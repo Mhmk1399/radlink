@@ -13,7 +13,6 @@ import {
   animation,
   focus,
   interactive,
-  components,
   accentTokens,
 } from "@/lib/design/design-system";
 
@@ -171,15 +170,14 @@ export default function SmartLandingNavbar() {
       )}
 
       <header
-        dir="rtl"
+      dir="rtl"
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 px-3 transition-all duration-500 ease-out",
-          // Spacing from top
+          "fixed top-0 left-0 right-0 z-50 px-3 transition-all  duration-500 ease-out",
           scrolled ? "pt-2 sm:pt-2" : "pt-3 sm:pt-4",
-          // Hide on scroll down
           hidden && !isOpen
             ? "-translate-y-full opacity-0"
             : "translate-y-0 opacity-100",
+          scrolled ? backgrounds.navbarScrolled : backgrounds.navbar,
         )}
       >
         <div className={layout.container}>
@@ -188,18 +186,17 @@ export default function SmartLandingNavbar() {
             className={cn(
               "nav-slide-down relative overflow-visible p-1.5 transition-all duration-500 ease-out",
               layout.radius.navbar,
-              // Dynamic background
+              // Dynamic background using design system
               scrolled
                 ? cn(
-                    "bg-[#060e1b]/80 backdrop-blur-2xl backdrop-saturate-150",
-                    "border border-white/[0.08]",
-                    "shadow-[0_8px_40px_-12px_rgba(0,0,0,0.8),0_4px_20px_-8px_rgba(59,130,246,0.15)]",
+                    backgrounds.navbarScrolled, // ← DS navbar background
+                    borders.inner, // ← DS border
+                    shadows.navbar, // ← DS shadow
                   )
                 : cn(
-                    "bg-gradient-to-br from-[#071427]/70 via-[#0B2037]/60 to-[#0A5168]/50",
-                    "backdrop-blur-xl",
-                    "border border-white/[0.06]",
-                    "shadow-[0_24px_70px_-32px_rgba(2,8,23,0.6),0_16px_40px_-20px_rgba(59,130,246,0.15)]",
+                    backgrounds.navbar, // ← DS navbar background
+                    borders.inner, // ← DS border
+                    shadows.navbar, // ← DS shadow
                   ),
             )}
           >
@@ -352,49 +349,26 @@ export default function SmartLandingNavbar() {
                           onClick={() => handleNavClick(item.href)}
                           aria-current={isActive ? "page" : undefined}
                           className={cn(
-                            "nav-item-fade group relative inline-flex items-center px-3.5 py-2 text-[13px] font-medium transition-all duration-300",
+                            "nav-item-fade group relative inline-flex cursor-pointer items-center px-3.5 py-2 text-[13px] font-medium transition-all duration-300",
                             layout.radius.full,
                             interactive.touch,
                             animation.motionSafe,
                             focus.ring,
                             isActive
                               ? cn(
-                                  "text-white",
-                                  scrolled
-                                    ? "bg-sky-500/15 shadow-[inset_0_1px_0_rgba(56,189,248,0.15)]"
-                                    : "bg-white/[0.1] shadow-inner shadow-white/5",
+                                  typography.navItemActive,
+                                  borders.inner,
+                                  shadows.innerLight,
+                                  accentTokens.sky.bgHover,
                                 )
                               : cn(
-                                  "text-slate-400",
-                                  "hover:text-white hover:bg-white/[0.06]",
+                                  typography.navItem,
+                                  "hover:" + accentTokens.sky.bgHover,
                                   animation.activePress,
                                 ),
                           )}
-                          style={{ animationDelay: `${i * 0.05 + 0.1}s` }}
                         >
                           <span className="relative z-10">{item.label}</span>
-
-                          {/* Active indicator dot */}
-                          <span
-                            className={cn(
-                              "absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full transition-all duration-300",
-                              isActive
-                                ? "bg-sky-400 scale-100 shadow-[0_0_6px_rgba(56,189,248,0.6)]"
-                                : "bg-transparent scale-0",
-                            )}
-                          />
-
-                          {/* Hover underline */}
-                          <span
-                            className={cn(
-                              "pointer-events-none absolute inset-x-3 bottom-1 h-px origin-center",
-                              "bg-gradient-to-r from-transparent via-sky-400/60 to-transparent",
-                              "transition-transform duration-300",
-                              isActive
-                                ? "scale-x-0"
-                                : "scale-x-0 group-hover:scale-x-100",
-                            )}
-                          />
                         </button>
                       </li>
                     );
@@ -592,21 +566,28 @@ export default function SmartLandingNavbar() {
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       href="/auth"
-                      onClick={() => setIsOpen(false)}
                       className={cn(
-                        "inline-flex h-11 items-center justify-center px-4",
-                        layout.radius.lg,
+                        "group inline-flex items-center justify-center gap-2 rounded-full border transition-all duration-300",
+                        scrolled ? "h-9 px-4 text-[13px]" : "h-10 px-5 text-sm",
                         borders.skyStrong,
                         gradients.primary,
-                        "text-sm font-semibold text-white",
-                        shadows.ctaSmall,
-                        animation.base,
-                        interactive.touch,
+                        typography.ctaText,
+                        scrolled ? shadows.ctaSmall : shadows.ctaSmall,
+                        "hover:-translate-y-0.5",
                         animation.activePress,
+                        animation.activeRestore,
                         focus.ringLight,
                       )}
                     >
-                      شروع رایگان
+                      <span>شروع رایگان</span>
+                      <span
+                        className={cn(
+                          "rounded-full",
+                          shadows.dot,
+                          "group-hover:scale-125",
+                          scrolled ? "h-1.5 w-1.5" : "h-2 w-2",
+                        )}
+                      />
                     </Link>
 
                     <Link

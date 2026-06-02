@@ -385,7 +385,7 @@ function ProblemCard({ item, index }: { item: ProblemItem; index: number }) {
     <article
       className={cn(
         animation.classes.fadeUp,
-         "group relative overflow-hidden p-6 sm:p-8",
+        "group relative overflow-hidden p-6 sm:p-8",
         layout.radius.xl,
         borders.subtle,
         backgrounds.surface.card,
@@ -449,24 +449,6 @@ function ProblemCard({ item, index }: { item: ProblemItem; index: number }) {
       <p className={cn("mt-3", typography.cardDescription)}>
         {item.description}
       </p>
-
-      {/* Bottom decorative arrow */}
-      <div
-        className={cn(
-          "mt-5 flex items-center gap-2",
-          typography.link,
-          animation.base,
-        )}
-      >
-        <span>راه‌حل در ادامه</span>
-        <ArrowIcon
-          className={cn(
-            "-scale-x-100",
-            animation.transform,
-            "group-hover:-translate-x-1",
-          )}
-        />
-      </div>
     </article>
   );
 }
@@ -512,13 +494,7 @@ export function HeroSection() {
             </div>
 
             {/* H1 */}
-            <h1
-              className={cn(
-                animation.classes.fadeUp,
-                 "mt-6",
-                typography.h1,
-              )}
-            >
+            <h1 className={cn(animation.classes.fadeUp, "mt-6", typography.h1)}>
               صفحه اختصاصی{" "}
               <span className="relative inline-block">
                 <span className={cn("relative z-10", gradients.textPrimary)}>
@@ -533,7 +509,7 @@ export function HeroSection() {
             <p
               className={cn(
                 animation.classes.fadeUp,
-                 "mt-6 lg:max-w-xl",
+                "mt-6 lg:max-w-xl",
                 typography.bodyLg,
               )}
             >
@@ -547,7 +523,7 @@ export function HeroSection() {
             <div
               className={cn(
                 animation.classes.fadeUp,
-                 "mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start",
+                "mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start",
               )}
             >
               {/* Primary CTA */}
@@ -573,15 +549,13 @@ export function HeroSection() {
                   )}
                 />
               </Link>
-
-              
             </div>
 
             {/* Mini Features */}
             <div
               className={cn(
                 animation.classes.fadeUp,
-                 "mt-10 flex flex-wrap items-center justify-center gap-3 lg:justify-start",
+                "mt-10 flex flex-wrap items-center justify-center gap-3 lg:justify-start",
               )}
             >
               {miniFeatures.map((f) => (
@@ -597,7 +571,7 @@ export function HeroSection() {
           <div
             className={cn(
               animation.classes.fadeUp,
-               "flex-shrink-0",
+              "flex-shrink-0",
               animation.classes.floatSlow,
             )}
           >
@@ -651,25 +625,13 @@ export function ProblemSection() {
           </div>
 
           {/* Title */}
-          <h2
-            className={cn(
-              animation.classes.fadeUp,
-               "mt-5",
-              typography.h2,
-            )}
-          >
+          <h2 className={cn(animation.classes.fadeUp, "mt-5", typography.h2)}>
             چرا به یک صفحه اختصاصی{" "}
             <span className={gradients.textPrimary}>نیاز داری؟</span>
           </h2>
 
           {/* Description */}
-          <p
-            className={cn(
-              animation.classes.fadeUp,
-               "mt-5",
-              typography.body,
-            )}
-          >
+          <p className={cn(animation.classes.fadeUp, "mt-5", typography.body)}>
             وقتی لینک‌ها، شبکه‌های اجتماعی، شماره تماس، فرم‌ها و مسیرهای ارتباطی
             در چند جای مختلف پخش باشند، مخاطب سردرگم می‌شود. این پلتفرم همه چیز
             را در یک صفحه مرتب، سریع و حرفه‌ای جمع می‌کند تا کاربر راحت‌تر با تو

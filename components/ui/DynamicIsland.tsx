@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { cn, gradients } from "@/lib/design/design-system";
+import {
+  accentTokens,
+  backgrounds,
+  borders,
+  cn,
+  gradients,
+  shadows,
+  typography,
+} from "@/lib/design/design-system";
 
 /* ══════════════════════════════════════════════
    KEYFRAMES
@@ -189,20 +197,31 @@ function NavButton({
       className={cn(
         "relative flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-2xl px-1 py-2 min-w-[54px]",
         "transition-transform duration-150 touch-manipulation select-none",
-        isActive ? "text-sky-300" : "text-slate-500",
+        isActive
+          ? cn(
+              accentTokens.amber.bg, // active background
+              borders.inner, // border
+              shadows.innerLight, // shadow
+              typography.navItemActive, // text color
+            )
+          : cn(
+              typography.navItem, // text color
+              borders.inner, // optional border
+            ),
         pressed ? "scale-[0.85]" : "scale-100",
       )}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {ripple && (
         <span
-          className="pointer-events-none absolute rounded-full bg-sky-400/20"
+          className="pointer-events-none absolute rounded-full"
           style={{
             left: ripple.x - 20,
             top: ripple.y - 20,
             width: 40,
             height: 40,
             animation: "island-ripple .5s ease-out forwards",
+            backgroundColor: accentTokens.orange.glow.replace("bg-", ""), // gold glow
           }}
         />
       )}
@@ -211,7 +230,7 @@ function NavButton({
         className={cn(
           "absolute inset-1 rounded-xl transition-all duration-300",
           isActive
-            ? "bg-sky-400/[0.1] border border-sky-400/20"
+            ? "bg-yellow-400/[0.1] border border-yellow-400/20"
             : "border border-transparent",
         )}
       />
@@ -228,7 +247,7 @@ function NavButton({
       <span
         className={cn(
           "relative z-10 text-[10px] font-medium leading-none transition-colors duration-200",
-          isActive ? "text-sky-200" : "text-slate-500",
+          isActive ? typography.navItemActive : typography.navItem,
         )}
       >
         {item.label}
@@ -238,7 +257,7 @@ function NavButton({
         className={cn(
           "absolute bottom-0.5 left-1/2 -translate-x-1/2 h-[3px] rounded-full transition-all duration-300",
           isActive
-            ? "w-4 bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.5)]"
+            ? "w-4 bg-yellow-400 shadow-[0_0_6px_rgba(56,189,248,0.5)]"
             : "w-0",
         )}
       />
@@ -302,22 +321,12 @@ export default function DynamicIsland() {
       >
         <div
           className={cn(
-            "relative w-full max-w-[380px] overflow-hidden",
+            "relative w-full overflow-hidden",
             expanded ? "rounded-[28px]" : "rounded-full",
-            // ── بکگراند بلور قوی ──
-            "bg-[#040a14]/85",
-            "backdrop-blur-3xl",
-            "[-webkit-backdrop-filter:blur(40px)_saturate(180%)]",
-            "[backdrop-filter:blur(40px)_saturate(180%)]",
-            // ── بوردر ──
-            "border border-white/[0.07]",
-            // ── سایه + glow ──
-            expanded
-              ? "shadow-[0_-12px_50px_-15px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.04)]"
-              : "island-glow",
-            // ── Shape animation ──
+            backgrounds.surface.glass, // DS background
+            borders.inner, // DS border
+            expanded ? shadows.card : shadows.orb, // DS shadow/glow
             expanded ? "island-expand" : "island-collapse",
-            // ── Enter ──
             "island-enter",
           )}
         >
@@ -325,7 +334,7 @@ export default function DynamicIsland() {
           <div
             className={cn(
               "absolute inset-x-4 top-0 h-px",
-              gradients.dividerSky,
+              gradients.primary,
               expanded ? "opacity-40" : "opacity-25",
             )}
           />
@@ -350,7 +359,7 @@ export default function DynamicIsland() {
                   href="/auth"
                   className={cn(
                     "flex h-10 items-center gap-1.5 rounded-full px-4",
-                    "bg-gradient-to-r from-sky-500 to-blue-600",
+                    "bg-gradient-to-r from-yellow-500 to-yellow-700",
                     "text-[12px] font-bold text-white",
                     "shadow-[0_2px_12px_-2px_rgba(56,189,248,0.45)]",
                     "active:scale-[0.9] transition-transform duration-150 touch-manipulation",
@@ -401,7 +410,7 @@ export default function DynamicIsland() {
                         width="11"
                         height="3"
                         rx="1.5"
-                        className="fill-sky-100"
+                        className="fill-yellow-100"
                       />
                       <rect
                         x="4"
@@ -452,7 +461,7 @@ export default function DynamicIsland() {
                         "island-item-enter flex flex-col items-center gap-1 rounded-2xl border p-2.5",
                         "transition-all duration-150 touch-manipulation active:scale-[0.9]",
                         isActive
-                          ? "border-sky-400/20 bg-sky-400/[0.08] text-sky-300"
+                          ? "border-yellow-400/20 bg-yellow-400/[0.08] text-yellow-300"
                           : "border-white/[0.03] bg-white/[0.02] text-slate-500 active:bg-white/[0.05]",
                       )}
                       style={{
@@ -512,9 +521,9 @@ export default function DynamicIsland() {
                   onClick={() => setExpanded(false)}
                   className={cn(
                     "island-item-enter flex h-10 items-center justify-center gap-1.5 rounded-xl",
-                    "bg-gradient-to-r from-sky-500 to-blue-600",
-                    "text-[12px] font-bold text-white",
-                    "shadow-[0_2px_12px_-2px_rgba(56,189,248,0.45)]",
+                    gradients.primary, // DS gradient
+                    typography.ctaText, // DS text color
+                    shadows.ctaSmall, // DS shadow
                     "active:scale-[0.93] transition-transform duration-150 touch-manipulation",
                   )}
                   style={{

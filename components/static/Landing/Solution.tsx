@@ -10,7 +10,6 @@ import {
   typography,
   layout,
   animation,
-  focus,
   components,
   accentTokens,
   toPersian,
@@ -297,87 +296,6 @@ const featureCards: FeatureCard[] = [
 ];
 
 /* ──────────────────────────────────────────────
-   SOLUTION — ORBITING CARD
-   ────────────────────────────────────────────── */
-
-const orbitPositions = [
-  "-top-8 -right-8 sm:-top-10 sm:-right-10",
-  "-top-8 -left-8 sm:-top-10 sm:-left-10",
-  "-bottom-8 -right-8 sm:-bottom-10 sm:-right-10",
-  "-bottom-8 -left-8 sm:-bottom-10 sm:-left-10",
-];
-
-function OrbitCard({
-  item,
-  index,
-}: {
-  item: (typeof solutionItems)[0];
-  index: number;
-}) {
-  return (
-    <div
-      className={cn(
-        "absolute z-20",
-        orbitPositions[index],
-        animation.classes.fadeUp,
-      )}
-      style={{ animationDelay: `${index * 0.1}s` }}
-    >
-      <div className="group relative">
-        {/* Card */}
-        <div
-          className={cn(
-            "flex items-center gap-2.5 px-3.5 py-2.5",
-            layout.radius.lg,
-            borders.light,
-            backgrounds.surface.dark,
-            shadows.card,
-            animation.smooth,
-            borders.hoverSky,
-            "hover:bg-[#0d2040]/90",
-            animation.hoverLift,
-            "hover:shadow-[0_18px_40px_-15px_rgba(56,189,248,0.2)]",
-            animation.activePress,
-          )}
-        >
-          <div
-            className={cn(
-              "flex h-9 w-9 flex-shrink-0 items-center justify-center",
-              layout.radius.md,
-              borders.light,
-              "bg-linear-to-br from-sky-500/20 to-blue-600/20",
-              accentTokens.sky.text,
-              animation.colors,
-              "group-hover:from-sky-500/30 group-hover:to-blue-600/30",
-            )}
-          >
-            {item.icon}
-          </div>
-          <div className="min-w-0">
-            <p className="whitespace-nowrap text-xs font-semibold text-white sm:text-sm">
-              {item.title}
-            </p>
-            <p className={cn("mt-0.5 hidden sm:block", typography.labelSmall)}>
-              {item.desc}
-            </p>
-          </div>
-        </div>
-
-        {/* Connector line */}
-        <div
-          className={cn(
-            "absolute h-px bg-linear-to-r from-sky-400/30 to-transparent",
-            index % 2 === 0
-              ? "left-full top-1/2 w-6 sm:w-8"
-              : "right-full top-1/2 w-6 sm:w-8 rotate-180",
-          )}
-        />
-      </div>
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────
    FEATURE CARD COMPONENT
    ────────────────────────────────────────────── */
 
@@ -415,8 +333,6 @@ function FeatureCardComponent({
           animation.opacity,
         )}
       />
-
-    
 
       {/* Icon */}
       <div

@@ -126,7 +126,7 @@ function LogoMark() {
           width="11"
           height="3"
           rx="1.5"
-          className="fill-sky-100"
+          className="fill-yellow-100"
         />
         <rect
           x="4"
@@ -267,17 +267,17 @@ function OtpInput({
           onPaste={handlePaste}
           aria-label={`رقم ${i + 1} کد تأیید`}
           className={cn(
-            "h-14 w-11 rounded-xl border text-center text-xl font-bold text-white caret-sky-400 outline-none sm:h-16 sm:w-13",
+            "h-14 w-11 rounded-xl border text-center text-xl font-bold text-white caret-yellow-400 outline-none sm:h-16 sm:w-13",
             animation.smooth,
             disabled ? "opacity-50 cursor-not-allowed" : "",
             error
               ? "border-red-400/40 bg-red-400/[0.06] text-red-300"
               : value[i]
-                ? cn(accentTokens.sky.border, "bg-sky-400/[0.06]")
+                ? cn(accentTokens.amber.border, "bg-yellow-400/[0.06]")
                 : cn(borders.light, backgrounds.surface.glass),
             !disabled &&
               !error &&
-              "focus:border-sky-400/50 focus:bg-sky-400/[0.08] focus:ring-2 focus:ring-sky-400/20",
+              "focus:border-yellow-400/50 focus:bg-yellow-400/[0.08] focus:ring-2 focus:ring-yellow-400/20",
           )}
         />
       ))}
@@ -466,7 +466,7 @@ export default function AuthPage() {
           <div
             className={cn(
               "absolute right-0 top-1/4 h-80 w-80 rounded-full blur-3xl",
-              backgrounds.glow.skyOrb,
+              backgrounds.glow.hero,
               animation.classes.floatSlow,
             )}
           />
@@ -493,10 +493,7 @@ export default function AuthPage() {
         >
           {/* Top accent line */}
           <div
-            className={cn(
-              "absolute inset-x-0 top-0 h-px",
-              gradients.dividerSky,
-            )}
+            className={cn("absolute inset-x-0 top-0 h-px", gradients.primary)}
           />
 
           {/* Content */}
@@ -553,7 +550,7 @@ export default function AuthPage() {
                           error
                             ? "border-red-400/40 bg-red-400/[0.04]"
                             : cn(borders.light, backgrounds.surface.glass),
-                          "focus:border-sky-400/50 focus:bg-sky-400/[0.04] focus:ring-2 focus:ring-sky-400/20",
+                          "focus:border-yellow-400/50 focus:bg-yellow-400/[0.04] focus:ring-2 focus:ring-yellow-400/20",
                           loading && "opacity-60 cursor-not-allowed",
                         )}
                       />
@@ -629,7 +626,7 @@ export default function AuthPage() {
                             borders.subtle,
                             "text-slate-400",
                             animation.base,
-                            "hover:text-sky-300 hover:border-sky-400/20 hover:bg-sky-400/[0.04]",
+                            "hover:text-yellow-300 hover:border-yellow-400/20 hover:bg-yellow-400/[0.04]",
                           )}
                         >
                           {u.phone}
@@ -644,7 +641,9 @@ export default function AuthPage() {
                       )}
                     >
                       یا هر شماره دیگری (کاربر جدید) — کد:{" "}
-                      <span className="font-mono text-sky-300">{FAKE_OTP}</span>
+                      <span className="font-mono text-yellow-300">
+                        {FAKE_OTP}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -696,7 +695,7 @@ export default function AuthPage() {
                       )}
                     >
                       کد ارسال شده به{" "}
-                      <span dir="ltr" className="font-mono text-sky-300">
+                      <span dir="ltr" className="font-mono text-yellow-300">
                         {formatPhone(phone.replace(/\D/g, ""))}
                       </span>{" "}
                       را وارد کنید
@@ -768,7 +767,10 @@ export default function AuthPage() {
                         animation.colors,
                         resendCooldown > 0
                           ? "text-slate-500 cursor-not-allowed"
-                          : cn(accentTokens.sky.text, "hover:text-sky-200"),
+                          : cn(
+                              accentTokens.amber.text,
+                              "hover:text-yellow-200",
+                            ),
                       )}
                     >
                       {resendCooldown > 0
@@ -873,7 +875,7 @@ export default function AuthPage() {
                         error
                           ? "border-red-400/40 bg-red-400/[0.04]"
                           : cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-sky-400/50 focus:bg-sky-400/[0.04] focus:ring-2 focus:ring-sky-400/20",
+                        "focus:border-yellow-400/50 focus:bg-yellow-400/[0.04] focus:ring-2 focus:ring-yellow-400/20",
                         loading && "opacity-60 cursor-not-allowed",
                       )}
                     />
@@ -991,14 +993,14 @@ export default function AuthPage() {
                   با ورود یا ثبت‌نام،{" "}
                   <Link
                     href="#terms"
-                    className={cn(accentTokens.sky.text, "hover:underline")}
+                    className={cn(accentTokens.amber.text, "hover:underline")}
                   >
                     قوانین
                   </Link>{" "}
                   و{" "}
                   <Link
                     href="#privacy"
-                    className={cn(accentTokens.sky.text, "hover:underline")}
+                    className={cn(accentTokens.amber.text, "hover:underline")}
                   >
                     حریم خصوصی
                   </Link>{" "}

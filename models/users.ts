@@ -1,0 +1,203 @@
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
+
+export type UserRole = "user" | "agent" | "admin" | "superAdmin";
+
+export type UserStatus = "active" | "inactive" | "blocked" | "pending";
+
+export interface IUser extends Document {
+  firstName?: string;
+  lastName?: string;
+
+  phoneNumber: string;
+  email?: string;
+  avatarUrl?: string;
+
+  nationalCode?: string;
+  fatherName?: string;
+
+  role: UserRole;
+  status: UserStatus;
+
+  permissions: Types.ObjectId[];
+
+  limits: {
+    files: number;
+    blocks: number;
+    pages: number;
+    landingPages: number;
+  };
+
+  lastLoginAt?: Date;
+  lastOtpRequestAt?: Date;
+  phoneVerifiedAt?: Date;
+
+  isPhoneVerified: boolean;
+  isDeleted: boolean;
+
+  createdBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const UserSchema = new Schema<IUser>(
+  {
+    firstName: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+    },
+
+    lastName: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+    },
+
+    phoneNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      index: true,
+    },
+
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+      index: true,
+    },
+
+    avatarUrl: {
+      type: String,
+      trim: true,
+    },
+
+    nationalCode: {
+      type: String,
+      trim: true,
+      sparse: true,
+      index: true,
+    },
+
+    fatherName: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+    },
+
+    role: {
+      type: String,
+      enum: ["user", "agent", "admin", "superAdmin"],
+      default: "user",
+      required: true,
+      index: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["active", "inactive", "blocked", "pending"],
+      default: "active",
+      required: true,
+      index: true,
+    },
+
+    permissions: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Permission",
+      },
+    ],
+
+    limits: {
+      files: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      blocks: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      pages: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      landingPages: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+    },
+
+    lastLoginAt: {
+      type: Date,
+    },
+
+    lastOtpRequestAt: {
+      type: Date,
+    },
+
+    phoneVerifiedAt: {
+      type: Date,
+    },
+
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// Prevent returning deleted users by default in common queries
+UserSchema.pre(/^find/, function (next) {
+  this.where({ isDeleted: false });
+  next();
+});
+
+// Clean JSON response
+UserSchema.set("toJSON", {
+  transform: function (_doc, ret) {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+// Useful virtual full name
+UserSchema.virtual("fullName").get(function () {
+  return `${this.firstName || ""} ${this.lastName || ""}`.trim();
+});
+
+const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+
+export default User;

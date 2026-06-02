@@ -7,37 +7,37 @@
    BACKGROUNDS
    ══════════════════════════════════════════════ */
 export const backgrounds = {
-    page: "bg-linear-to-b from-[#060e1b] via-[#081223] to-[#091828]",
-    pageAlt: "bg-linear-to-b from-[#071427] via-[#081223] to-[#060e1b]",
+    page: "bg-linear-to-b from-[#030303] via-[#090806] to-[#141006]",
+    pageAlt: "bg-linear-to-b from-[#120E05] via-[#080706] to-[#030303]",
 
     surface: {
-        glass: "bg-white/[0.04] backdrop-blur-xl",
-        glassHover: "hover:bg-white/[0.08]",
-        glassStrong: "bg-white/[0.06] backdrop-blur-xl",
-        glassMedium: "bg-white/[0.03] backdrop-blur-sm",
-        card: "bg-linear-to-b from-white/[0.04] to-white/[0.015]",
-        cardHover: "hover:bg-linear-to-b hover:from-white/[0.06] hover:to-white/[0.02]",
-        dark: "bg-[#0b1a30]/90 backdrop-blur-xl",
-        darkAlt: "bg-[#0c1a30]/80",
-        overlay: "bg-[#081223]/80 backdrop-blur-xl",
+        glass: "bg-white/[0.035] backdrop-blur-xl",
+        glassHover: "hover:bg-white/[0.07]",
+        glassStrong: "bg-white/[0.055] backdrop-blur-xl",
+        glassMedium: "bg-white/[0.025] backdrop-blur-sm",
+        card: "bg-linear-to-b from-white/[0.045] to-[#D4AF37]/[0.018]",
+        cardHover: "hover:bg-linear-to-b hover:from-white/[0.065] hover:to-[#D4AF37]/[0.03]",
+        dark: "bg-[#0B0905]/90 backdrop-blur-xl",
+        darkAlt: "bg-[#11100C]/80",
+        overlay: "bg-[#050505]/80 backdrop-blur-xl",
     },
 
-    navbar: "bg-linear-to-br from-[#071427]/95 via-[#0B2037]/90 to-[#0A5168]/85",
-    navbarScrolled: "bg-linear-to-br from-[#071427]/98 via-[#0B2037]/95 to-[#0A5168]/90",
+    navbar: "bg-linear-to-br from-[#050505]/96 via-[#0E0B05]/94 to-[#1A1304]/90",
+    navbarScrolled: "bg-linear-to-br from-[#030303]/98 via-[#0B0905]/96 to-[#161004]/92",
 
     glow: {
-        hero: "bg-linear-to-b from-sky-500/[0.07] to-transparent",
-        skyOrb: "bg-cyan-500/[0.05]",
-        blueOrb: "bg-blue-600/[0.05]",
-        skyCenter: "bg-sky-400/[0.03]",
+        hero: "bg-linear-to-b from-[#D4AF37]/[0.09] to-transparent",
+        skyOrb: "bg-[#D4AF37]/[0.06]",
+        blueOrb: "bg-[#B8860B]/[0.06]",
+        skyCenter: "bg-[#F5D76E]/[0.035]",
     },
 
     grid: {
         lines:
-            "bg-[linear-gradient(rgba(255,255,255,.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.1)_1px,transparent_1px)] bg-[length:60px_60px] opacity-[0.03]",
-        dots: "bg-[radial-gradient(rgba(255,255,255,.15)_1px,transparent_1px)] bg-[length:40px_40px] opacity-[0.02]",
+            "bg-[linear-gradient(rgba(212,175,55,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(212,175,55,.18)_1px,transparent_1px)] bg-[length:60px_60px] opacity-[0.035]",
+        dots: "bg-[radial-gradient(rgba(245,215,110,.22)_1px,transparent_1px)] bg-[length:40px_40px] opacity-[0.025]",
         dotsDense:
-            "bg-[radial-gradient(rgba(255,255,255,.12)_1px,transparent_1px)] bg-[length:32px_32px] opacity-[0.02]",
+            "bg-[radial-gradient(rgba(245,215,110,.18)_1px,transparent_1px)] bg-[length:32px_32px] opacity-[0.025]",
     },
 } as const;
 
@@ -45,37 +45,37 @@ export const backgrounds = {
    GRADIENTS
    ══════════════════════════════════════════════ */
 export const gradients = {
-    primary: "bg-linear-to-r from-[#0EA5E9] via-[#3B82F6] to-[#2563EB]",
-    primaryReverse: "bg-linear-to-l from-[#0EA5E9] via-[#3B82F6] to-[#2563EB]",
+    primary: "bg-linear-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E]",
+    primaryReverse: "bg-linear-to-l from-[#B8860B] via-[#D4AF37] to-[#F5D76E]",
 
     textPrimary:
-        "bg-linear-to-l from-sky-300 via-cyan-300 to-blue-400 bg-clip-text text-transparent",
+        "bg-linear-to-l from-[#FFE8A3] via-[#F5D76E] to-[#D4AF37] bg-clip-text text-transparent",
     textSecondary:
-        "bg-linear-to-l from-cyan-300 via-sky-300 to-blue-300 bg-clip-text text-transparent",
+        "bg-linear-to-l from-[#F5D76E] via-[#D4AF37] to-[#B8860B] bg-clip-text text-transparent",
 
-    logo: "bg-linear-to-br from-[#102748] via-[#0E7490] to-[#3B82F6]",
-    orb: "bg-linear-to-br from-[#0c1e3d] via-[#0f2d52] to-[#0a3a5c]",
+    logo: "bg-linear-to-br from-[#050505] via-[#B8860B] to-[#F5D76E]",
+    orb: "bg-linear-to-br from-[#080705] via-[#191204] to-[#3A2904]",
 
-    divider: "bg-linear-to-r from-transparent via-sky-400/20 to-transparent",
+    divider: "bg-linear-to-r from-transparent via-[#D4AF37]/25 to-transparent",
     dividerLight: "bg-linear-to-r from-transparent via-white/10 to-transparent",
-    dividerSky: "bg-linear-to-r from-transparent via-sky-300/50 to-transparent",
+    dividerSky: "bg-linear-to-r from-transparent via-[#F5D76E]/55 to-transparent",
 
-    innerHighlight: "bg-linear-to-br from-white/20 via-white/5 to-transparent",
-    innerHighlightCircle: "bg-linear-to-br from-white/10 via-transparent to-transparent",
+    innerHighlight: "bg-linear-to-br from-white/18 via-[#F5D76E]/10 to-transparent",
+    innerHighlightCircle: "bg-linear-to-br from-[#F5D76E]/12 via-transparent to-transparent",
 
     accent: {
-        sky: "from-sky-400 to-blue-500",
-        blue: "from-blue-400 to-indigo-500",
-        cyan: "from-cyan-400 to-teal-500",
-        emerald: "from-emerald-400 to-green-500",
-        violet: "from-violet-400 to-purple-500",
-        amber: "from-amber-400 to-orange-500",
-        rose: "from-rose-400 to-pink-500",
-        pink: "from-pink-400 to-rose-500",
-        red: "from-red-400 to-rose-500",
-        indigo: "from-indigo-400 to-violet-500",
-        orange: "from-orange-400 to-amber-500",
-        teal: "from-teal-400 to-cyan-500",
+        sky: "from-[#F5D76E] to-[#D4AF37]",
+        blue: "from-[#FFE8A3] to-[#D4AF37]",
+        cyan: "from-[#E9C46A] to-[#B8860B]",
+        emerald: "from-[#D4AF37] to-[#8A6A12]",
+        violet: "from-[#F5D76E] to-[#9A7A16]",
+        amber: "from-[#F5D76E] via-[#D4AF37] to-[#B8860B]",
+        rose: "from-[#FFE8A3] to-[#C99700]",
+        pink: "from-[#F7E7A1] to-[#D4AF37]",
+        red: "from-[#E0B84F] to-[#8A5A00]",
+        indigo: "from-[#F5D76E] to-[#A67C00]",
+        orange: "from-[#FFC857] to-[#B8860B]",
+        teal: "from-[#D4AF37] to-[#5C4300]",
     },
 } as const;
 
@@ -85,59 +85,60 @@ export const gradients = {
 export const borders = {
     subtle: "border border-white/8",
     light: "border border-white/10",
-    medium: "border border-white/12",
-    strong: "border border-white/15",
+    medium: "border border-[#D4AF37]/12",
+    strong: "border border-[#D4AF37]/18",
 
-    hoverLight: "hover:border-white/12",
-    hoverMedium: "hover:border-white/15",
-    hoverSky: "hover:border-sky-400/20",
-    hoverSkyStrong: "hover:border-sky-300/20",
+    hoverLight: "hover:border-[#D4AF37]/18",
+    hoverMedium: "hover:border-[#D4AF37]/25",
+    hoverSky: "hover:border-[#D4AF37]/25",
+    hoverSkyStrong: "hover:border-[#F5D76E]/30",
 
-    sky: "border-sky-400/20",
-    skyStrong: "border-sky-300/25",
-    cyan: "border-cyan-400/20",
-    emerald: "border-emerald-400/20",
-    violet: "border-violet-400/20",
-    amber: "border-amber-400/20",
-    rose: "border-rose-400/20",
-    blue: "border-blue-400/20",
-    indigo: "border-indigo-400/20",
-    orange: "border-orange-400/20",
-    teal: "border-teal-400/20",
-    pink: "border-pink-400/20",
-    red: "border-red-400/20",
+    sky: "border-[#D4AF37]/20",
+    skyStrong: "border-[#F5D76E]/25",
+    cyan: "border-[#E9C46A]/20",
+    emerald: "border-[#D4AF37]/20",
+    violet: "border-[#F5D76E]/20",
+    amber: "border-[#D4AF37]/20",
+    rose: "border-[#FFE8A3]/20",
+    blue: "border-[#FFE8A3]/20",
+    indigo: "border-[#F5D76E]/20",
+    orange: "border-[#FFC857]/20",
+    teal: "border-[#D4AF37]/20",
+    pink: "border-[#F7E7A1]/20",
+    red: "border-[#E0B84F]/20",
 
-    dashed: "border border-dashed border-white/15",
+    dashed: "border border-dashed border-[#D4AF37]/18",
     inner: "border border-white/5",
-    innerLight: "border border-white/[0.06]",
+    innerLight: "border border-[#D4AF37]/[0.08]",
 } as const;
+
 
 /* ══════════════════════════════════════════════
    SHADOWS
    ══════════════════════════════════════════════ */
 export const shadows = {
     navbar:
-        "shadow-[0_24px_70px_-32px_rgba(2,8,23,0.8),0_16px_40px_-20px_rgba(59,130,246,0.28)]",
-    card: "shadow-[0_20px_50px_-28px_rgba(2,8,23,0.9)]",
-    cardHover: "hover:shadow-[0_30px_60px_-30px_rgba(2,8,23,0.8)]",
+        "shadow-[0_24px_70px_-32px_rgba(0,0,0,0.95),0_16px_40px_-22px_rgba(212,175,55,0.32)]",
+    card: "shadow-[0_20px_50px_-28px_rgba(0,0,0,0.95)]",
+    cardHover: "hover:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9)]",
     cardFeature: "hover:shadow-[0_30px_60px_-25px]",
     phone:
-        "shadow-[0_40px_80px_-30px_rgba(2,8,23,0.9),0_20px_40px_-15px_rgba(59,130,246,0.25)]",
+        "shadow-[0_40px_80px_-30px_rgba(0,0,0,0.95),0_20px_40px_-15px_rgba(212,175,55,0.22)]",
 
-    ctaPrimary: "shadow-[0_20px_50px_-20px_rgba(59,130,246,0.9)]",
-    ctaPrimaryHover: "hover:shadow-[0_28px_60px_-18px_rgba(56,189,248,0.7)]",
-    ctaSmall: "shadow-[0_18px_38px_-20px_rgba(59,130,246,0.95)]",
-    ctaSmallHover: "hover:shadow-[0_22px_42px_-18px_rgba(56,189,248,0.8)]",
+    ctaPrimary: "shadow-[0_20px_50px_-20px_rgba(212,175,55,0.75)]",
+    ctaPrimaryHover: "hover:shadow-[0_28px_60px_-18px_rgba(245,215,110,0.65)]",
+    ctaSmall: "shadow-[0_18px_38px_-20px_rgba(212,175,55,0.8)]",
+    ctaSmallHover: "hover:shadow-[0_22px_42px_-18px_rgba(245,215,110,0.65)]",
 
-    logo: "shadow-[0_18px_35px_-18px_rgba(56,189,248,0.85)]",
+    logo: "shadow-[0_18px_35px_-18px_rgba(245,215,110,0.75)]",
 
     innerLight: "shadow-inner shadow-white/5",
-    insetGlow: "shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
+    insetGlow: "shadow-[inset_0_1px_0_rgba(255,232,163,0.08)]",
 
-    orb: "shadow-[0_0_60px_-15px_rgba(56,189,248,0.4)]",
+    orb: "shadow-[0_0_60px_-15px_rgba(212,175,55,0.42)]",
     dot: "shadow-[0_0_12px_rgba(255,255,255,0.8)]",
-    dotSky: "shadow-[0_0_12px_rgba(125,211,252,0.7)]",
-    dotCyan: "shadow-[0_0_12px_rgba(103,232,249,0.7)]",
+    dotSky: "shadow-[0_0_12px_rgba(245,215,110,0.75)]",
+    dotCyan: "shadow-[0_0_12px_rgba(212,175,55,0.75)]",
 } as const;
 
 /* ══════════════════════════════════════════════
@@ -159,12 +160,12 @@ export const typography = {
     badge: "text-xs font-medium sm:text-sm",
     label: "text-xs font-medium text-slate-400",
     labelSmall: "text-[10px] text-slate-400",
-    labelMuted: "text-[11px] font-medium text-sky-100/55",
+    labelMuted: "text-[11px] font-medium text-[#FFE8A3]/55",
 
     brandName: "text-sm font-semibold tracking-tight text-white sm:text-base",
-    brandSub: "text-[11px] font-medium text-sky-100/55",
+    brandSub: "text-[11px] font-medium text-[#FFE8A3]/55",
 
-    link: "text-xs font-medium text-sky-300/50 group-hover:text-sky-300",
+    link: "text-xs font-medium text-[#F5D76E]/60 group-hover:text-[#F5D76E]",
     ctaText: "text-sm font-semibold text-white sm:text-base",
     ctaSecondaryText: "text-sm font-medium text-slate-100",
 
@@ -297,9 +298,9 @@ export const animation = {
    FOCUS / ACCESSIBILITY
    ══════════════════════════════════════════════ */
 export const focus = {
-    ring: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+    ring: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
     ringLight:
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5D76E]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
     none: "focus-visible:outline-none",
 } as const;
 
@@ -308,9 +309,9 @@ export const focus = {
    ══════════════════════════════════════════════ */
 export const interactive = {
     touch: "touch-manipulation",
-    button: "transition-all duration-200 touch-manipulation active:scale-[0.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+    button: "transition-all duration-200 touch-manipulation active:scale-[0.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
     linkHover: "hover:text-white transition-colors duration-200",
-    cardHover: "transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_30px_60px_-30px_rgba(2,8,23,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+    cardHover: "transition-all duration-300 hover:-translate-y-1 hover:border-[#D4AF37]/20 hover:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 } as const;
 
 /* ══════════════════════════════════════════════
@@ -319,60 +320,60 @@ export const interactive = {
 export const components = {
     badge: {
         base: "inline-flex items-center gap-2 rounded-full px-4 py-2 backdrop-blur-sm",
-        sky: "border border-sky-400/20 bg-sky-400/[0.08]",
-        emerald: "border border-emerald-400/20 bg-emerald-400/[0.08]",
-        rose: "border border-rose-400/20 bg-rose-400/[0.08]",
-        amber: "border border-amber-400/20 bg-amber-400/[0.08]",
-        violet: "border border-violet-400/20 bg-violet-400/[0.08]",
+        sky: "border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
+        emerald: "border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
+        rose: "border border-[#FFE8A3]/20 bg-[#FFE8A3]/[0.08]",
+        amber: "border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
+        violet: "border border-[#F5D76E]/20 bg-[#F5D76E]/[0.08]",
     },
 
     ctaPrimary:
-        "group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-2xl border border-sky-300/25 bg-linear-to-r from-[#0EA5E9] via-[#3B82F6] to-[#2563EB] px-8 py-3.5 text-sm font-semibold text-white shadow-[0_20px_50px_-20px_rgba(59,130,246,0.9)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(56,189,248,0.7)] active:translate-y-0 active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-2xl border border-[#F5D76E]/30 bg-linear-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E] px-8 py-3.5 text-sm font-semibold text-[#050505] shadow-[0_20px_50px_-20px_rgba(212,175,55,0.75)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(245,215,110,0.65)] active:translate-y-0 active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5D76E]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     ctaSecondary:
-        "group inline-flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.04] px-7 py-3.5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm transition-all duration-200 hover:border-sky-300/20 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/18 bg-white/[0.04] px-7 py-3.5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,232,163,0.08)] backdrop-blur-sm transition-all duration-200 hover:border-[#F5D76E]/30 hover:bg-[#D4AF37]/[0.08] hover:text-white active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     ctaSmall:
-        "group inline-flex h-11 items-center justify-center gap-2 rounded-full border border-sky-300/20 bg-linear-to-r from-[#0EA5E9] via-[#3B82F6] to-[#2563EB] px-5 text-sm font-semibold text-white shadow-[0_18px_38px_-20px_rgba(59,130,246,0.95)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-18px_rgba(56,189,248,0.8)] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "group inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#F5D76E]/25 bg-linear-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E] px-5 text-sm font-semibold text-[#050505] shadow-[0_18px_38px_-20px_rgba(212,175,55,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-18px_rgba(245,215,110,0.65)] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5D76E]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     ghostButton:
-        "inline-flex h-11 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] px-5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200 hover:border-sky-300/20 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "inline-flex h-11 items-center justify-center rounded-full border border-[#D4AF37]/18 bg-white/[0.04] px-5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,232,163,0.08)] transition-all duration-200 hover:border-[#F5D76E]/30 hover:bg-[#D4AF37]/[0.08] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     navItem:
-        "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:bg-white/[0.06] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:bg-[#D4AF37]/[0.08] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     navItemActive:
-        "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-white bg-white/[0.08] shadow-inner shadow-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#081223]",
+        "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-[#FFE8A3] bg-[#D4AF37]/[0.10] shadow-inner shadow-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     featureCard:
-        "group relative overflow-hidden rounded-3xl border border-white/8 bg-linear-to-b from-white/[0.04] to-white/[0.015] p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1",
+        "group relative overflow-hidden rounded-3xl border border-[#D4AF37]/12 bg-linear-to-b from-white/[0.045] to-[#D4AF37]/[0.018] p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1",
 
     miniFeature:
-        "inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-2 text-xs font-medium text-slate-300 transition-all duration-200 hover:border-sky-400/15 hover:bg-white/[0.06] hover:text-white",
+        "inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/12 bg-white/[0.03] px-3.5 py-2 text-xs font-medium text-slate-300 transition-all duration-200 hover:border-[#D4AF37]/25 hover:bg-[#D4AF37]/[0.08] hover:text-white",
 
     iconBox: {
         sm: "flex h-6 w-6 items-center justify-center rounded-lg",
         md: "flex h-10 w-10 items-center justify-center rounded-xl",
         lg: "flex h-14 w-14 items-center justify-center rounded-2xl",
-        circle: "flex h-10 w-10 items-center justify-center rounded-full border border-white/15",
+        circle: "flex h-10 w-10 items-center justify-center rounded-full border border-[#D4AF37]/20",
     },
 
     numberBadge:
-        "flex h-8 w-8 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-xs font-bold text-white/25 transition-colors duration-300 group-hover:text-white/40",
+        "flex h-8 w-8 items-center justify-center rounded-full border border-[#D4AF37]/12 bg-white/[0.04] text-xs font-bold text-white/25 transition-colors duration-300 group-hover:text-[#FFE8A3]/60",
 
     phoneMockup: {
         outer:
-            "relative overflow-hidden rounded-[2.5rem] border border-white/15 bg-linear-to-b from-[#0c1a30] via-[#0f2340] to-[#071427] p-1.5 shadow-[0_40px_80px_-30px_rgba(2,8,23,0.9),0_20px_40px_-15px_rgba(59,130,246,0.25)]",
+            "relative overflow-hidden rounded-[2.5rem] border border-[#D4AF37]/18 bg-linear-to-b from-[#151007] via-[#0E0B05] to-[#050505] p-1.5 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.95),0_20px_40px_-15px_rgba(212,175,55,0.22)]",
         inner:
-            "relative overflow-hidden rounded-[2rem] border border-white/8 bg-linear-to-b from-[#091828] to-[#060f1e]",
-        notch: "mx-auto mt-2 h-5 w-24 rounded-full bg-black/80 border border-white/10",
-        homeBar: "mx-auto mb-2 h-1 w-16 rounded-full bg-white/20",
+            "relative overflow-hidden rounded-[2rem] border border-[#D4AF37]/12 bg-linear-to-b from-[#100C05] to-[#030303]",
+        notch: "mx-auto mt-2 h-5 w-24 rounded-full bg-black/85 border border-[#D4AF37]/15",
+        homeBar: "mx-auto mb-2 h-1 w-16 rounded-full bg-[#D4AF37]/35",
     },
 
     sectionHeader: "mx-auto max-w-3xl text-center",
 
     connector: {
-        line: "h-12 w-px bg-linear-to-b from-white/10 to-transparent",
-        dot: "flex h-10 w-10 items-center justify-center rounded-full border border-sky-400/20 bg-sky-400/[0.08]",
+        line: "h-12 w-px bg-linear-to-b from-[#D4AF37]/20 to-transparent",
+        dot: "flex h-10 w-10 items-center justify-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
     },
 } as const;
