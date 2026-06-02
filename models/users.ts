@@ -7,7 +7,7 @@ export type UserStatus = "active" | "inactive" | "blocked" | "pending";
 export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
-
+agentid?: Types.ObjectId;
   phoneNumber: string;
   email?: string;
   avatarUrl?: string;
@@ -170,6 +170,7 @@ const UserSchema = new Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    agentid:{ type: Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,
