@@ -254,10 +254,10 @@ function RecentItem({
       <div
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-          isDark ? "bg-white/[0.04]" : "bg-black/[0.03]",
+          isDark ? "bg-white/4" : "bg-black/3",
           colors[status ?? "default"],
         )}
-      >
+      > 
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -445,8 +445,8 @@ export default function DashboardSection({
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-110",
                 isDark
-                  ? "bg-white/[0.04] text-slate-400"
-                  : "bg-black/[0.03] text-[#6B5D3E]",
+                  ? "bg-white/4 text-slate-400"
+                  : "bg-black/3 text-[#6B5D3E]",
               )}
             >
               {item.icon}

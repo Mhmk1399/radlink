@@ -233,7 +233,7 @@ function NotificationDropdown({
               </button>
             )}
           </div>
-          <div className="max-h-[300px] overflow-y-auto">
+          <div className={cn("max-h-[300px] overflow-y-auto", t.scrollbar)}>
             {notifs.length === 0 ? (
               <div className="py-10 text-center">
                 <FaBell
@@ -261,7 +261,7 @@ function NotificationDropdown({
                   <div
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg mt-0.5",
-                      isDark ? "bg-white/[0.04]" : "bg-black/[0.03]",
+                      isDark ? "bg-white/4" : "bg-black/3",
                     )}
                   >
                     {typeIcons[n.type]}
@@ -570,7 +570,7 @@ function GlobalSearch({ navigate }: { navigate: (s: AdminSection) => void }) {
             ESC
           </kbd>
         </div>
-        <div className="max-h-[300px] overflow-y-auto py-2">
+        <div className={cn("max-h-[300px] overflow-y-auto py-2", t.scrollbar)}>
           {query.trim() === "" ? (
             <p className={cn("px-4 py-6 text-center text-sm", t.textMuted)}>
               عبارتی تایپ کنید...
@@ -722,7 +722,12 @@ function DynamicIsland({
                 بخش‌های بیشتر
               </p>
             </div>
-            <div className="grid grid-cols-4 gap-1 p-3">
+            <div
+              className={cn(
+                "grid grid-cols-4 gap-1 p-3 max-h-[50vh] overflow-y-auto",
+                t.scrollbar,
+              )}
+            >
               {extraItems.map((key) => {
                 const meta = getMeta(key);
                 if (!meta) return null;
@@ -946,6 +951,7 @@ function Sidebar({
           className={cn(
             "flex-1 overflow-y-auto py-3 space-y-4",
             collapsed ? "px-2" : "px-3",
+            t.scrollbar, // ✅ already here — now it's themed & smaller
           )}
         >
           {groups.map((group) => (
@@ -1240,7 +1246,10 @@ export default function AdminShell({
           navigate={navigate}
         />
         <main
-          className={cn("flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8", t.scrollbar)}
+          className={cn(
+            "flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 overflow-y-auto",
+            t.scrollbar,
+          )}
         >
           {children({ section, navigate })}
         </main>

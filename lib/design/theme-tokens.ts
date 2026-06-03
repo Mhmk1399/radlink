@@ -1,9 +1,4 @@
-// ─────────────────────────────────────────────────────────────────
-// lib/design/theme-tokens.ts
-// ─────────────────────────────────────────────────────────────────
-
 export interface ThemeTokens {
-    // Backgrounds
     pageBg: string;
     sidebarBg: string;
     cardBg: string;
@@ -17,7 +12,6 @@ export interface ThemeTokens {
     hoverBg: string;
     selectedBg: string;
 
-    // Text
     textPrimary: string;
     textSecondary: string;
     textMuted: string;
@@ -30,7 +24,6 @@ export interface ThemeTokens {
     textWarning: string;
     textInfo: string;
 
-    // Borders
     borderSubtle: string;
     borderLight: string;
     borderMedium: string;
@@ -42,16 +35,14 @@ export interface ThemeTokens {
     borderInputFocus: string;
     divider: string;
 
-    // Shadows
     cardShadow: string;
     dropdownShadow: string;
 
-    // Scrollbar
     scrollbar: string;
+    scrollbarWide: string;
 }
 
 const dark: ThemeTokens = {
-    // Backgrounds
     pageBg: "bg-gradient-to-b from-[#030303] via-[#090806] to-[#141006]",
     sidebarBg: "bg-[#0B0905]/95 backdrop-blur-2xl",
     cardBg: "bg-white/[0.035] backdrop-blur-xl",
@@ -62,10 +53,9 @@ const dark: ThemeTokens = {
     tooltipBg: "bg-[#1A1304]",
     dropdownBg: "bg-[#0B0905]/98 backdrop-blur-2xl",
     activeBg: "bg-[#D4AF37]/[0.08]",
-    hoverBg: "hover:bg-white/[0.04]",
+    hoverBg: "hover:bg-white/4",
     selectedBg: "bg-[#D4AF37]/[0.06]",
 
-    // Text
     textPrimary: "text-white",
     textSecondary: "text-slate-300",
     textMuted: "text-slate-400",
@@ -78,7 +68,6 @@ const dark: ThemeTokens = {
     textWarning: "text-amber-400",
     textInfo: "text-blue-400",
 
-    // Borders
     borderSubtle: "border-white/[0.06]",
     borderLight: "border-white/[0.08]",
     borderMedium: "border-white/[0.12]",
@@ -90,17 +79,31 @@ const dark: ThemeTokens = {
     borderInputFocus: "focus:border-[#D4AF37]/40",
     divider: "border-white/[0.06]",
 
-    // Shadows
     cardShadow: "shadow-[0_20px_50px_-28px_rgba(0,0,0,0.95)]",
     dropdownShadow: "shadow-[0_20px_50px_-15px_rgba(0,0,0,0.9)]",
 
-    // Scrollbar
-    scrollbar:
-        "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full",
+    scrollbar: [
+        "[&::-webkit-scrollbar]:w-1",
+        "[&::-webkit-scrollbar-track]:bg-transparent",
+        "[&::-webkit-scrollbar-track]:my-2",
+        "[&::-webkit-scrollbar-thumb]:bg-white/[0.08]",
+        "[&::-webkit-scrollbar-thumb]:rounded-full",
+        "[&::-webkit-scrollbar-thumb:hover]:bg-white/[0.15]",
+        "[&::-webkit-scrollbar-thumb:active]:bg-[#D4AF37]/30",
+    ].join(" "),
+
+    scrollbarWide: [
+        "[&::-webkit-scrollbar]:w-1.5",
+        "[&::-webkit-scrollbar-track]:bg-transparent",
+        "[&::-webkit-scrollbar-track]:my-1",
+        "[&::-webkit-scrollbar-thumb]:bg-white/[0.10]",
+        "[&::-webkit-scrollbar-thumb]:rounded-full",
+        "[&::-webkit-scrollbar-thumb:hover]:bg-white/[0.18]",
+        "[&::-webkit-scrollbar-thumb:active]:bg-[#D4AF37]/30",
+    ].join(" "),
 };
 
 const light: ThemeTokens = {
-    // Backgrounds
     pageBg: "bg-gradient-to-b from-[#FAFAF8] via-[#F5F3EE] to-[#EDE8DC]",
     sidebarBg: "bg-white/90 backdrop-blur-2xl",
     cardBg: "bg-white/70 backdrop-blur-xl",
@@ -111,10 +114,9 @@ const light: ThemeTokens = {
     tooltipBg: "bg-[#1A1304]",
     dropdownBg: "bg-white/98 backdrop-blur-2xl",
     activeBg: "bg-[#D4AF37]/[0.06]",
-    hoverBg: "hover:bg-black/[0.03]",
+    hoverBg: "hover:bg-black/3",
     selectedBg: "bg-[#D4AF37]/[0.05]",
 
-    // Text
     textPrimary: "text-[#1A1304]",
     textSecondary: "text-[#3D3520]",
     textMuted: "text-[#6B5D3E]",
@@ -127,7 +129,6 @@ const light: ThemeTokens = {
     textWarning: "text-amber-600",
     textInfo: "text-blue-600",
 
-    // Borders
     borderSubtle: "border-black/[0.06]",
     borderLight: "border-black/[0.08]",
     borderMedium: "border-black/[0.12]",
@@ -139,13 +140,28 @@ const light: ThemeTokens = {
     borderInputFocus: "focus:border-[#D4AF37]/50",
     divider: "border-black/[0.06]",
 
-    // Shadows
     cardShadow: "shadow-[0_8px_30px_-12px_rgba(0,0,0,0.1)]",
     dropdownShadow: "shadow-[0_12px_40px_-10px_rgba(0,0,0,0.12)]",
 
-    // Scrollbar
-    scrollbar:
-        "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/10 [&::-webkit-scrollbar-thumb]:rounded-full",
+    scrollbar: [
+        "[&::-webkit-scrollbar]:w-1",
+        "[&::-webkit-scrollbar-track]:bg-transparent",
+        "[&::-webkit-scrollbar-track]:my-2",
+        "[&::-webkit-scrollbar-thumb]:bg-black/[0.08]",
+        "[&::-webkit-scrollbar-thumb]:rounded-full",
+        "[&::-webkit-scrollbar-thumb:hover]:bg-black/[0.15]",
+        "[&::-webkit-scrollbar-thumb:active]:bg-[#D4AF37]/30",
+    ].join(" "),
+
+    scrollbarWide: [
+        "[&::-webkit-scrollbar]:w-1.5",
+        "[&::-webkit-scrollbar-track]:bg-transparent",
+        "[&::-webkit-scrollbar-track]:my-1",
+        "[&::-webkit-scrollbar-thumb]:bg-black/[0.10]",
+        "[&::-webkit-scrollbar-thumb]:rounded-full",
+        "[&::-webkit-scrollbar-thumb:hover]:bg-black/[0.18]",
+        "[&::-webkit-scrollbar-thumb:active]:bg-[#D4AF37]/30",
+    ].join(" "),
 };
 
 export const themeTokens: Record<"dark" | "light", ThemeTokens> = {

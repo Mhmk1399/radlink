@@ -2698,7 +2698,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
                     {col.label}
                   </dt>
-                  <dd className="text-sm text-slate-200 wrap-break-word">
+                  <dd
+                    className={cn(
+                      isDark ? gradients.textPrimary : "text-[#1A1304]",
+                      "wrap-break-word text-sm",
+                    )}
+                  >
                     {display}
                   </dd>
                 </div>
