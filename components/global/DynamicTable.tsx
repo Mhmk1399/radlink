@@ -53,103 +53,17 @@ import CustomSelect from "../ui/customSelect";
 import {
   useTableData,
   type ServerPaginationParams,
-  type ServerPaginatedResponse,
-} from "@/hooks/table/useTableData";
-import { useDebounce } from "@/hooks/table/useDebounce";
-import { usePullToRefresh } from "@/hooks/table/usePullToRefresh";
-import { useCopyToClipboard } from "@/hooks/table/useCopyToClipboard";
-import type { SWRConfiguration } from "swr";
-
-/* ══════════════════════════════════════════════
-   TYPES
-   ══════════════════════════════════════════════ */
-
-export interface ColumnDef<T> {
-  key: keyof T & string;
-  label: string;
-  render?: (value: T[keyof T], row: T) => ReactNode;
-  visible?: boolean;
-  editable?: boolean;
-  viewable?: boolean;
-  inputType?: string;
-  sortable?: boolean;
-  placeholder?: string;
-  isPrimary?: boolean;
-  hideOnMobile?: boolean;
-  required?: boolean;
-  options?: { label: string; value: string }[];
-  filterable?: boolean;
-  dateFilter?: boolean;
-  /** Allow copying this cell's value */
-  copyable?: boolean;
-}
-
-export interface DynamicTableProps<T extends Record<string, unknown>> {
-  endpoint: string;
-  columns: ColumnDef<T>[];
-  title?: string;
-  subtitle?: string;
-
-  onCreate?: (
-    item: Partial<T>,
-    builtInCreate: (item: Partial<T>) => Promise<T | void>,
-  ) => Promise<void> | void;
-  onUpdate?: (
-    item: T,
-    builtInUpdate: (item: T) => Promise<T | void>,
-  ) => Promise<void> | void;
-  onDelete?: (
-    item: T,
-    builtInRemove: (item: T) => Promise<void>,
-  ) => Promise<void> | void;
-
-  canCreate?: boolean;
-  canUpdate?: boolean;
-  canDelete?: boolean;
-
-  primaryKey?: keyof T & string;
-  pageSize?: number;
-  /** Available page sizes for the selector */
-  pageSizes?: number[];
-  searchable?: boolean;
-  /** Debounce delay for search input in ms */
-  searchDebounceMs?: number;
-  emptyMessage?: string;
-  rowActions?: (row: T) => ReactNode;
-  exportable?: boolean;
-  exportFileName?: string;
-
-  /** Enable sticky table header */
-  stickyHeader?: boolean;
-  /** Show row numbers */
-  showRowNumbers?: boolean;
-  /** Enable double-click to edit */
-  doubleClickToEdit?: boolean;
-  /** Enable cell copy on click */
-  enableCellCopy?: boolean;
-  /** Enable pull-to-refresh on mobile */
-  pullToRefresh?: boolean;
-
-  /** Server-side pagination mode */
-  serverSide?: boolean;
-  transformPaginatedResponse?: (raw: unknown) => ServerPaginatedResponse<T>;
-
-  fetcher?: (url: string) => Promise<T[]>;
-  transformResponse?: (raw: unknown) => T[];
-  headers?: Record<string, string>;
-  swrConfig?: SWRConfiguration<T[]>;
-  enabled?: boolean;
-  onError?: (error: Error) => void;
-  data?: T[];
-}
-
-type SortDir = "asc" | "desc" | null;
-type ModalMode = "view" | "create" | "edit" | "delete" | null;
-
-interface DateRange {
-  from: DateObject | null;
-  to: DateObject | null;
-}
+} from "@/hook/table/useTableData";
+import { useDebounce } from "@/hook/table/useDebounce";
+import { usePullToRefresh } from "@/hook/table/usePullToRefresh";
+import { useCopyToClipboard } from "@/hook/table/useCopyToClipboard";
+import {
+  ColumnDef,
+  DateRange,
+  DynamicTableProps,
+  ModalMode,
+  SortDir,
+} from "@/types/table";
 
 /* ══════════════════════════════════════════════
    DATEPICKER CUSTOM STYLES
@@ -525,7 +439,7 @@ function ActionBtn({
   return (
     <button
       type="button"
-      onClick={onClick} 
+      onClick={onClick}
       title={title}
       aria-label={title}
       className={cn(
@@ -561,7 +475,7 @@ function PaginationBtn({
   return (
     <button
       type="button"
-      onClick={onClick} 
+      onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
@@ -647,8 +561,8 @@ function FilterDropdown({
         >
           <button
             type="button"
-            role="option" 
-            aria-selected={!value} 
+            role="option"
+            aria-selected={!value}
             onClick={() => {
               onChange("");
               setOpen(false);
@@ -745,7 +659,7 @@ function DateRangeFilter({
               "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
               "bg-white/[0.035] backdrop-blur-sm",
               hasRange
-                ? "border-[#D4AF37]/25 text-[#F5D76E]" 
+                ? "border-[#D4AF37]/25 text-[#F5D76E]"
                 : borders.subtle + " text-slate-400",
               animation.base,
               focus.ring,
@@ -754,7 +668,7 @@ function DateRangeFilter({
             )}
           >
             <Icon.Calendar />
-            <span className="whitespace-nowrap">{label}</span> 
+            <span className="whitespace-nowrap">{label}</span>
             {hasRange && (
               <span className="mr-1 rounded-full bg-[#D4AF37]/15 px-1.5 py-0.5 text-[10px] text-[#F5D76E] whitespace-nowrap truncate max-w-35">
                 {formatRange()}
@@ -955,7 +869,7 @@ function PageSizeSelector({
         )}
       >
         <span>{toPersianDigits(value)} ردیف</span>
-        <Icon.ChevronDown /> 
+        <Icon.ChevronDown />
       </button>
       {open && (
         <div
@@ -1043,7 +957,7 @@ function ErrorBanner({
 
 /* ── Copy Toast ── */
 function CopyToast({ visible }: { visible: boolean }) {
-  if (!visible) return null; 
+  if (!visible) return null;
   return (
     <div
       role="status"
@@ -1751,13 +1665,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
               </button>
             )}
-          </div> 
+          </div>
         )}
 
         {/* ── Selected ── */}
         {selectedRows.size > 0 && (
           <div
-            className={cn( 
+            className={cn(
               "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5",
               "bg-[#D4AF37]/8 border border-[#D4AF37]/15",
             )}
@@ -1796,9 +1710,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               threshold={80}
             />
           </div>
- 
+
           {(loading || isValidating) && (
-            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10"> 
+            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10">
               <div className="absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite] bg-linear-to-l from-transparent via-[#D4AF37]/40 to-transparent" />
             </div>
           )}
@@ -1971,11 +1885,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         aria-rowindex={globalRowIndex}
                         onDoubleClick={() => handleRowDoubleClick(row)}
                         className={cn(
-                          "group border-b border-white/4 last:border-b-0", 
+                          "group border-b border-white/4 last:border-b-0",
                           animation.colors,
-                          isSelected
-                            ? "bg-[#D4AF37]/4"
-                            : "hover:bg-white/2.5",
+                          isSelected ? "bg-[#D4AF37]/4" : "hover:bg-white/2.5",
                           doubleClickToEdit && canUpdate && "cursor-pointer",
                         )}
                       >
@@ -2149,9 +2061,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     className={cn(
                       "group p-4",
                       animation.colors,
-                      isSelected 
-                        ? "bg-[#D4AF37]/4"
-                        : "active:bg-white/3",
+                      isSelected ? "bg-[#D4AF37]/4" : "active:bg-white/3",
                     )}
                   >
                     <div className="flex items-start gap-3 mb-2">
@@ -2448,7 +2358,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   </dt>
                   <dd className="text-sm text-slate-200 wrap-break-word">
                     {display}
-                  </dd> 
+                  </dd>
                 </div>
               );
             })}
