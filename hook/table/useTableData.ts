@@ -196,6 +196,7 @@ export function useTableData<T extends Record<string, unknown>>(
         data: rawData,
         error,
         isLoading,
+        
         isValidating,
         mutate,
     } = useSWR<T[]>(swrKey, finalFetcher, {
