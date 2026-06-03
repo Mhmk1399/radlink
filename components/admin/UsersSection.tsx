@@ -18,6 +18,7 @@ import {
 } from "react-icons/fa6";
 import { ColumnDef } from "@/types/table";
 import DynamicTable from "../global/DynamicTable";
+import { toast } from "../ui/CustomToast";
 
 /* ══════════════════════════════════════════════
    HELPERS
@@ -593,9 +594,11 @@ export default function UsersSection({
         }}
         onUpdate={async (item) => {
           await handleUpdate(item);
+          toast.success("تغییر اعمال شد");
         }}
         onDelete={async (item) => {
           await handleDelete(item);
+          toast.success("حذف اعمال شد");
         }}
         rowActions={(row) => (
           <button
