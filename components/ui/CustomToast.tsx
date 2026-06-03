@@ -133,11 +133,7 @@ const TV: Record<ToastType, TypeVisuals> = {
     msg: "text-emerald-100/75",
     closeHover: "hover:bg-emerald-400/15 hover:text-emerald-200",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-5.5 w-5.5 t-icon-pop"
-      >
+      <svg viewBox="0 0 24 24" fill="none" className="h-5.5 w-5.5 t-icon-pop">
         <circle
           cx="12"
           cy="12"
@@ -171,11 +167,7 @@ const TV: Record<ToastType, TypeVisuals> = {
     msg: "text-red-100/75",
     closeHover: "hover:bg-red-400/15 hover:text-red-200",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-5.5 w-5.5 t-icon-pop"
-      >
+      <svg viewBox="0 0 24 24" fill="none" className="h-5.5 w-5.5 t-icon-pop">
         <circle
           cx="12"
           cy="12"
@@ -208,11 +200,7 @@ const TV: Record<ToastType, TypeVisuals> = {
     msg: "text-amber-100/75",
     closeHover: "hover:bg-amber-400/15 hover:text-amber-200",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-5.5 w-5.5 t-icon-pop"
-      >
+      <svg viewBox="0 0 24 24" fill="none" className="h-5.5 w-5.5 t-icon-pop">
         <path
           d="M12 3L2.5 20h19L12 3Z"
           className="fill-amber-400/10 stroke-amber-400/30"
@@ -244,11 +232,7 @@ const TV: Record<ToastType, TypeVisuals> = {
     msg: "text-sky-100/75",
     closeHover: "hover:bg-sky-400/15 hover:text-sky-200",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-5.5 w-5.5 t-icon-pop"
-      >
+      <svg viewBox="0 0 24 24" fill="none" className="h-5.5 w-5.5 t-icon-pop">
         <circle
           cx="12"
           cy="12"
@@ -315,11 +299,7 @@ const TV: Record<ToastType, TypeVisuals> = {
     msg: "text-violet-100/75",
     closeHover: "hover:bg-violet-400/15 hover:text-violet-200",
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-5.5 w-5.5 t-icon-pop"
-      >
+      <svg viewBox="0 0 24 24" fill="none" className="h-5.5 w-5.5 t-icon-pop">
         <path
           d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.2 5.6 21.2 8 14l-6-4.8h7.6Z"
           className="fill-violet-400/15 stroke-violet-400/40"
@@ -515,40 +495,30 @@ function ToastItem({
       }
       className={cn(
         "group relative w-full overflow-hidden",
-        "rounded-2xl",
-        "border",
-        v.border,
+        "rounded-xl",
+
         v.bg,
         "backdrop-blur-2xl",
-        "shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6),0_4px_16px_-4px_rgba(0,0,0,0.4)]",
+        "shadow-[0_6px_20px_-10px_rgba(0,0,0,0.55),0_2px_10px_-6px_rgba(0,0,0,0.35)]",
         exiting ? "t-exit" : enterAnim,
         t.type === "error" && !exiting && "t-shake",
       )}
     >
-      {/* Top accent bar */}
-      <div
-        className={cn(
-          "absolute inset-x-0 top-0 h-[2px] bg-linear-to-r",
-          v.progress,
-          "opacity-80",
-        )}
-      />
-
       {/* Glow */}
       <div
         className={cn(
-          "pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full blur-3xl",
+          "pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full blur-2xl",
           v.glow,
           "t-glow",
         )}
       />
 
       {/* Content */}
-      <div className="relative flex items-start gap-3 p-4">
+      <div className="relative flex items-start gap-2.5 p-3">
         {/* Icon */}
         <div
           className={cn(
-            "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border",
+            "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border",
             v.iconBorder,
             v.iconBg,
             v.iconText,
@@ -558,18 +528,15 @@ function ToastItem({
         </div>
 
         {/* Text */}
-        <div className="min-w-0 flex-1 pt-px">
+        <div className="min-w-0 flex-1 pt-0.5">
           {t.title && (
-            <p className={cn("text-[13px] font-bold leading-tight", v.title)}>
+            <p className={cn("text-[12px] font-bold leading-tight", v.title)}>
               {t.title}
             </p>
           )}
+
           <p
-            className={cn(
-              "text-[13px] leading-relaxed",
-              v.msg,
-              t.title && "mt-1",
-            )}
+            className={cn("text-[12px] leading-5", v.msg, t.title && "mt-0.5")}
           >
             {t.message}
           </p>
@@ -582,7 +549,7 @@ function ToastItem({
                 dismiss();
               }}
               className={cn(
-                "mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold",
+                "mt-2 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-bold",
                 v.iconBorder,
                 v.iconBg,
                 v.iconText,
@@ -607,14 +574,14 @@ function ToastItem({
           )}
         </div>
 
-        {/* Close — همیشه نمایش داده می‌شود */}
+        {/* Close */}
         {t.dismissible && (
           <button
             type="button"
             onClick={dismiss}
             aria-label="بستن اعلان"
             className={cn(
-              "flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg",
+              "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md",
               "text-white/40",
               "transition-all duration-150",
               v.closeHover,
@@ -622,11 +589,7 @@ function ToastItem({
               focus.ring,
             )}
           >
-            <svg
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="h-3.5 w-3.5"
-            >
+            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
               <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
             </svg>
           </button>
@@ -635,10 +598,10 @@ function ToastItem({
 
       {/* Progress */}
       {t.progress && t.duration && t.duration > 0 && (
-        <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/[0.05] overflow-hidden rounded-b-2xl">
+        <div className="absolute inset-x-0 bottom-0 h-[2px] overflow-hidden rounded-b-xl bg-white/[0.05]">
           <div
             className={cn(
-              "h-full origin-right bg-linear-to-r rounded-full",
+              "h-full origin-right rounded-full bg-linear-to-r",
               v.progress,
               "opacity-60",
             )}
@@ -660,27 +623,27 @@ function ToastItem({
 
 const posMap: Record<ToastPosition, { box: string; anim: string }> = {
   "top-right": {
-    box: "top-3 right-3 items-end sm:top-5 sm:right-5",
+    box: "top-2.5 right-2.5 items-end sm:top-4 sm:right-4",
     anim: "t-enter-r",
   },
   "top-left": {
-    box: "top-3 left-3 items-start sm:top-5 sm:left-5",
+    box: "top-2.5 left-2.5 items-start sm:top-4 sm:left-4",
     anim: "t-enter-l",
   },
   "top-center": {
-    box: "top-3 left-3 right-3 sm:left-auto sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-5 items-center",
+    box: "top-2.5 left-2.5 right-2.5 items-center sm:top-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2",
     anim: "t-enter-t",
   },
   "bottom-right": {
-    box: "bottom-3 right-3 items-end sm:bottom-5 sm:right-5",
+    box: "bottom-2.5 right-2.5 items-end sm:bottom-4 sm:right-4",
     anim: "t-enter-r",
   },
   "bottom-left": {
-    box: "bottom-3 left-3 items-start sm:bottom-5 sm:left-5",
+    box: "bottom-2.5 left-2.5 items-start sm:bottom-4 sm:left-4",
     anim: "t-enter-l",
   },
   "bottom-center": {
-    box: "bottom-3 left-3 right-3 sm:left-auto sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:bottom-5 items-center",
+    box: "bottom-2.5 left-2.5 right-2.5 items-center sm:bottom-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2",
     anim: "t-enter-b",
   },
 };

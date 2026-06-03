@@ -16,13 +16,11 @@ import React, {
 import {
   borders,
   shadows,
-  typography,
-  layout,
+   layout,
   animation,
   focus,
   interactive,
-  gradients,
-} from "@/lib/design/tokens";
+ } from "@/lib/design/tokens";
 
 /* ══════════════════════════════════════════════
    TYPES

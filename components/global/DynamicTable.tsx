@@ -15,6 +15,29 @@ import DatePicker, { DateObject } from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import {
+  HiMiniEye,
+  HiMiniPencilSquare,
+  HiMiniTrash,
+  HiMiniPlus,
+  HiMiniMagnifyingGlass,
+  HiMiniChevronUp,
+  HiMiniChevronDown,
+  HiMiniChevronLeft,
+  HiMiniChevronRight,
+  HiMiniXMark,
+  HiMiniExclamationTriangle,
+  HiMiniArrowDownTray,
+  HiMiniPhoto,
+  HiMiniFunnel,
+  HiMiniCheck,
+  HiMiniCalendarDays,
+  HiMiniArrowPath,
+  HiMiniExclamationCircle,
+  HiMiniDocumentDuplicate,
+  HiMiniClipboardDocumentCheck,
+} from "react-icons/hi2";
+import { LuPackage } from "react-icons/lu";
+import {
   backgrounds,
   borders,
   shadows,
@@ -27,6 +50,15 @@ import {
   gradients,
 } from "@/lib/design/tokens";
 import CustomSelect from "../ui/customSelect";
+import {
+  useTableData,
+  type ServerPaginationParams,
+  type ServerPaginatedResponse,
+} from "@/hooks/table/useTableData";
+import { useDebounce } from "@/hooks/table/useDebounce";
+import { usePullToRefresh } from "@/hooks/table/usePullToRefresh";
+import { useCopyToClipboard } from "@/hooks/table/useCopyToClipboard";
+import type { SWRConfiguration } from "swr";
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -47,26 +79,68 @@ export interface ColumnDef<T> {
   required?: boolean;
   options?: { label: string; value: string }[];
   filterable?: boolean;
-  /** Enable date range filter for this column (uses Jalali calendar) */
   dateFilter?: boolean;
+  /** Allow copying this cell's value */
+  copyable?: boolean;
 }
 
 export interface DynamicTableProps<T extends Record<string, unknown>> {
-  data: T[];
+  endpoint: string;
   columns: ColumnDef<T>[];
   title?: string;
   subtitle?: string;
-  onCreate?: (item: Partial<T>) => Promise<void> | void;
-  onUpdate?: (item: T) => Promise<void> | void;
-  onDelete?: (item: T) => Promise<void> | void;
-  loading?: boolean;
+
+  onCreate?: (
+    item: Partial<T>,
+    builtInCreate: (item: Partial<T>) => Promise<T | void>,
+  ) => Promise<void> | void;
+  onUpdate?: (
+    item: T,
+    builtInUpdate: (item: T) => Promise<T | void>,
+  ) => Promise<void> | void;
+  onDelete?: (
+    item: T,
+    builtInRemove: (item: T) => Promise<void>,
+  ) => Promise<void> | void;
+
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+
   primaryKey?: keyof T & string;
   pageSize?: number;
+  /** Available page sizes for the selector */
+  pageSizes?: number[];
   searchable?: boolean;
+  /** Debounce delay for search input in ms */
+  searchDebounceMs?: number;
   emptyMessage?: string;
   rowActions?: (row: T) => ReactNode;
   exportable?: boolean;
   exportFileName?: string;
+
+  /** Enable sticky table header */
+  stickyHeader?: boolean;
+  /** Show row numbers */
+  showRowNumbers?: boolean;
+  /** Enable double-click to edit */
+  doubleClickToEdit?: boolean;
+  /** Enable cell copy on click */
+  enableCellCopy?: boolean;
+  /** Enable pull-to-refresh on mobile */
+  pullToRefresh?: boolean;
+
+  /** Server-side pagination mode */
+  serverSide?: boolean;
+  transformPaginatedResponse?: (raw: unknown) => ServerPaginatedResponse<T>;
+
+  fetcher?: (url: string) => Promise<T[]>;
+  transformResponse?: (raw: unknown) => T[];
+  headers?: Record<string, string>;
+  swrConfig?: SWRConfiguration<T[]>;
+  enabled?: boolean;
+  onError?: (error: Error) => void;
+  data?: T[];
 }
 
 type SortDir = "asc" | "desc" | null;
@@ -82,465 +156,75 @@ interface DateRange {
    ══════════════════════════════════════════════ */
 
 const datePickerStyles = `
-/* ─── Container ─── */
-.rmdp-container {
-  direction: rtl !important;
-}
-
-/* ─── Wrapper / Shadow Box ─── */
-.rmdp-wrapper,
-.rmdp-shadow {
+.rmdp-container { direction: rtl !important; }
+.rmdp-wrapper, .rmdp-shadow {
   background: rgba(11, 9, 5, 0.97) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 16px !important;
-  box-shadow: 0 20px 50px -28px rgba(0, 0, 0, 0.95),
-    0 0 40px -10px rgba(212, 175, 55, 0.12) !important;
+  box-shadow: 0 20px 50px -28px rgba(0,0,0,0.95), 0 0 40px -10px rgba(212,175,55,0.12) !important;
   padding: 12px !important;
   font-family: inherit !important;
 }
-
-/* ─── Header ─── */
-.rmdp-header {
-  padding: 6px 4px 12px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  margin-bottom: 8px !important;
-}
-
-.rmdp-header-values {
-  color: #F5D76E !important;
-  font-weight: 700 !important;
-  font-size: 14px !important;
-  letter-spacing: -0.01em !important;
-}
-
-.rmdp-header-values span {
-  padding: 4px 10px !important;
-  border-radius: 8px !important;
-  transition: background 0.2s !important;
-}
-
-.rmdp-header-values span:hover {
-  background: rgba(212, 175, 55, 0.1) !important;
-}
-
-/* ─── Arrow Buttons ─── */
-.rmdp-arrow-container {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  border-radius: 10px !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  transition: all 0.2s !important;
-}
-
-.rmdp-arrow-container:hover {
-  background: rgba(212, 175, 55, 0.12) !important;
-  border-color: rgba(212, 175, 55, 0.25) !important;
-}
-
-.rmdp-arrow-container .rmdp-arrow {
-  border-color: #94a3b8 !important;
-  width: 8px !important;
-  height: 8px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.rmdp-arrow-container:hover .rmdp-arrow {
-  border-color: #F5D76E !important;
-}
-
-/* ─── Weekday Names ─── */
-.rmdp-week-day {
-  color: rgba(148, 163, 184, 0.6) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-}
-
-/* ─── Day Cells ─── */
-.rmdp-day {
-  width: 38px !important;
-  height: 38px !important;
-}
-
-.rmdp-day span {
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  color: #cbd5e1 !important;
-  border-radius: 10px !important;
-  transition: all 0.15s !important;
-  width: 34px !important;
-  height: 34px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  inset: 2px !important;
-}
-
-.rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
-  background: rgba(212, 175, 55, 0.12) !important;
-  color: #F5D76E !important;
-  border: 1px solid rgba(212, 175, 55, 0.2) !important;
-}
-
-/* ─── Today ─── */
-.rmdp-today span {
-  background: rgba(212, 175, 55, 0.08) !important;
-  color: #F5D76E !important;
-  border: 1px solid rgba(212, 175, 55, 0.2) !important;
-  font-weight: 700 !important;
-}
-
-/* ─── Selected Day ─── */
-.rmdp-selected span,
-.rmdp-day.rmdp-selected span {
-  background: linear-gradient(135deg, #B8860B, #D4AF37, #F5D76E) !important;
-  color: #050505 !important;
-  font-weight: 700 !important;
-  box-shadow: 0 4px 16px -4px rgba(212, 175, 55, 0.5) !important;
-  border: none !important;
-}
-
-/* ─── Range Between ─── */
-.rmdp-range {
-  background: rgba(212, 175, 55, 0.08) !important;
-  box-shadow: none !important;
-}
-
-.rmdp-range span {
-  color: #F5D76E !important;
-}
-
-.rmdp-range.start span,
-.rmdp-range.end span {
-  background: linear-gradient(135deg, #B8860B, #D4AF37) !important;
-  color: #050505 !important;
-  font-weight: 700 !important;
-}
-
-/* ─── Disabled ─── */
-.rmdp-disabled span,
-.rmdp-day.rmdp-disabled span {
-  color: rgba(148, 163, 184, 0.2) !important;
-}
-
-.rmdp-deactive span {
-  color: rgba(148, 163, 184, 0.25) !important;
-}
-
-/* ─── Month / Year Picker ─── */
-.rmdp-month-picker,
-.rmdp-year-picker {
-  background: rgba(11, 9, 5, 0.97) !important;
-  border-radius: 12px !important;
-}
-
-.rmdp-month-picker .rmdp-day span,
-.rmdp-year-picker .rmdp-day span {
-  font-size: 12px !important;
-  border-radius: 8px !important;
-}
-
-.rmdp-month-picker .rmdp-day.rmdp-selected span,
-.rmdp-year-picker .rmdp-day.rmdp-selected span {
-  background: linear-gradient(135deg, #B8860B, #D4AF37) !important;
-  color: #050505 !important;
-}
-
-/* ─── Range Label Bar ─── */
-.rmdp-range-label {
-  display: none !important;
-}
-
-/* ─── Action Buttons ─── */
-.rmdp-action-button {
-  border-radius: 10px !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  padding: 6px 16px !important;
-  transition: all 0.2s !important;
-}
-
-/* ─── Pointer / Arrow ─── */
-.rmdp-ep-arrow {
-  display: none !important;
-}
-
-.rmdp-ep-arrow::after {
-  display: none !important;
-}
-
-/* ─── Border top between months ─── */
-.rmdp-border-top {
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-/* ─── Only Month ─── */
-.only-month-picker .rmdp-month-picker,
-.only-year-picker .rmdp-year-picker {
-  width: 100% !important;
-}
-
-/* ─── Panel Body ─── */
-.rmdp-panel-body li {
-  background: rgba(212, 175, 55, 0.08) !important;
-  border: 1px solid rgba(212, 175, 55, 0.15) !important;
-  border-radius: 8px !important;
-  color: #F5D76E !important;
-  font-size: 12px !important;
-}
-
-.rmdp-panel-body li .b-deselect {
-  color: #ef4444 !important;
-  font-size: 16px !important;
-}
-
-/* ─── Calendar inside input ─── */
-.rmdp-input {
-  background: transparent !important;
-  border: none !important;
-  color: inherit !important;
-  font: inherit !important;
-  padding: 0 !important;
-  width: 100% !important;
-  outline: none !important;
-}
+.rmdp-header { padding: 6px 4px 12px !important; border-bottom: 1px solid rgba(255,255,255,0.06) !important; margin-bottom: 8px !important; }
+.rmdp-header-values { color: #F5D76E !important; font-weight: 700 !important; font-size: 14px !important; }
+.rmdp-header-values span { padding: 4px 10px !important; border-radius: 8px !important; transition: background 0.2s !important; }
+.rmdp-header-values span:hover { background: rgba(212,175,55,0.1) !important; }
+.rmdp-arrow-container { display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; border-radius: 10px !important; background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important; transition: all 0.2s !important; }
+.rmdp-arrow-container:hover { background: rgba(212,175,55,0.12) !important; border-color: rgba(212,175,55,0.25) !important; }
+.rmdp-arrow-container .rmdp-arrow { border-color: #94a3b8 !important; width: 8px !important; height: 8px !important; margin: 0 !important; padding: 0 !important; }
+.rmdp-arrow-container:hover .rmdp-arrow { border-color: #F5D76E !important; }
+.rmdp-week-day { color: rgba(148,163,184,0.6) !important; font-size: 11px !important; font-weight: 600 !important; }
+.rmdp-day { width: 38px !important; height: 38px !important; }
+.rmdp-day span { font-size: 13px !important; font-weight: 500 !important; color: #cbd5e1 !important; border-radius: 10px !important; transition: all 0.15s !important; width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; inset: 2px !important; }
+.rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover { background: rgba(212,175,55,0.12) !important; color: #F5D76E !important; border: 1px solid rgba(212,175,55,0.2) !important; }
+.rmdp-today span { background: rgba(212,175,55,0.08) !important; color: #F5D76E !important; border: 1px solid rgba(212,175,55,0.2) !important; font-weight: 700 !important; }
+.rmdp-selected span, .rmdp-day.rmdp-selected span { background: linear-gradient(135deg,#B8860B,#D4AF37,#F5D76E) !important; color: #050505 !important; font-weight: 700 !important; box-shadow: 0 4px 16px -4px rgba(212,175,55,0.5) !important; border: none !important; }
+.rmdp-range { background: rgba(212,175,55,0.08) !important; box-shadow: none !important; }
+.rmdp-range span { color: #F5D76E !important; }
+.rmdp-range.start span, .rmdp-range.end span { background: linear-gradient(135deg,#B8860B,#D4AF37) !important; color: #050505 !important; font-weight: 700 !important; }
+.rmdp-disabled span, .rmdp-day.rmdp-disabled span { color: rgba(148,163,184,0.2) !important; }
+.rmdp-deactive span { color: rgba(148,163,184,0.25) !important; }
+.rmdp-month-picker, .rmdp-year-picker { background: rgba(11,9,5,0.97) !important; border-radius: 12px !important; }
+.rmdp-month-picker .rmdp-day span, .rmdp-year-picker .rmdp-day span { font-size: 12px !important; border-radius: 8px !important; }
+.rmdp-month-picker .rmdp-day.rmdp-selected span, .rmdp-year-picker .rmdp-day.rmdp-selected span { background: linear-gradient(135deg,#B8860B,#D4AF37) !important; color: #050505 !important; }
+.rmdp-range-label { display: none !important; }
+.rmdp-action-button { border-radius: 10px !important; font-size: 12px !important; font-weight: 600 !important; padding: 6px 16px !important; }
+.rmdp-ep-arrow, .rmdp-ep-arrow::after { display: none !important; }
+.rmdp-border-top { border-top: 1px solid rgba(255,255,255,0.06) !important; }
+.rmdp-panel-body li { background: rgba(212,175,55,0.08) !important; border: 1px solid rgba(212,175,55,0.15) !important; border-radius: 8px !important; color: #F5D76E !important; font-size: 12px !important; }
+.rmdp-input { background: transparent !important; border: none !important; color: inherit !important; font: inherit !important; padding: 0 !important; width: 100% !important; outline: none !important; }
 `;
 
 /* ══════════════════════════════════════════════
-   ICONS (inline SVG – zero dependencies)
+   ICONS
    ══════════════════════════════════════════════ */
 
 const Icon = {
-  Eye: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
-      <path
-        fillRule="evenodd"
-        d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Edit: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-    </svg>
-  ),
-  Trash: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 01.78.72l.5 6.5a.75.75 0 01-1.49.12l-.5-6.5a.75.75 0 01.71-.84zm3.62.72a.75.75 0 00-1.49-.12l-.5 6.5a.75.75 0 101.49.12l.5-6.5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Plus: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-    </svg>
-  ),
-  Search: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  ChevronUp: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-3.5 w-3.5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  ChevronDown: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-3.5 w-3.5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  ChevronLeft: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  ChevronRight: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  X: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-5 w-5"
-    >
-      <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-    </svg>
-  ),
-  AlertTriangle: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-6 w-6"
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Empty: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.2}
-      className="h-12 w-12"
-    >
-      <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-  ),
-  Download: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-      <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-    </svg>
-  ),
-  Image: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 00.75-.75v-2.69l-2.22-2.219a.75.75 0 00-1.06 0l-1.91 1.909.47.47a.75.75 0 11-1.06 1.06L6.53 8.091a.75.75 0 00-1.06 0L2.5 11.06zm4-2.56a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Filter: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Check: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Calendar: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.75 2a.75.75 0 01.75.75V4h7V2.75a.75.75 0 011.5 0V4h.25A2.75 2.75 0 0118 6.75v8.5A2.75 2.75 0 0115.25 18H4.75A2.75 2.75 0 012 15.25v-8.5A2.75 2.75 0 014.75 4H5V2.75A.75.75 0 015.75 2zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
+  Eye: () => <HiMiniEye className="h-4 w-4" />,
+  Edit: () => <HiMiniPencilSquare className="h-4 w-4" />,
+  Trash: () => <HiMiniTrash className="h-4 w-4" />,
+  Plus: () => <HiMiniPlus className="h-4 w-4" />,
+  Search: () => <HiMiniMagnifyingGlass className="h-4 w-4" />,
+
+  ChevronUp: () => <HiMiniChevronUp className="h-3.5 w-3.5" />,
+  ChevronDown: () => <HiMiniChevronDown className="h-3.5 w-3.5" />,
+  ChevronLeft: () => <HiMiniChevronLeft className="h-4 w-4" />,
+  ChevronRight: () => <HiMiniChevronRight className="h-4 w-4" />,
+
+  X: () => <HiMiniXMark className="h-5 w-5" />,
+  AlertTriangle: () => <HiMiniExclamationTriangle className="h-6 w-6" />,
+  Empty: () => <LuPackage className="h-12 w-12" />,
+  Download: () => <HiMiniArrowDownTray className="h-4 w-4" />,
+  Image: () => <HiMiniPhoto className="h-4 w-4" />,
+  Filter: () => <HiMiniFunnel className="h-4 w-4" />,
+  Check: () => <HiMiniCheck className="h-4 w-4" />,
+  Calendar: () => <HiMiniCalendarDays className="h-4 w-4" />,
+  Refresh: () => <HiMiniArrowPath className="h-4 w-4" />,
+  AlertCircle: () => <HiMiniExclamationCircle className="h-5 w-5" />,
+  Copy: () => <HiMiniDocumentDuplicate className="h-3.5 w-3.5" />,
+  CopyDone: () => <HiMiniClipboardDocumentCheck className="h-3.5 w-3.5" />,
 };
 
 /* ══════════════════════════════════════════════
@@ -572,20 +256,14 @@ function truncate(str: string, max: number): string {
 }
 
 function toPersianDigits(n: number | string): string {
-  const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  return String(n).replace(/\d/g, (d) => persianDigits[parseInt(d)]);
+  const pd = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  return String(n).replace(/\d/g, (d) => pd[parseInt(d)]);
 }
 
-/**
- * Parse a Persian (Jalali) date string like "۱۴۰۲/۱۰/۲۵" or "1402/10/25"
- * into a DateObject for comparison.
- */
 function parsePersianDate(val: unknown): DateObject | null {
   if (!val) return null;
   const str = String(val);
-  // Convert Persian digits to Latin
   const latin = str.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
-  // Match pattern YYYY/MM/DD
   const match = latin.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (!match) return null;
   try {
@@ -601,9 +279,7 @@ function parsePersianDate(val: unknown): DateObject | null {
   }
 }
 
-/* ══════════════════════════════════════════════
-   EXPORT UTILITIES (no external libs)
-   ══════════════════════════════════════════════ */
+/* ── Export Utilities ── */
 
 function exportToCSV<T extends Record<string, unknown>>(
   rows: T[],
@@ -622,8 +298,10 @@ function exportToCSV<T extends Record<string, unknown>>(
       .join(","),
   );
   const csv = BOM + [headers, ...csvRows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  downloadBlob(blob, `${fileName}.csv`);
+  downloadBlob(
+    new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+    `${fileName}.csv`,
+  );
 }
 
 function exportToExcel<T extends Record<string, unknown>>(
@@ -631,30 +309,11 @@ function exportToExcel<T extends Record<string, unknown>>(
   columns: ColumnDef<T>[],
   fileName: string,
 ) {
-  const tableHtml = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office"
-          xmlns:x="urn:schemas-microsoft-com:office:excel"
-          xmlns="http://www.w3.org/TR/REC-html40">
-    <head><meta charset="UTF-8">
-    <style>td,th{font-family:Tahoma,sans-serif;font-size:11pt;text-align:right;direction:rtl;padding:6px 10px;border:1px solid #ddd}th{background:#1a1a1a;color:#F5D76E;font-weight:bold}tr:nth-child(even){background:#f9f9f9}</style>
-    </head><body dir="rtl"><table>
-    <tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr>
-    ${rows
-      .map(
-        (row) =>
-          `<tr>${columns
-            .map((col) => {
-              const val = getNestedValue(row, col.key);
-              return `<td>${formatCellValue(val)}</td>`;
-            })
-            .join("")}</tr>`,
-      )
-      .join("")}
-    </table></body></html>`;
-  const blob = new Blob([tableHtml], {
-    type: "application/vnd.ms-excel;charset=utf-8",
-  });
-  downloadBlob(blob, `${fileName}.xls`);
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>td,th{font-family:Tahoma;font-size:11pt;text-align:right;direction:rtl;padding:6px 10px;border:1px solid #ddd}th{background:#1a1a1a;color:#F5D76E;font-weight:bold}tr:nth-child(even){background:#f9f9f9}</style></head><body dir="rtl"><table><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr>${rows.map((row) => `<tr>${columns.map((col) => `<td>${formatCellValue(getNestedValue(row, col.key))}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
+  downloadBlob(
+    new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" }),
+    `${fileName}.xls`,
+  );
 }
 
 async function exportToPNG<T extends Record<string, unknown>>(
@@ -662,81 +321,76 @@ async function exportToPNG<T extends Record<string, unknown>>(
   columns: ColumnDef<T>[],
   fileName: string,
 ) {
-  const cellPadding = 12;
-  const headerHeight = 44;
-  const rowHeight = 38;
-  const fontSize = 13;
-  const headerFontSize = 13;
-
-  const colWidths = columns.map((col) => {
-    const headerLen = col.label.length;
-    const maxDataLen = rows.reduce((max, row) => {
-      const val = formatCellValue(getNestedValue(row, col.key));
-      return Math.max(max, val.length);
-    }, 0);
-    return Math.max(headerLen, maxDataLen) * 9 + cellPadding * 2 + 20;
+  const cp = 12,
+    hh = 44,
+    rh = 38,
+    fs = 13;
+  const cw = columns.map((col) => {
+    const hl = col.label.length;
+    const ml = rows.reduce(
+      (m, r) => Math.max(m, formatCellValue(getNestedValue(r, col.key)).length),
+      0,
+    );
+    return Math.max(hl, ml) * 9 + cp * 2 + 20;
   });
-
-  const totalWidth = Math.max(
-    colWidths.reduce((a, b) => a + b, 0),
-    600,
-  );
-  const totalHeight = headerHeight + rows.length * rowHeight + 20;
-
+  const tw = Math.max(
+      cw.reduce((a, b) => a + b, 0),
+      600,
+    ),
+    th = hh + rows.length * rh + 20;
   const canvas = document.createElement("canvas");
-  const scale = 2;
-  canvas.width = totalWidth * scale;
-  canvas.height = totalHeight * scale;
+  const s = 2;
+  canvas.width = tw * s;
+  canvas.height = th * s;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  ctx.scale(scale, scale);
-
+  ctx.scale(s, s);
   ctx.fillStyle = "#0B0905";
-  ctx.fillRect(0, 0, totalWidth, totalHeight);
+  ctx.fillRect(0, 0, tw, th);
   ctx.fillStyle = "#1A1304";
-  ctx.fillRect(0, 0, totalWidth, headerHeight);
+  ctx.fillRect(0, 0, tw, hh);
   ctx.strokeStyle = "rgba(212,175,55,0.25)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, headerHeight);
-  ctx.lineTo(totalWidth, headerHeight);
+  ctx.moveTo(0, hh);
+  ctx.lineTo(tw, hh);
   ctx.stroke();
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#F5D76E";
-  ctx.font = `bold ${headerFontSize}px Tahoma, sans-serif`;
-  let xOffset = totalWidth - 10;
+  ctx.font = `bold ${fs}px Tahoma,sans-serif`;
+  let xo = tw - 10;
   columns.forEach((col, ci) => {
-    ctx.fillText(col.label, xOffset - 8, headerHeight / 2);
-    xOffset -= colWidths[ci];
+    ctx.fillText(col.label, xo - 8, hh / 2);
+    xo -= cw[ci];
   });
-
   rows.forEach((row, ri) => {
-    const y = headerHeight + ri * rowHeight;
+    const y = hh + ri * rh;
     if (ri % 2 === 1) {
       ctx.fillStyle = "rgba(255,255,255,0.02)";
-      ctx.fillRect(0, y, totalWidth, rowHeight);
+      ctx.fillRect(0, y, tw, rh);
     }
     ctx.strokeStyle = "rgba(255,255,255,0.04)";
     ctx.beginPath();
-    ctx.moveTo(0, y + rowHeight);
-    ctx.lineTo(totalWidth, y + rowHeight);
+    ctx.moveTo(0, y + rh);
+    ctx.lineTo(tw, y + rh);
     ctx.stroke();
     ctx.fillStyle = "#CBD5E1";
-    ctx.font = `${fontSize}px Tahoma, sans-serif`;
-    let cellX = totalWidth - 10;
+    ctx.font = `${fs}px Tahoma,sans-serif`;
+    let cx = tw - 10;
     columns.forEach((col, ci) => {
-      const val = formatCellValue(getNestedValue(row, col.key));
-      const t = val.length > 30 ? val.slice(0, 30) + "…" : val;
-      ctx.fillText(t, cellX - 8, y + rowHeight / 2);
-      cellX -= colWidths[ci];
+      const v = formatCellValue(getNestedValue(row, col.key));
+      ctx.fillText(
+        v.length > 30 ? v.slice(0, 30) + "…" : v,
+        cx - 8,
+        y + rh / 2,
+      );
+      cx -= cw[ci];
     });
   });
-
   ctx.strokeStyle = "rgba(212,175,55,0.15)";
   ctx.lineWidth = 2;
-  ctx.strokeRect(0, 0, totalWidth, totalHeight);
-
+  ctx.strokeRect(0, 0, tw, th);
   canvas.toBlob((blob) => {
     if (blob) downloadBlob(blob, `${fileName}.png`);
   }, "image/png");
@@ -757,6 +411,7 @@ function downloadBlob(blob: Blob, fileName: string) {
    SUB-COMPONENTS
    ══════════════════════════════════════════════ */
 
+/* ── Overlay ── */
 function Overlay({
   open,
   onClose,
@@ -769,14 +424,50 @@ function Overlay({
   wide?: boolean;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const firstFocusableRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      // Focus trap
+      if (e.key === "Tab") {
+        const modal = overlayRef.current?.querySelector(
+          '[role="document"], .modal-content',
+        ) as HTMLElement;
+        if (!modal) return;
+        const focusables = modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+
+    // Auto-focus first focusable
+    setTimeout(() => {
+      const modal = overlayRef.current;
+      if (modal) {
+        const first = modal.querySelector<HTMLElement>(
+          "button, input, select, textarea",
+        );
+        if (first) {
+          firstFocusableRef.current = first;
+          first.focus();
+        }
+      }
+    }, 100);
+
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
@@ -797,11 +488,13 @@ function Overlay({
       }}
       role="dialog"
       aria-modal="true"
+      aria-label="پنجره مودال"
       dir="rtl"
     >
       <div
+        role="document"
         className={cn(
-          "relative w-full overflow-hidden",
+          "modal-content relative w-full overflow-hidden",
           wide ? "max-w-2xl" : "max-w-lg",
           layout.radius.lg,
           borders.light,
@@ -817,6 +510,7 @@ function Overlay({
   );
 }
 
+/* ── Action Btn ── */
 function ActionBtn({
   onClick,
   title,
@@ -850,22 +544,27 @@ function ActionBtn({
   );
 }
 
+/* ── Pagination Btn ── */
 function PaginationBtn({
   onClick,
   disabled,
   active,
   children,
+  ariaLabel,
 }: {
   onClick: () => void;
   disabled?: boolean;
   active?: boolean;
   children: ReactNode;
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
+      aria-current={active ? "page" : undefined}
       className={cn(
         "inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-xs font-medium",
         animation.base,
@@ -896,14 +595,13 @@ function FilterDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node))
         setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
   return (
@@ -911,6 +609,9 @@ function FilterDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={`فیلتر ${label}`}
         className={cn(
           "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
           "bg-white/[0.035] backdrop-blur-sm",
@@ -931,9 +632,10 @@ function FilterDropdown({
         )}
         <Icon.ChevronDown />
       </button>
-
       {open && (
         <div
+          role="listbox"
+          aria-label={`گزینه‌های ${label}`}
           className={cn(
             "absolute top-full right-0 z-50 mt-1 min-w-[160px] overflow-hidden",
             layout.radius.md,
@@ -945,6 +647,8 @@ function FilterDropdown({
         >
           <button
             type="button"
+            role="option"
+            aria-selected={!value}
             onClick={() => {
               onChange("");
               setOpen(false);
@@ -964,6 +668,8 @@ function FilterDropdown({
             <button
               key={opt}
               type="button"
+              role="option"
+              aria-selected={value === opt}
               onClick={() => {
                 onChange(opt);
                 setOpen(false);
@@ -997,12 +703,9 @@ function DateRangeFilter({
   onChange: (range: DateRange) => void;
 }) {
   const hasRange = value.from || value.to;
-
   const formatRange = () => {
     if (!value.from && !value.to) return "";
-    const from = value.from?.format("YYYY/MM/DD") ?? "...";
-    const to = value.to?.format("YYYY/MM/DD") ?? "...";
-    return `${from} – ${to}`;
+    return `${value.from?.format("YYYY/MM/DD") ?? "..."} – ${value.to?.format("YYYY/MM/DD") ?? "..."}`;
   };
 
   return (
@@ -1037,6 +740,7 @@ function DateRangeFilter({
           <button
             type="button"
             onClick={openCalendar}
+            aria-label={`فیلتر تاریخ ${label}`}
             className={cn(
               "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
               "bg-white/[0.035] backdrop-blur-sm",
@@ -1060,8 +764,6 @@ function DateRangeFilter({
           </button>
         )}
       />
-
-      {/* Clear button */}
       {hasRange && (
         <button
           type="button"
@@ -1069,12 +771,8 @@ function DateRangeFilter({
             e.stopPropagation();
             onChange({ from: null, to: null });
           }}
-          className={cn(
-            "absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full",
-            "bg-red-500/20 text-red-400 hover:bg-red-500/30",
-            "transition-all duration-150",
-          )}
-          title="پاک کردن"
+          aria-label="پاک کردن فیلتر تاریخ"
+          className="absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all duration-150"
         >
           <svg viewBox="0 0 12 12" fill="currentColor" className="h-2.5 w-2.5">
             <path d="M3.404 3.404a.55.55 0 01.778 0L6 5.222l1.818-1.818a.55.55 0 01.778.778L6.778 6l1.818 1.818a.55.55 0 11-.778.778L6 6.778 4.182 8.596a.55.55 0 11-.778-.778L5.222 6 3.404 4.182a.55.55 0 010-.778z" />
@@ -1092,21 +790,20 @@ function ExportMenu({
   onExportCSV,
   selectedCount,
 }: {
-  onExportExcel: (selected: boolean) => void;
-  onExportPNG: (selected: boolean) => void;
-  onExportCSV: (selected: boolean) => void;
+  onExportExcel: (s: boolean) => void;
+  onExportPNG: (s: boolean) => void;
+  onExportCSV: (s: boolean) => void;
   selectedCount: number;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node))
         setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
   const items = [
@@ -1177,6 +874,9 @@ function ExportMenu({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label="منوی خروجی"
         className={cn(components.ghostButton, "h-9 text-xs px-3 gap-1.5")}
       >
         <Icon.Download />
@@ -1184,6 +884,8 @@ function ExportMenu({
       </button>
       {open && (
         <div
+          role="menu"
+          aria-label="فرمت‌های خروجی"
           className={cn(
             "absolute top-full left-0 z-50 mt-1 min-w-[220px] overflow-hidden",
             layout.radius.md,
@@ -1197,6 +899,7 @@ function ExportMenu({
             <button
               key={i}
               type="button"
+              role="menuitem"
               onClick={item.action}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-2.5 text-xs text-right",
@@ -1214,32 +917,236 @@ function ExportMenu({
   );
 }
 
+/* ── Page Size Selector ── */
+function PageSizeSelector({
+  value,
+  options,
+  onChange,
+}: {
+  value: number;
+  options: number[];
+  onChange: (size: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={`تعداد ردیف در هر صفحه: ${toPersianDigits(value)}`}
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium",
+          borders.subtle,
+          "text-slate-400 hover:text-white",
+          animation.base,
+          focus.ring,
+        )}
+      >
+        <span>{toPersianDigits(value)} ردیف</span>
+        <Icon.ChevronDown />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label="تعداد ردیف"
+          className={cn(
+            "absolute bottom-full right-0 z-50 mb-1 min-w-[100px] overflow-hidden",
+            layout.radius.md,
+            borders.light,
+            "bg-[#0B0905]/98 backdrop-blur-2xl",
+            shadows.card,
+            "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+          )}
+        >
+          {options.map((size) => (
+            <button
+              key={size}
+              type="button"
+              role="option"
+              aria-selected={value === size}
+              onClick={() => {
+                onChange(size);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between px-3 py-2 text-xs",
+                animation.colors,
+                value === size
+                  ? "text-[#F5D76E] bg-[#D4AF37]/10"
+                  : "text-slate-400 hover:bg-white/[0.04] hover:text-white",
+              )}
+            >
+              <span>{toPersianDigits(size)} ردیف</span>
+              {value === size && <Icon.Check />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Error Banner ── */
+function ErrorBanner({
+  error,
+  onRetry,
+}: {
+  error: Error;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex items-center gap-3 rounded-xl border px-4 py-3 mb-3",
+        "border-red-500/20 bg-red-500/[0.06]",
+      )}
+    >
+      <div className="text-red-400">
+        <Icon.AlertCircle />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-red-300">خطا در دریافت داده</p>
+        <p className="text-xs text-red-400/70 truncate mt-0.5">
+          {error.message}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        aria-label="تلاش مجدد برای دریافت داده"
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium",
+          "border-red-500/25 text-red-400 hover:bg-red-500/10 hover:text-red-300",
+          animation.base,
+          focus.ring,
+        )}
+      >
+        <Icon.Refresh />
+        تلاش مجدد
+      </button>
+    </div>
+  );
+}
+
+/* ── Copy Toast ── */
+function CopyToast({ visible }: { visible: boolean }) {
+  if (!visible) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] inline-flex items-center gap-2 rounded-xl px-4 py-2.5",
+        "bg-[#0B0905]/95 backdrop-blur-xl border",
+        borders.light,
+        shadows.card,
+        "animate-[fade-up_.3s_cubic-bezier(.22,1,.36,1)_both]",
+      )}
+    >
+      <div className="text-green-400">
+        <Icon.CopyDone />
+      </div>
+      <span className="text-xs font-medium text-white">کپی شد!</span>
+    </div>
+  );
+}
+
+/* ── Pull to Refresh Indicator ── */
+function PullIndicator({
+  distance,
+  isRefreshing,
+  threshold,
+}: {
+  distance: number;
+  isRefreshing: boolean;
+  threshold: number;
+}) {
+  if (distance <= 0 && !isRefreshing) return null;
+  const progress = Math.min(distance / threshold, 1);
+  const rotation = progress * 360;
+
+  return (
+    <div
+      role="status"
+      aria-label={isRefreshing ? "در حال بارگذاری" : "برای بارگذاری مجدد بکشید"}
+      className="flex justify-center py-3 transition-all duration-200"
+      style={{
+        height: isRefreshing ? 48 : Math.max(0, distance * 0.6),
+        opacity: Math.min(progress, 1),
+      }}
+    >
+      <div
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-full",
+          "bg-[#D4AF37]/10 border border-[#D4AF37]/20",
+          isRefreshing && "animate-spin",
+        )}
+        style={{ transform: `rotate(${rotation}deg)` }}
+      >
+        <Icon.Refresh />
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
 
 export default function DynamicTable<T extends Record<string, unknown>>({
-  data,
+  endpoint,
   columns,
   title,
   subtitle,
   onCreate,
   onUpdate,
   onDelete,
-  loading = false,
+  canCreate = true,
+  canUpdate = true,
+  canDelete = true,
   primaryKey = "id" as keyof T & string,
-  pageSize = 10,
+  pageSize: initialPageSize = 10,
+  pageSizes = [10, 25, 50, 100],
   searchable = true,
+  searchDebounceMs = 300,
   emptyMessage = "داده‌ای یافت نشد",
   rowActions,
   exportable = true,
   exportFileName = "export",
+  stickyHeader = true,
+  showRowNumbers = false,
+  doubleClickToEdit = true,
+  enableCellCopy = true,
+  pullToRefresh: enablePullToRefresh = true,
+  serverSide = false,
+  transformPaginatedResponse,
+  fetcher,
+  transformResponse,
+  headers,
+  swrConfig,
+  enabled = true,
+  onError,
+  data: staticData,
 }: DynamicTableProps<T>) {
-  /* ── State ── */
+  /* ── Local state ── */
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [page, setPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(initialPageSize);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
@@ -1248,6 +1155,81 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, DateRange>>({});
+
+  // Debounced search
+  const debouncedSearch = useDebounce(search, searchDebounceMs);
+
+  // Copy to clipboard
+  const { copied, copiedCell, copy } = useCopyToClipboard();
+
+  /* ── Server-side pagination params ── */
+  const serverPaginationParams = useMemo<
+    ServerPaginationParams | undefined
+  >(() => {
+    if (!serverSide) return undefined;
+    return {
+      page,
+      pageSize: currentPageSize,
+      search: debouncedSearch || undefined,
+      sortKey: sortKey || undefined,
+      sortDir: (sortDir as "asc" | "desc") || undefined,
+      filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v)),
+    };
+  }, [
+    serverSide,
+    page,
+    currentPageSize,
+    debouncedSearch,
+    sortKey,
+    sortDir,
+    filters,
+  ]);
+
+  /* ── SWR Data Hook ── */
+  const {
+    data: fetchedData,
+    isLoading,
+    isValidating,
+    error: fetchError,
+    mutate,
+    create: hookCreate,
+    update: hookUpdate,
+    remove: hookRemove,
+    serverTotal,
+    serverTotalPages,
+  } = useTableData<T>({
+    endpoint,
+    fetcher,
+    transformResponse,
+    headers,
+    swrConfig,
+    enabled: enabled && !staticData,
+    serverSide,
+    serverPaginationParams,
+    transformPaginatedResponse,
+  });
+
+  const data = staticData ?? fetchedData;
+  const loading = !staticData && isLoading;
+
+  /* ── Pull to Refresh ── */
+  const {
+    containerRef: pullRef,
+    pullDistance,
+    isPulling,
+    isRefreshing,
+  } = usePullToRefresh({
+    onRefresh: async () => {
+      await mutate();
+    },
+    enabled: enablePullToRefresh && !staticData,
+    threshold: 80,
+  });
+
+  // Report errors
+  useEffect(() => {
+    if (fetchError && onError) onError(fetchError);
+  }, [fetchError, onError]);
 
   /* ── Derived columns ── */
   const visibleCols = useMemo(
@@ -1271,81 +1253,62 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     [columns],
   );
 
-  /* ── Filter options from data ── */
   const filterOptions = useMemo(() => {
     const opts: Record<string, string[]> = {};
     filterableCols.forEach((col) => {
-      const uniqueVals = new Set<string>();
+      const s = new Set<string>();
       data.forEach((row) => {
-        const val = getNestedValue(row, col.key);
-        if (val !== null && val !== undefined) uniqueVals.add(String(val));
+        const v = getNestedValue(row, col.key);
+        if (v != null) s.add(String(v));
       });
-      opts[col.key] = Array.from(uniqueVals).sort();
+      opts[col.key] = Array.from(s).sort();
     });
     return opts;
   }, [data, filterableCols]);
 
   const activeFiltersCount = useMemo(() => {
-    const textFilters = Object.values(filters).filter(Boolean).length;
-    const dateFilters = Object.values(dateRanges).filter(
-      (r) => r.from || r.to,
-    ).length;
-    return textFilters + dateFilters;
+    return (
+      Object.values(filters).filter(Boolean).length +
+      Object.values(dateRanges).filter((r) => r.from || r.to).length
+    );
   }, [filters, dateRanges]);
 
-  /* ── Search + Filter + Date Range + Sort + Paginate ── */
+  /* ── Client-side filter + sort + paginate ── */
   const filtered = useMemo(() => {
+    if (serverSide) return data; // Server already filtered
     let items = [...data];
 
     // Text filters
     Object.entries(filters).forEach(([key, val]) => {
-      if (val) {
+      if (val)
         items = items.filter((row) => {
-          const cellVal = getNestedValue(row, key);
-          return (
-            cellVal !== null && cellVal !== undefined && String(cellVal) === val
-          );
+          const cv = getNestedValue(row, key);
+          return cv != null && String(cv) === val;
         });
-      }
     });
 
     // Date range filters
     Object.entries(dateRanges).forEach(([key, range]) => {
       if (!range.from && !range.to) return;
       items = items.filter((row) => {
-        const cellVal = getNestedValue(row, key);
-        const cellDate = parsePersianDate(cellVal);
-        if (!cellDate) return false;
-
-        const cellTimestamp = cellDate.toUnix();
-
-        if (range.from && range.to) {
-          return (
-            cellTimestamp >= range.from.toUnix() &&
-            cellTimestamp <= range.to.toUnix()
-          );
-        }
-        if (range.from) {
-          return cellTimestamp >= range.from.toUnix();
-        }
-        if (range.to) {
-          return cellTimestamp <= range.to.toUnix();
-        }
+        const cd = parsePersianDate(getNestedValue(row, key));
+        if (!cd) return false;
+        const ct = cd.toUnix();
+        if (range.from && range.to)
+          return ct >= range.from.toUnix() && ct <= range.to.toUnix();
+        if (range.from) return ct >= range.from.toUnix();
+        if (range.to) return ct <= range.to.toUnix();
         return true;
       });
     });
 
-    // Search
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    // Search (debounced)
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       items = items.filter((row) =>
         columns.some((col) => {
-          const val = getNestedValue(row, col.key);
-          return (
-            val !== null &&
-            val !== undefined &&
-            String(val).toLowerCase().includes(q)
-          );
+          const v = getNestedValue(row, col.key);
+          return v != null && String(v).toLowerCase().includes(q);
         }),
       );
     }
@@ -1353,32 +1316,51 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     // Sort
     if (sortKey && sortDir) {
       items.sort((a, b) => {
-        const aVal = getNestedValue(a, sortKey);
-        const bVal = getNestedValue(b, sortKey);
-        const aStr = aVal != null ? String(aVal) : "";
-        const bStr = bVal != null ? String(bVal) : "";
-        const cmp = aStr.localeCompare(bStr, "fa", {
-          numeric: true,
-          sensitivity: "base",
-        });
+        const as = getNestedValue(a, sortKey),
+          bs = getNestedValue(b, sortKey);
+        const cmp = (as != null ? String(as) : "").localeCompare(
+          bs != null ? String(bs) : "",
+          "fa",
+          { numeric: true, sensitivity: "base" },
+        );
         return sortDir === "asc" ? cmp : -cmp;
       });
     }
 
     return items;
-  }, [data, search, sortKey, sortDir, columns, filters, dateRanges]);
+  }, [
+    data,
+    debouncedSearch,
+    sortKey,
+    sortDir,
+    columns,
+    filters,
+    dateRanges,
+    serverSide,
+  ]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalItems = serverSide ? serverTotal : filtered.length;
+  const totalPages = serverSide
+    ? serverTotalPages
+    : Math.max(1, Math.ceil(filtered.length / currentPageSize));
   const currentPage = Math.min(page, totalPages);
 
   const paginatedRows = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, currentPage, pageSize]);
+    if (serverSide) return data; // Already paginated by server
+    const start = (currentPage - 1) * currentPageSize;
+    return filtered.slice(start, start + currentPageSize);
+  }, [filtered, currentPage, currentPageSize, serverSide, data]);
 
+  // Reset page on search/filter change
   useEffect(() => {
     setPage(1);
-  }, [search, filters, dateRanges]);
+  }, [debouncedSearch, filters, dateRanges]);
+
+  // Reset page on page size change
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    setCurrentPageSize(newSize);
+    setPage(1);
+  }, []);
 
   /* ── Selection ── */
   const toggleRowSelection = useCallback(
@@ -1395,11 +1377,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   );
 
   const toggleAllSelection = useCallback(() => {
-    if (selectedRows.size === paginatedRows.length) {
-      setSelectedRows(new Set());
-    } else {
+    if (selectedRows.size === paginatedRows.length) setSelectedRows(new Set());
+    else
       setSelectedRows(new Set(paginatedRows.map((r) => String(r[primaryKey]))));
-    }
   }, [paginatedRows, selectedRows, primaryKey]);
 
   const isAllSelected =
@@ -1422,6 +1402,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       }
     },
     [sortKey, sortDir],
+  );
+
+  /* ── Cell Copy ── */
+  const handleCellCopy = useCallback(
+    (value: unknown, rowKey: string, colKey: string) => {
+      const text = formatCellValue(value);
+      if (text && text !== "—") copy(text, `${rowKey}-${colKey}`);
+    },
+    [copy],
   );
 
   /* ── Modal handlers ── */
@@ -1472,10 +1461,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     const errors: Record<string, string> = {};
     editableCols.forEach((col) => {
       if (col.required) {
-        const val = formData[col.key];
-        if (val === undefined || val === null || String(val).trim() === "") {
+        const v = formData[col.key];
+        if (v === undefined || v === null || String(v).trim() === "")
           errors[col.key] = `${col.label} الزامی است`;
-        }
       }
     });
     setFormErrors(errors);
@@ -1488,15 +1476,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       if (!validateForm()) return;
       setSubmitting(true);
       try {
-        if (modalMode === "create" && onCreate) {
-          await onCreate(formData as Partial<T>);
-        } else if (modalMode === "edit" && onUpdate && selectedRow) {
+        if (modalMode === "create") {
+          if (onCreate) await onCreate(formData as Partial<T>, hookCreate);
+          else await hookCreate(formData as Partial<T>);
+        } else if (modalMode === "edit" && selectedRow) {
           const updated = { ...selectedRow, ...formData } as T;
-          await onUpdate(updated);
+          if (onUpdate)
+            await onUpdate(updated, (item) => hookUpdate(item, primaryKey));
+          else await hookUpdate(updated, primaryKey);
         }
         closeModal();
       } catch {
-        // parent handles
+        /* parent handles */
       } finally {
         setSubmitting(false);
       }
@@ -1507,23 +1498,28 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       selectedRow,
       onCreate,
       onUpdate,
+      hookCreate,
+      hookUpdate,
+      primaryKey,
       validateForm,
       closeModal,
     ],
   );
 
   const handleDelete = useCallback(async () => {
-    if (!onDelete || !selectedRow) return;
+    if (!selectedRow) return;
     setSubmitting(true);
     try {
-      await onDelete(selectedRow);
+      if (onDelete)
+        await onDelete(selectedRow, (item) => hookRemove(item, primaryKey));
+      else await hookRemove(selectedRow, primaryKey);
       closeModal();
     } catch {
-      // parent handles
+      /* parent handles */
     } finally {
       setSubmitting(false);
     }
-  }, [onDelete, selectedRow, closeModal]);
+  }, [onDelete, selectedRow, hookRemove, primaryKey, closeModal]);
 
   const updateField = useCallback((key: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -1534,32 +1530,43 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     });
   }, []);
 
+  /* ── Double click to edit ── */
+  const handleRowDoubleClick = useCallback(
+    (row: T) => {
+      if (doubleClickToEdit && canUpdate) openEdit(row);
+    },
+    [doubleClickToEdit, canUpdate, openEdit],
+  );
+
   /* ── Export handlers ── */
   const handleExportExcel = useCallback(
-    (selectedOnly: boolean) => {
-      const rows = selectedOnly ? getSelectedData() : filtered;
-      exportToExcel(rows, visibleCols, exportFileName);
-    },
+    (s: boolean) =>
+      exportToExcel(
+        s ? getSelectedData() : filtered,
+        visibleCols,
+        exportFileName,
+      ),
     [filtered, getSelectedData, visibleCols, exportFileName],
   );
-
   const handleExportPNG = useCallback(
-    (selectedOnly: boolean) => {
-      const rows = selectedOnly ? getSelectedData() : filtered;
-      exportToPNG(rows, visibleCols, exportFileName);
-    },
+    (s: boolean) =>
+      exportToPNG(
+        s ? getSelectedData() : filtered,
+        visibleCols,
+        exportFileName,
+      ),
     [filtered, getSelectedData, visibleCols, exportFileName],
   );
-
   const handleExportCSV = useCallback(
-    (selectedOnly: boolean) => {
-      const rows = selectedOnly ? getSelectedData() : filtered;
-      exportToCSV(rows, visibleCols, exportFileName);
-    },
+    (s: boolean) =>
+      exportToCSV(
+        s ? getSelectedData() : filtered,
+        visibleCols,
+        exportFileName,
+      ),
     [filtered, getSelectedData, visibleCols, exportFileName],
   );
 
-  /* ── Clear filters ── */
   const clearAllFilters = useCallback(() => {
     setFilters({});
     setDateRanges({});
@@ -1569,16 +1576,23 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   /* ── Pagination ── */
   const pageNumbers = useMemo(() => {
     const pages: number[] = [];
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    const end = Math.min(totalPages, start + maxVisible - 1);
-    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+    const max = 5;
+    let start = Math.max(1, currentPage - Math.floor(max / 2));
+    const end = Math.min(totalPages, start + max - 1);
+    if (end - start + 1 < max) start = Math.max(1, end - max + 1);
     for (let i = start; i <= end; i++) pages.push(i);
     return pages;
   }, [currentPage, totalPages]);
 
-  const hasActions = !!(onUpdate || onDelete || rowActions);
+  const hasActions = !!(canUpdate || canDelete || rowActions);
   const hasFilters = filterableCols.length > 0 || dateFilterCols.length > 0;
+
+  // Total column count for colSpan
+  const totalColCount =
+    (showRowNumbers ? 1 : 0) +
+    1 /* checkbox */ +
+    visibleCols.length +
+    (hasActions ? 1 : 0);
 
   /* ══════════════════════════════════════════════
      RENDER
@@ -1588,7 +1602,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       <style>{animation.keyframes}</style>
       <style>{datePickerStyles}</style>
 
-      <section className="w-full" dir="rtl">
+      <section
+        className="w-full"
+        dir="rtl"
+        role="region"
+        aria-label={title || "جدول داده‌ها"}
+      >
         {/* ── Header Bar ── */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -1599,18 +1618,35 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             )}
             {subtitle && <p className={typography.bodySmall}>{subtitle}</p>}
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
+            {!staticData && (
+              <button
+                type="button"
+                onClick={() => mutate()}
+                disabled={isValidating}
+                title="بارگذاری مجدد"
+                aria-label="بارگذاری مجدد داده‌ها"
+                className={cn(
+                  components.ghostButton,
+                  "h-9 w-9 !px-0 justify-center",
+                  isValidating && "animate-spin",
+                )}
+              >
+                <Icon.Refresh />
+              </button>
+            )}
             {searchable && (
               <div className="relative">
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
                   <Icon.Search />
                 </span>
                 <input
-                  type="text"
+                  type="search"
                   placeholder="جستجو…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  aria-label="جستجو در جدول"
+                  role="searchbox"
                   className={cn(
                     "h-9 w-full rounded-xl border pr-9 pl-4 text-xs text-white placeholder-slate-500 outline-none",
                     "bg-white/[0.035] backdrop-blur-sm",
@@ -1621,9 +1657,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     "sm:w-48",
                   )}
                 />
+                {search && debouncedSearch !== search && (
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                    <div className="h-3 w-3 rounded-full border-2 border-[#D4AF37]/40 border-t-[#F5D76E] animate-spin" />
+                  </div>
+                )}
               </div>
             )}
-
             {exportable && (
               <ExportMenu
                 onExportExcel={handleExportExcel}
@@ -1632,11 +1672,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 selectedCount={selectedRows.size}
               />
             )}
-
-            {onCreate && (
+            {canCreate && (
               <button
                 type="button"
                 onClick={openCreate}
+                aria-label="افزودن رکورد جدید"
                 className={cn(components.ctaSmall, "h-9 text-xs")}
               >
                 <Icon.Plus />
@@ -1646,15 +1686,34 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           </div>
         </div>
 
-        {/* ── Filters Row ── */}
+        {/* ── Error ── */}
+        {fetchError && (
+          <ErrorBanner error={fetchError} onRetry={() => mutate()} />
+        )}
+
+        {/* ── Validating ── */}
+        {isValidating && !isLoading && (
+          <div
+            className="mb-3 flex items-center gap-2 text-xs text-slate-500"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+            <span>در حال بروزرسانی…</span>
+          </div>
+        )}
+
+        {/* ── Filters ── */}
         {hasFilters && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div
+            className="mb-3 flex flex-wrap items-center gap-2"
+            role="toolbar"
+            aria-label="فیلترها"
+          >
             <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
               <Icon.Filter />
               فیلترها:
             </span>
-
-            {/* Text filters */}
             {filterableCols.map((col) => (
               <FilterDropdown
                 key={col.key}
@@ -1666,8 +1725,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 }
               />
             ))}
-
-            {/* Date range filters */}
             {dateFilterCols.map((col) => (
               <DateRangeFilter
                 key={col.key}
@@ -1678,11 +1735,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 }
               />
             ))}
-
             {activeFiltersCount > 0 && (
               <button
                 type="button"
                 onClick={clearAllFilters}
+                aria-label="پاک کردن همه فیلترها"
                 className={cn(
                   "inline-flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium",
                   "text-red-400/80 hover:text-red-400 hover:bg-red-500/10",
@@ -1697,13 +1754,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           </div>
         )}
 
-        {/* ── Selected count bar ── */}
+        {/* ── Selected ── */}
         {selectedRows.size > 0 && (
           <div
             className={cn(
               "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5",
               "bg-[#D4AF37]/[0.08] border border-[#D4AF37]/15",
             )}
+            role="status"
+            aria-live="polite"
           >
             <span className="text-xs font-medium text-[#F5D76E]">
               {toPersianDigits(selectedRows.size)} ردیف انتخاب شده
@@ -1720,6 +1779,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
         {/* ── Table Card ── */}
         <div
+          ref={pullRef as any}
           className={cn(
             "overflow-hidden",
             layout.radius.lg,
@@ -1728,7 +1788,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             shadows.card,
           )}
         >
-          {loading && (
+          {/* Pull to refresh indicator */}
+          <div className="block md:hidden">
+            <PullIndicator
+              distance={pullDistance}
+              isRefreshing={isRefreshing}
+              threshold={80}
+            />
+          </div>
+
+          {(loading || isValidating) && (
             <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10">
               <div className="absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite] bg-gradient-to-l from-transparent via-[#D4AF37]/40 to-transparent" />
             </div>
@@ -1736,14 +1805,36 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
           {/* ── Desktop Table ── */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-right">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="w-10 px-3 py-3">
+            <table
+              className="w-full text-right"
+              role="table"
+              aria-label={title || "جدول"}
+              aria-rowcount={totalItems}
+            >
+              <thead
+                className={
+                  stickyHeader
+                    ? "sticky top-0 z-10 bg-[#0B0905]/95 backdrop-blur-xl"
+                    : ""
+                }
+              >
+                <tr className="border-b border-white/[0.06]" role="row">
+                  {/* Checkbox column */}
+                  <th
+                    className="w-10 px-3 py-3"
+                    role="columnheader"
+                    aria-label="انتخاب همه"
+                  >
                     <button
                       type="button"
                       onClick={toggleAllSelection}
-                      title="انتخاب همه"
+                      title={isAllSelected ? "لغو انتخاب همه" : "انتخاب همه"}
+                      aria-label={
+                        isAllSelected
+                          ? "لغو انتخاب همه ردیف‌ها"
+                          : "انتخاب همه ردیف‌ها"
+                      }
+                      aria-pressed={isAllSelected}
                       className={cn(
                         "flex h-5 w-5 items-center justify-center rounded border",
                         animation.base,
@@ -1770,12 +1861,32 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     </button>
                   </th>
 
+                  {/* Row number column */}
+                  {showRowNumbers && (
+                    <th
+                      className="w-12 px-3 py-3 text-xs font-semibold text-slate-500"
+                      role="columnheader"
+                      aria-label="شماره ردیف"
+                    >
+                      #
+                    </th>
+                  )}
+
+                  {/* Data columns */}
                   {visibleCols.map((col) => {
                     const isSorted = sortKey === col.key;
                     const canSort = col.sortable !== false;
                     return (
                       <th
                         key={col.key}
+                        role="columnheader"
+                        aria-sort={
+                          isSorted
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
                         className={cn(
                           "px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500",
                           canSort && "cursor-pointer select-none",
@@ -1795,19 +1906,50 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     );
                   })}
                   {hasActions && (
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
+                      role="columnheader"
+                    >
                       عملیات
                     </th>
                   )}
                 </tr>
               </thead>
               <tbody>
-                {paginatedRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={visibleCols.length + (hasActions ? 1 : 0) + 1}
-                      className="py-16 text-center"
+                {loading && data.length === 0 ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr
+                      key={`sk-${i}`}
+                      className="border-b border-white/[0.04]"
+                      role="row"
+                      aria-busy="true"
                     >
+                      <td className="px-3 py-3">
+                        <div className="h-5 w-5 rounded bg-white/[0.04] animate-pulse" />
+                      </td>
+                      {showRowNumbers && (
+                        <td className="px-3 py-3">
+                          <div className="h-4 w-6 rounded bg-white/[0.04] animate-pulse" />
+                        </td>
+                      )}
+                      {visibleCols.map((col) => (
+                        <td key={col.key} className="px-4 py-3">
+                          <div
+                            className="h-4 rounded bg-white/[0.04] animate-pulse"
+                            style={{ width: `${60 + Math.random() * 40}%` }}
+                          />
+                        </td>
+                      ))}
+                      {hasActions && (
+                        <td className="px-4 py-3">
+                          <div className="h-4 w-20 rounded bg-white/[0.04] animate-pulse" />
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                ) : paginatedRows.length === 0 ? (
+                  <tr role="row">
+                    <td colSpan={totalColCount} className="py-16 text-center">
                       <div className="flex flex-col items-center gap-3 text-slate-500">
                         <Icon.Empty />
                         <p className="text-sm">{emptyMessage}</p>
@@ -1818,21 +1960,32 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   paginatedRows.map((row, ri) => {
                     const rowKey = String(row[primaryKey] ?? ri);
                     const isSelected = selectedRows.has(rowKey);
+                    const globalRowIndex =
+                      (currentPage - 1) * currentPageSize + ri + 1;
+
                     return (
                       <tr
                         key={rowKey}
+                        role="row"
+                        aria-selected={isSelected}
+                        aria-rowindex={globalRowIndex}
+                        onDoubleClick={() => handleRowDoubleClick(row)}
                         className={cn(
                           "group border-b border-white/[0.04] last:border-b-0",
                           animation.colors,
                           isSelected
                             ? "bg-[#D4AF37]/[0.04]"
                             : "hover:bg-white/[0.025]",
+                          doubleClickToEdit && canUpdate && "cursor-pointer",
                         )}
                       >
-                        <td className="w-10 px-3 py-3">
+                        {/* Checkbox */}
+                        <td className="w-10 px-3 py-3" role="cell">
                           <button
                             type="button"
                             onClick={() => toggleRowSelection(row)}
+                            aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف ${toPersianDigits(globalRowIndex)}`}
+                            aria-pressed={isSelected}
                             className={cn(
                               "flex h-5 w-5 items-center justify-center rounded border",
                               animation.base,
@@ -1853,32 +2006,84 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           </button>
                         </td>
 
+                        {/* Row number */}
+                        {showRowNumbers && (
+                          <td
+                            className="w-12 px-3 py-3 text-xs text-slate-500 font-mono"
+                            role="cell"
+                            aria-label={`ردیف ${toPersianDigits(globalRowIndex)}`}
+                          >
+                            {toPersianDigits(globalRowIndex)}
+                          </td>
+                        )}
+
+                        {/* Data cells */}
                         {visibleCols.map((col) => {
                           const raw = getNestedValue(row, col.key);
                           const display = col.render
                             ? col.render(raw as T[keyof T], row)
                             : formatCellValue(raw);
+                          const cellId = `${rowKey}-${col.key}`;
+                          const isCopied = copiedCell === cellId;
+                          const canCopy =
+                            enableCellCopy && col.copyable !== false;
+
                           return (
                             <td
                               key={col.key}
-                              className="px-4 py-3 text-sm text-slate-300"
+                              role="cell"
+                              className={cn(
+                                "px-4 py-3 text-sm text-slate-300 relative group/cell",
+                                canCopy && "cursor-copy",
+                              )}
+                              onClick={() =>
+                                canCopy && handleCellCopy(raw, rowKey, col.key)
+                              }
+                              title={canCopy ? "کلیک برای کپی" : undefined}
                             >
-                              {typeof display === "string"
-                                ? truncate(display, 60)
-                                : display}
+                              <div className="flex items-center gap-1.5">
+                                <span className="flex-1">
+                                  {typeof display === "string"
+                                    ? truncate(display, 60)
+                                    : display}
+                                </span>
+                                {/* Copy indicator */}
+                                {canCopy && (
+                                  <span
+                                    className={cn(
+                                      "shrink-0 transition-all duration-200",
+                                      isCopied
+                                        ? "text-green-400 opacity-100"
+                                        : "text-slate-600 opacity-0 group-hover/cell:opacity-50",
+                                    )}
+                                  >
+                                    {isCopied ? (
+                                      <Icon.CopyDone />
+                                    ) : (
+                                      <Icon.Copy />
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           );
                         })}
+
+                        {/* Actions */}
                         {hasActions && (
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-start gap-1">
+                          <td className="px-4 py-3" role="cell">
+                            <div
+                              className="flex items-center justify-start gap-1"
+                              role="toolbar"
+                              aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
+                            >
                               <ActionBtn
                                 onClick={() => openView(row)}
                                 title="مشاهده جزئیات"
                               >
                                 <Icon.Eye />
                               </ActionBtn>
-                              {onUpdate && (
+                              {canUpdate && (
                                 <ActionBtn
                                   onClick={() => openEdit(row)}
                                   title="ویرایش"
@@ -1886,7 +2091,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                   <Icon.Edit />
                                 </ActionBtn>
                               )}
-                              {onDelete && (
+                              {canDelete && (
                                 <ActionBtn
                                   onClick={() => openDelete(row)}
                                   title="حذف"
@@ -1909,7 +2114,19 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
           {/* ── Mobile Card List ── */}
           <div className="block md:hidden divide-y divide-white/[0.04]">
-            {paginatedRows.length === 0 ? (
+            {loading && data.length === 0 ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={`msk-${i}`} className="p-4">
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="h-5 w-5 rounded bg-white/[0.04] animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-16 rounded bg-white/[0.04] animate-pulse" />
+                      <div className="h-4 w-32 rounded bg-white/[0.04] animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : paginatedRows.length === 0 ? (
               <div className="py-16 text-center">
                 <div className="flex flex-col items-center gap-3 text-slate-500">
                   <Icon.Empty />
@@ -1921,9 +2138,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 const mobileCols = visibleCols.filter((c) => !c.hideOnMobile);
                 const rowKey = String(row[primaryKey] ?? ri);
                 const isSelected = selectedRows.has(rowKey);
+                const globalIdx = (currentPage - 1) * currentPageSize + ri + 1;
+
                 return (
                   <div
                     key={rowKey}
+                    role="article"
+                    aria-label={`ردیف ${toPersianDigits(globalIdx)}`}
+                    onDoubleClick={() => handleRowDoubleClick(row)}
                     className={cn(
                       "group p-4",
                       animation.colors,
@@ -1933,27 +2155,36 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     )}
                   >
                     <div className="flex items-start gap-3 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleRowSelection(row)}
-                        className={cn(
-                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border",
-                          animation.base,
-                          isSelected
-                            ? "bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#F5D76E]"
-                            : "border-white/15 text-transparent",
+                      <div className="flex items-center gap-2">
+                        {showRowNumbers && (
+                          <span className="text-[10px] text-slate-500 font-mono w-5">
+                            {toPersianDigits(globalIdx)}
+                          </span>
                         )}
-                      >
-                        {isSelected && (
-                          <svg
-                            viewBox="0 0 12 12"
-                            fill="currentColor"
-                            className="h-3 w-3"
-                          >
-                            <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
-                          </svg>
-                        )}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleRowSelection(row)}
+                          aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف`}
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+                            animation.base,
+                            isSelected
+                              ? "bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#F5D76E]"
+                              : "border-white/15 text-transparent",
+                          )}
+                        >
+                          {isSelected && (
+                            <svg
+                              viewBox="0 0 12 12"
+                              fill="currentColor"
+                              className="h-3 w-3"
+                            >
+                              <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                       <div className="flex-1">
                         {mobileCols.slice(0, 1).map((col) => {
                           const raw = getNestedValue(row, col.key);
@@ -1961,7 +2192,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             ? col.render(raw as T[keyof T], row)
                             : formatCellValue(raw);
                           return (
-                            <div key={col.key}>
+                            <div
+                              key={col.key}
+                              onClick={() =>
+                                enableCellCopy &&
+                                handleCellCopy(raw, rowKey, col.key)
+                              }
+                              className={
+                                enableCellCopy
+                                  ? "cursor-copy active:opacity-70"
+                                  : ""
+                              }
+                            >
                               <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 mb-0.5">
                                 {col.label}
                               </p>
@@ -1982,7 +2224,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           ? col.render(raw as T[keyof T], row)
                           : formatCellValue(raw);
                         return (
-                          <div key={col.key}>
+                          <div
+                            key={col.key}
+                            onClick={() =>
+                              enableCellCopy &&
+                              handleCellCopy(raw, rowKey, col.key)
+                            }
+                            className={
+                              enableCellCopy
+                                ? "cursor-copy active:opacity-70"
+                                : ""
+                            }
+                          >
                             <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 mb-0.5">
                               {col.label}
                             </p>
@@ -1996,14 +2249,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       })}
                     </div>
                     {hasActions && (
-                      <div className="mt-3 flex items-center gap-1 border-t border-white/[0.04] pt-3 mr-8">
+                      <div
+                        className="mt-3 flex items-center gap-1 border-t border-white/[0.04] pt-3 mr-8"
+                        role="toolbar"
+                        aria-label="عملیات"
+                      >
                         <ActionBtn
                           onClick={() => openView(row)}
                           title="مشاهده جزئیات"
                         >
                           <Icon.Eye />
                         </ActionBtn>
-                        {onUpdate && (
+                        {canUpdate && (
                           <ActionBtn
                             onClick={() => openEdit(row)}
                             title="ویرایش"
@@ -2011,7 +2268,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             <Icon.Edit />
                           </ActionBtn>
                         )}
-                        {onDelete && (
+                        {canDelete && (
                           <ActionBtn
                             onClick={() => openDelete(row)}
                             title="حذف"
@@ -2031,28 +2288,41 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
           {/* ── Pagination ── */}
           {totalPages > 1 && (
-            <div className="flex flex-col items-center gap-3 border-t border-white/[0.06] px-4 py-3 sm:flex-row sm:justify-between">
-              <p className="text-xs text-slate-500">
-                نمایش{" "}
-                <span className="font-medium text-slate-300">
-                  {toPersianDigits((currentPage - 1) * pageSize + 1)}
-                </span>{" "}
-                تا{" "}
-                <span className="font-medium text-slate-300">
-                  {toPersianDigits(
-                    Math.min(currentPage * pageSize, filtered.length),
-                  )}
-                </span>{" "}
-                از{" "}
-                <span className="font-medium text-slate-300">
-                  {toPersianDigits(filtered.length)}
-                </span>{" "}
-                مورد
-              </p>
-              <div className="flex items-center gap-1" dir="ltr">
+            <nav
+              aria-label="صفحه‌بندی"
+              className="flex flex-col items-center gap-3 border-t border-white/[0.06] px-4 py-3 sm:flex-row sm:justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-slate-500" aria-live="polite">
+                  نمایش{" "}
+                  <span className="font-medium text-slate-300">
+                    {toPersianDigits((currentPage - 1) * currentPageSize + 1)}
+                  </span>{" "}
+                  تا{" "}
+                  <span className="font-medium text-slate-300">
+                    {toPersianDigits(
+                      Math.min(currentPage * currentPageSize, totalItems),
+                    )}
+                  </span>{" "}
+                  از{" "}
+                  <span className="font-medium text-slate-300">
+                    {toPersianDigits(totalItems)}
+                  </span>{" "}
+                  مورد
+                </p>
+                <PageSizeSelector
+                  value={currentPageSize}
+                  options={pageSizes}
+                  onChange={handlePageSizeChange}
+                />
+              </div>
+
+              {/* Desktop pagination */}
+              <div className="hidden sm:flex items-center gap-1" dir="ltr">
                 <PaginationBtn
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
+                  ariaLabel="صفحه قبلی"
                 >
                   <Icon.ChevronLeft />
                 </PaginationBtn>
@@ -2061,6 +2331,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     key={n}
                     onClick={() => setPage(n)}
                     active={n === currentPage}
+                    ariaLabel={`صفحه ${toPersianDigits(n)}`}
                   >
                     {toPersianDigits(n)}
                   </PaginationBtn>
@@ -2068,33 +2339,87 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 <PaginationBtn
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
+                  ariaLabel="صفحه بعدی"
                 >
                   <Icon.ChevronRight />
                 </PaginationBtn>
               </div>
-            </div>
+
+              {/* Mobile pagination — simple prev/next */}
+              <div className="flex sm:hidden items-center gap-3 w-full justify-between">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="صفحه قبلی"
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-xl border px-4 text-xs font-medium",
+                    borders.subtle,
+                    animation.base,
+                    focus.ring,
+                    currentPage === 1
+                      ? "opacity-30 pointer-events-none text-slate-500"
+                      : "text-slate-300 hover:text-white hover:border-[#D4AF37]/20",
+                  )}
+                >
+                  <Icon.ChevronRight />
+                  <span>قبلی</span>
+                </button>
+
+                <span
+                  className="text-xs font-medium text-slate-400"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  صفحه {toPersianDigits(currentPage)} از{" "}
+                  {toPersianDigits(totalPages)}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="صفحه بعدی"
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-xl border px-4 text-xs font-medium",
+                    borders.subtle,
+                    animation.base,
+                    focus.ring,
+                    currentPage === totalPages
+                      ? "opacity-30 pointer-events-none text-slate-500"
+                      : "text-slate-300 hover:text-white hover:border-[#D4AF37]/20",
+                  )}
+                >
+                  <span>بعدی</span>
+                  <Icon.ChevronLeft />
+                </button>
+              </div>
+            </nav>
           )}
         </div>
       </section>
+
+      {/* ── Copy Toast ── */}
+      <CopyToast visible={copied} />
 
       {/* ══════════════════════════════════════════════
           MODALS
           ══════════════════════════════════════════════ */}
 
-      {/* ── View Modal ── */}
+      {/* ── View ── */}
       <Overlay open={modalMode === "view"} onClose={closeModal} wide>
         <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
           <h3 className={cn(typography.h4, gradients.textPrimary)}>جزئیات</h3>
           <button
             type="button"
             onClick={closeModal}
+            aria-label="بستن پنجره جزئیات"
             className={cn(
               "rounded-lg p-1 text-slate-500",
               animation.colors,
               "hover:bg-white/[0.06] hover:text-white",
               focus.ring,
             )}
-            aria-label="بستن"
           >
             <Icon.X />
           </button>
@@ -2130,7 +2455,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           </dl>
         </div>
         <div className="border-t border-white/[0.06] px-5 py-3 flex justify-start gap-2">
-          {onUpdate && selectedRow && (
+          {canUpdate && selectedRow && (
             <button
               type="button"
               onClick={() => {
@@ -2153,13 +2478,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         </div>
       </Overlay>
 
-      {/* ── Create / Edit Modal ── */}
+      {/* ── Create / Edit ── */}
       <Overlay
         open={modalMode === "create" || modalMode === "edit"}
         onClose={closeModal}
         wide
       >
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
             <h3 className={cn(typography.h4, gradients.textPrimary)}>
               {modalMode === "create" ? "ایجاد رکورد جدید" : "ویرایش رکورد"}
@@ -2167,13 +2492,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <button
               type="button"
               onClick={closeModal}
+              aria-label="بستن فرم"
               className={cn(
                 "rounded-lg p-1 text-slate-500",
                 animation.colors,
                 "hover:bg-white/[0.06] hover:text-white",
                 focus.ring,
               )}
-              aria-label="بستن"
             >
               <Icon.X />
             </button>
@@ -2181,17 +2506,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <div className="max-h-[60vh] overflow-y-auto overflow-x-visible px-5 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {editableCols.map((col) => {
-                const fieldValue = formData[col.key];
+                const fv = formData[col.key];
                 const error = formErrors[col.key];
                 const inputType = col.inputType || "text";
-                const isFullWidth = inputType === "textarea";
-                const isDateField = col.dateFilter || inputType === "date";
+                const isFull = inputType === "textarea";
+                const isDate = col.dateFilter || inputType === "date";
 
                 return (
-                  <div
-                    key={col.key}
-                    className={isFullWidth ? "sm:col-span-2" : ""}
-                  >
+                  <div key={col.key} className={isFull ? "sm:col-span-2" : ""}>
                     <label
                       htmlFor={`field-${col.key}`}
                       className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400"
@@ -2202,47 +2524,43 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       )}
                     </label>
 
-                    {/* Date field with Jalali picker */}
-                    {isDateField ? (
-                      <div className="relative">
-                        <DatePicker
-                          value={fieldValue ? String(fieldValue) : ""}
-                          onChange={(date) => {
-                            if (date && !Array.isArray(date)) {
-                              updateField(col.key, date.format("YYYY/MM/DD"));
-                            } else {
-                              updateField(col.key, "");
-                            }
-                          }}
-                          calendar={persian}
-                          locale={persian_fa}
-                          calendarPosition="bottom-right"
-                          fixMainPosition
-                          arrow={false}
-                          render={(value, openCalendar) => (
-                            <button
-                              type="button"
-                              onClick={openCalendar}
-                              className={cn(
-                                "flex h-10 w-full items-center gap-2 rounded-xl border px-3 text-sm text-right",
-                                "bg-white/[0.035] backdrop-blur-sm",
-                                error ? "border-red-500/40" : borders.subtle,
-                                animation.base,
-                                focus.ring,
-                                "hover:border-[#D4AF37]/18",
-                                value ? "text-white" : "text-slate-500",
-                              )}
-                            >
-                              <Icon.Calendar />
-                              <span className="flex-1 text-right">
-                                {value ||
-                                  col.placeholder ||
-                                  `${col.label} را انتخاب کنید`}
-                              </span>
-                            </button>
-                          )}
-                        />
-                      </div>
+                    {isDate ? (
+                      <DatePicker
+                        value={fv ? String(fv) : ""}
+                        onChange={(date) => {
+                          if (date && !Array.isArray(date))
+                            updateField(col.key, date.format("YYYY/MM/DD"));
+                          else updateField(col.key, "");
+                        }}
+                        calendar={persian}
+                        locale={persian_fa}
+                        calendarPosition="bottom-right"
+                        fixMainPosition
+                        arrow={false}
+                        render={(value, openCalendar) => (
+                          <button
+                            type="button"
+                            onClick={openCalendar}
+                            aria-label={`انتخاب ${col.label}`}
+                            className={cn(
+                              "flex h-10 w-full items-center gap-2 rounded-xl border px-3 text-sm text-right",
+                              "bg-white/[0.035] backdrop-blur-sm",
+                              error ? "border-red-500/40" : borders.subtle,
+                              animation.base,
+                              focus.ring,
+                              "hover:border-[#D4AF37]/18",
+                              value ? "text-white" : "text-slate-500",
+                            )}
+                          >
+                            <Icon.Calendar />
+                            <span className="flex-1 text-right">
+                              {value ||
+                                col.placeholder ||
+                                `${col.label} را انتخاب کنید`}
+                            </span>
+                          </button>
+                        )}
+                      />
                     ) : col.options ? (
                       <div className="relative z-20">
                         <CustomSelect
@@ -2251,7 +2569,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             value: opt.value,
                             label: opt.label,
                           }))}
-                          value={String(fieldValue ?? "")}
+                          value={String(fv ?? "")}
                           onChange={(val) =>
                             updateField(
                               col.key,
@@ -2271,10 +2589,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       <textarea
                         id={`field-${col.key}`}
                         rows={3}
-                        value={String(fieldValue ?? "")}
+                        value={String(fv ?? "")}
                         onChange={(e) => updateField(col.key, e.target.value)}
                         placeholder={
                           col.placeholder || `${col.label} را وارد کنید`
+                        }
+                        aria-invalid={!!error}
+                        aria-describedby={
+                          error ? `error-${col.key}` : undefined
                         }
                         className={cn(
                           "w-full rounded-xl border px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none",
@@ -2290,7 +2612,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         <input
                           type="checkbox"
                           id={`field-${col.key}`}
-                          checked={Boolean(fieldValue)}
+                          checked={Boolean(fv)}
                           onChange={(e) =>
                             updateField(col.key, e.target.checked)
                           }
@@ -2309,8 +2631,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         type={inputType}
                         value={
                           inputType === "number"
-                            ? ((fieldValue as string) ?? "")
-                            : String(fieldValue ?? "")
+                            ? ((fv as string) ?? "")
+                            : String(fv ?? "")
                         }
                         onChange={(e) =>
                           updateField(
@@ -2325,6 +2647,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         placeholder={
                           col.placeholder || `${col.label} را وارد کنید`
                         }
+                        aria-invalid={!!error}
+                        aria-describedby={
+                          error ? `error-${col.key}` : undefined
+                        }
+                        aria-required={col.required}
                         className={cn(
                           "h-10 w-full rounded-xl border px-3 text-sm text-white placeholder-slate-500 outline-none",
                           "bg-white/[0.035] backdrop-blur-sm",
@@ -2335,9 +2662,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         )}
                       />
                     )}
-
                     {error && (
-                      <p className="mt-1 text-[11px] text-red-400">{error}</p>
+                      <p
+                        id={`error-${col.key}`}
+                        role="alert"
+                        className="mt-1 text-[11px] text-red-400"
+                      >
+                        {error}
+                      </p>
                     )}
                   </div>
                 );
@@ -2348,6 +2680,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <button
               type="submit"
               disabled={submitting}
+              aria-busy={submitting}
               className={cn(
                 components.ctaSmall,
                 "h-9 text-xs",
@@ -2371,7 +2704,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         </form>
       </Overlay>
 
-      {/* ── Delete Confirmation ── */}
+      {/* ── Delete ── */}
       <Overlay open={modalMode === "delete"} onClose={closeModal}>
         <div className="px-5 py-6 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-400">
@@ -2409,6 +2742,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               type="button"
               onClick={handleDelete}
               disabled={submitting}
+              aria-busy={submitting}
               className={cn(
                 "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-red-500/25 bg-red-500/15 px-5 text-xs font-semibold text-red-400",
                 animation.base,

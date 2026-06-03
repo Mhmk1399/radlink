@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────
-// app/dashboard/users/page.tsx
+// app/dashboard/users/page.tsx — فقط بخش‌های تغییر یافته
 // ─────────────────────────────────────────────────────────────────
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React from "react";
 import {
   backgrounds,
   layout,
@@ -11,13 +11,24 @@ import {
   gradients,
   animation,
   borders,
-  components,
   cn,
+  focus,
+  interactive,
 } from "@/lib/design/design-system";
 import DynamicTable, { ColumnDef } from "@/components/global/DynamicTable";
+import {
+  FaUsers,
+  FaCircleCheck,
+  FaClock,
+  FaCircleXmark,
+  FaCircleInfo,
+  FaPowerOff,
+  FaLock,
+  FaLockOpen,
+  FaEnvelope,
+  FaKey,
+} from "react-icons/fa6";
 import { toast } from "@/components/ui/CustomToast";
-import SelectDemoPage from "@/components/ui/TestSelect";
-
 /* ══════════════════════════════════════════════
    تایپ کاربر
    ══════════════════════════════════════════════ */
@@ -28,6 +39,7 @@ interface User {
   email: string;
   role: string;
   status: string;
+  isActive: boolean; // ← اضافه شد
   department: string;
   phone: string;
   createdAt: string;
@@ -35,16 +47,17 @@ interface User {
 }
 
 /* ══════════════════════════════════════════════
-   API ساختگی — جایگزین با API واقعی خود شوید
+   داده‌های پیش‌فرض
    ══════════════════════════════════════════════ */
 
-const FAKE_USERS: User[] = [
+const DEFAULT_USERS: User[] = [
   {
     id: "1",
     name: "سارا جانسون",
     email: "sara@company.com",
     role: "مدیر",
     status: "فعال",
+    isActive: true,
     department: "مهندسی",
     phone: "۰۹۱۲۱۲۳۴۵۶۷",
     createdAt: "۱۴۰۲/۱۰/۲۵",
@@ -55,6 +68,7 @@ const FAKE_USERS: User[] = [
     email: "mohammad@company.com",
     role: "ویرایشگر",
     status: "فعال",
+    isActive: true,
     department: "طراحی",
     phone: "۰۹۱۲۲۳۴۵۶۷۸",
     createdAt: "۱۴۰۲/۱۱/۰۱",
@@ -65,6 +79,7 @@ const FAKE_USERS: User[] = [
     email: "fatemeh@company.com",
     role: "بازدیدکننده",
     status: "غیرفعال",
+    isActive: false,
     department: "بازاریابی",
     phone: "۰۹۱۲۳۴۵۶۷۸۹",
     createdAt: "۱۴۰۲/۱۲/۱۵",
@@ -75,6 +90,7 @@ const FAKE_USERS: User[] = [
     email: "ali@company.com",
     role: "مدیر",
     status: "فعال",
+    isActive: true,
     department: "مهندسی",
     phone: "۰۹۱۲۴۵۶۷۸۹۰",
     createdAt: "۱۴۰۳/۰۱/۰۵",
@@ -85,6 +101,7 @@ const FAKE_USERS: User[] = [
     email: "maryam@company.com",
     role: "ویرایشگر",
     status: "فعال",
+    isActive: true,
     department: "محتوا",
     phone: "۰۹۱۲۵۶۷۸۹۰۱",
     createdAt: "۱۴۰۳/۰۲/۱۸",
@@ -95,6 +112,7 @@ const FAKE_USERS: User[] = [
     email: "hossein@company.com",
     role: "بازدیدکننده",
     status: "در انتظار",
+    isActive: false,
     department: "فروش",
     phone: "۰۹۱۲۶۷۸۹۰۱۲",
     createdAt: "۱۴۰۳/۰۳/۲۲",
@@ -105,6 +123,7 @@ const FAKE_USERS: User[] = [
     email: "zahra@company.com",
     role: "مدیر",
     status: "فعال",
+    isActive: true,
     department: "منابع انسانی",
     phone: "۰۹۱۲۷۸۹۰۱۲۳",
     createdAt: "۱۴۰۳/۰۴/۰۱",
@@ -115,6 +134,7 @@ const FAKE_USERS: User[] = [
     email: "reza@company.com",
     role: "ویرایشگر",
     status: "فعال",
+    isActive: true,
     department: "مهندسی",
     phone: "۰۹۱۲۸۹۰۱۲۳۴",
     createdAt: "۱۴۰۳/۰۴/۱۵",
@@ -125,6 +145,7 @@ const FAKE_USERS: User[] = [
     email: "negar@company.com",
     role: "بازدیدکننده",
     status: "غیرفعال",
+    isActive: false,
     department: "مالی",
     phone: "۰۹۱۲۹۰۱۲۳۴۵",
     createdAt: "۱۴۰۳/۰۵/۰۳",
@@ -135,6 +156,7 @@ const FAKE_USERS: User[] = [
     email: "amir@company.com",
     role: "مدیر",
     status: "فعال",
+    isActive: true,
     department: "مهندسی",
     phone: "۰۹۱۳۰۱۲۳۴۵۶",
     createdAt: "۱۴۰۳/۰۵/۲۰",
@@ -145,6 +167,7 @@ const FAKE_USERS: User[] = [
     email: "nazanin@company.com",
     role: "ویرایشگر",
     status: "فعال",
+    isActive: true,
     department: "طراحی",
     phone: "۰۹۱۳۱۲۳۴۵۶۷",
     createdAt: "۱۴۰۳/۰۶/۰۱",
@@ -155,23 +178,24 @@ const FAKE_USERS: User[] = [
     email: "saeed@company.com",
     role: "بازدیدکننده",
     status: "در انتظار",
+    isActive: false,
     department: "پشتیبانی",
     phone: "۰۹۱۳۲۳۴۵۶۷۸",
     createdAt: "۱۴۰۳/۰۶/۱۵",
   },
 ];
 
-/* ── شبیه‌سازی تأخیر شبکه ── */
-async function fakeDelay(ms = 600) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+/* ══════════════════════════════════════════════
+   آیکون‌های سفارشی برای اکشن‌ها
+   ══════════════════════════════════════════════ */
 
-/* ── شبیه‌سازی خطای تصادفی ── */
-function maybeThrow(chance = 0.15) {
-  if (Math.random() < chance) {
-    throw new Error("ارتباط با سرور قطع شد");
-  }
-}
+const CustomIcons = {
+  Power: () => <FaPowerOff className="h-4 w-4" />,
+  Lock: () => <FaLock className="h-4 w-4" />,
+  Unlock: () => <FaLockOpen className="h-4 w-4" />,
+  Mail: () => <FaEnvelope className="h-4 w-4" />,
+  Key: () => <FaKey className="h-4 w-4" />,
+};
 
 /* ══════════════════════════════════════════════
    زیرکامپوننت‌های نشانک
@@ -188,7 +212,6 @@ function StatusBadge({ status }: { status: string }) {
     "در انتظار": "bg-[#F5D76E]",
     غیرفعال: "bg-slate-400",
   };
-
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${colors[status] ?? colors["غیرفعال"]}`}
@@ -207,7 +230,6 @@ function RoleBadge({ role }: { role: string }) {
     ویرایشگر: "bg-blue-500/10 text-blue-400 border-blue-500/20",
     بازدیدکننده: "bg-slate-500/10 text-slate-400 border-slate-500/20",
   };
-
   return (
     <span
       className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${colors[role] ?? colors["بازدیدکننده"]}`}
@@ -217,68 +239,39 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+/* ── آیکون فعال/غیرفعال ── */
+function ActiveIndicator({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
+        active
+          ? "bg-emerald-500/10 text-emerald-400"
+          : "bg-red-500/10 text-red-400",
+      )}
+    >
+      <span
+        className={cn(
+          "h-2 w-2 rounded-full",
+          active ? "bg-emerald-400" : "bg-red-400",
+        )}
+      />
+      {active ? "آنلاین" : "آفلاین"}
+    </span>
+  );
+}
+
 /* ══════════════════════════════════════════════
    آیکون‌های آمار
    ══════════════════════════════════════════════ */
 
 const StatIcons = {
-  Users: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-5 w-5"
-    >
-      <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
-    </svg>
-  ),
-  Active: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-5 w-5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Pending: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-5 w-5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-  Inactive: () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-5 w-5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
+  Users: () => <FaUsers className="h-5 w-5" />,
+  Active: () => <FaCircleCheck className="h-5 w-5" />,
+  Pending: () => <FaClock className="h-5 w-5" />,
+  Inactive: () => <FaCircleXmark className="h-5 w-5" />,
+  Info: () => <FaCircleInfo className="h-4 w-4" />,
 };
-
-/* ══════════════════════════════════════════════
-   اعداد فارسی
-   ══════════════════════════════════════════════ */
 
 function toPersianDigits(n: number | string): string {
   const p = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
@@ -286,12 +279,8 @@ function toPersianDigits(n: number | string): string {
 }
 
 /* ══════════════════════════════════════════════
-   تعریف ستون‌ها
+   ستون‌ها — با isActive اضافه شده
    ══════════════════════════════════════════════ */
-
-// ─────────────────────────────────────────────────────────────────
-// app/dashboard/users/page.tsx — فقط تغییرات مربوط به ستون‌ها
-// ─────────────────────────────────────────────────────────────────
 
 const userColumns: ColumnDef<User>[] = [
   {
@@ -301,6 +290,7 @@ const userColumns: ColumnDef<User>[] = [
     editable: false,
     sortable: true,
     hideOnMobile: true,
+    copyable: true,
   },
   {
     key: "name",
@@ -308,6 +298,8 @@ const userColumns: ColumnDef<User>[] = [
     sortable: true,
     required: true,
     placeholder: "نام و نام‌خانوادگی",
+    editable: true,
+    copyable: true,
   },
   {
     key: "email",
@@ -316,41 +308,55 @@ const userColumns: ColumnDef<User>[] = [
     required: true,
     inputType: "email",
     placeholder: "user@example.com",
+    copyable: true,
   },
   {
     key: "role",
     label: "نقش",
     sortable: true,
     required: true,
-    filterable: true, // ← فیلتر دراپ‌داون
+    filterable: true,
     options: [
       { label: "مدیر", value: "مدیر" },
       { label: "ویرایشگر", value: "ویرایشگر" },
       { label: "بازدیدکننده", value: "بازدیدکننده" },
     ],
     render: (value) => <RoleBadge role={String(value)} />,
+    copyable: false,
   },
   {
     key: "status",
     label: "وضعیت",
     sortable: true,
     required: true,
-    filterable: true, // ← فیلتر دراپ‌داون
+    filterable: true,
     options: [
       { label: "فعال", value: "فعال" },
       { label: "غیرفعال", value: "غیرفعال" },
       { label: "در انتظار", value: "در انتظار" },
     ],
     render: (value) => <StatusBadge status={String(value)} />,
+    copyable: false,
+  },
+  {
+    key: "isActive",
+    label: "وضعیت اتصال",
+    sortable: true,
+    filterable: true,
+    editable: false, // از فرم ویرایش حذف — فقط با دکمه پاور
+    hideOnMobile: true,
+    render: (value) => <ActiveIndicator active={Boolean(value)} />,
+    copyable: false,
   },
   {
     key: "department",
     label: "بخش",
     sortable: true,
     required: true,
-    filterable: true, // ← فیلتر دراپ‌داون
+    filterable: true,
     hideOnMobile: true,
     placeholder: "مثلاً مهندسی",
+    copyable: true,
   },
   {
     key: "phone",
@@ -358,14 +364,16 @@ const userColumns: ColumnDef<User>[] = [
     inputType: "tel",
     hideOnMobile: true,
     placeholder: "۰۹۱۲۰۰۰۰۰۰۰",
+    copyable: true,
   },
   {
     key: "createdAt",
     label: "تاریخ ایجاد",
     sortable: true,
-    dateFilter: true, // ← فیلتر تاریخ شمسی ✨
+    dateFilter: true,
+    editable: false,
     hideOnMobile: true,
-    placeholder: "۱۴۰۳/۰۱/۰۱",
+    copyable: true,
   },
 ];
 
@@ -390,24 +398,19 @@ function StatCard({
         "group relative overflow-hidden rounded-2xl border p-4",
         borders.subtle,
         backgrounds.surface.glass,
-        "transition-all duration-300",
-        "hover:border-white/12 hover:-translate-y-0.5",
-        "hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.5)]",
+        "transition-all duration-300 hover:border-white/12 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.5)]",
       )}
     >
-      {/* glow */}
       <div
         className={cn(
           "pointer-events-none absolute -left-4 -top-4 h-16 w-16 rounded-full blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100",
           color,
         )}
       />
-
       <div className="relative flex items-center gap-3">
         <div
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl border",
-            "bg-white/[0.04]",
+            "flex h-10 w-10 items-center justify-center rounded-xl border bg-white/[0.04]",
             borders.subtle,
             "text-slate-400 transition-colors duration-300 group-hover:text-[#F5D76E]",
           )}
@@ -426,383 +429,301 @@ function StatCard({
 }
 
 /* ══════════════════════════════════════════════
-   صفحه اصلی مدیریت کاربران
+   هوک مدیریت دیتا
    ══════════════════════════════════════════════ */
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+function useLocalUsers(initialData: User[]) {
+  const [users, setUsers] = React.useState<User[]>(initialData);
 
-  /* ── آمار محاسبه‌شده ── */
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.status === "فعال").length,
-    pending: users.filter((u) => u.status === "در انتظار").length,
-    inactive: users.filter((u) => u.status === "غیرفعال").length,
-  };
-
-  /* ──────────────────────────────────────────────
-     GET: دریافت کاربران
-     ────────────────────────────────────────────── */
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      // ── API واقعی ──
-      // const res = await fetch('/api/users');
-      // if (!res.ok) throw new Error('خطا در دریافت');
-      // const data = await res.json();
-      // setUsers(data);
-
-      await fakeDelay(800);
-      setUsers(FAKE_USERS);
-      toast.success("لیست کاربران با موفقیت بارگذاری شد.", {
-        title: "بارگذاری موفق",
-        duration: 3000,
-      });
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "خطا در دریافت اطلاعات",
-        {
-          title: "خطای بارگذاری",
-          action: {
-            label: "تلاش مجدد",
-            onClick: () => fetchUsers(),
-          },
-          duration: 8000,
-        },
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  /* ──────────────────────────────────────────────
-     POST: ایجاد کاربر
-     ────────────────────────────────────────────── */
-  const handleCreate = useCallback(async (item: Partial<User>) => {
-    const loadingId = toast.loading("در حال ایجاد کاربر جدید...", {
-      title: "ایجاد کاربر",
-    });
-
-    try {
-      // ── API واقعی ──
-      // const res = await fetch('/api/users', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(item),
-      // });
-      // if (!res.ok) throw new Error('خطا در ایجاد');
-      // const newUser = await res.json();
-
-      await fakeDelay(1000);
-      maybeThrow(0.1);
-
-      const newUser: User = {
-        id: String(Date.now()),
-        name: String(item.name ?? ""),
-        email: String(item.email ?? ""),
-        role: String(item.role ?? "بازدیدکننده"),
-        status: String(item.status ?? "در انتظار"),
-        department: String(item.department ?? ""),
-        phone: String(item.phone ?? ""),
-        createdAt: "۱۴۰۳/۰۶/۲۰",
-      };
-
-      setUsers((prev) => [newUser, ...prev]);
-
-      toast.update(loadingId, {
-        type: "success",
-        title: "کاربر ایجاد شد",
-        message: `«${newUser.name}» با موفقیت به لیست اضافه شد.`,
-        duration: 4000,
-      });
-    } catch (err) {
-      toast.update(loadingId, {
-        type: "error",
-        title: "خطا در ایجاد",
-        message: err instanceof Error ? err.message : "عملیات با خطا مواجه شد.",
-        action: {
-          label: "تلاش مجدد",
-          onClick: () => handleCreate(item),
-        },
-        duration: 8000,
-      });
-      throw err; // re-throw so DynamicTable keeps modal open
-    }
-  }, []);
-
-  /* ──────────────────────────────────────────────
-     PATCH: ویرایش کاربر
-     ────────────────────────────────────────────── */
-  const handleUpdate = useCallback(async (item: User) => {
-    const loadingId = toast.loading("در حال ذخیره تغییرات...", {
-      title: "ویرایش کاربر",
-    });
-
-    try {
-      // ── API واقعی ──
-      // const res = await fetch(`/api/users/${item.id}`, {
-      //   method: 'PATCH',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(item),
-      // });
-      // if (!res.ok) throw new Error('خطا در ویرایش');
-
-      await fakeDelay(800);
-      maybeThrow(0.1);
-
-      setUsers((prev) =>
-        prev.map((u) => (u.id === item.id ? { ...u, ...item } : u)),
-      );
-
-      toast.update(loadingId, {
-        type: "success",
-        title: "تغییرات ذخیره شد",
-        message: `اطلاعات «${item.name}» با موفقیت به‌روزرسانی شد.`,
-        duration: 4000,
-      });
-    } catch (err) {
-      toast.update(loadingId, {
-        type: "error",
-        title: "خطا در ویرایش",
-        message:
-          err instanceof Error ? err.message : "ذخیره تغییرات با خطا مواجه شد.",
-        action: {
-          label: "تلاش مجدد",
-          onClick: () => handleUpdate(item),
-        },
-        duration: 8000,
-      });
-      throw err;
-    }
-  }, []);
-
-  /* ──────────────────────────────────────────────
-     DELETE: حذف کاربر
-     ────────────────────────────────────────────── */
-  const handleDelete = useCallback(
-    async (item: User) => {
-      const loadingId = toast.loading(`در حال حذف «${item.name}»...`, {
-        title: "حذف کاربر",
-      });
-
-      // برای Undo: ذخیره‌سازی state قبلی
-      const previousUsers = [...users];
-
-      try {
-        // ── حذف خوشبینانه: فوری از UI حذف شود ──
-        setUsers((prev) => prev.filter((u) => u.id !== item.id));
-
-        // ── API واقعی ──
-        // const res = await fetch(`/api/users/${item.id}`, { method: 'DELETE' });
-        // if (!res.ok) throw new Error('خطا در حذف');
-
-        await fakeDelay(700);
-        maybeThrow(0.1);
-
-        toast.update(loadingId, {
-          type: "success",
-          title: "کاربر حذف شد",
-          message: `«${item.name}» از سیستم حذف شد.`,
-          duration: 6000,
-          action: {
-            label: "بازگردانی",
-            onClick: () => {
-              // undo
-              setUsers(previousUsers);
-              toast.success(`«${item.name}» بازگردانی شد.`, {
-                title: "بازگردانی موفق",
-                duration: 3000,
-              });
-            },
-          },
-        });
-      } catch (err) {
-        // ── rollback ──
-        setUsers(previousUsers);
-
-        toast.update(loadingId, {
-          type: "error",
-          title: "خطا در حذف",
-          message:
-            err instanceof Error ? err.message : "حذف کاربر با خطا مواجه شد.",
-          action: {
-            label: "تلاش مجدد",
-            onClick: () => handleDelete(item),
-          },
-          duration: 8000,
-        });
-        throw err;
-      }
-    },
+  const stats = React.useMemo(
+    () => ({
+      total: users.length,
+      active: users.filter((u) => u.status === "فعال").length,
+      pending: users.filter((u) => u.status === "در انتظار").length,
+      inactive: users.filter((u) => u.status === "غیرفعال").length,
+    }),
     [users],
   );
 
-  /* ══════════════════════════════════════════════
-     RENDER
-     ══════════════════════════════════════════════ */
+  const handleCreate = React.useCallback(async (item: Partial<User>) => {
+    await new Promise((r) => setTimeout(r, 500));
+    const newUser: User = {
+      id: String(Date.now()),
+      name: String(item.name ?? ""),
+      email: String(item.email ?? ""),
+      role: String(item.role ?? "بازدیدکننده"),
+      status: String(item.status ?? "در انتظار"),
+      isActive: false,
+      department: String(item.department ?? ""),
+      phone: String(item.phone ?? ""),
+      createdAt: new Date().toLocaleDateString("fa-IR"),
+    };
+    setUsers((prev) => [newUser, ...prev]);
+  }, []);
+
+  const handleUpdate = React.useCallback(async (item: User) => {
+    await new Promise((r) => setTimeout(r, 500));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === item.id ? { ...u, ...item } : u)),
+    );
+  }, []);
+
+  const handleDelete = React.useCallback(async (item: User) => {
+    await new Promise((r) => setTimeout(r, 400));
+    setUsers((prev) => prev.filter((u) => u.id !== item.id));
+  }, []);
+
+  // ── ⭐ Toggle Active/Inactive ──
+  const handleToggleActive = React.useCallback(async (user: User) => {
+    await new Promise((r) => setTimeout(r, 300));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, isActive: !u.isActive } : u)),
+    );
+  }, []);
+
+  // ── ⭐ ریست پسورد ──
+  const handleResetPassword = React.useCallback(async (user: User) => {
+    await new Promise((r) => setTimeout(r, 500));
+    console.log(`🔑 Password reset for ${user.name}`);
+    toast.info(`رمز عبور «${user.name}» ریست شد!`);
+  }, []);
+
+  // ── ⭐ ارسال ایمیل ──
+  const handleSendEmail = React.useCallback(async (user: User) => {
+    await new Promise((r) => setTimeout(r, 300));
+    console.log(`📧 Email sent to ${user.email}`);
+    toast.info(`ایمیل به «${user.email}» ارسال شد!`);
+  }, []);
+
+  return {
+    users,
+    stats,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+    handleToggleActive,
+    handleResetPassword,
+    handleSendEmail,
+  };
+}
+
+/* ══════════════════════════════════════════════
+   صفحه اصلی
+   ══════════════════════════════════════════════ */
+
+export default function UsersPage() {
+  const {
+    users,
+    stats,
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+    handleToggleActive,
+    handleResetPassword,
+    handleSendEmail,
+  } = useLocalUsers(DEFAULT_USERS);
 
   return (
-    <>
-      {" "}
-      <div className={cn("min-h-screen", backgrounds.page)} dir="rtl">
-        <style>{animation.keyframes}</style>
+    <div className={cn("min-h-screen", backgrounds.page)} dir="rtl">
+      <style>{animation.keyframes}</style>
 
-        <div className={cn(layout.container, layout.section)}>
-          {/* ── سربرگ صفحه ── */}
-          <header className="mb-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl border",
-                      borders.medium,
-                      "bg-[#D4AF37]/[0.08]",
-                      "text-[#F5D76E]",
-                    )}
-                  >
-                    <StatIcons.Users />
-                  </div>
-                  <div>
-                    <h1 className={cn(typography.h2, gradients.textPrimary)}>
-                      مدیریت کاربران
-                    </h1>
-                  </div>
-                </div>
-                <p className={cn(typography.body, "mr-13")}>
-                  اعضای تیم، نقش‌ها و سطوح دسترسی خود را مدیریت کنید.
-                </p>
-              </div>
+      <div className={cn(layout.container, layout.section)}>
+        {/* ── سربرگ ── */}
+        <header className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-xl border",
+                borders.medium,
+                "bg-[#D4AF37]/[0.08] text-[#F5D76E]",
+              )}
+            >
+              <StatIcons.Users />
+            </div>
+            <h1 className={cn(typography.h2, gradients.textPrimary)}>
+              مدیریت کاربران
+            </h1>
+          </div>
+          <p className={cn(typography.body, "mr-13")}>
+            اعضای تیم، نقش‌ها و سطوح دسترسی خود را مدیریت کنید.
+          </p>
+        </header>
 
-              {/* ── دکمه Refresh ── */}
+        {/* ── آمار ── */}
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            icon={<StatIcons.Users />}
+            label="کل کاربران"
+            value={stats.total}
+            color="bg-[#D4AF37]/20"
+          />
+          <StatCard
+            icon={<StatIcons.Active />}
+            label="فعال"
+            value={stats.active}
+            color="bg-emerald-500/20"
+          />
+          <StatCard
+            icon={<StatIcons.Pending />}
+            label="در انتظار"
+            value={stats.pending}
+            color="bg-amber-500/20"
+          />
+          <StatCard
+            icon={<StatIcons.Inactive />}
+            label="غیرفعال"
+            value={stats.inactive}
+            color="bg-red-500/20"
+          />
+        </div>
+
+        {/* ═══════════════════════════════════════════
+           ⭐ جدول با rowActions سفارشی
+           ═══════════════════════════════════════════ */}
+        <DynamicTable<User>
+          endpoint=""
+          data={users}
+          enabled={false}
+          columns={userColumns}
+          title="لیست کاربران"
+          subtitle={`${toPersianDigits(users.length)} عضو تیم`}
+          primaryKey="id"
+          pageSize={8}
+          pageSizes={[5, 8, 15, 25]}
+          searchDebounceMs={300}
+          searchable
+          stickyHeader
+          showRowNumbers
+          enableCellCopy
+          doubleClickToEdit
+          pullToRefresh
+          canCreate
+          canUpdate
+          canDelete
+          exportable
+          exportFileName="کاربران"
+          emptyMessage="کاربری یافت نشد!"
+          onCreate={async (item) => await handleCreate(item)}
+          onUpdate={async (item) => await handleUpdate(item)}
+          onDelete={async (item) => await handleDelete(item)}
+          // دکمه ها اینجا اضافه میشن
+          rowActions={(row) => (
+            <>
+              {/* ── دکمه پاور (روشن/خاموش) ── */}
               <button
                 type="button"
-                onClick={fetchUsers}
-                disabled={loading}
+                onClick={(e) => {
+                  e.stopPropagation(); // جلوگیری از double-click edit
+                  handleToggleActive(row);
+                }}
+                title={row.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                aria-label={
+                  row.isActive
+                    ? `غیرفعال کردن ${row.name}`
+                    : `فعال کردن ${row.name}`
+                }
                 className={cn(
-                  components.ghostButton,
-                  "h-10 text-xs px-4 gap-2",
-                  loading && "pointer-events-none opacity-50",
+                  "inline-flex h-8 w-8 items-center justify-center rounded-lg",
+                  "transition-all duration-200",
+                  focus.ring,
+                  interactive.touch,
+                  row.isActive
+                    ? "text-emerald-400/70 hover:bg-emerald-500/10 hover:text-emerald-400"
+                    : "text-slate-500 hover:bg-slate-500/10 hover:text-slate-300",
                 )}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className={cn("h-4 w-4", loading && "animate-spin")}
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.312a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-1.873-7.263A7 7 0 001.627 7.3a.75.75 0 101.45.388A5.5 5.5 0 0112.2 6.11l.312.311H10.08a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.537a.75.75 0 00-1.5 0v2.033l-.312-.312a6.995 6.995 0 00-1.213-.097z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                بروزرسانی
+                <CustomIcons.Power />
               </button>
+
+              {/* ── دکمه ریست پسورد ── */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleResetPassword(row);
+                }}
+                title="ریست رمز عبور"
+                aria-label={`ریست رمز عبور ${row.name}`}
+                className={cn(
+                  "inline-flex h-8 w-8 items-center justify-center rounded-lg",
+                  "transition-all duration-200",
+                  focus.ring,
+                  interactive.touch,
+                  "text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400",
+                )}
+              >
+                <CustomIcons.Key />
+              </button>
+
+              {/* ── دکمه ارسال ایمیل ── */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendEmail(row);
+                }}
+                title="ارسال ایمیل"
+                aria-label={`ارسال ایمیل به ${row.name}`}
+                className={cn(
+                  "inline-flex h-8 w-8 items-center justify-center rounded-lg",
+                  "transition-all duration-200",
+                  focus.ring,
+                  interactive.touch,
+                  "text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400",
+                )}
+              >
+                <CustomIcons.Mail />
+              </button>
+            </>
+          )}
+        />
+
+        {/* ── راهنما ── */}
+        <div
+          className={cn(
+            "mt-6 overflow-hidden rounded-2xl border p-4 sm:p-5",
+            borders.subtle,
+            backgrounds.surface.glass,
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#D4AF37]/[0.08] text-[#F5D76E]">
+              <StatIcons.Info />
             </div>
-          </header>
-
-          {/* ── کارت‌های آمار ── */}
-          <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard
-              icon={<StatIcons.Users />}
-              label="کل کاربران"
-              value={stats.total}
-              color="bg-[#D4AF37]/20"
-            />
-            <StatCard
-              icon={<StatIcons.Active />}
-              label="فعال"
-              value={stats.active}
-              color="bg-emerald-500/20"
-            />
-            <StatCard
-              icon={<StatIcons.Pending />}
-              label="در انتظار"
-              value={stats.pending}
-              color="bg-amber-500/20"
-            />
-            <StatCard
-              icon={<StatIcons.Inactive />}
-              label="غیرفعال"
-              value={stats.inactive}
-              color="bg-red-500/20"
-            />
-          </div>
-
-          {/* ── جدول داینامیک با CRUD کامل ── */}
-          <DynamicTable<User>
-            data={users}
-            columns={userColumns}
-            title="لیست کاربران"
-            subtitle={`${toPersianDigits(users.length)} عضو تیم`}
-            primaryKey="id"
-            loading={loading}
-            searchable
-            pageSize={8}
-            emptyMessage="کاربری یافت نشد. اولین عضو تیم خود را اضافه کنید!"
-            exportable
-            exportFileName="کاربران"
-            onCreate={handleCreate}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-          />
-
-          {/* ── راهنمای پایین صفحه ── */}
-          <div
-            className={cn(
-              "mt-6 overflow-hidden rounded-2xl border p-4 sm:p-5",
-              borders.subtle,
-              backgrounds.surface.glass,
-            )}
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#D4AF37]/[0.08] text-[#F5D76E]">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white mb-1">
-                  راهنمای استفاده
-                </h4>
-                <ul className="space-y-1 text-xs text-slate-400 leading-relaxed">
-                  <li className="flex items-center gap-2">
-                    <span className="h-1 w-1 rounded-full bg-[#D4AF37]/50" />
-                    برای جستجو از فیلد بالای جدول استفاده کنید
+            <div>
+              <h4 className="text-sm font-bold text-white mb-2">
+                راهنمای عملیات
+              </h4>
+              <ul className="space-y-1.5 text-xs text-slate-400 leading-relaxed">
+                {[
+                  [
+                    "⚡ پاور",
+                    "کلیک روی آیکون پاور وضعیت آنلاین/آفلاین کاربر را تغییر می‌دهد",
+                  ],
+                  [
+                    "🔑 ریست رمز",
+                    "رمز عبور کاربر را ریست می‌کند و ایمیل بازیابی ارسال می‌شود",
+                  ],
+                  ["📧 ایمیل", "ایمیل اطلاع‌رسانی به کاربر ارسال می‌شود"],
+                  [
+                    "✏️ ویرایش",
+                    "دابل‌کلیک روی ردیف یا دکمه ویرایش برای تغییر اطلاعات",
+                  ],
+                  ["📋 کپی", "کلیک روی هر سلول مقدار آن را کپی می‌کند"],
+                ].map(([title, desc]) => (
+                  <li key={title} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-emerald-400" />
+                    <span>
+                      <strong className="text-slate-300">{title}:</strong>{" "}
+                      {desc}
+                    </span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-1 w-1 rounded-full bg-[#D4AF37]/50" />
-                    با فیلترها می‌توانید بر اساس نقش، وضعیت و بخش فیلتر کنید
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-1 w-1 rounded-full bg-[#D4AF37]/50" />
-                    ردیف‌ها را انتخاب کنید و خروجی اکسل، CSV یا PNG بگیرید
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-1 w-1 rounded-full bg-[#D4AF37]/50" />
-                    پس از حذف، با دکمه «بازگردانی» می‌توانید عملیات را برگردانید
-                  </li>
-                </ul>
-              </div>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
