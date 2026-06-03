@@ -5,6 +5,7 @@
 
 import useSWR, { type SWRConfiguration, type KeyedMutator } from "swr";
 import { useCallback, useRef } from "react";
+import { ServerPaginatedResponse } from "@/types/table";
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -19,13 +20,7 @@ export interface ServerPaginationParams {
     filters?: Record<string, string>;
 }
 
-export interface ServerPaginatedResponse<T> {
-    data: T[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-}
+ 
 
 export interface UseTableDataOptions<T> {
     endpoint: string;
@@ -201,6 +196,7 @@ export function useTableData<T extends Record<string, unknown>>(
         data: rawData,
         error,
         isLoading,
+        
         isValidating,
         mutate,
     } = useSWR<T[]>(swrKey, finalFetcher, {

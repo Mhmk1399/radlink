@@ -11,6 +11,7 @@ import {
   shadows,
   typography,
 } from "@/lib/design/design-system";
+import { usePathname } from "next/navigation";
 
 /* ══════════════════════════════════════════════
    KEYFRAMES
@@ -274,6 +275,8 @@ export default function DynamicIsland() {
   const activeSection = useActiveSection(navIslandItems.map((i) => i.id));
   const islandRef = useRef<HTMLDivElement>(null);
 
+  const pathName = usePathname();
+
   // Close on outside touch
   useEffect(() => {
     if (!expanded) return;
@@ -294,7 +297,9 @@ export default function DynamicIsland() {
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
-
+  if (pathName === "/admin") {
+    return null;
+  }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: islandKeyframes }} />

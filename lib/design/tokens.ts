@@ -147,8 +147,8 @@ export const shadows = {
 export const typography = {
     h1: "text-3xl font-extrabold leading-[1.3] tracking-tight text-white sm:text-4xl md:text-5xl lg:text-[3.25rem] lg:leading-[1.25]",
     h2: "text-2xl font-extrabold leading-snug tracking-tight text-white sm:text-3xl md:text-4xl",
-    h3: "text-lg font-bold text-white sm:text-xl",
-    h4: "text-base font-bold text-white",
+    h3: "text-lg font-bold  sm:text-xl",
+    h4: "text-base font-bold",
 
     body: "text-sm leading-relaxed text-slate-300/80 sm:text-base sm:leading-8",
     bodyLg: "text-sm leading-relaxed text-slate-300/90 sm:text-base sm:leading-8 lg:text-lg",

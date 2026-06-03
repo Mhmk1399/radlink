@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: estedad, sans-serif;
 }
+
+
+
+/* ─── Custom Scrollbar ─── */
+
+/* Thin scrollbar for Firefox */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+/* Auto-hide scrollbar until hover */
+@supports selector(::-webkit-scrollbar) {
+  .scrollbar-auto-hide {
+    &::-webkit-scrollbar-thumb {
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+      opacity: 1;
+    }
+  }
+}

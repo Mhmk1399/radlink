@@ -15,6 +15,7 @@ import {
   accentTokens,
   animDelay,
 } from "@/lib/design/design-system";
+import { usePathname } from "next/navigation";
 
 /* ──────────────────────────────────────────────
    DATA
@@ -76,7 +77,11 @@ const socialLinks = [
 
 export function SmartLandingFooter() {
   const currentYear = new Date().getFullYear().toLocaleString("fa-IR");
+  const pathName = usePathname();
 
+  if (pathName === "/admin") {
+    return null;
+  }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: animation.keyframes }} />
@@ -330,12 +335,13 @@ export function SmartLandingFooter() {
           {/* ── Bottom bar ── */}
           <div
             className={cn(
-              "mt-14 flex flex-col items-center justify-between gap-4 border-t border-gray-700 pt-6 sm:flex-row sm:gap-0"
-             
+              "mt-14 flex flex-col items-center justify-between gap-4 border-t border-gray-700 pt-6 sm:flex-row sm:gap-0",
             )}
           >
             {/* Copyright */}
-            <p className={cn(typography.labelSmall, "text-slate-500 font-bold")}>
+            <p
+              className={cn(typography.labelSmall, "text-slate-500 font-bold")}
+            >
               © {currentYear} رادلینک — تمام حقوق این پلتفرم محفوظ است.
             </p>
 

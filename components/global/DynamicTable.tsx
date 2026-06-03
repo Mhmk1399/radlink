@@ -53,150 +53,379 @@ import CustomSelect from "../ui/customSelect";
 import {
   useTableData,
   type ServerPaginationParams,
-  type ServerPaginatedResponse,
-} from "@/hooks/table/useTableData";
-import { useDebounce } from "@/hooks/table/useDebounce";
-import { usePullToRefresh } from "@/hooks/table/usePullToRefresh";
-import { useCopyToClipboard } from "@/hooks/table/useCopyToClipboard";
-import type { SWRConfiguration } from "swr";
-
-/* ══════════════════════════════════════════════
-   TYPES
-   ══════════════════════════════════════════════ */
-
-export interface ColumnDef<T> {
-  key: keyof T & string;
-  label: string;
-  render?: (value: T[keyof T], row: T) => ReactNode;
-  visible?: boolean;
-  editable?: boolean;
-  viewable?: boolean;
-  inputType?: string;
-  sortable?: boolean;
-  placeholder?: string;
-  isPrimary?: boolean;
-  hideOnMobile?: boolean;
-  required?: boolean;
-  options?: { label: string; value: string }[];
-  filterable?: boolean;
-  dateFilter?: boolean;
-  /** Allow copying this cell's value */
-  copyable?: boolean;
-}
-
-export interface DynamicTableProps<T extends Record<string, unknown>> {
-  endpoint: string;
-  columns: ColumnDef<T>[];
-  title?: string;
-  subtitle?: string;
-
-  onCreate?: (
-    item: Partial<T>,
-    builtInCreate: (item: Partial<T>) => Promise<T | void>,
-  ) => Promise<void> | void;
-  onUpdate?: (
-    item: T,
-    builtInUpdate: (item: T) => Promise<T | void>,
-  ) => Promise<void> | void;
-  onDelete?: (
-    item: T,
-    builtInRemove: (item: T) => Promise<void>,
-  ) => Promise<void> | void;
-
-  canCreate?: boolean;
-  canUpdate?: boolean;
-  canDelete?: boolean;
-
-  primaryKey?: keyof T & string;
-  pageSize?: number;
-  /** Available page sizes for the selector */
-  pageSizes?: number[];
-  searchable?: boolean;
-  /** Debounce delay for search input in ms */
-  searchDebounceMs?: number;
-  emptyMessage?: string;
-  rowActions?: (row: T) => ReactNode;
-  exportable?: boolean;
-  exportFileName?: string;
-
-  /** Enable sticky table header */
-  stickyHeader?: boolean;
-  /** Show row numbers */
-  showRowNumbers?: boolean;
-  /** Enable double-click to edit */
-  doubleClickToEdit?: boolean;
-  /** Enable cell copy on click */
-  enableCellCopy?: boolean;
-  /** Enable pull-to-refresh on mobile */
-  pullToRefresh?: boolean;
-
-  /** Server-side pagination mode */
-  serverSide?: boolean;
-  transformPaginatedResponse?: (raw: unknown) => ServerPaginatedResponse<T>;
-
-  fetcher?: (url: string) => Promise<T[]>;
-  transformResponse?: (raw: unknown) => T[];
-  headers?: Record<string, string>;
-  swrConfig?: SWRConfiguration<T[]>;
-  enabled?: boolean;
-  onError?: (error: Error) => void;
-  data?: T[];
-}
-
-type SortDir = "asc" | "desc" | null;
-type ModalMode = "view" | "create" | "edit" | "delete" | null;
-
-interface DateRange {
-  from: DateObject | null;
-  to: DateObject | null;
-}
-
+} from "@/hook/table/useTableData";
+import { useDebounce } from "@/hook/table/useDebounce";
+import { usePullToRefresh } from "@/hook/table/usePullToRefresh";
+import { useCopyToClipboard } from "@/hook/table/useCopyToClipboard";
+import {
+  ColumnDef,
+  DateRange,
+  DynamicTableProps,
+  ModalMode,
+  SortDir,
+} from "@/types/table";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useThemeTokens } from "@/hook/theme/useThemeTokens";
+import type { CSSProperties } from "react";
 /* ══════════════════════════════════════════════
    DATEPICKER CUSTOM STYLES
    ══════════════════════════════════════════════ */
 
 const datePickerStyles = `
 .rmdp-container { direction: rtl !important; }
-.rmdp-wrapper, .rmdp-shadow {
-  background: rgba(11, 9, 5, 0.97) !important;
+
+.rmdp-wrapper,
+.rmdp-shadow {
+  background: var(--dt-bg) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--dt-border) !important;
   border-radius: 16px !important;
-  box-shadow: 0 20px 50px -28px rgba(0,0,0,0.95), 0 0 40px -10px rgba(212,175,55,0.12) !important;
+  box-shadow: var(--dt-shadow) !important;
   padding: 12px !important;
   font-family: inherit !important;
 }
-.rmdp-header { padding: 6px 4px 12px !important; border-bottom: 1px solid rgba(255,255,255,0.06) !important; margin-bottom: 8px !important; }
-.rmdp-header-values { color: #F5D76E !important; font-weight: 700 !important; font-size: 14px !important; }
-.rmdp-header-values span { padding: 4px 10px !important; border-radius: 8px !important; transition: background 0.2s !important; }
-.rmdp-header-values span:hover { background: rgba(212,175,55,0.1) !important; }
-.rmdp-arrow-container { display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; border-radius: 10px !important; background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important; transition: all 0.2s !important; }
-.rmdp-arrow-container:hover { background: rgba(212,175,55,0.12) !important; border-color: rgba(212,175,55,0.25) !important; }
-.rmdp-arrow-container .rmdp-arrow { border-color: #94a3b8 !important; width: 8px !important; height: 8px !important; margin: 0 !important; padding: 0 !important; }
-.rmdp-arrow-container:hover .rmdp-arrow { border-color: #F5D76E !important; }
-.rmdp-week-day { color: rgba(148,163,184,0.6) !important; font-size: 11px !important; font-weight: 600 !important; }
-.rmdp-day { width: 38px !important; height: 38px !important; }
-.rmdp-day span { font-size: 13px !important; font-weight: 500 !important; color: #cbd5e1 !important; border-radius: 10px !important; transition: all 0.15s !important; width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; inset: 2px !important; }
-.rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover { background: rgba(212,175,55,0.12) !important; color: #F5D76E !important; border: 1px solid rgba(212,175,55,0.2) !important; }
-.rmdp-today span { background: rgba(212,175,55,0.08) !important; color: #F5D76E !important; border: 1px solid rgba(212,175,55,0.2) !important; font-weight: 700 !important; }
-.rmdp-selected span, .rmdp-day.rmdp-selected span { background: linear-gradient(135deg,#B8860B,#D4AF37,#F5D76E) !important; color: #050505 !important; font-weight: 700 !important; box-shadow: 0 4px 16px -4px rgba(212,175,55,0.5) !important; border: none !important; }
-.rmdp-range { background: rgba(212,175,55,0.08) !important; box-shadow: none !important; }
-.rmdp-range span { color: #F5D76E !important; }
-.rmdp-range.start span, .rmdp-range.end span { background: linear-gradient(135deg,#B8860B,#D4AF37) !important; color: #050505 !important; font-weight: 700 !important; }
-.rmdp-disabled span, .rmdp-day.rmdp-disabled span { color: rgba(148,163,184,0.2) !important; }
-.rmdp-deactive span { color: rgba(148,163,184,0.25) !important; }
-.rmdp-month-picker, .rmdp-year-picker { background: rgba(11,9,5,0.97) !important; border-radius: 12px !important; }
-.rmdp-month-picker .rmdp-day span, .rmdp-year-picker .rmdp-day span { font-size: 12px !important; border-radius: 8px !important; }
-.rmdp-month-picker .rmdp-day.rmdp-selected span, .rmdp-year-picker .rmdp-day.rmdp-selected span { background: linear-gradient(135deg,#B8860B,#D4AF37) !important; color: #050505 !important; }
-.rmdp-range-label { display: none !important; }
-.rmdp-action-button { border-radius: 10px !important; font-size: 12px !important; font-weight: 600 !important; padding: 6px 16px !important; }
-.rmdp-ep-arrow, .rmdp-ep-arrow::after { display: none !important; }
-.rmdp-border-top { border-top: 1px solid rgba(255,255,255,0.06) !important; }
-.rmdp-panel-body li { background: rgba(212,175,55,0.08) !important; border: 1px solid rgba(212,175,55,0.15) !important; border-radius: 8px !important; color: #F5D76E !important; font-size: 12px !important; }
-.rmdp-input { background: transparent !important; border: none !important; color: inherit !important; font: inherit !important; padding: 0 !important; width: 100% !important; outline: none !important; }
+
+.rmdp-header {
+  padding: 6px 4px 12px !important;
+  border-bottom: 1px solid var(--dt-divider) !important;
+  margin-bottom: 8px !important;
+}
+
+.rmdp-header-values {
+  color: var(--dt-header) !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+}
+
+.rmdp-header-values span {
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  transition: background 0.2s !important;
+}
+
+.rmdp-header-values span:hover {
+  background: var(--dt-hover-bg) !important;
+}
+
+.rmdp-arrow-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+  background: var(--dt-soft-bg) !important;
+  border: 1px solid var(--dt-soft-border) !important;
+  transition: all 0.2s !important;
+}
+
+.rmdp-arrow-container:hover {
+  background: var(--dt-hover-bg) !important;
+  border-color: var(--dt-hover-border) !important;
+}
+
+.rmdp-arrow-container .rmdp-arrow {
+  border-color: var(--dt-muted) !important;
+  width: 8px !important;
+  height: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.rmdp-arrow-container:hover .rmdp-arrow {
+  border-color: var(--dt-header) !important;
+}
+
+.rmdp-week-day {
+  color: var(--dt-muted) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.rmdp-day {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.rmdp-day span {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--dt-text) !important;
+  border-radius: 10px !important;
+  transition: all 0.15s !important;
+  width: 34px !important;
+  height: 34px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  inset: 2px !important;
+}
+
+.rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
+  background: var(--dt-hover-bg) !important;
+  color: var(--dt-header) !important;
+  border: 1px solid var(--dt-hover-border) !important;
+}
+
+.rmdp-today span {
+  background: var(--dt-today-bg) !important;
+  color: var(--dt-header) !important;
+  border: 1px solid var(--dt-hover-border) !important;
+  font-weight: 700 !important;
+}
+
+.rmdp-selected span,
+.rmdp-day.rmdp-selected span {
+  background: var(--dt-selected-bg) !important;
+  color: var(--dt-selected-text) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px -4px rgba(212,175,55,0.5) !important;
+  border: none !important;
+}
+
+.rmdp-range {
+  background: var(--dt-range-bg) !important;
+  box-shadow: none !important;
+}
+
+.rmdp-range span {
+  color: var(--dt-header) !important;
+}
+
+.rmdp-range.start span,
+.rmdp-range.end span {
+  background: var(--dt-range-edge-bg) !important;
+  color: var(--dt-selected-text) !important;
+  font-weight: 700 !important;
+}
+
+.rmdp-disabled span,
+.rmdp-day.rmdp-disabled span {
+  color: var(--dt-disabled) !important;
+}
+
+.rmdp-deactive span {
+  color: var(--dt-disabled) !important;
+}
+
+.rmdp-month-picker,
+.rmdp-year-picker {
+  background: var(--dt-bg) !important;
+  border-radius: 12px !important;
+}
+
+.rmdp-month-picker .rmdp-day span,
+.rmdp-year-picker .rmdp-day span {
+  font-size: 12px !important;
+  border-radius: 8px !important;
+}
+
+.rmdp-month-picker .rmdp-day.rmdp-selected span,
+.rmdp-year-picker .rmdp-day.rmdp-selected span {
+  background: var(--dt-range-edge-bg) !important;
+  color: var(--dt-selected-text) !important;
+}
+
+.rmdp-range-label {
+  display: none !important;
+}
+
+.rmdp-action-button {
+  border-radius: 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 6px 16px !important;
+}
+
+.rmdp-ep-arrow,
+.rmdp-ep-arrow::after {
+  display: none !important;
+}
+
+.rmdp-border-top {
+  border-top: 1px solid var(--dt-divider) !important;
+}
+
+.rmdp-panel-body li {
+  background: var(--dt-range-bg) !important;
+  border: 1px solid var(--dt-hover-border) !important;
+  border-radius: 8px !important;
+  color: var(--dt-header) !important;
+  font-size: 12px !important;
+}
+
+.rmdp-input {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  font: inherit !important;
+  padding: 0 !important;
+  width: 100% !important;
+  outline: none !important;
+}
 `;
 
+function getDatePickerVariables(isDark: boolean): CSSProperties {
+  return {
+    ["--dt-bg" as string]: isDark
+      ? "rgba(11, 9, 5, 0.97)"
+      : "rgba(255, 255, 255, 0.98)",
+
+    ["--dt-border" as string]: isDark
+      ? "rgba(255, 255, 255, 0.10)"
+      : "rgba(0, 0, 0, 0.08)",
+
+    ["--dt-divider" as string]: isDark
+      ? "rgba(255, 255, 255, 0.06)"
+      : "rgba(0, 0, 0, 0.06)",
+
+    ["--dt-header" as string]: isDark ? "#F5D76E" : "#8A6A12",
+
+    ["--dt-muted" as string]: isDark
+      ? "rgba(148,163,184,0.6)"
+      : "rgba(107,93,62,0.7)",
+
+    ["--dt-text" as string]: isDark ? "#CBD5E1" : "#3D3520",
+
+    ["--dt-soft-bg" as string]: isDark
+      ? "rgba(255,255,255,0.04)"
+      : "rgba(0,0,0,0.03)",
+
+    ["--dt-soft-border" as string]: isDark
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(0,0,0,0.08)",
+
+    ["--dt-hover-bg" as string]: "rgba(212,175,55,0.12)",
+    ["--dt-hover-border" as string]: "rgba(212,175,55,0.22)",
+
+    ["--dt-today-bg" as string]: isDark
+      ? "rgba(212,175,55,0.08)"
+      : "rgba(212,175,55,0.12)",
+
+    ["--dt-selected-bg" as string]:
+      "linear-gradient(135deg, #B8860B, #D4AF37, #F5D76E)",
+
+    ["--dt-selected-text" as string]: "#050505",
+
+    ["--dt-range-bg" as string]: isDark
+      ? "rgba(212,175,55,0.08)"
+      : "rgba(212,175,55,0.10)",
+
+    ["--dt-range-edge-bg" as string]:
+      "linear-gradient(135deg, #B8860B, #D4AF37)",
+
+    ["--dt-disabled" as string]: isDark
+      ? "rgba(148,163,184,0.2)"
+      : "rgba(160,144,112,0.35)",
+
+    ["--dt-shadow" as string]: isDark
+      ? "0 20px 50px -28px rgba(0,0,0,0.95), 0 0 40px -10px rgba(212,175,55,0.12)"
+      : "0 12px 40px -10px rgba(0,0,0,0.12)",
+  } as CSSProperties;
+}
+function useTableTheme() {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+
+  return {
+    t,
+    isDark,
+
+    tableCard: cn(
+      "overflow-hidden",
+      layout.radius.lg,
+      "border",
+      t.borderSubtle,
+      t.cardBg,
+      t.cardShadow,
+    ),
+
+    fieldBase: cn(
+      "w-full rounded-xl border outline-none backdrop-blur-sm",
+      "transition-all duration-200",
+      "border",
+      t.borderInput,
+      t.inputBg,
+      t.textPrimary,
+      isDark ? "placeholder:text-slate-500" : "placeholder:text-[#A09070]",
+      isDark ? "hover:border-[#D4AF37]/18" : "hover:border-[#D4AF37]/30",
+      focus.ring,
+    ),
+
+    fieldError: "border-red-500/40",
+
+    fieldLabel: cn(
+      "text-xs font-semibold uppercase tracking-wider",
+      t.textMuted,
+    ),
+
+    fieldHelp: cn("text-[11px]", t.textDisabled),
+    fieldErrorText: cn("text-[11px]", t.textError),
+
+    checkboxBase: cn(
+      "h-4 w-4 rounded",
+      "transition-all duration-200",
+      isDark ? "border-white/20 bg-white/4" : "border-black/20 bg-black/4",
+      "text-[#D4AF37]",
+      focus.ring,
+    ),
+
+    checkboxLabel: t.textSecondary,
+
+    modalCard: cn("border", t.borderSubtle, t.modalBg, t.cardShadow),
+
+    panel: cn("border", t.borderSubtle, t.dropdownBg, t.dropdownShadow),
+
+    input: cn("border", t.borderInput, t.inputBg),
+
+    ghostButton: cn(
+      "inline-flex items-center justify-center gap-2 rounded-xl border px-4 h-9 text-xs font-medium transition-all duration-200",
+      "border",
+      t.borderSubtle,
+      t.inputBg,
+      t.textSecondary,
+      t.hoverBg,
+      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+      focus.ring,
+    ),
+
+    primaryButton: cn(
+      "inline-flex items-center justify-center gap-2 rounded-xl px-4 h-9 text-xs font-semibold transition-all duration-200",
+      focus.ring,
+      isDark
+        ? "bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E] text-[#050505] hover:brightness-105"
+        : "bg-[#D4AF37] text-[#1A1304] hover:bg-[#C99E17]",
+    ),
+
+    iconButton: cn(
+      "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
+      "border",
+      t.borderSubtle,
+      t.inputBg,
+      t.textMuted,
+      t.hoverBg,
+      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+      focus.ring,
+    ),
+
+    stickyHead: cn(
+      isDark ? "bg-[#0B0905]/95" : "bg-white/95",
+      "backdrop-blur-xl",
+    ),
+
+    rowHover: isDark ? "hover:bg-white/[0.025]" : "hover:bg-black/[0.025]",
+    rowSelected: t.selectedBg,
+
+    cardSection: cn(
+      "rounded-2xl border",
+      t.cardBg,
+      "border",
+      t.borderSubtle,
+      t.cardShadow,
+    ),
+  };
+}
 /* ══════════════════════════════════════════════
    ICONS
    ══════════════════════════════════════════════ */
@@ -235,9 +464,11 @@ function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
-function getNestedValue(obj: Record<string, unknown>, key: string): unknown {
+function getNestedValue(obj: object, key: string): unknown {
   return key.split(".").reduce((o, k) => {
-    if (o && typeof o === "object") return (o as Record<string, unknown>)[k];
+    if (o && typeof o === "object") {
+      return (o as Record<string, unknown>)[k];
+    }
     return undefined;
   }, obj as unknown);
 }
@@ -424,50 +655,15 @@ function Overlay({
   wide?: boolean;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const firstFocusableRef = useRef<HTMLElement | null>(null);
+  const { modalCard } = useTableTheme();
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      // Focus trap
-      if (e.key === "Tab") {
-        const modal = overlayRef.current?.querySelector(
-          '[role="document"], .modal-content',
-        ) as HTMLElement;
-        if (!modal) return;
-        const focusables = modal.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
-
-    // Auto-focus first focusable
-    setTimeout(() => {
-      const modal = overlayRef.current;
-      if (modal) {
-        const first = modal.querySelector<HTMLElement>(
-          "button, input, select, textarea",
-        );
-        if (first) {
-          firstFocusableRef.current = first;
-          first.focus();
-        }
-      }
-    }, 100);
-
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
@@ -497,9 +693,7 @@ function Overlay({
           "modal-content relative w-full overflow-hidden",
           wide ? "max-w-2xl" : "max-w-lg",
           layout.radius.lg,
-          borders.light,
-          "bg-[#0B0905]/95 backdrop-blur-2xl",
-          shadows.card,
+          modalCard,
           "transform transition-all duration-300",
           "animate-[fade-up_.35s_cubic-bezier(.22,1,.36,1)_both]",
         )}
@@ -522,10 +716,12 @@ function ActionBtn({
   variant?: "default" | "danger";
   children: ReactNode;
 }) {
+  const { t, isDark } = useTableTheme();
+
   return (
     <button
       type="button"
-      onClick={onClick} 
+      onClick={onClick}
       title={title}
       aria-label={title}
       className={cn(
@@ -536,7 +732,11 @@ function ActionBtn({
         animation.activePress,
         variant === "danger"
           ? "text-red-400/70 hover:bg-red-500/10 hover:text-red-400"
-          : "text-slate-400 hover:bg-white/6 hover:text-[#F5D76E]",
+          : cn(
+              t.textMuted,
+              t.hoverBg,
+              isDark ? "hover:text-[#F5D76E]" : "hover:text-[#B8860B]",
+            ),
       )}
     >
       {children}
@@ -558,10 +758,12 @@ function PaginationBtn({
   children: ReactNode;
   ariaLabel?: string;
 }) {
+  const { t, isDark } = useTableTheme();
+
   return (
     <button
       type="button"
-      onClick={onClick} 
+      onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
@@ -572,15 +774,19 @@ function PaginationBtn({
         focus.ring,
         disabled && "pointer-events-none opacity-30",
         active
-          ? "bg-[#D4AF37]/15 text-[#F5D76E] border border-[#D4AF37]/25"
-          : "text-slate-400 hover:bg-white/6 hover:text-white border border-transparent",
+          ? cn("border", t.borderAccent, t.activeBg, t.textAccent)
+          : cn(
+              "border border-transparent",
+              t.textMuted,
+              t.hoverBg,
+              isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+            ),
       )}
     >
       {children}
     </button>
   );
 }
-
 /* ── Filter Dropdown ── */
 function FilterDropdown({
   label,
@@ -595,10 +801,13 @@ function FilterDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { t, panel, isDark } = useTableTheme();
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+      }
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -613,42 +822,46 @@ function FilterDropdown({
         aria-haspopup="listbox"
         aria-label={`فیلتر ${label}`}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
-          "bg-white/[0.035] backdrop-blur-sm",
+          "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium backdrop-blur-sm",
           value
-            ? "border-[#D4AF37]/25 text-[#F5D76E]"
-            : borders.subtle + " text-slate-400",
+            ? cn("border", t.borderAccent, t.textAccent, t.inputBg)
+            : cn("border", t.borderInput, t.inputBg, t.textMuted),
           animation.base,
           focus.ring,
-          "hover:border-[#D4AF37]/18 hover:text-white",
+          t.hoverBg,
+          isDark ? "hover:text-white" : "hover:text-[#1A1304]",
         )}
       >
         <Icon.Filter />
         <span>{label}</span>
         {value && (
-          <span className="mr-1 rounded-full bg-[#D4AF37]/15 px-1.5 py-0.5 text-[10px] text-[#F5D76E]">
+          <span
+            className={cn(
+              "mr-1 rounded-full px-1.5 py-0.5 text-[10px]",
+              t.activeBg,
+              t.textAccent,
+            )}
+          >
             {value}
           </span>
         )}
         <Icon.ChevronDown />
       </button>
+
       {open && (
         <div
           role="listbox"
           aria-label={`گزینه‌های ${label}`}
           className={cn(
-            "absolute top-full right-0 z-50 mt-1 min-w-40 overflow-hidden",
-            layout.radius.md,
-            borders.light,
-            "bg-[#0B0905]/98 backdrop-blur-2xl",
-            shadows.card,
+            "absolute top-full right-0 z-50 mt-1 min-w-40 overflow-hidden rounded-xl",
+            panel,
             "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
         >
           <button
             type="button"
-            role="option" 
-            aria-selected={!value} 
+            role="option"
+            aria-selected={!value}
             onClick={() => {
               onChange("");
               setOpen(false);
@@ -657,13 +870,18 @@ function FilterDropdown({
               "flex w-full items-center gap-2 px-3 py-2 text-xs text-right",
               animation.colors,
               !value
-                ? "text-[#F5D76E] bg-[#D4AF37]/10"
-                : "text-slate-400 hover:bg-white/4 hover:text-white",
+                ? cn(t.activeBg, t.textAccent)
+                : cn(
+                    t.textMuted,
+                    t.hoverBg,
+                    isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                  ),
             )}
           >
             <span className="flex-1">همه</span>
             {!value && <Icon.Check />}
           </button>
+
           {options.map((opt) => (
             <button
               key={opt}
@@ -678,8 +896,12 @@ function FilterDropdown({
                 "flex w-full items-center gap-2 px-3 py-2 text-xs text-right",
                 animation.colors,
                 value === opt
-                  ? "text-[#F5D76E] bg-[#D4AF37]/10"
-                  : "text-slate-400 hover:bg-white/4 hover:text-white",
+                  ? cn(t.activeBg, t.textAccent)
+                  : cn(
+                      t.textMuted,
+                      t.hoverBg,
+                      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                    ),
               )}
             >
               <span className="flex-1">{opt}</span>
@@ -745,7 +967,7 @@ function DateRangeFilter({
               "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
               "bg-white/[0.035] backdrop-blur-sm",
               hasRange
-                ? "border-[#D4AF37]/25 text-[#F5D76E]" 
+                ? "border-[#D4AF37]/25 text-[#F5D76E]"
                 : borders.subtle + " text-slate-400",
               animation.base,
               focus.ring,
@@ -754,7 +976,7 @@ function DateRangeFilter({
             )}
           >
             <Icon.Calendar />
-            <span className="whitespace-nowrap">{label}</span> 
+            <span className="whitespace-nowrap">{label}</span>
             {hasRange && (
               <span className="mr-1 rounded-full bg-[#D4AF37]/15 px-1.5 py-0.5 text-[10px] text-[#F5D76E] whitespace-nowrap truncate max-w-35">
                 {formatRange()}
@@ -929,10 +1151,13 @@ function PageSizeSelector({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { t, panel, isDark } = useTableTheme();
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+      }
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -948,25 +1173,27 @@ function PageSizeSelector({
         aria-label={`تعداد ردیف در هر صفحه: ${toPersianDigits(value)}`}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium",
-          borders.subtle,
-          "text-slate-400 hover:text-white",
+          "border",
+          t.borderInput,
+          t.inputBg,
+          t.textMuted,
+          t.hoverBg,
+          isDark ? "hover:text-white" : "hover:text-[#1A1304]",
           animation.base,
           focus.ring,
         )}
       >
         <span>{toPersianDigits(value)} ردیف</span>
-        <Icon.ChevronDown /> 
+        <Icon.ChevronDown />
       </button>
+
       {open && (
         <div
           role="listbox"
           aria-label="تعداد ردیف"
           className={cn(
-            "absolute bottom-full right-0 z-50 mb-1 min-w-25 overflow-hidden",
-            layout.radius.md,
-            borders.light,
-            "bg-[#0B0905]/98 backdrop-blur-2xl",
-            shadows.card,
+            "absolute bottom-full right-0 z-50 mb-1 min-w-25 overflow-hidden rounded-xl",
+            panel,
             "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
         >
@@ -984,8 +1211,12 @@ function PageSizeSelector({
                 "flex w-full items-center justify-between px-3 py-2 text-xs",
                 animation.colors,
                 value === size
-                  ? "text-[#F5D76E] bg-[#D4AF37]/10"
-                  : "text-slate-400 hover:bg-white/4 hover:text-white",
+                  ? cn(t.activeBg, t.textAccent)
+                  : cn(
+                      t.textMuted,
+                      t.hoverBg,
+                      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                    ),
               )}
             >
               <span>{toPersianDigits(size)} ردیف</span>
@@ -1043,7 +1274,7 @@ function ErrorBanner({
 
 /* ── Copy Toast ── */
 function CopyToast({ visible }: { visible: boolean }) {
-  if (!visible) return null; 
+  if (!visible) return null;
   return (
     <div
       role="status"
@@ -1161,6 +1392,28 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
   // Copy to clipboard
   const { copied, copiedCell, copy } = useCopyToClipboard();
+
+  const {
+    t,
+    isDark,
+    tableCard,
+    fieldBase,
+    fieldError,
+    fieldLabel,
+    fieldHelp,
+    fieldErrorText,
+    checkboxBase,
+    checkboxLabel,
+    primaryButton,
+    iconButton,
+    stickyHead,
+    rowHover,
+    rowSelected,
+  } = useTableTheme();
+  const datePickerVars = useMemo(
+    () => getDatePickerVariables(isDark),
+    [isDark],
+  );
 
   /* ── Server-side pagination params ── */
   const serverPaginationParams = useMemo<
@@ -1607,12 +1860,19 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         dir="rtl"
         role="region"
         aria-label={title || "جدول داده‌ها"}
+        style={datePickerVars}
       >
         {/* ── Header Bar ── */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             {title && (
-              <h2 className={cn(typography.h3, gradients.textPrimary, "mb-1")}>
+              <h2
+                className={cn(
+                  typography.h3,
+                  isDark ? gradients.textPrimary : "text-[#1A1304]",
+                  "mb-1",
+                )}
+              >
                 {title}
               </h2>
             )}
@@ -1626,11 +1886,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 disabled={isValidating}
                 title="بارگذاری مجدد"
                 aria-label="بارگذاری مجدد داده‌ها"
-                className={cn(
-                  components.ghostButton,
-                  "h-9 w-9 px-0! justify-center",
-                  isValidating && "animate-spin",
-                )}
+                className={cn(iconButton, isValidating && "animate-spin")}
               >
                 <Icon.Refresh />
               </button>
@@ -1648,13 +1904,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   aria-label="جستجو در جدول"
                   role="searchbox"
                   className={cn(
-                    "h-9 w-full rounded-xl border pr-9 pl-4 text-xs text-white placeholder-slate-500 outline-none",
-                    "bg-white/[0.035] backdrop-blur-sm",
-                    borders.subtle,
+                    "h-9 w-full rounded-xl border pr-9 pl-4 text-xs outline-none sm:w-48",
+                    "border",
+                    t.borderInput,
+                    t.inputBg,
+                    t.textPrimary,
+                    "placeholder:text-slate-500",
                     animation.base,
                     focus.ring,
                     "hover:border-[#D4AF37]/18",
-                    "sm:w-48",
                   )}
                 />
                 {search && debouncedSearch !== search && (
@@ -1677,7 +1935,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 type="button"
                 onClick={openCreate}
                 aria-label="افزودن رکورد جدید"
-                className={cn(components.ctaSmall, "h-9 text-xs")}
+                className={primaryButton}
               >
                 <Icon.Plus />
                 <span>افزودن</span>
@@ -1694,7 +1952,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         {/* ── Validating ── */}
         {isValidating && !isLoading && (
           <div
-            className="mb-3 flex items-center gap-2 text-xs text-slate-500"
+            className={cn(
+              "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5 border",
+              t.activeBg,
+              t.borderAccent,
+            )}
             role="status"
             aria-live="polite"
           >
@@ -1751,20 +2013,20 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
               </button>
             )}
-          </div> 
+          </div>
         )}
 
         {/* ── Selected ── */}
         {selectedRows.size > 0 && (
           <div
-            className={cn( 
+            className={cn(
               "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5",
               "bg-[#D4AF37]/8 border border-[#D4AF37]/15",
             )}
             role="status"
             aria-live="polite"
           >
-            <span className="text-xs font-medium text-[#F5D76E]">
+            <span className={cn("text-xs font-medium", t.textAccent)}>
               {toPersianDigits(selectedRows.size)} ردیف انتخاب شده
             </span>
             <button
@@ -1778,16 +2040,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         )}
 
         {/* ── Table Card ── */}
-        <div
-          ref={pullRef as any}
-          className={cn(
-            "overflow-hidden",
-            layout.radius.lg,
-            borders.light,
-            backgrounds.surface.glass,
-            shadows.card,
-          )}
-        >
+        <div ref={pullRef as any} className={tableCard}>
           {/* Pull to refresh indicator */}
           <div className="block md:hidden">
             <PullIndicator
@@ -1796,9 +2049,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               threshold={80}
             />
           </div>
- 
+
           {(loading || isValidating) && (
-            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10"> 
+            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10">
               <div className="absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite] bg-linear-to-l from-transparent via-[#D4AF37]/40 to-transparent" />
             </div>
           )}
@@ -1813,12 +2066,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             >
               <thead
                 className={
-                  stickyHeader
-                    ? "sticky top-0 z-10 bg-[#0B0905]/95 backdrop-blur-xl"
-                    : ""
+                  stickyHeader ? cn("sticky top-0 z-10", stickyHead) : ""
                 }
               >
-                <tr className="border-b border-white/6" role="row">
+                <tr className={cn("border-b", t.divider)} role="row">
                   {/* Checkbox column */}
                   <th
                     className="w-10 px-3 py-3"
@@ -1971,11 +2222,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         aria-rowindex={globalRowIndex}
                         onDoubleClick={() => handleRowDoubleClick(row)}
                         className={cn(
-                          "group border-b border-white/4 last:border-b-0", 
+                          "group border-b last:border-b-0",
+                          t.divider,
                           animation.colors,
-                          isSelected
-                            ? "bg-[#D4AF37]/4"
-                            : "hover:bg-white/2.5",
+                          isSelected ? rowSelected : rowHover,
                           doubleClickToEdit && canUpdate && "cursor-pointer",
                         )}
                       >
@@ -2033,7 +2283,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                               key={col.key}
                               role="cell"
                               className={cn(
-                                "px-4 py-3 text-sm text-slate-300 relative group/cell",
+                                "px-4 py-3 text-sm relative group/cell",
+                                t.textSecondary,
                                 canCopy && "cursor-copy",
                               )}
                               onClick={() =>
@@ -2149,9 +2400,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     className={cn(
                       "group p-4",
                       animation.colors,
-                      isSelected 
-                        ? "bg-[#D4AF37]/4"
-                        : "active:bg-white/3",
+                      isSelected ? "bg-[#D4AF37]/4" : "active:bg-white/3",
                     )}
                   >
                     <div className="flex items-start gap-3 mb-2">
@@ -2358,8 +2607,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     animation.base,
                     focus.ring,
                     currentPage === 1
-                      ? "opacity-30 pointer-events-none text-slate-500"
-                      : "text-slate-300 hover:text-white hover:border-[#D4AF37]/20",
+                      ? cn("opacity-30 pointer-events-none", t.textDisabled)
+                      : cn(
+                          t.textSecondary,
+                          isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                          "hover:border-[#D4AF37]/20",
+                        ),
                   )}
                 >
                   <Icon.ChevronRight />
@@ -2417,7 +2670,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             className={cn(
               "rounded-lg p-1 text-slate-500",
               animation.colors,
-              "hover:bg-white/6 hover:text-white",
+              cn(
+                t.hoverBg,
+                isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+              ),
               focus.ring,
             )}
           >
@@ -2437,18 +2693,19 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               return (
                 <div
                   key={col.key}
-                  className={cn(
-                    "rounded-xl p-3",
-                    "bg-white/2.5",
-                    borders.subtle,
-                  )}
+                  className={cn("rounded-xl p-3", t.inputBg, borders.subtle)}
                 >
                   <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
                     {col.label}
                   </dt>
-                  <dd className="text-sm text-slate-200 wrap-break-word">
+                  <dd
+                    className={cn(
+                      isDark ? gradients.textPrimary : "text-[#1A1304]",
+                      "wrap-break-word text-sm",
+                    )}
+                  >
                     {display}
-                  </dd> 
+                  </dd>
                 </div>
               );
             })}
@@ -2486,7 +2743,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       >
         <form onSubmit={handleSubmit} noValidate>
           <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
-            <h3 className={cn(typography.h4, gradients.textPrimary)}>
+            <h3
+              className={cn(
+                typography.h4,
+                isDark ? gradients.textPrimary : "text-[#1A1304]",
+              )}
+            >
               {modalMode === "create" ? "ایجاد رکورد جدید" : "ویرایش رکورد"}
             </h3>
             <button
@@ -2496,7 +2758,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               className={cn(
                 "rounded-lg p-1 text-slate-500",
                 animation.colors,
-                "hover:bg-white/6 hover:text-white",
+                cn(
+                  t.hoverBg,
+                  isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                ),
                 focus.ring,
               )}
             >
@@ -2516,7 +2781,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   <div key={col.key} className={isFull ? "sm:col-span-2" : ""}>
                     <label
                       htmlFor={`field-${col.key}`}
-                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400"
+                      className={cn("mb-1.5 block", fieldLabel)}
                     >
                       {col.label}
                       {col.required && (
@@ -2599,12 +2864,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           error ? `error-${col.key}` : undefined
                         }
                         className={cn(
-                          "w-full rounded-xl border px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none",
-                          "bg-white/[0.035] backdrop-blur-sm",
-                          error ? "border-red-500/40" : borders.subtle,
-                          animation.base,
-                          focus.ring,
-                          "hover:border-[#D4AF37]/18",
+                          fieldBase,
+                          "px-3 py-2.5 text-base resize-none",
+                          error && fieldError,
                         )}
                       />
                     ) : inputType === "checkbox" ? (
@@ -2616,12 +2878,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           onChange={(e) =>
                             updateField(col.key, e.target.checked)
                           }
-                          className={cn(
-                            "h-4 w-4 rounded border-white/20 bg-white/4 text-[#D4AF37]",
-                            focus.ring,
-                          )}
+                          className={checkboxBase}
                         />
-                        <span className="text-sm text-slate-300">
+                        <span className={cn("text-sm", checkboxLabel)}>
                           {col.placeholder || col.label}
                         </span>
                       </label>
@@ -2653,12 +2912,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         }
                         aria-required={col.required}
                         className={cn(
-                          "h-10 w-full rounded-xl border px-3 text-sm text-white placeholder-slate-500 outline-none",
-                          "bg-white/[0.035] backdrop-blur-sm",
-                          error ? "border-red-500/40" : borders.subtle,
-                          animation.base,
-                          focus.ring,
-                          "hover:border-[#D4AF37]/18",
+                          fieldBase,
+                          "h-10 px-3 text-sm",
+                          error && fieldError,
                         )}
                       />
                     )}
@@ -2666,7 +2922,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       <p
                         id={`error-${col.key}`}
                         role="alert"
-                        className="mt-1 text-[11px] text-red-400"
+                        className={cn("mt-1", fieldErrorText)}
                       >
                         {error}
                       </p>
@@ -2718,7 +2974,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <div
               className={cn(
                 "mx-auto mb-6 max-w-xs rounded-xl p-3 text-right",
-                "bg-white/2.5",
+                t.inputBg,
                 borders.subtle,
               )}
             >
