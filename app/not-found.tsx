@@ -142,14 +142,14 @@ function BrokenLinkVisual() {
       >
         <div
           className={cn(
-            "absolute inset-[2px] rounded-full",
+            "absolute inset-0.5 rounded-full",
             gradients.innerHighlightCircle,
           )}
         />
 
         {/* Scan line */}
         <div className="absolute inset-0 overflow-hidden rounded-full">
-          <div className="absolute left-0 right-0 h-[2px] bg-linear-to-r from-transparent via-sky-400/40 to-transparent nf-scan" />
+          <div className="absolute left-0 right-0 h-0.5 bg-linear-to-r from-transparent via-sky-400/40 to-transparent nf-scan" />
         </div>
 
         {/* Broken link icon */}
@@ -233,7 +233,7 @@ function DigitDisplay() {
             `nf-digit-roll nf-digit-d${i + 1}`,
             "flex h-20 w-16 items-center justify-center overflow-hidden rounded-2xl border sm:h-28 sm:w-24",
             borders.light,
-            "bg-linear-to-b from-white/[0.05] to-white/[0.02]",
+            "bg-linear-to-b from-white/5 to-white/2",
             "shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]",
           )}
         >
@@ -363,7 +363,7 @@ export default function NotFoundPage() {
         <div className="pointer-events-none absolute inset-0">
           <div
             className={cn(
-              "absolute left-1/2 top-1/2 h-[800px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[180px]",
+              "absolute left-1/2 top-1/2 h-200 w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[180px]",
               backgrounds.glow.hero,
             )}
           />

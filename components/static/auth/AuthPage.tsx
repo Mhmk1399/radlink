@@ -271,13 +271,13 @@ function OtpInput({
             animation.smooth,
             disabled ? "opacity-50 cursor-not-allowed" : "",
             error
-              ? "border-red-400/40 bg-red-400/[0.06] text-red-300"
+              ? "border-red-400/40 bg-red-400/6 text-red-300"
               : value[i]
-                ? cn(accentTokens.amber.border, "bg-yellow-400/[0.06]")
+                ? cn(accentTokens.amber.border, "bg-yellow-400/6")
                 : cn(borders.light, backgrounds.surface.glass),
             !disabled &&
               !error &&
-              "focus:border-yellow-400/50 focus:bg-yellow-400/[0.08] focus:ring-2 focus:ring-yellow-400/20",
+              "focus:border-yellow-400/50 focus:bg-yellow-400/8 focus:ring-2 focus:ring-yellow-400/20",
           )}
         />
       ))}
@@ -459,7 +459,7 @@ export default function AuthPage() {
         <div className="pointer-events-none fixed inset-0">
           <div
             className={cn(
-              "absolute left-1/2 top-1/2 h-[800px] w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[150px]",
+              "absolute left-1/2 top-1/2 h-200 w-[1000px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[150px]",
               backgrounds.glow.hero,
             )}
           />
@@ -548,9 +548,9 @@ export default function AuthPage() {
                           "w-full rounded-xl border px-4 py-3.5 pr-12 text-left text-base font-medium text-white placeholder:text-slate-500 outline-none",
                           animation.smooth,
                           error
-                            ? "border-red-400/40 bg-red-400/[0.04]"
+                            ? "border-red-400/40 bg-red-400/4"
                             : cn(borders.light, backgrounds.surface.glass),
-                          "focus:border-yellow-400/50 focus:bg-yellow-400/[0.04] focus:ring-2 focus:ring-yellow-400/20",
+                          "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
                           loading && "opacity-60 cursor-not-allowed",
                         )}
                       />
@@ -626,7 +626,7 @@ export default function AuthPage() {
                             borders.subtle,
                             "text-slate-400",
                             animation.base,
-                            "hover:text-yellow-300 hover:border-yellow-400/20 hover:bg-yellow-400/[0.04]",
+                            "hover:text-yellow-300 hover:border-yellow-400/20 hover:bg-yellow-400/4",
                           )}
                         >
                           {u.phone}
@@ -665,7 +665,7 @@ export default function AuthPage() {
                       backgrounds.surface.glass,
                       "text-slate-400",
                       animation.base,
-                      "hover:text-white hover:bg-white/[0.08]",
+                      "hover:text-white hover:bg-white/8",
                       focus.ring,
                     )}
                     aria-label="بازگشت"
@@ -873,9 +873,9 @@ export default function AuthPage() {
                         "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
                         animation.smooth,
                         error
-                          ? "border-red-400/40 bg-red-400/[0.04]"
+                          ? "border-red-400/40 bg-red-400/4"
                           : cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-yellow-400/50 focus:bg-yellow-400/[0.04] focus:ring-2 focus:ring-yellow-400/20",
+                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
                         loading && "opacity-60 cursor-not-allowed",
                       )}
                     />
@@ -942,7 +942,7 @@ export default function AuthPage() {
                   <div
                     className={cn(
                       "h-1 overflow-hidden rounded-full",
-                      "bg-white/[0.06]",
+                      "bg-white/6",
                     )}
                   >
                     <div
@@ -986,7 +986,7 @@ export default function AuthPage() {
               <div
                 className={cn(
                   "mt-8 pt-5 text-center",
-                  "border-t border-white/[0.06]",
+                  "border-t border-white/6",
                 )}
               >
                 <p className={cn(typography.labelSmall, "text-slate-500")}>

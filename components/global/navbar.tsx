@@ -231,7 +231,7 @@ export default function SmartLandingNavbar() {
                 layout.radius.navbarInner,
                 // Inner background changes with scroll
                 scrolled
-                  ? "border border-white/[0.04] bg-white/[0.02] px-3 py-2 sm:px-4"
+                  ? "border border-white/4 bg-white/2 px-3 py-2 sm:px-4"
                   : cn(
                       borders.inner,
                       backgrounds.surface.glassMedium,
@@ -384,7 +384,7 @@ export default function SmartLandingNavbar() {
                     "inline-flex items-center justify-center rounded-full border px-4 text-[13px] font-medium text-slate-300 transition-all duration-300",
                     scrolled ? "h-9" : "h-10",
                     scrolled
-                      ? "border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06]"
+                      ? "border-white/6 bg-white/3 hover:bg-white/6"
                       : cn(borders.medium, backgrounds.surface.glass),
                     "hover:text-white hover:border-white/15",
                     shadows.insetGlow,
@@ -441,7 +441,7 @@ export default function SmartLandingNavbar() {
                   backgrounds.surface.glass,
                   shadows.insetGlow,
                   animation.base,
-                  "hover:bg-white/[0.08]",
+                  "hover:bg-white/8",
                   "active:scale-[0.92]",
                   focus.ring,
                   animation.motionSafe,
@@ -522,12 +522,12 @@ export default function SmartLandingNavbar() {
                               focus.ring,
                               isActive
                                 ? cn(
-                                    "border-sky-400/20 bg-sky-400/[0.08] text-white",
+                                    "border-sky-400/20 bg-sky-400/8 text-white",
                                     "shadow-[inset_0_1px_0_rgba(56,189,248,0.1)]",
                                   )
                                 : cn(
-                                    "border-white/[0.04] bg-white/[0.02] text-slate-300",
-                                    "hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-white",
+                                    "border-white/4 bg-white/2 text-slate-300",
+                                    "hover:border-white/8 hover:bg-white/4 hover:text-white",
                                     animation.activePressSmall,
                                   ),
                             )}
@@ -596,13 +596,13 @@ export default function SmartLandingNavbar() {
                       className={cn(
                         "inline-flex h-11 items-center justify-center px-4",
                         layout.radius.lg,
-                        "border border-white/[0.06]",
-                        "bg-white/[0.03]",
+                        "border border-white/6",
+                        "bg-white/3",
                         shadows.insetGlow,
                         "text-sm font-medium text-slate-200",
                         animation.base,
                         interactive.touch,
-                        "hover:bg-white/[0.06] hover:text-white",
+                        "hover:bg-white/6 hover:text-white",
                         focus.ring,
                         animation.activePress,
                       )}

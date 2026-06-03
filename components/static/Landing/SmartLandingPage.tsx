@@ -245,7 +245,7 @@ function PhoneMockup() {
   const clicks = useCounter(1463, 2400);
 
   return (
-    <div className="relative mx-auto w-[260px] sm:w-[280px] lg:w-[300px]">
+    <div className="relative mx-auto w-65 sm:w-70 lg:w-75">
       {/* Outer glow */}
       <div
         className={cn(
@@ -571,7 +571,7 @@ export function HeroSection() {
           <div
             className={cn(
               animation.classes.fadeUp,
-              "flex-shrink-0",
+              "shrink-0",
               animation.classes.floatSlow,
             )}
           >

@@ -177,9 +177,9 @@ const themeColors = [
   { bg: "from-amber-500 to-orange-600", active: false },
 ];
 
-function CustomizationMockup() {
+function CustomizationMockup() {  
   return (
-    <div className="relative mx-auto w-[260px] sm:w-[280px] lg:w-[300px]">
+    <div className="relative mx-auto w-65 sm:w-70 lg:w-75">
       <div className="absolute -inset-6 rounded-[3rem] bg-linear-to-b from-violet-400/15 via-sky-500/10 to-transparent blur-2xl" />
 
       {/* Phone body */}
@@ -200,10 +200,10 @@ function CustomizationMockup() {
                 شخصی‌سازی
               </span>
               <div className="flex gap-1">
-                <div className="h-4 w-8 rounded border border-white/10 bg-white/[0.06] flex items-center justify-center">
+                <div className="h-4 w-8 rounded border border-white/10 bg-white/6 flex items-center justify-center">
                   <span className="text-[8px] text-slate-400">قالب</span>
                 </div>
-                <div className="h-4 w-8 rounded border border-sky-400/20 bg-sky-400/[0.08] flex items-center justify-center">
+                <div className="h-4 w-8 rounded border border-sky-400/20 bg-sky-400/8 flex items-center justify-center">
                   <span className="text-[8px] text-sky-300">رنگ</span>
                 </div>
               </div>
@@ -235,7 +235,7 @@ function CustomizationMockup() {
                       key={t}
                       className={cn(
                         "flex items-center justify-between rounded-lg border px-2.5 py-1.5",
-                        "border-sky-400/20 bg-sky-400/[0.06]",
+                        "border-sky-400/20 bg-sky-400/6",
                       )}
                     >
                       <span className="text-[9px] font-medium text-sky-200">
@@ -262,9 +262,9 @@ function CustomizationMockup() {
               <div className="flex gap-1.5">
                 {themeColors.map((c, i) => (
                   <button
-                    key={i}
+                    key={i} 
                     className={cn(
-                      "h-6 w-6 flex-shrink-0 rounded-full bg-linear-to-br",
+                      "h-6 w-6 shrink-0 rounded-full bg-linear-to-br",
                       c.bg,
                       animation.base,
                       c.active &&
@@ -309,7 +309,7 @@ function CustomizationMockup() {
               className={cn(
                 "flex items-center justify-center gap-1.5 rounded-xl py-2",
                 borders.subtle,
-                "border-emerald-400/20 bg-emerald-400/[0.06]",
+                "border-emerald-400/20 bg-emerald-400/6",
               )}
             >
               <div className="relative flex h-1.5 w-1.5">
@@ -357,7 +357,7 @@ export function CustomizationSection() {
               className={cn(
                 animation.classes.fadeUp,
                 animDelay(3),
-                "flex-shrink-0 order-2 lg:order-1",
+                "shrink-0 order-2 lg:order-1",
                 animation.classes.floatSlow,
               )}
             >
@@ -435,13 +435,13 @@ export function CustomizationSection() {
                         borders.subtle,
                         backgrounds.surface.glass,
                         animation.smooth,
-                        "hover:border-white/12 hover:bg-white/[0.06]",
+                        "hover:border-white/12 hover:bg-white/6",
                         animation.hoverLift,
                       )}
                     >
                       <div
                         className={cn(
-                          "flex h-9 w-9 flex-shrink-0 items-center justify-center",
+                          "flex h-9 w-9 shrink-0 items-center justify-center",
                           layout.radius.md,
                           "border",
                           t.border,
@@ -609,7 +609,7 @@ function BenefitCard({ card, index }: { card: BenefitsCard; index: number }) {
           >
             <span
               className={cn(
-                "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border",
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
                 t.border,
                 t.bg,
               )}

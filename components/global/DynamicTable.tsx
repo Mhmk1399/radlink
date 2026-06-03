@@ -480,7 +480,7 @@ function Overlay({
     <div
       ref={overlayRef}
       className={cn(
-        "fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6",
+        "fixed inset-0 z-100 flex items-center justify-center p-3 sm:p-6",
         backgrounds.surface.overlay,
       )}
       onClick={(e) => {
@@ -525,7 +525,7 @@ function ActionBtn({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={onClick} 
       title={title}
       aria-label={title}
       className={cn(
@@ -536,7 +536,7 @@ function ActionBtn({
         animation.activePress,
         variant === "danger"
           ? "text-red-400/70 hover:bg-red-500/10 hover:text-red-400"
-          : "text-slate-400 hover:bg-white/[0.06] hover:text-[#F5D76E]",
+          : "text-slate-400 hover:bg-white/6 hover:text-[#F5D76E]",
       )}
     >
       {children}
@@ -561,19 +561,19 @@ function PaginationBtn({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={onClick} 
       disabled={disabled}
       aria-label={ariaLabel}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-xs font-medium",
+        "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium",
         animation.base,
         interactive.touch,
         focus.ring,
         disabled && "pointer-events-none opacity-30",
         active
           ? "bg-[#D4AF37]/15 text-[#F5D76E] border border-[#D4AF37]/25"
-          : "text-slate-400 hover:bg-white/[0.06] hover:text-white border border-transparent",
+          : "text-slate-400 hover:bg-white/6 hover:text-white border border-transparent",
       )}
     >
       {children}
@@ -637,7 +637,7 @@ function FilterDropdown({
           role="listbox"
           aria-label={`گزینه‌های ${label}`}
           className={cn(
-            "absolute top-full right-0 z-50 mt-1 min-w-[160px] overflow-hidden",
+            "absolute top-full right-0 z-50 mt-1 min-w-40 overflow-hidden",
             layout.radius.md,
             borders.light,
             "bg-[#0B0905]/98 backdrop-blur-2xl",
@@ -647,8 +647,8 @@ function FilterDropdown({
         >
           <button
             type="button"
-            role="option"
-            aria-selected={!value}
+            role="option" 
+            aria-selected={!value} 
             onClick={() => {
               onChange("");
               setOpen(false);
@@ -658,7 +658,7 @@ function FilterDropdown({
               animation.colors,
               !value
                 ? "text-[#F5D76E] bg-[#D4AF37]/10"
-                : "text-slate-400 hover:bg-white/[0.04] hover:text-white",
+                : "text-slate-400 hover:bg-white/4 hover:text-white",
             )}
           >
             <span className="flex-1">همه</span>
@@ -679,7 +679,7 @@ function FilterDropdown({
                 animation.colors,
                 value === opt
                   ? "text-[#F5D76E] bg-[#D4AF37]/10"
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-white",
+                  : "text-slate-400 hover:bg-white/4 hover:text-white",
               )}
             >
               <span className="flex-1">{opt}</span>
@@ -745,18 +745,18 @@ function DateRangeFilter({
               "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
               "bg-white/[0.035] backdrop-blur-sm",
               hasRange
-                ? "border-[#D4AF37]/25 text-[#F5D76E]"
+                ? "border-[#D4AF37]/25 text-[#F5D76E]" 
                 : borders.subtle + " text-slate-400",
               animation.base,
               focus.ring,
               "hover:border-[#D4AF37]/18 hover:text-white",
-              "max-w-[280px]",
+              "max-w-70",
             )}
           >
             <Icon.Calendar />
-            <span className="whitespace-nowrap">{label}</span>
+            <span className="whitespace-nowrap">{label}</span> 
             {hasRange && (
-              <span className="mr-1 rounded-full bg-[#D4AF37]/15 px-1.5 py-0.5 text-[10px] text-[#F5D76E] whitespace-nowrap truncate max-w-[140px]">
+              <span className="mr-1 rounded-full bg-[#D4AF37]/15 px-1.5 py-0.5 text-[10px] text-[#F5D76E] whitespace-nowrap truncate max-w-35">
                 {formatRange()}
               </span>
             )}
@@ -887,7 +887,7 @@ function ExportMenu({
           role="menu"
           aria-label="فرمت‌های خروجی"
           className={cn(
-            "absolute top-full left-0 z-50 mt-1 min-w-[220px] overflow-hidden",
+            "absolute top-full left-0 z-50 mt-1 min-w-55 overflow-hidden",
             layout.radius.md,
             borders.light,
             "bg-[#0B0905]/98 backdrop-blur-2xl",
@@ -904,7 +904,7 @@ function ExportMenu({
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-2.5 text-xs text-right",
                 animation.colors,
-                "text-slate-400 hover:bg-white/[0.04] hover:text-white",
+                "text-slate-400 hover:bg-white/4 hover:text-white",
               )}
             >
               {item.icon}
@@ -955,14 +955,14 @@ function PageSizeSelector({
         )}
       >
         <span>{toPersianDigits(value)} ردیف</span>
-        <Icon.ChevronDown />
+        <Icon.ChevronDown /> 
       </button>
       {open && (
         <div
           role="listbox"
           aria-label="تعداد ردیف"
           className={cn(
-            "absolute bottom-full right-0 z-50 mb-1 min-w-[100px] overflow-hidden",
+            "absolute bottom-full right-0 z-50 mb-1 min-w-25 overflow-hidden",
             layout.radius.md,
             borders.light,
             "bg-[#0B0905]/98 backdrop-blur-2xl",
@@ -985,7 +985,7 @@ function PageSizeSelector({
                 animation.colors,
                 value === size
                   ? "text-[#F5D76E] bg-[#D4AF37]/10"
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-white",
+                  : "text-slate-400 hover:bg-white/4 hover:text-white",
               )}
             >
               <span>{toPersianDigits(size)} ردیف</span>
@@ -1011,7 +1011,7 @@ function ErrorBanner({
       role="alert"
       className={cn(
         "flex items-center gap-3 rounded-xl border px-4 py-3 mb-3",
-        "border-red-500/20 bg-red-500/[0.06]",
+        "border-red-500/20 bg-red-500/6",
       )}
     >
       <div className="text-red-400">
@@ -1043,13 +1043,13 @@ function ErrorBanner({
 
 /* ── Copy Toast ── */
 function CopyToast({ visible }: { visible: boolean }) {
-  if (!visible) return null;
+  if (!visible) return null; 
   return (
     <div
       role="status"
       aria-live="polite"
       className={cn(
-        "fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] inline-flex items-center gap-2 rounded-xl px-4 py-2.5",
+        "fixed bottom-6 left-1/2 -translate-x-1/2 z-200 inline-flex items-center gap-2 rounded-xl px-4 py-2.5",
         "bg-[#0B0905]/95 backdrop-blur-xl border",
         borders.light,
         shadows.card,
@@ -1628,7 +1628,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 aria-label="بارگذاری مجدد داده‌ها"
                 className={cn(
                   components.ghostButton,
-                  "h-9 w-9 !px-0 justify-center",
+                  "h-9 w-9 px-0! justify-center",
                   isValidating && "animate-spin",
                 )}
               >
@@ -1751,15 +1751,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
               </button>
             )}
-          </div>
+          </div> 
         )}
 
         {/* ── Selected ── */}
         {selectedRows.size > 0 && (
           <div
-            className={cn(
+            className={cn( 
               "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5",
-              "bg-[#D4AF37]/[0.08] border border-[#D4AF37]/15",
+              "bg-[#D4AF37]/8 border border-[#D4AF37]/15",
             )}
             role="status"
             aria-live="polite"
@@ -1796,10 +1796,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               threshold={80}
             />
           </div>
-
+ 
           {(loading || isValidating) && (
-            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10">
-              <div className="absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite] bg-gradient-to-l from-transparent via-[#D4AF37]/40 to-transparent" />
+            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10"> 
+              <div className="absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite] bg-linear-to-l from-transparent via-[#D4AF37]/40 to-transparent" />
             </div>
           )}
 
@@ -1818,7 +1818,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     : ""
                 }
               >
-                <tr className="border-b border-white/[0.06]" role="row">
+                <tr className="border-b border-white/6" role="row">
                   {/* Checkbox column */}
                   <th
                     className="w-10 px-3 py-3"
@@ -1920,29 +1920,29 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr
                       key={`sk-${i}`}
-                      className="border-b border-white/[0.04]"
+                      className="border-b border-white/4"
                       role="row"
                       aria-busy="true"
                     >
                       <td className="px-3 py-3">
-                        <div className="h-5 w-5 rounded bg-white/[0.04] animate-pulse" />
+                        <div className="h-5 w-5 rounded bg-white/4 animate-pulse" />
                       </td>
                       {showRowNumbers && (
                         <td className="px-3 py-3">
-                          <div className="h-4 w-6 rounded bg-white/[0.04] animate-pulse" />
+                          <div className="h-4 w-6 rounded bg-white/4 animate-pulse" />
                         </td>
                       )}
                       {visibleCols.map((col) => (
                         <td key={col.key} className="px-4 py-3">
                           <div
-                            className="h-4 rounded bg-white/[0.04] animate-pulse"
+                            className="h-4 rounded bg-white/4 animate-pulse"
                             style={{ width: `${60 + Math.random() * 40}%` }}
                           />
                         </td>
                       ))}
                       {hasActions && (
                         <td className="px-4 py-3">
-                          <div className="h-4 w-20 rounded bg-white/[0.04] animate-pulse" />
+                          <div className="h-4 w-20 rounded bg-white/4 animate-pulse" />
                         </td>
                       )}
                     </tr>
@@ -1971,11 +1971,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         aria-rowindex={globalRowIndex}
                         onDoubleClick={() => handleRowDoubleClick(row)}
                         className={cn(
-                          "group border-b border-white/[0.04] last:border-b-0",
+                          "group border-b border-white/4 last:border-b-0", 
                           animation.colors,
                           isSelected
-                            ? "bg-[#D4AF37]/[0.04]"
-                            : "hover:bg-white/[0.025]",
+                            ? "bg-[#D4AF37]/4"
+                            : "hover:bg-white/2.5",
                           doubleClickToEdit && canUpdate && "cursor-pointer",
                         )}
                       >
@@ -2113,15 +2113,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           </div>
 
           {/* ── Mobile Card List ── */}
-          <div className="block md:hidden divide-y divide-white/[0.04]">
+          <div className="block md:hidden divide-y divide-white/4">
             {loading && data.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={`msk-${i}`} className="p-4">
                   <div className="flex items-start gap-3 mb-2">
-                    <div className="h-5 w-5 rounded bg-white/[0.04] animate-pulse" />
+                    <div className="h-5 w-5 rounded bg-white/4 animate-pulse" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 w-16 rounded bg-white/[0.04] animate-pulse" />
-                      <div className="h-4 w-32 rounded bg-white/[0.04] animate-pulse" />
+                      <div className="h-3 w-16 rounded bg-white/4 animate-pulse" />
+                      <div className="h-4 w-32 rounded bg-white/4 animate-pulse" />
                     </div>
                   </div>
                 </div>
@@ -2149,9 +2149,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     className={cn(
                       "group p-4",
                       animation.colors,
-                      isSelected
-                        ? "bg-[#D4AF37]/[0.04]"
-                        : "active:bg-white/[0.03]",
+                      isSelected 
+                        ? "bg-[#D4AF37]/4"
+                        : "active:bg-white/3",
                     )}
                   >
                     <div className="flex items-start gap-3 mb-2">
@@ -2250,7 +2250,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     </div>
                     {hasActions && (
                       <div
-                        className="mt-3 flex items-center gap-1 border-t border-white/[0.04] pt-3 mr-8"
+                        className="mt-3 flex items-center gap-1 border-t border-white/4 pt-3 mr-8"
                         role="toolbar"
                         aria-label="عملیات"
                       >
@@ -2290,7 +2290,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           {totalPages > 1 && (
             <nav
               aria-label="صفحه‌بندی"
-              className="flex flex-col items-center gap-3 border-t border-white/[0.06] px-4 py-3 sm:flex-row sm:justify-between"
+              className="flex flex-col items-center gap-3 border-t border-white/6 px-4 py-3 sm:flex-row sm:justify-between"
             >
               <div className="flex items-center gap-3">
                 <p className="text-xs text-slate-500" aria-live="polite">
@@ -2408,7 +2408,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
       {/* ── View ── */}
       <Overlay open={modalMode === "view"} onClose={closeModal} wide>
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+        <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
           <h3 className={cn(typography.h4, gradients.textPrimary)}>جزئیات</h3>
           <button
             type="button"
@@ -2417,7 +2417,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             className={cn(
               "rounded-lg p-1 text-slate-500",
               animation.colors,
-              "hover:bg-white/[0.06] hover:text-white",
+              "hover:bg-white/6 hover:text-white",
               focus.ring,
             )}
           >
@@ -2439,22 +2439,22 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   key={col.key}
                   className={cn(
                     "rounded-xl p-3",
-                    "bg-white/[0.025]",
+                    "bg-white/2.5",
                     borders.subtle,
                   )}
                 >
                   <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
                     {col.label}
                   </dt>
-                  <dd className="text-sm text-slate-200 break-words">
+                  <dd className="text-sm text-slate-200 wrap-break-word">
                     {display}
-                  </dd>
+                  </dd> 
                 </div>
               );
             })}
           </dl>
         </div>
-        <div className="border-t border-white/[0.06] px-5 py-3 flex justify-start gap-2">
+        <div className="border-t border-white/6 px-5 py-3 flex justify-start gap-2">
           {canUpdate && selectedRow && (
             <button
               type="button"
@@ -2485,7 +2485,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         wide
       >
         <form onSubmit={handleSubmit} noValidate>
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+          <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
             <h3 className={cn(typography.h4, gradients.textPrimary)}>
               {modalMode === "create" ? "ایجاد رکورد جدید" : "ویرایش رکورد"}
             </h3>
@@ -2496,7 +2496,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               className={cn(
                 "rounded-lg p-1 text-slate-500",
                 animation.colors,
-                "hover:bg-white/[0.06] hover:text-white",
+                "hover:bg-white/6 hover:text-white",
                 focus.ring,
               )}
             >
@@ -2617,7 +2617,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             updateField(col.key, e.target.checked)
                           }
                           className={cn(
-                            "h-4 w-4 rounded border-white/20 bg-white/[0.04] text-[#D4AF37]",
+                            "h-4 w-4 rounded border-white/20 bg-white/4 text-[#D4AF37]",
                             focus.ring,
                           )}
                         />
@@ -2676,7 +2676,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               })}
             </div>
           </div>
-          <div className="flex justify-start gap-2 border-t border-white/[0.06] px-5 py-3">
+          <div className="flex justify-start gap-2 border-t border-white/6 px-5 py-3">
             <button
               type="submit"
               disabled={submitting}
@@ -2718,7 +2718,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <div
               className={cn(
                 "mx-auto mb-6 max-w-xs rounded-xl p-3 text-right",
-                "bg-white/[0.025]",
+                "bg-white/2.5",
                 borders.subtle,
               )}
             >

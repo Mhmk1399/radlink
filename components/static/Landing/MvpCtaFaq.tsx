@@ -28,7 +28,7 @@ function SectionBackground() {
     <div className="pointer-events-none absolute inset-0">
       <div
         className={cn(
-          "absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
+          "absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
           backgrounds.glow.hero,
         )}
       />
@@ -208,7 +208,7 @@ export function MvpSection() {
                       borders.subtle,
                       backgrounds.surface.card,
                       animation.smooth,
-                      "hover:border-white/12 hover:bg-white/[0.05]",
+                      "hover:border-white/12 hover:bg-white/5",
                       "active:scale-[0.98] touch-manipulation",
                     )}
                     style={{ animationDelay: `${i * 0.04 + 0.2}s` }}
@@ -258,7 +258,7 @@ export function MvpSection() {
             <Link href="/create" className={cn(components.ctaPrimary, "px-8")}>
               <span
                 className={cn(
-                  "pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100",
+                  "pointer-events-none absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100",
                   animation.opacity,
                   animation.classes.shimmer,
                 )}
@@ -329,7 +329,7 @@ export function CtaSection() {
       >
         {/* Stronger BG */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[700px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-sky-500/[0.1] via-blue-500/[0.06] to-transparent blur-[120px]" />
+          <div className="absolute left-1/2 top-1/2 h-[700px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-linear-to-b from-sky-500/[0.1] via-blue-500/6 to-transparent blur-[120px]" />
           <div
             className={cn(
               "absolute right-0 top-0 h-80 w-80 rounded-full blur-3xl",
@@ -359,7 +359,7 @@ export function CtaSection() {
             className={cn(
               "mx-auto max-w-3xl overflow-hidden rounded-3xl border p-8 text-center sm:p-12 md:p-14",
               borders.subtle,
-              "bg-gradient-to-b from-white/[0.04] to-white/[0.01]",
+              "bg-linear-to-b from-white/4 to-white/1",
               "shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]",
             )}
           >
@@ -384,7 +384,7 @@ export function CtaSection() {
               >
                 <div
                   className={cn(
-                    "absolute inset-[2px] rounded-full",
+                    "absolute inset-0.5 rounded-full",
                     gradients.innerHighlightCircle,
                   )}
                 />
@@ -448,7 +448,7 @@ export function CtaSection() {
               >
                 <span
                   className={cn(
-                    "pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100",
+                    "pointer-events-none absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100",
                     animation.opacity,
                     animation.classes.shimmer,
                   )}
@@ -580,7 +580,7 @@ function FaqItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
         "rounded-2xl",
         open
           ? cn(
-              "border-sky-400/20 bg-sky-400/[0.03]",
+              "border-sky-400/20 bg-sky-400/3",
               "shadow-[0_8px_24px_-8px_rgba(56,189,248,0.1)]",
             )
           : cn(
@@ -612,7 +612,7 @@ function FaqItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
                   accentTokens.sky.text,
                   "scale-105",
                 )
-              : cn(borders.subtle, "bg-white/[0.03] text-white/25"),
+              : cn(borders.subtle, "bg-white/3 text-white/25"),
           )}
         >
           {toPersian(index + 1)}
@@ -635,7 +635,7 @@ function FaqItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-300",
             open
               ? cn(accentTokens.sky.bg, "border border-sky-400/20")
-              : "bg-white/[0.03]",
+              : "bg-white/3",
           )}
         >
           <svg
@@ -760,7 +760,7 @@ export function FaqSection() {
               )}
             >
               {/* Top gradient */}
-              <div className="h-1 bg-gradient-to-r from-sky-400/40 via-cyan-400/30 to-blue-400/40" />
+              <div className="h-1 bg-linear-to-r from-sky-400/40 via-cyan-400/30 to-blue-400/40" />
 
               <div className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-right sm:gap-5">
                 <div

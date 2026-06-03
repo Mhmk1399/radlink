@@ -410,7 +410,7 @@ function StatCard({
       <div className="relative flex items-center gap-3">
         <div
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl border bg-white/[0.04]",
+            "flex h-10 w-10 items-center justify-center rounded-xl border bg-white/4",
             borders.subtle,
             "text-slate-400 transition-colors duration-300 group-hover:text-[#F5D76E]",
           )}
@@ -535,7 +535,7 @@ export default function UsersPage() {
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl border",
                 borders.medium,
-                "bg-[#D4AF37]/[0.08] text-[#F5D76E]",
+                "bg-[#D4AF37]/8 text-[#F5D76E]",
               )}
             >
               <StatIcons.Users />
@@ -687,7 +687,7 @@ export default function UsersPage() {
           )}
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#D4AF37]/[0.08] text-[#F5D76E]">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#D4AF37]/8 text-[#F5D76E]">
               <StatIcons.Info />
             </div>
             <div>

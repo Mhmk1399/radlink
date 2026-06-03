@@ -697,7 +697,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   key={opt.value}
                   className={cn(
                     "select-tag-in inline-flex items-center gap-1 rounded-lg border",
-                    "bg-[#D4AF37]/[0.08] border-[#D4AF37]/20 text-[#F5D76E]",
+                    "bg-[#D4AF37]/8 border-[#D4AF37]/20 text-[#F5D76E]",
                     sz.tag,
                   )}
                 >
@@ -716,7 +716,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               <span
                 className={cn(
                   "inline-flex items-center rounded-lg border",
-                  "bg-white/[0.04] border-white/10 text-slate-400",
+                  "bg-white/4 border-white/10 text-slate-400",
                   sz.tag,
                 )}
               >
@@ -733,12 +733,12 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 key={opt.value}
                 className={cn(
                   "select-tag-in inline-flex items-center gap-1 rounded-lg border",
-                  "bg-[#D4AF37]/[0.08] border-[#D4AF37]/20 text-[#F5D76E]",
+                  "bg-[#D4AF37]/8 border-[#D4AF37]/20 text-[#F5D76E]",
                   sz.tag,
                 )}
               >
                 {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                <span className="truncate max-w-[100px]">{opt.label}</span>
+                <span className="truncate max-w-25">{opt.label}</span>
                 <button
                   type="button"
                   onClick={(e) => removeTag(opt.value, e)}
@@ -785,7 +785,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               sz.option,
               animation.colors,
               opt.disabled && "pointer-events-none opacity-40",
-              highlighted && "bg-white/[0.04]",
+              highlighted && "bg-white/4",
             )}
           >
             {renderOption(opt, selected)}
@@ -811,8 +811,8 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             animation.colors,
             interactive.touch,
             opt.disabled && "pointer-events-none opacity-40",
-            highlighted && !selected && "bg-white/[0.04]",
-            selected && "bg-[#D4AF37]/[0.08]",
+            highlighted && !selected && "bg-white/4",
+            selected && "bg-[#D4AF37]/8",
           )}
         >
           {/* Icon / Avatar */}
@@ -914,7 +914,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   className={cn(
                     "sticky top-0 z-10 px-3.5 py-2",
                     "bg-[#0B0905]/95 backdrop-blur-sm",
-                    "border-b border-white/[0.04]",
+                    "border-b border-white/4",
                   )}
                 >
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -936,7 +936,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 className={cn(
                   "flex w-full items-center gap-2 rounded-xl text-right",
                   sz.option,
-                  "text-[#F5D76E] hover:bg-[#D4AF37]/[0.06]",
+                  "text-[#F5D76E] hover:bg-[#D4AF37]/6",
                   animation.colors,
                 )}
               >
@@ -963,7 +963,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 className={cn(
                   "flex w-full items-center gap-2 rounded-xl text-right",
                   sz.option,
-                  "text-[#F5D76E] hover:bg-[#D4AF37]/[0.06]",
+                  "text-[#F5D76E] hover:bg-[#D4AF37]/6",
                   animation.colors,
                 )}
               >
@@ -1126,7 +1126,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             >
               {/* Search bar */}
               {searchable && (
-                <div className="relative border-b border-white/[0.06] p-1.5">
+                <div className="relative border-b border-white/6 p-1.5">
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
                     <Icons.Search />
                   </span>
@@ -1137,10 +1137,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={searchPlaceholder}
                     className={cn(
-                      "w-full rounded-lg border-0 bg-white/[0.03] pr-9 pl-3 text-white placeholder-slate-500 outline-none",
+                      "w-full rounded-lg border-0 bg-white/3 pr-9 pl-3 text-white placeholder-slate-500 outline-none",
                       sz.search,
                       animation.base,
-                      "focus:bg-white/[0.05]",
+                      "focus:bg-white/5",
                     )}
                     autoComplete="off"
                     aria-label="جستجو در گزینه‌ها"
@@ -1152,7 +1152,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               {multiple &&
                 maxSelections &&
                 selectedValues.length >= maxSelections && (
-                  <div className="px-3.5 py-2 border-b border-white/[0.04]">
+                  <div className="px-3.5 py-2 border-b border-white/4">
                     <span className="text-[11px] text-amber-400/80">
                       حداکثر {toPersianDigits(maxSelections)} گزینه قابل انتخاب
                       است
@@ -1171,7 +1171,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
 
               {/* Footer: selected count */}
               {multiple && selectedValues.length > 0 && (
-                <div className="flex items-center justify-between border-t border-white/[0.06] px-3.5 py-2">
+                <div className="flex items-center justify-between border-t border-white/6 px-3.5 py-2">
                   <span className="text-[11px] text-slate-500">
                     {toPersianDigits(selectedValues.length)} مورد انتخاب شده
                     {maxSelections && (

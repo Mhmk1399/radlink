@@ -405,7 +405,7 @@ export default function SelectDemoPage() {
                 className={cn(
                   "inline-flex h-8 items-center rounded-lg border px-3 text-[11px] font-medium",
                   borders.subtle,
-                  "text-slate-400 hover:text-white hover:bg-white/[0.04]",
+                  "text-slate-400 hover:text-white hover:bg-white/4",
                   animation.base,
                 )}
               >
@@ -417,7 +417,7 @@ export default function SelectDemoPage() {
                 className={cn(
                   "inline-flex h-8 items-center rounded-lg border px-3 text-[11px] font-medium",
                   borders.subtle,
-                  "text-slate-400 hover:text-white hover:bg-white/[0.04]",
+                  "text-slate-400 hover:text-white hover:bg-white/4",
                   animation.base,
                 )}
               >
@@ -482,7 +482,7 @@ export default function SelectDemoPage() {
                 key={item.label}
                 className={cn(
                   "rounded-lg p-2.5",
-                  "bg-white/[0.02]",
+                  "bg-white/2",
                   borders.subtle,
                 )}
               >

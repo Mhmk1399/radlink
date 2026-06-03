@@ -93,7 +93,7 @@ export function SmartLandingFooter() {
               gradients.divider,
             )}
           />
-          <div className="absolute left-1/2 top-0 h-48 w-full -translate-x-1/2 bg-linear-to-b from-sky-500/[0.04] to-transparent" />
+          <div className="absolute left-1/2 top-0 h-48 w-full -translate-x-1/2 bg-linear-to-b from-sky-500/4 to-transparent" />
           <div className={cn("absolute inset-0", backgrounds.grid.lines)} />
         </div>
 
@@ -298,7 +298,7 @@ export function SmartLandingFooter() {
               >
                 <div
                   className={cn(
-                    "flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border",
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
                     accentTokens.emerald.border,
                     accentTokens.emerald.bg,
                   )}

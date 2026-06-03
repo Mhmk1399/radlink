@@ -421,7 +421,7 @@ function SolutionVisual() {
           >
             <div
               className={cn(
-                "absolute inset-[2px] rounded-full",
+                "absolute inset-0.5 rounded-full",
                 gradients.innerHighlightCircle,
               )}
             />
@@ -429,7 +429,7 @@ function SolutionVisual() {
             {/* Scan line */}
             <div className="absolute inset-0 overflow-hidden rounded-full">
               <div
-                className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-sky-400/30 to-transparent"
+                className="absolute left-0 right-0 h-px bg-linear-to-r from-transparent via-sky-400/30 to-transparent"
                 style={{ animation: "nf-scan 4s linear infinite", top: "50%" }}
               />
             </div>
@@ -454,7 +454,7 @@ function SolutionVisual() {
           </div>
 
           {/* Connecting lines from orb to cards */}
-          <div className="absolute left-1/2 bottom-0 h-8 w-px -translate-x-1/2 bg-gradient-to-b from-sky-400/20 to-transparent" />
+          <div className="absolute left-1/2 bottom-0 h-8 w-px -translate-x-1/2 bg-linear-to-b from-sky-400/20 to-transparent" />
         </div>
 
         {/* Solution cards — گرید 2×2 بدون overlap */}
@@ -470,7 +470,7 @@ function SolutionVisual() {
                   "transition-all duration-300 touch-manipulation",
                   borders.subtle,
                   backgrounds.surface.card,
-                  "hover:border-white/12 hover:bg-white/[0.06] hover:-translate-y-0.5",
+                  "hover:border-white/12 hover:bg-white/6 hover:-translate-y-0.5",
                   "active:scale-[0.97]",
                 )}
                 style={{ animationDelay: `${i * 0.08 + 0.3}s` }}
@@ -645,13 +645,13 @@ export function SolutionSection() {
                       "transition-all duration-300",
                       borders.subtle,
                       backgrounds.surface.glass,
-                      "hover:border-sky-400/15 hover:bg-sky-400/[0.04]",
+                      "hover:border-sky-400/15 hover:bg-sky-400/4",
                     )}
                   >
                     {/* Number + Check */}
                     <div
                       className={cn(
-                        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
                         accentTokens.sky.border,
                         accentTokens.sky.bg,
                         animation.smooth,
@@ -675,7 +675,7 @@ export function SolutionSection() {
                       viewBox="0 0 16 16"
                       fill="currentColor"
                       className={cn(
-                        "mr-auto h-3.5 w-3.5 flex-shrink-0 -scale-x-100 text-slate-600",
+                        "mr-auto h-3.5 w-3.5 shrink-0 -scale-x-100 text-slate-600",
                         "transition-all duration-300",
                         "group-hover:text-sky-400 group-hover:-translate-x-1",
                       )}
@@ -741,7 +741,7 @@ export function SolutionSection() {
                   <span
                     className={cn(
                       "pointer-events-none absolute inset-0",
-                      "bg-gradient-to-r from-white/0 via-white/20 to-white/0",
+                      "bg-linear-to-r from-white/0 via-white/20 to-white/0",
                       "opacity-0 group-hover:opacity-100",
                       animation.opacity,
                       animation.classes.shimmer,
@@ -784,7 +784,7 @@ export function FeaturesSection() {
           <div
             className={cn(
               "absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 -translate-y-1/3 rounded-full blur-3xl",
-              "bg-linear-to-b from-sky-500/[0.06] to-transparent",
+              "bg-linear-to-b from-sky-500/6 to-transparent",
             )}
           />
           <div

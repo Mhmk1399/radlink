@@ -359,7 +359,7 @@ export default function DynamicIsland() {
                   href="/auth"
                   className={cn(
                     "flex h-10 items-center gap-1.5 rounded-full px-4",
-                    "bg-gradient-to-r from-yellow-500 to-yellow-700",
+                    "bg-linear-to-r from-yellow-500 to-yellow-700",
                     "text-[12px] font-bold text-white",
                     "shadow-[0_2px_12px_-2px_rgba(56,189,248,0.45)]",
                     "active:scale-[0.9] transition-transform duration-150 touch-manipulation",
@@ -428,7 +428,7 @@ export default function DynamicIsland() {
                 </div>
                 <button
                   onClick={() => setExpanded(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-400 active:scale-[0.85] transition-transform duration-150 touch-manipulation"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/6 bg-white/3 text-slate-400 active:scale-[0.85] transition-transform duration-150 touch-manipulation"
                   style={{ WebkitTapHighlightColor: "transparent" }}
                 >
                   <svg
@@ -461,8 +461,8 @@ export default function DynamicIsland() {
                         "island-item-enter flex flex-col items-center gap-1 rounded-2xl border p-2.5",
                         "transition-all duration-150 touch-manipulation active:scale-[0.9]",
                         isActive
-                          ? "border-yellow-400/20 bg-yellow-400/[0.08] text-yellow-300"
-                          : "border-white/[0.03] bg-white/[0.02] text-slate-500 active:bg-white/[0.05]",
+                          ? "border-yellow-400/20 bg-yellow-400/8 text-yellow-300"
+                          : "border-white/3 bg-white/2 text-slate-500 active:bg-white/5",
                       )}
                       style={{
                         animationDelay: `${i * 0.04}s`,
@@ -485,8 +485,8 @@ export default function DynamicIsland() {
                     key={link.label}
                     onClick={() => handleNavClick(link.href)}
                     className={cn(
-                      "island-item-enter flex items-center gap-2 rounded-xl border border-white/[0.03] bg-white/[0.02] px-3 py-2",
-                      "text-slate-500 active:bg-white/[0.05] active:scale-[0.96]",
+                      "island-item-enter flex items-center gap-2 rounded-xl border border-white/3 bg-white/2 px-3 py-2",
+                      "text-slate-500 active:bg-white/5 active:scale-[0.96]",
                       "transition-all duration-150 touch-manipulation",
                     )}
                     style={{
@@ -497,7 +497,7 @@ export default function DynamicIsland() {
                     <svg
                       viewBox="0 0 24 24"
                       fill="none"
-                      className="h-4 w-4 flex-shrink-0"
+                      className="h-4 w-4 shrink-0"
                     >
                       <path
                         d={link.icon}
@@ -546,9 +546,9 @@ export default function DynamicIsland() {
                   onClick={() => setExpanded(false)}
                   className={cn(
                     "island-item-enter flex h-10 items-center justify-center gap-1.5 rounded-xl",
-                    "border border-white/[0.06] bg-white/[0.03]",
+                    "border border-white/6 bg-white/3",
                     "text-[12px] font-medium text-slate-300",
-                    "active:scale-[0.93] active:bg-white/[0.06]",
+                    "active:scale-[0.93] active:bg-white/6",
                     "transition-all duration-150 touch-manipulation",
                   )}
                   style={{

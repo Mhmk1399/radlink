@@ -14,9 +14,9 @@ export const backgrounds = {
         glass: "bg-white/[0.035] backdrop-blur-xl",
         glassHover: "hover:bg-white/[0.07]",
         glassStrong: "bg-white/[0.055] backdrop-blur-xl",
-        glassMedium: "bg-white/[0.025] backdrop-blur-sm",
+        glassMedium: "bg-white/2.5 backdrop-blur-sm",
         card: "bg-linear-to-b from-white/[0.045] to-[#D4AF37]/[0.018]",
-        cardHover: "hover:bg-linear-to-b hover:from-white/[0.065] hover:to-[#D4AF37]/[0.03]",
+        cardHover: "hover:bg-linear-to-b hover:from-white/[0.065] hover:to-[#D4AF37]/3",
         dark: "bg-[#0B0905]/90 backdrop-blur-xl",
         darkAlt: "bg-[#11100C]/80",
         overlay: "bg-[#050505]/80 backdrop-blur-xl",
@@ -27,17 +27,17 @@ export const backgrounds = {
 
     glow: {
         hero: "bg-linear-to-b from-[#D4AF37]/[0.09] to-transparent",
-        skyOrb: "bg-[#D4AF37]/[0.06]",
-        blueOrb: "bg-[#B8860B]/[0.06]",
+        skyOrb: "bg-[#D4AF37]/6",
+        blueOrb: "bg-[#B8860B]/6",
         skyCenter: "bg-[#F5D76E]/[0.035]",
     },
 
     grid: {
         lines:
             "bg-[linear-gradient(rgba(212,175,55,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(212,175,55,.18)_1px,transparent_1px)] bg-[length:60px_60px] opacity-[0.035]",
-        dots: "bg-[radial-gradient(rgba(245,215,110,.22)_1px,transparent_1px)] bg-[length:40px_40px] opacity-[0.025]",
+        dots: "bg-[radial-gradient(rgba(245,215,110,.22)_1px,transparent_1px)] bg-[length:40px_40px] opacity-2.5",
         dotsDense:
-            "bg-[radial-gradient(rgba(245,215,110,.18)_1px,transparent_1px)] bg-[length:32px_32px] opacity-[0.025]",
+            "bg-[radial-gradient(rgba(245,215,110,.18)_1px,transparent_1px)] bg-[length:32px_32px] opacity-2.5",
     },
 } as const;
 
@@ -109,7 +109,7 @@ export const borders = {
 
     dashed: "border border-dashed border-[#D4AF37]/18",
     inner: "border border-white/5",
-    innerLight: "border border-[#D4AF37]/[0.08]",
+    innerLight: "border border-[#D4AF37]/8",
 } as const;
 
 
@@ -215,7 +215,7 @@ export const layout = {
         navbar: "rounded-[1.75rem]",
         navbarInner: "rounded-[1.35rem]",
         phone: "rounded-[2.5rem]",
-        phoneInner: "rounded-[2rem]",
+        phoneInner: "rounded-8",
     },
 } as const;
 
@@ -320,27 +320,27 @@ export const interactive = {
 export const components = {
     badge: {
         base: "inline-flex items-center gap-2 rounded-full px-4 py-2 backdrop-blur-sm",
-        sky: "border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
-        emerald: "border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
-        rose: "border border-[#FFE8A3]/20 bg-[#FFE8A3]/[0.08]",
-        amber: "border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
-        violet: "border border-[#F5D76E]/20 bg-[#F5D76E]/[0.08]",
+        sky: "border border-[#D4AF37]/20 bg-[#D4AF37]/8",
+        emerald: "border border-[#D4AF37]/20 bg-[#D4AF37]/8",
+        rose: "border border-[#FFE8A3]/20 bg-[#FFE8A3]/8",
+        amber: "border border-[#D4AF37]/20 bg-[#D4AF37]/8",
+        violet: "border border-[#F5D76E]/20 bg-[#F5D76E]/8",
     },
 
     ctaPrimary:
         "group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-2xl border border-[#F5D76E]/30 bg-linear-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E] px-8 py-3.5 text-sm font-semibold text-[#050505] shadow-[0_20px_50px_-20px_rgba(212,175,55,0.75)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-18px_rgba(245,215,110,0.65)] active:translate-y-0 active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5D76E]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     ctaSecondary:
-        "group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/18 bg-white/[0.04] px-7 py-3.5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,232,163,0.08)] backdrop-blur-sm transition-all duration-200 hover:border-[#F5D76E]/30 hover:bg-[#D4AF37]/[0.08] hover:text-white active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
+        "group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/18 bg-white/4 px-7 py-3.5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,232,163,0.08)] backdrop-blur-sm transition-all duration-200 hover:border-[#F5D76E]/30 hover:bg-[#D4AF37]/8 hover:text-white active:scale-[0.98] sm:text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     ctaSmall:
         "group inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#F5D76E]/25 bg-linear-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E] px-5 text-sm font-semibold text-[#050505] shadow-[0_18px_38px_-20px_rgba(212,175,55,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-18px_rgba(245,215,110,0.65)] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5D76E]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     ghostButton:
-        "inline-flex h-11 items-center justify-center rounded-full border border-[#D4AF37]/18 bg-white/[0.04] px-5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,232,163,0.08)] transition-all duration-200 hover:border-[#F5D76E]/30 hover:bg-[#D4AF37]/[0.08] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
+        "inline-flex h-11 items-center justify-center rounded-full border border-[#D4AF37]/18 bg-white/4 px-5 text-sm font-medium text-slate-100 shadow-[inset_0_1px_0_rgba(255,232,163,0.08)] transition-all duration-200 hover:border-[#F5D76E]/30 hover:bg-[#D4AF37]/8 hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     navItem:
-        "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:bg-[#D4AF37]/[0.08] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
+        "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:bg-[#D4AF37]/8 hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
 
     navItemActive:
         "group relative inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-[#FFE8A3] bg-[#D4AF37]/[0.10] shadow-inner shadow-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]",
@@ -349,7 +349,7 @@ export const components = {
         "group relative overflow-hidden rounded-3xl border border-[#D4AF37]/12 bg-linear-to-b from-white/[0.045] to-[#D4AF37]/[0.018] p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1",
 
     miniFeature:
-        "inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/12 bg-white/[0.03] px-3.5 py-2 text-xs font-medium text-slate-300 transition-all duration-200 hover:border-[#D4AF37]/25 hover:bg-[#D4AF37]/[0.08] hover:text-white",
+        "inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/12 bg-white/3 px-3.5 py-2 text-xs font-medium text-slate-300 transition-all duration-200 hover:border-[#D4AF37]/25 hover:bg-[#D4AF37]/8 hover:text-white",
 
     iconBox: {
         sm: "flex h-6 w-6 items-center justify-center rounded-lg",
@@ -359,13 +359,13 @@ export const components = {
     },
 
     numberBadge:
-        "flex h-8 w-8 items-center justify-center rounded-full border border-[#D4AF37]/12 bg-white/[0.04] text-xs font-bold text-white/25 transition-colors duration-300 group-hover:text-[#FFE8A3]/60",
+        "flex h-8 w-8 items-center justify-center rounded-full border border-[#D4AF37]/12 bg-white/4 text-xs font-bold text-white/25 transition-colors duration-300 group-hover:text-[#FFE8A3]/60",
 
     phoneMockup: {
         outer:
             "relative overflow-hidden rounded-[2.5rem] border border-[#D4AF37]/18 bg-linear-to-b from-[#151007] via-[#0E0B05] to-[#050505] p-1.5 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.95),0_20px_40px_-15px_rgba(212,175,55,0.22)]",
         inner:
-            "relative overflow-hidden rounded-[2rem] border border-[#D4AF37]/12 bg-linear-to-b from-[#100C05] to-[#030303]",
+            "relative overflow-hidden rounded-8 border border-[#D4AF37]/12 bg-linear-to-b from-[#100C05] to-[#030303]",
         notch: "mx-auto mt-2 h-5 w-24 rounded-full bg-black/85 border border-[#D4AF37]/15",
         homeBar: "mx-auto mb-2 h-1 w-16 rounded-full bg-[#D4AF37]/35",
     },
@@ -374,6 +374,6 @@ export const components = {
 
     connector: {
         line: "h-12 w-px bg-linear-to-b from-[#D4AF37]/20 to-transparent",
-        dot: "flex h-10 w-10 items-center justify-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08]",
+        dot: "flex h-10 w-10 items-center justify-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/8",
     },
 } as const;

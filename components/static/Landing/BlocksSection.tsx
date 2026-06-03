@@ -251,10 +251,10 @@ const blockItems: BlockItem[] = [
 
 function SectionBackground() {
   return (
-    <div className="pointer-events-none absolute inset-0">
+    <div className="pointer-events-none absolute inset-0"> 
       <div
         className={cn(
-          "absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
+          "absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
           backgrounds.glow.hero,
         )}
       />
@@ -291,8 +291,8 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
   const preview = blockItems.slice(0, 5);
 
   return (
-    <div className="relative mx-auto w-[240px] sm:w-[260px] md:w-[270px] lg:w-[280px]">
-      <div className="absolute -inset-5 rounded-[3rem] bg-gradient-to-b from-sky-400/12 via-blue-500/8 to-transparent blur-2xl" />
+    <div className="relative mx-auto w-60 sm:w-65 md:w-67.5 lg:w-70">
+      <div className="absolute -inset-5 rounded-[3rem] bg-linear-to-b from-sky-400/12 via-blue-500/8 to-transparent blur-2xl" />
 
       <div className={components.phoneMockup.outer}>
         <div className={components.phoneMockup.inner}>
@@ -320,7 +320,7 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
               ].map((d, i) => (
                 <div
                   key={i}
-                  className="flex h-4 w-4 items-center justify-center rounded border border-white/8 bg-white/[0.04]"
+                  className="flex h-4 w-4 items-center justify-center rounded border border-white/8 bg-white/4"
                 >
                   <svg
                     viewBox="0 0 16 16"
@@ -341,24 +341,24 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
               const isActive = i === activeBlock % preview.length;
               return (
                 <div
-                  key={block.title}
+                  key={block.title} 
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-all duration-300",
                     isActive
                       ? cn(t.border, t.bg, "shadow-md")
-                      : "border-white/[0.05] bg-white/[0.02]",
+                      : "border-white/5 bg-white/2",
                   )}
                 >
                   <div
                     className={cn(
-                      "flex flex-col gap-[2px] transition-opacity",
+                      "flex flex-col gap-0.5 transition-opacity",
                       isActive ? "opacity-70" : "opacity-20",
                     )}
-                  >
+                  > 
                     {[0, 1].map((r) => (
-                      <div key={r} className="flex gap-[2px]">
-                        <div className="h-[2px] w-[2px] rounded-full bg-slate-400" />
-                        <div className="h-[2px] w-[2px] rounded-full bg-slate-400" />
+                      <div key={r} className="flex gap-0.5">
+                        <div className="h-0.5 w-0.5 rounded-full bg-slate-400" />
+                        <div className="h-0.5 w-0.5 rounded-full bg-slate-400" />
                       </div>
                     ))}
                   </div>
@@ -367,7 +367,7 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
                       "flex h-6 w-6 shrink-0 items-center justify-center rounded",
                       isActive
                         ? cn(t.bg, t.text)
-                        : "bg-white/[0.04] text-slate-500",
+                        : "bg-white/4 text-slate-500",
                     )}
                   >
                     <div className="scale-[0.6]">{block.icon}</div>
@@ -392,7 +392,7 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
 
           {/* Add button */}
           <div className="mx-3 mb-3">
-            <div className="flex items-center justify-center gap-1 rounded-lg border border-dashed border-white/10 bg-white/[0.01] py-2">
+            <div className="flex items-center justify-center gap-1 rounded-lg border border-dashed border-white/10 bg-white/1 py-2">
               <svg
                 viewBox="0 0 16 16"
                 fill="currentColor"
@@ -450,13 +450,13 @@ function BlockCard({
         isActive
           ? cn(
               t.border,
-              "bg-gradient-to-r from-white/[0.06] to-white/[0.02]",
-              "shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]",
+              "bg-linear-to-r from-white/6 to-white/2",
+              "shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]", 
             )
           : cn(
               borders.subtle,
-              "bg-white/[0.02]",
-              "hover:border-white/10 hover:bg-white/[0.04]",
+              "bg-white/2",
+              "hover:border-white/10 hover:bg-white/4",
             ),
       )}
       style={{ animationDelay: `${Math.min(index * 0.03 + 0.1, 0.5)}s` }}
@@ -473,7 +473,7 @@ function BlockCard({
       {/* Top line */}
       <div
         className={cn(
-          "absolute inset-x-4 top-0 h-px bg-gradient-to-r transition-opacity duration-300",
+          "absolute inset-x-4 top-0 h-px bg-linear-to-r transition-opacity duration-300",
           t.gradient,
           isActive ? "opacity-50" : "opacity-0 group-hover:opacity-20",
         )}
@@ -485,7 +485,7 @@ function BlockCard({
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-300",
           isActive
             ? cn(t.border, t.bg, t.text, "scale-105")
-            : "border-white/8 bg-white/[0.03] text-slate-500 group-hover:text-slate-300",
+            : "border-white/8 bg-white/3 text-slate-500 group-hover:text-slate-300",
         )}
       >
         {block.icon}
@@ -656,7 +656,7 @@ export function BlocksSection() {
                           accentTokens.sky.border,
                           "border text-sky-200",
                         )
-                      : "text-slate-400 hover:text-white hover:bg-white/[0.04]",
+                      : "text-slate-400 hover:text-white hover:bg-white/4",
                   )}
                 >
                   {cat.label}

@@ -151,11 +151,11 @@ backgrounds.page        // "bg-linear-to-b from-[#060e1b] via-[#081223] to-[#091
 backgrounds.pageAlt     // Reversed gradient
 Surface Backgrounds (Cards, Panels)
 Token	Value	Usage
-surface.glass	bg-white/[0.04] backdrop-blur-xl	Default glass surface
-surface.glassHover	hover:bg-white/[0.08]	Hover state for glass
-surface.glassStrong	bg-white/[0.06] backdrop-blur-xl	Stronger glass
-surface.glassMedium	bg-white/[0.03] backdrop-blur-sm	Subtle glass
-surface.card	bg-linear-to-b from-white/[0.04] to-white/[0.015]	Card gradient
+surface.glass	bg-white/4 backdrop-blur-xl	Default glass surface
+surface.glassHover	hover:bg-white/8	Hover state for glass
+surface.glassStrong	bg-white/6 backdrop-blur-xl	Stronger glass
+surface.glassMedium	bg-white/3 backdrop-blur-sm	Subtle glass
+surface.card	bg-linear-to-b from-white/4 to-white/[0.015]	Card gradient
 surface.dark	bg-[#0b1a30]/90 backdrop-blur-xl	Dark surface
 surface.darkAlt	bg-[#0c1a30]/80	Icon inner background
 surface.overlay	bg-[#081223]/80 backdrop-blur-xl	Modal / overlay
@@ -245,7 +245,7 @@ React
 
 borders.dashed      // "border border-dashed border-white/15"
 borders.inner       // "border border-white/5"
-borders.innerLight  // "border border-white/[0.06]"
+borders.innerLight  // "border border-white/6"
 Shadows
 React
 
@@ -356,7 +356,7 @@ layout.radius.full        // "rounded-full"
 layout.radius.navbar      // "rounded-[1.75rem]"
 layout.radius.navbarInner // "rounded-[1.35rem]"
 layout.radius.phone       // "rounded-[2.5rem]"
-layout.radius.phoneInner  // "rounded-[2rem]"
+layout.radius.phoneInner  // "rounded-8"
 Animation
 React
 
@@ -662,7 +662,7 @@ function SectionBackground() {
   return (
     <div className="pointer-events-none absolute inset-0">
       <div className={cn(
-        "absolute left-1/2 top-0 h-[600px] w-[800px]",
+        "absolute left-1/2 top-0 h-150 w-200",
         "-translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
         backgrounds.glow.hero
       )} />

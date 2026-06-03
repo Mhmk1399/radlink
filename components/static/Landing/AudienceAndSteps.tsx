@@ -375,7 +375,7 @@ function StepCard({
           <div
             className={cn(
               "flex h-12 w-12 items-center justify-center rounded-2xl border p-0.5",
-              "bg-gradient-to-br",
+              "bg-linear-to-br",
               t.gradient,
               borders.light,
               "shadow-lg",
@@ -450,7 +450,7 @@ function StepCard({
           <div className="flex flex-col items-center py-2 lg:hidden">
             <div
               className={cn(
-                "h-6 w-px bg-gradient-to-b",
+                "h-6 w-px bg-linear-to-b",
                 `from-${step.color}-400/30`,
                 "to-transparent",
               )}
@@ -476,7 +476,7 @@ function StepCard({
             </div>
             <div
               className={cn(
-                "h-6 w-px bg-gradient-to-b from-transparent",
+                "h-6 w-px bg-linear-to-b from-transparent",
                 `to-${steps[index + 1].color}-400/30`,
               )}
             />
@@ -486,7 +486,7 @@ function StepCard({
           <div className="pointer-events-none absolute left-0 top-1/2 hidden -translate-x-full -translate-y-1/2 lg:flex items-center px-1">
             <div
               className={cn(
-                "h-px w-4 bg-gradient-to-r",
+                "h-px w-4 bg-linear-to-r",
                 `from-${step.color}-400/25`,
                 "to-transparent",
               )}
@@ -512,7 +512,7 @@ function StepCard({
             </div>
             <div
               className={cn(
-                "h-px w-4 bg-gradient-to-l from-transparent",
+                "h-px w-4 bg-linear-to-l from-transparent",
                 `to-${steps[index + 1]?.color || step.color}-400/25`,
               )}
             />
@@ -672,10 +672,10 @@ export function HowItWorksSection() {
             <div className="hidden lg:block mb-8">
               <div className="relative mx-auto max-w-2xl">
                 {/* Track */}
-                <div className="h-1 rounded-full bg-white/[0.06]" />
+                <div className="h-1 rounded-full bg-white/6" />
 
                 {/* Filled */}
-                <div className="absolute inset-y-0 right-0 w-full rounded-full bg-gradient-to-l from-sky-400/30 via-cyan-400/20 to-emerald-400/30" />
+                <div className="absolute inset-y-0 right-0 w-full rounded-full bg-linear-to-l from-sky-400/30 via-cyan-400/20 to-emerald-400/30" />
 
                 {/* Dots */}
                 <div className="absolute inset-y-0 right-0 flex w-full items-center justify-between">

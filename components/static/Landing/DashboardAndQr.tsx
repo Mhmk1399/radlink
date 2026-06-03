@@ -218,7 +218,7 @@ function DashboardMockup() {
               className={cn(
                 "mx-auto flex-1 max-w-xs rounded-lg px-3 py-1.5 text-center",
                 borders.subtle,
-                "bg-white/[0.03]",
+                "bg-white/3",
               )}
             >
               <span className={typography.labelSmall}>
@@ -233,7 +233,7 @@ function DashboardMockup() {
             {/* Sidebar */}
             <div
               className={cn(
-                "hidden w-48 flex-shrink-0 border-l border-white/8 p-3 sm:block",
+                "hidden w-48 shrink-0 border-l border-white/8 p-3 sm:block",
               )}
             >
               <div className="flex items-center gap-2 px-2 py-2">
@@ -262,7 +262,7 @@ function DashboardMockup() {
                         animation.base,
                         isActive
                           ? cn(t.bg, t.border, "border text-white")
-                          : "text-slate-400 hover:text-white hover:bg-white/[0.04]",
+                          : "text-slate-400 hover:text-white hover:bg-white/4",
                       )}
                     >
                       <span
@@ -336,7 +336,7 @@ function DashboardMockup() {
                         borders.subtle,
                         backgrounds.surface.glass,
                         animation.base,
-                        "hover:border-white/12 hover:bg-white/[0.06]",
+                        "hover:border-white/12 hover:bg-white/6",
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -550,7 +550,7 @@ const qrUseCases = [
 
 function QrCodeVisual() {
   return (
-    <div className="relative mx-auto w-[240px] sm:w-[280px]">
+    <div className="relative mx-auto w-60 sm:w-70">
       {/* Outer glow */}
       <div className="absolute -inset-8 rounded-3xl bg-linear-to-b from-sky-400/15 via-blue-500/8 to-transparent blur-2xl s-pulse-glow" />
 
@@ -590,11 +590,11 @@ function QrCodeVisual() {
                   <div
                     key={i}
                     className={cn(
-                      "aspect-square rounded-[2px]",
+                      "aspect-square rounded-0.5",
                       animation.smooth,
                       isFilled
                         ? "bg-linear-to-br from-sky-300 to-blue-400"
-                        : "bg-white/[0.06] hover:bg-white/[0.12]",
+                        : "bg-white/6 hover:bg-white/[0.12]",
                     )}
                   />
                 );

@@ -518,7 +518,7 @@ function ToastItem({
         {/* Icon */}
         <div
           className={cn(
-            "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border",
             v.iconBorder,
             v.iconBg,
             v.iconText,
@@ -581,7 +581,7 @@ function ToastItem({
             onClick={dismiss}
             aria-label="بستن اعلان"
             className={cn(
-              "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md",
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
               "text-white/40",
               "transition-all duration-150",
               v.closeHover,
@@ -598,7 +598,7 @@ function ToastItem({
 
       {/* Progress */}
       {t.progress && t.duration && t.duration > 0 && (
-        <div className="absolute inset-x-0 bottom-0 h-[2px] overflow-hidden rounded-b-xl bg-white/[0.05]">
+        <div className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-b-xl bg-white/5">
           <div
             className={cn(
               "h-full origin-right rounded-full bg-linear-to-r",
@@ -803,7 +803,7 @@ export function ToastDemo() {
         <div className="pointer-events-none absolute inset-0">
           <div
             className={cn(
-              "absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
+              "absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
               backgrounds.glow.hero,
             )}
           />
@@ -887,7 +887,7 @@ export function ToastDemo() {
                 borders.subtle,
                 backgrounds.surface.glass,
                 animation.base,
-                "hover:text-white hover:bg-white/[0.06]",
+                "hover:text-white hover:bg-white/6",
                 animation.activePress,
                 focus.ring,
               )}
