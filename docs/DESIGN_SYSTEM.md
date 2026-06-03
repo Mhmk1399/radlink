@@ -853,4 +853,756 @@ Built for Next.js 14+ · TypeScript 5+ · Tailwind CSS 3.4+
 No external animation libraries. No runtime CSS-in-JS. Pure Tailwind + CSS keyframes.
 
 © 2024 Smart Landing. All design tokens are project-specific and not published as a standalone package.
+
+
+
+
+### PROPS
+
+ColumnDef<T>
+این اینترفیس مشخص می‌کند هر ستون جدول چه رفتاری داشته باشد.
+
+key
+TypeScript
+
+key: keyof T & string;
+کلیدی از آبجکت داده که این ستون باید نمایش بدهد.
+
+مثال:
+TypeScript
+
+{ key: "name", label: "نام" }
+اگر ردیف شما این شکلی باشد:
+
+TypeScript
+
+{ id: 1, name: "Ali" }
+مقدار ستون name برابر "Ali" خواهد بود.
+
+label
+TypeScript
+
+label: string;
+عنوانی که در هدر جدول برای این ستون نمایش داده می‌شود.
+
+مثال:
+TypeScript
+
+{ key: "email", label: "ایمیل" }
+render
+TypeScript
+
+render?: (value: T[keyof T], row: T) => ReactNode;
+اگر بخواهی مقدار ستون را به شکل سفارشی نمایش بدهی از این استفاده می‌کنی.
+
+کاربرد:
+badge
+رنگی کردن مقدار
+آیکن کنار متن
+فرمت دلخواه
+مثال:
+TypeScript
+
+{
+  key: "status",
+  label: "وضعیت",
+  render: (value) => <StatusBadge status={String(value)} />
+}
+اگر render ندهی، جدول خودش مقدار را به صورت متن ساده نمایش می‌دهد.
+
+visible
+TypeScript
+
+visible?: boolean;
+مشخص می‌کند این ستون اصلاً داخل جدول نمایش داده بشود یا نه.
+
+رفتار:
+اگر false باشد: ستون کامل مخفی می‌شود
+اگر تعریف نشود: نمایش داده می‌شود
+مثال:
+TypeScript
+
+{ key: "internalCode", label: "کد داخلی", visible: false }
+editable
+TypeScript
+
+editable?: boolean;
+مشخص می‌کند این ستون داخل فرم ایجاد/ویرایش بیاید یا نه.
+
+رفتار:
+اگر false باشد: در فرم create/edit نمایش داده نمی‌شود
+اگر تعریف نشود: قابل ویرایش در نظر گرفته می‌شود
+اگر isPrimary باشد، به طور خودکار از فرم حذف می‌شود
+مثال:
+TypeScript
+
+{ key: "createdAt", label: "تاریخ ایجاد", editable: false }
+viewable
+TypeScript
+
+viewable?: boolean;
+مشخص می‌کند این ستون داخل مودال مشاهده جزئیات نمایش داده شود یا نه.
+
+رفتار:
+اگر false باشد: در مودال view نشان داده نمی‌شود
+اگر تعریف نشود: نمایش داده می‌شود
+inputType
+TypeScript
+
+inputType?: string;
+نوع ورودی برای فرم ایجاد/ویرایش.
+
+مقادیر رایج:
+"text"
+"email"
+"number"
+"tel"
+"textarea"
+"checkbox"
+"date"
+مثال:
+TypeScript
+
+{ key: "email", label: "ایمیل", inputType: "email" }
+نکته:
+اگر inputType === "date" یا dateFilter === true باشد، برای فرم از Jalali DatePicker استفاده می‌شود.
+
+sortable
+TypeScript
+
+sortable?: boolean;
+مشخص می‌کند کاربر بتواند روی هدر ستون کلیک کند و sort انجام شود یا نه.
+
+رفتار:
+اگر false باشد: ستون sortable نیست
+اگر تعریف نشود: sortable است
+placeholder
+TypeScript
+
+placeholder?: string;
+متن placeholder برای ورودی فرم create/edit.
+
+مثال:
+TypeScript
+
+{ key: "phone", label: "تلفن", placeholder: "۰۹۱۲۰۰۰۰۰۰۰" }
+isPrimary
+TypeScript
+
+isPrimary?: boolean;
+مشخص می‌کند این ستون کلید اصلی رکورد است.
+
+کاربرد:
+معمولاً id
+از فرم create/edit حذف می‌شود
+برای تشخیص ردیف اصلی استفاده می‌شود
+مثال:
+TypeScript
+
+{ key: "id", label: "شناسه", isPrimary: true }
+در عمل بهتر است علاوه بر این، primaryKey را هم در خود جدول مشخص کنی.
+
+hideOnMobile
+TypeScript
+
+hideOnMobile?: boolean;
+اگر true باشد، این ستون در نمای موبایل نمایش داده نمی‌شود.
+
+کاربرد:
+برای ستون‌هایی که در موبایل مهم نیستند:
+
+id
+تاریخ
+کد داخلی
+توضیحات بلند
+required
+TypeScript
+
+required?: boolean;
+مشخص می‌کند این فیلد در فرم create/edit اجباری باشد.
+
+رفتار:
+اگر کاربر خالی بگذارد، خطای اعتبارسنجی نمایش داده می‌شود.
+
+مثال:
+TypeScript
+
+{ key: "name", label: "نام", required: true }
+options
+TypeScript
+
+options?: { label: string; value: string }[];
+اگر این پراپ را بدهی، ورودی فرم به جای input تبدیل به CustomSelect می‌شود.
+
+کاربرد:
+برای فیلدهایی مثل:
+
+نقش
+وضعیت
+دسته‌بندی
+نوع کاربر
+مثال:
+TypeScript
+
+{
+  key: "role",
+  label: "نقش",
+  options: [
+    { label: "مدیر", value: "admin" },
+    { label: "کاربر", value: "user" },
+  ]
+}
+filterable
+TypeScript
+
+filterable?: boolean;
+اگر true باشد، برای این ستون یک فیلتر dropdown در بالای جدول ساخته می‌شود.
+
+رفتار:
+مقادیر فیلتر از روی داده‌های موجود ساخته می‌شود.
+
+مثال:
+TypeScript
+
+{ key: "status", label: "وضعیت", filterable: true }
+dateFilter
+TypeScript
+
+dateFilter?: boolean;
+اگر true باشد، برای این ستون فیلتر بازه تاریخ شمسی نمایش داده می‌شود.
+
+کاربرد:
+برای ستون‌هایی مثل:
+
+createdAt
+updatedAt
+startDate
+نکته:
+این فیلتر انتظار دارد مقدار ستون قابل تفسیر به تاریخ فارسی باشد، مثل:
+
+TypeScript
+
+"۱۴۰۳/۰۶/۱۵"
+copyable
+TypeScript
+
+copyable?: boolean;
+مشخص می‌کند این سلول با کلیک قابل کپی باشد یا نه.
+
+رفتار:
+اگر false باشد: این ستون copy نمی‌شود
+اگر تعریف نشود: اگر enableCellCopy فعال باشد، قابل کپی است
+مثال:
+TypeScript
+
+{ key: "email", label: "ایمیل", copyable: true }
+DynamicTableProps<T>
+این اینترفیس مربوط به کل جدول است.
+
+endpoint
+TypeScript
+
+endpoint: string;
+آدرس API برای fetch داده‌ها با SWR.
+
+مثال:
+TypeScript
+
+endpoint="/api/users"
+نکته مهم:
+اگر از data استفاده کنی، این مقدار عملاً استفاده نمی‌شود.
+در آن حالت معمولاً می‌توانی این را خالی بگذاری:
+
+TypeScript
+
+endpoint=""
+columns
+TypeScript
+
+columns: ColumnDef<T>[];
+لیست ستون‌های جدول.
+
+مثال:
+TypeScript
+
+columns={userColumns}
+title
+TypeScript
+
+title?: string;
+عنوان بالای جدول.
+
+subtitle
+TypeScript
+
+subtitle?: string;
+زیرعنوان بالای جدول.
+
+CRUD Handlers
+اگر این‌ها را ندهی، جدول از CRUD داخلی خودش استفاده می‌کند و به endpoint درخواست می‌زند.
+اگر data استاتیک می‌دهی، بهتر است این‌ها را خودت پیاده‌سازی کنی.
+
+onCreate
+TypeScript
+
+onCreate?: (
+  item: Partial<T>,
+  builtInCreate: (item: Partial<T>) => Promise<T | void>,
+) => Promise<void> | void;
+برای ساخت رکورد جدید.
+
+پارامترها:
+item: داده فرم
+builtInCreate: تابع داخلی جدول برای POST + mutate
+دو حالت استفاده:
+1. استفاده از تابع داخلی:
+TypeScript
+
+onCreate={async (item, builtInCreate) => {
+  await builtInCreate(item);
+}}
+2. مدیریت دستی:
+TypeScript
+
+onCreate={async (item) => {
+  setUsers(prev => [...prev, newUser]);
+}}
+onUpdate
+TypeScript
+
+onUpdate?: (
+  item: T,
+  builtInUpdate: (item: T) => Promise<T | void>,
+) => Promise<void> | void;
+برای ویرایش رکورد.
+
+پارامترها:
+item: رکورد کامل بعد از ویرایش
+builtInUpdate: تابع داخلی PUT + mutate
+onDelete
+TypeScript
+
+onDelete?: (
+  item: T,
+  builtInRemove: (item: T) => Promise<void>,
+) => Promise<void> | void;
+برای حذف رکورد.
+
+پارامترها:
+item: رکورد انتخاب‌شده
+builtInRemove: تابع داخلی DELETE + mutate
+Permissions
+canCreate
+TypeScript
+
+canCreate?: boolean;
+آیا دکمه «افزودن» نمایش داده شود؟
+
+پیش‌فرض:
+TypeScript
+
+true
+canUpdate
+TypeScript
+
+canUpdate?: boolean;
+آیا دکمه ویرایش نمایش داده شود؟
+
+پیش‌فرض:
+TypeScript
+
+true
+canDelete
+TypeScript
+
+canDelete?: boolean;
+آیا دکمه حذف نمایش داده شود؟
+
+پیش‌فرض:
+TypeScript
+
+true
+Row Identity
+primaryKey
+TypeScript
+
+primaryKey?: keyof T & string;
+نام کلیدی که یکتا بودن هر ردیف را مشخص می‌کند.
+
+پیش‌فرض:
+TypeScript
+
+"id"
+مثال:
+TypeScript
+
+primaryKey="userId"
+Pagination
+pageSize
+TypeScript
+
+pageSize?: number;
+تعداد اولیه ردیف در هر صفحه.
+
+پیش‌فرض:
+TypeScript
+
+10
+pageSizes
+TypeScript
+
+pageSizes?: number[];
+گزینه‌های selector تعداد ردیف در هر صفحه.
+
+پیش‌فرض:
+TypeScript
+
+[10, 25, 50, 100]
+مثال:
+TypeScript
+
+pageSizes={[5, 10, 20]}
+Search
+searchable
+TypeScript
+
+searchable?: boolean;
+آیا باکس جستجو نمایش داده شود؟
+
+پیش‌فرض:
+TypeScript
+
+true
+searchDebounceMs
+TypeScript
+
+searchDebounceMs?: number;
+تاخیر debounce جستجو بر حسب میلی‌ثانیه.
+
+پیش‌فرض:
+TypeScript
+
+300
+مثال:
+TypeScript
+
+searchDebounceMs={500}
+Table UI
+emptyMessage
+TypeScript
+
+emptyMessage?: string;
+متنی که وقتی داده‌ای وجود ندارد نمایش داده می‌شود.
+
+پیش‌فرض:
+TypeScript
+
+"داده‌ای یافت نشد"
+rowActions
+TypeScript
+
+rowActions?: (row: T) => ReactNode;
+برای اضافه کردن اکشن‌های سفارشی به هر ردیف.
+
+کاربرد:
+دکمه پاور
+قفل / آنلاک
+ارسال ایمیل
+reset password
+approve / reject
+مشاهده پروفایل
+مثال:
+React
+
+rowActions={(row) => (
+  <button onClick={() => toggleUser(row)}>Power</button>
+)}
+نکته:
+اگر داخل این دکمه‌ها کلیک داری و doubleClickToEdit روشن است، بهتر است:
+
+React
+
+e.stopPropagation()
+بزنی.
+
+exportable
+TypeScript
+
+exportable?: boolean;
+آیا منوی خروجی گرفتن نمایش داده شود؟
+
+فرمت‌ها:
+Excel
+CSV
+PNG
+پیش‌فرض:
+TypeScript
+
+true
+exportFileName
+TypeScript
+
+exportFileName?: string;
+نام فایل خروجی.
+
+پیش‌فرض:
+TypeScript
+
+"export"
+Extra UX Features
+stickyHeader
+TypeScript
+
+stickyHeader?: boolean;
+اگر true باشد، هدر جدول هنگام اسکرول بالا ثابت می‌ماند.
+
+پیش‌فرض:
+TypeScript
+
+true
+showRowNumbers
+TypeScript
+
+showRowNumbers?: boolean;
+اگر true باشد، ستون شماره ردیف نمایش داده می‌شود.
+
+پیش‌فرض:
+TypeScript
+
+false
+doubleClickToEdit
+TypeScript
+
+doubleClickToEdit?: boolean;
+اگر true باشد، دابل‌کلیک روی ردیف مودال ویرایش را باز می‌کند.
+
+پیش‌فرض:
+TypeScript
+
+true
+enableCellCopy
+TypeScript
+
+enableCellCopy?: boolean;
+اگر true باشد، کلیک روی سلول مقدار آن را کپی می‌کند.
+
+پیش‌فرض:
+TypeScript
+
+true
+نکته:
+فقط برای ستون‌هایی کار می‌کند که:
+
+TypeScript
+
+copyable !== false
+pullToRefresh
+TypeScript
+
+pullToRefresh?: boolean;
+اگر true باشد، در موبایل با کشیدن به پایین، جدول refresh می‌شود.
+
+پیش‌فرض:
+TypeScript
+
+true
+نکته:
+فقط وقتی fetching فعال باشد کاربرد دارد.
+اگر data استاتیک بدهی، این قابلیت عملاً کاری نمی‌کند مگر خودت mutate/state را هندل کنی.
+
+Server-Side Mode
+serverSide
+TypeScript
+
+serverSide?: boolean;
+اگر true باشد، صفحه‌بندی/جستجو/مرتب‌سازی سمت سرور انجام می‌شود.
+
+پیش‌فرض:
+TypeScript
+
+false
+تفاوت:
+false: همه داده‌ها یکجا لود می‌شوند و فیلترها سمت کلاینت انجام می‌شود
+true: با هر تغییر page/search/sort درخواست جدید به API زده می‌شود
+transformPaginatedResponse
+TypeScript
+
+transformPaginatedResponse?: (raw: unknown) => ServerPaginatedResponse<T>;
+وقتی serverSide=true است، این تابع پاسخ API را به ساختار قابل فهم برای جدول تبدیل می‌کند.
+
+جدول انتظار دارد چیزی شبیه این دریافت کند:
+TypeScript
+
+{
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+مثال:
+TypeScript
+
+transformPaginatedResponse={(raw: any) => ({
+  data: raw.items,
+  total: raw.total,
+  page: raw.page,
+  pageSize: raw.perPage,
+  totalPages: raw.lastPage,
+})}
+Fetching Customization
+fetcher
+TypeScript
+
+fetcher?: (url: string) => Promise<T[]>;
+اگر بخواهی fetch را خودت کنترل کنی، این را می‌دهی.
+
+کاربرد:
+axios
+custom auth
+special parsing
+interceptors
+transformResponse
+TypeScript
+
+transformResponse?: (raw: unknown) => T[];
+اگر API شما مستقیم آرایه برنمی‌گرداند، با این تابع تبدیلش می‌کنی.
+
+مثال:
+TypeScript
+
+transformResponse={(raw: any) => raw.data.users}
+headers
+TypeScript
+
+headers?: Record<string, string>;
+هدرهای HTTP برای درخواست‌ها.
+
+مثال:
+TypeScript
+
+headers={{
+  Authorization: `Bearer ${token}`,
+}}
+swrConfig
+TypeScript
+
+swrConfig?: SWRConfiguration<T[]>;
+تنظیمات SWR.
+
+کاربرد:
+revalidateOnFocus
+refreshInterval
+dedupingInterval
+...
+مثال:
+TypeScript
+
+swrConfig={{
+  revalidateOnFocus: false,
+  dedupingInterval: 10000,
+}}
+enabled
+TypeScript
+
+enabled?: boolean;
+اگر false باشد، fetching غیرفعال می‌شود.
+
+پیش‌فرض:
+TypeScript
+
+true
+کاربرد:
+تا آماده شدن token
+تا آماده شدن پارامترها
+وقتی data استاتیک می‌دهی
+مثال:
+TypeScript
+
+enabled={false}
+onError
+TypeScript
+
+onError?: (error: Error) => void;
+اگر fetch خطا بدهد، این callback اجرا می‌شود.
+
+کاربرد:
+toast
+logger
+retry action
+redirect
+مثال:
+TypeScript
+
+onError={(error) => {
+  console.error(error);
+}}
+data
+TypeScript
+
+data?: T[];
+اگر بخواهی جدول از داده استاتیک یا local state بخواند، این را می‌دهی.
+
+رفتار:
+اگر data موجود باشد، جدول به جای fetchedData از آن استفاده می‌کند
+معمولاً در این حالت:
+TypeScript
+
+enabled={false}
+endpoint=""
+می‌گذاری
+
+کاربرد:
+mock data
+local state
+وقتی API نداری
+داده‌ای که از قبل جای دیگری fetch شده
+پراپس‌هایی که بیشتر با هم استفاده می‌شوند
+حالت ۱: جدول با API
+React
+
+<DynamicTable
+  endpoint="/api/users"
+  columns={columns}
+/>
+حالت ۲: جدول با data استاتیک
+React
+
+<DynamicTable
+  endpoint=""
+  data={users}
+  enabled={false}
+  columns={columns}
+  onCreate={...}
+  onUpdate={...}
+  onDelete={...}
+/>
+حالت ۳: سرور-ساید
+React
+
+<DynamicTable
+  endpoint="/api/users"
+  serverSide
+  transformPaginatedResponse={(raw) => ...}
+  columns={columns}
+/>
+خلاصه خیلی کوتاه
+ستون‌ها (ColumnDef)
+key → از کدام فیلد بخواند
+label → عنوان ستون
+render → نمایش سفارشی
+editable/viewable/visible → در فرم/مودال/جدول نمایش داده شود یا نه
+inputType/options/placeholder/required → رفتار فیلد فرم
+sortable/filterable/dateFilter → امکانات مرتب‌سازی و فیلتر
+hideOnMobile/copyable → رفتار موبایل و کپی
+خود جدول (DynamicTableProps)
+endpoint → API
+data → داده استاتیک
+onCreate/onUpdate/onDelete → عملیات CRUD
+canCreate/canUpdate/canDelete → فعال/غیرفعال کردن CRUD
+pageSize/pageSizes/searchable/searchDebounceMs → صفحه‌بندی و جستجو
+stickyHeader/showRowNumbers/doubleClickToEdit/enableCellCopy/pullToRefresh → UX
+serverSide/transformPaginatedResponse → حالت سرور-ساید
+headers/fetcher/transformResponse/swrConfig/enabled → کنترل fetching
+rowActions → اکشن‌های سفارشی هر ردیف
 ```
