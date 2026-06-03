@@ -22,7 +22,7 @@ export interface ColumnDef<T> {
     copyable?: boolean;
 }
 
-export interface DynamicTableProps<T extends Record<string, unknown>> {
+export interface DynamicTableProps<T extends object> {
     endpoint: string;
     columns: ColumnDef<T>[];
     title?: string;

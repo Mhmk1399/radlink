@@ -17,9 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${estedad.className}   h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${estedad.className}   h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
-        <Toaster position="top-right" maxToasts={5}  />
+        <Toaster position="top-right" maxToasts={5} />
         <Navbar />
         {children}
         <DynamicIsland />

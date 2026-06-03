@@ -16,108 +16,67 @@ import React, {
 import {
   borders,
   shadows,
-   layout,
+  layout,
   animation,
   focus,
   interactive,
- } from "@/lib/design/tokens";
+} from "@/lib/design/tokens";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 
 /* ══════════════════════════════════════════════
    TYPES
    ══════════════════════════════════════════════ */
 
 export interface SelectOption {
-  /** Unique value */
   value: string;
-  /** Display label */
   label: string;
-  /** Optional description below label */
   description?: string;
-  /** Optional icon or avatar */
   icon?: ReactNode;
-  /** Disable this option */
   disabled?: boolean;
-  /** Group header (non-selectable) */
   group?: string;
-  /** Any extra data you want to pass */
   meta?: Record<string, unknown>;
 }
 
 export interface CustomSelectProps {
-  /** Options list */
   options: SelectOption[];
-  /** Currently selected value(s) */
   value?: string | string[];
-  /** Default value(s) for uncontrolled mode */
   defaultValue?: string | string[];
-  /** Callback on change */
   onChange?: (
     value: string | string[],
     option: SelectOption | SelectOption[],
   ) => void;
-  /** Placeholder text */
   placeholder?: string;
-  /** Label above the select */
   label?: string;
-  /** Helper/description text below */
   helperText?: string;
-  /** Error message */
   error?: string;
-  /** Required field */
   required?: boolean;
-  /** Disabled state */
   disabled?: boolean;
-  /** Loading state */
   loading?: boolean;
-  /** Enable search/filter in dropdown */
   searchable?: boolean;
-  /** Search placeholder */
   searchPlaceholder?: string;
-  /** Allow multiple selection */
   multiple?: boolean;
-  /** Allow clearing value */
   clearable?: boolean;
-  /** Maximum selections for multiple mode */
   maxSelections?: number;
-  /** Custom render for selected value display */
   renderValue?: (selected: SelectOption | SelectOption[]) => ReactNode;
-  /** Custom render for each option */
   renderOption?: (option: SelectOption, isSelected: boolean) => ReactNode;
-  /** Empty state message when no options */
   emptyMessage?: string;
-  /** No results message when search has no matches */
   noResultsMessage?: string;
-  /** Size variant */
   size?: "sm" | "md" | "lg";
-  /** Full width */
   fullWidth?: boolean;
-  /** Custom className for wrapper */
   className?: string;
-  /** Dropdown position */
   position?: "bottom" | "top" | "auto";
-  /** Close dropdown on select (for single mode, defaults true) */
   closeOnSelect?: boolean;
-  /** Name for form submission */
   name?: string;
-  /** id for accessibility */
   id?: string;
-  /** Async search handler — return filtered options */
   onSearch?: (query: string) => Promise<SelectOption[]> | SelectOption[];
-  /** Callback on open */
   onOpen?: () => void;
-  /** Callback on close */
   onClose?: () => void;
-  /** Group options by group field */
   grouped?: boolean;
-  /** Max dropdown height */
   maxDropdownHeight?: number;
-  /** Show selected count badge in multiple mode */
   showSelectedCount?: boolean;
-  /** Allow creating new option */
   creatable?: boolean;
-  /** Label for create option */
   createLabel?: (query: string) => string;
-  /** Callback when creating new option */
   onCreateOption?: (query: string) => void;
 }
 
@@ -290,6 +249,104 @@ const selectKeyframes = `
 `;
 
 /* ══════════════════════════════════════════════
+   THEME HOOK FOR SELECT
+   ══════════════════════════════════════════════ */
+
+function useSelectTheme() {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+
+  return {
+    t,
+    isDark,
+
+    // Trigger
+    triggerBg: t.inputBg,
+    triggerBorder: t.borderInput,
+    triggerBorderOpen: cn("border", t.borderAccent, "ring-2 ring-[#D4AF37]/15"),
+    triggerBorderError: "border-red-500/40",
+    triggerHover: t.borderAccentHover,
+    triggerText: t.textPrimary,
+    placeholderText: t.textDisabled,
+
+    // Dropdown
+    dropdownBg: t.dropdownBg,
+    dropdownBorder: t.borderSubtle,
+    dropdownShadow: t.dropdownShadow,
+    dropdownDivider: t.divider,
+
+    // Options
+    optionText: t.textSecondary,
+    optionTextSelected: t.textAccent,
+    optionBgHover: t.hoverBg,
+    optionBgSelected: t.activeBg,
+    optionTextHover: isDark ? "text-white" : "text-[#1A1304]",
+    optionDescText: t.textDisabled,
+    optionDescSelected: isDark ? "text-[#D4AF37]/60" : "text-[#8A6A12]/60",
+
+    // Tags
+    tagBg: isDark ? "bg-[#D4AF37]/8" : "bg-[#D4AF37]/10",
+    tagBorder: isDark ? "border-[#D4AF37]/20" : "border-[#D4AF37]/25",
+    tagText: t.textAccent,
+    tagRemoveHover: isDark ? "hover:bg-white/10" : "hover:bg-black/10",
+
+    // Count badge
+    countBg: isDark ? "bg-white/4" : "bg-black/4",
+    countBorder: isDark ? "border-white/10" : "border-black/10",
+    countText: t.textMuted,
+
+    // Search
+    searchBg: isDark ? "bg-white/3" : "bg-black/3",
+    searchFocusBg: isDark ? "focus:bg-white/5" : "focus:bg-black/5",
+    searchText: t.textPrimary,
+    searchPlaceholder: t.textDisabled,
+
+    // Check mark
+    checkColor: t.textAccent,
+
+    // Checkbox border
+    checkboxBorder: isDark ? "border-white/15" : "border-black/15",
+    checkboxBorderHighlight: isDark
+      ? "border-[#D4AF37]/30"
+      : "border-[#D4AF37]/40",
+
+    // Spinner
+    spinnerColor: t.textAccent,
+
+    // Empty
+    emptyText: t.textMuted,
+
+    // Group header
+    groupBg: isDark ? "bg-[#0B0905]/95" : "bg-white/95",
+    groupBorder: isDark ? "border-white/4" : "border-black/4",
+    groupText: t.textDisabled,
+
+    // Clear button
+    clearText: isDark ? "text-slate-500" : "text-[#A09070]",
+    clearHover: "hover:text-red-400 hover:bg-red-500/10",
+
+    // Footer
+    footerText: t.textDisabled,
+    footerClearText: "text-red-400/70 hover:text-red-400",
+
+    // Warning
+    warningText: isDark ? "text-amber-400/80" : "text-amber-600/80",
+
+    // Create
+    createText: t.textAccent,
+    createHover: isDark ? "hover:bg-[#D4AF37]/6" : "hover:bg-[#D4AF37]/8",
+
+    // Label
+    labelText: t.textMuted,
+    requiredStar: t.textAccent,
+
+    // Helper
+    helperText: t.textDisabled,
+    errorText: t.textError,
+  };
+}
+
+/* ══════════════════════════════════════════════
    COMPONENT
    ══════════════════════════════════════════════ */
 
@@ -325,7 +382,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       id,
       onSearch,
       onOpen,
-      onClose,
+      onClose: onCloseProp,
       grouped = false,
       maxDropdownHeight = 280,
       showSelectedCount = true,
@@ -335,6 +392,9 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     },
     ref,
   ) => {
+    const theme = useSelectTheme();
+    const { t, isDark } = theme;
+
     /* ── State ── */
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -347,15 +407,12 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       "bottom",
     );
 
-    // Internal uncontrolled value
     const [internalValue, setInternalValue] = useState<string[]>(() => {
-      if (defaultValue) {
+      if (defaultValue)
         return Array.isArray(defaultValue) ? defaultValue : [defaultValue];
-      }
       return [];
     });
 
-    // Determine controlled vs uncontrolled
     const isControlled = controlledValue !== undefined;
     const selectedValues: string[] = isControlled
       ? Array.isArray(controlledValue)
@@ -376,10 +433,9 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     const sz = sizeConfig[size];
     const shouldCloseOnSelect = closeOnSelect ?? !multiple;
 
-    /* ── Options source ── */
+    /* ── Options ── */
     const baseOptions = asyncOptions ?? propOptions;
 
-    /* ── Filtered options ── */
     const filteredOptions = useMemo(() => {
       if (!search.trim() || onSearch) return baseOptions;
       const q = search.toLowerCase();
@@ -391,7 +447,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       );
     }, [baseOptions, search, onSearch]);
 
-    /* ── Grouped options ── */
     const groupedOptions = useMemo(() => {
       if (!grouped) return null;
       const groups: Record<string, SelectOption[]> = {};
@@ -407,13 +462,11 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       return { groups, ungrouped };
     }, [filteredOptions, grouped]);
 
-    /* ── Flat list for keyboard nav ── */
     const selectableOptions = useMemo(
       () => filteredOptions.filter((o) => !o.disabled),
       [filteredOptions],
     );
 
-    /* ── Selected option objects ── */
     const selectedOptions = useMemo(
       () =>
         selectedValues
@@ -426,9 +479,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     useEffect(() => {
       if (!onSearch || !isOpen) return;
       setAsyncLoading(true);
-
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
-
       searchTimeout.current = setTimeout(async () => {
         try {
           const results = await onSearch(search);
@@ -439,28 +490,24 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
           setAsyncLoading(false);
         }
       }, 300);
-
       return () => {
         if (searchTimeout.current) clearTimeout(searchTimeout.current);
       };
     }, [search, onSearch, isOpen]);
 
-    /* ── Position detection ── */
+    /* ── Position ── */
     useEffect(() => {
       if (!isOpen || position !== "auto") {
-        if (position === "top") setDropDirection("top");
-        else setDropDirection("bottom");
+        setDropDirection(position === "top" ? "top" : "bottom");
         return;
       }
       const el = wrapperRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
+      const below = window.innerHeight - rect.bottom;
+      const above = rect.top;
       setDropDirection(
-        spaceBelow < maxDropdownHeight + 20 && spaceAbove > spaceBelow
-          ? "top"
-          : "bottom",
+        below < maxDropdownHeight + 20 && above > below ? "top" : "bottom",
       );
     }, [isOpen, position, maxDropdownHeight]);
 
@@ -471,37 +518,32 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         if (
           wrapperRef.current &&
           !wrapperRef.current.contains(e.target as Node)
-        ) {
-          close();
-        }
+        )
+          closeDropdown();
       };
       document.addEventListener("mousedown", handler);
       return () => document.removeEventListener("mousedown", handler);
     }, [isOpen]);
 
-    /* ── Focus search on open ── */
+    /* ── Focus search ── */
     useEffect(() => {
-      if (isOpen && searchable) {
+      if (isOpen && searchable)
         setTimeout(() => searchRef.current?.focus(), 50);
-      }
     }, [isOpen, searchable]);
 
-    /* ── Reset highlight on search ── */
     useEffect(() => {
       setHighlightIndex(0);
     }, [search]);
 
-    /* ── Scroll highlighted into view ── */
     useEffect(() => {
-      if (highlightIndex >= 0 && optionRefs.current[highlightIndex]) {
+      if (highlightIndex >= 0 && optionRefs.current[highlightIndex])
         optionRefs.current[highlightIndex]?.scrollIntoView({
           block: "nearest",
         });
-      }
     }, [highlightIndex]);
 
     /* ── Actions ── */
-    const open = useCallback(() => {
+    const openDropdown = useCallback(() => {
       if (disabled) return;
       setIsOpen(true);
       setSearch("");
@@ -509,29 +551,28 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       onOpen?.();
     }, [disabled, onOpen]);
 
-    const close = useCallback(() => {
+    const closeDropdown = useCallback(() => {
       setIsOpen(false);
       setSearch("");
       setAsyncOptions(null);
-      onClose?.();
-    }, [onClose]);
+      onCloseProp?.();
+    }, [onCloseProp]);
 
-    const toggle = useCallback(() => {
-      if (isOpen) close();
-      else open();
-    }, [isOpen, open, close]);
+    const toggleDropdown = useCallback(() => {
+      if (isOpen) closeDropdown();
+      else openDropdown();
+    }, [isOpen, openDropdown, closeDropdown]);
 
-    const clear = useCallback(() => {
+    const clearValue = useCallback(() => {
       if (!isControlled) setInternalValue([]);
       onChange?.(multiple ? [] : "", multiple ? [] : ({} as SelectOption));
     }, [isControlled, multiple, onChange]);
 
-    /* ── Imperative handle ── */
     useImperativeHandle(ref, () => ({
-      open,
-      close,
-      toggle,
-      clear,
+      open: openDropdown,
+      close: closeDropdown,
+      toggle: toggleDropdown,
+      clear: clearValue,
       focus: () => triggerRef.current?.focus(),
     }));
 
@@ -539,7 +580,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     const handleSelect = useCallback(
       (opt: SelectOption) => {
         if (opt.disabled) return;
-
         if (multiple) {
           let newValues: string[];
           if (selectedValues.includes(opt.value)) {
@@ -549,16 +589,15 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             newValues = [...selectedValues, opt.value];
           }
           if (!isControlled) setInternalValue(newValues);
-          const newOptions = newValues
+          const newOpts = newValues
             .map((v) => propOptions.find((o) => o.value === v))
             .filter(Boolean) as SelectOption[];
-          onChange?.(newValues, newOptions);
+          onChange?.(newValues, newOpts);
         } else {
           if (!isControlled) setInternalValue([opt.value]);
           onChange?.(opt.value, opt);
         }
-
-        if (shouldCloseOnSelect) close();
+        if (shouldCloseOnSelect) closeDropdown();
       },
       [
         selectedValues,
@@ -568,90 +607,76 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         propOptions,
         onChange,
         shouldCloseOnSelect,
-        close,
+        closeDropdown,
       ],
     );
 
-    /* ── Remove tag (multiple) ── */
     const removeTag = useCallback(
       (val: string, e: React.MouseEvent) => {
         e.stopPropagation();
         const newValues = selectedValues.filter((v) => v !== val);
         if (!isControlled) setInternalValue(newValues);
-        const newOptions = newValues
+        const newOpts = newValues
           .map((v) => propOptions.find((o) => o.value === v))
           .filter(Boolean) as SelectOption[];
-        onChange?.(newValues, newOptions);
+        onChange?.(newValues, newOpts);
       },
       [selectedValues, isControlled, propOptions, onChange],
     );
 
-    /* ── Create option ── */
     const handleCreate = useCallback(() => {
       if (!search.trim()) return;
       onCreateOption?.(search.trim());
       setSearch("");
-      if (shouldCloseOnSelect) close();
-    }, [search, onCreateOption, shouldCloseOnSelect, close]);
+      if (shouldCloseOnSelect) closeDropdown();
+    }, [search, onCreateOption, shouldCloseOnSelect, closeDropdown]);
 
     /* ── Keyboard ── */
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
         if (disabled) return;
-
         switch (e.key) {
           case "ArrowDown":
             e.preventDefault();
-            if (!isOpen) {
-              open();
-            } else {
-              setHighlightIndex((prev) =>
-                prev < selectableOptions.length - 1 ? prev + 1 : 0,
+            if (!isOpen) openDropdown();
+            else
+              setHighlightIndex((p) =>
+                p < selectableOptions.length - 1 ? p + 1 : 0,
               );
-            }
             break;
           case "ArrowUp":
             e.preventDefault();
-            if (!isOpen) {
-              open();
-            } else {
-              setHighlightIndex((prev) =>
-                prev > 0 ? prev - 1 : selectableOptions.length - 1,
+            if (!isOpen) openDropdown();
+            else
+              setHighlightIndex((p) =>
+                p > 0 ? p - 1 : selectableOptions.length - 1,
               );
-            }
             break;
           case "Enter":
           case " ":
             e.preventDefault();
-            if (!isOpen) {
-              open();
-            } else if (
-              highlightIndex >= 0 &&
-              selectableOptions[highlightIndex]
-            ) {
+            if (!isOpen) openDropdown();
+            else if (highlightIndex >= 0 && selectableOptions[highlightIndex])
               handleSelect(selectableOptions[highlightIndex]);
-            } else if (creatable && search.trim()) {
-              handleCreate();
-            }
+            else if (creatable && search.trim()) handleCreate();
             break;
           case "Escape":
             e.preventDefault();
-            close();
+            closeDropdown();
             triggerRef.current?.focus();
             break;
           case "Backspace":
             if (multiple && !search && selectedValues.length > 0) {
-              const lastVal = selectedValues[selectedValues.length - 1];
               const newValues = selectedValues.slice(0, -1);
               if (!isControlled) setInternalValue(newValues);
-              const newOptions = newValues
+              const newOpts = newValues
                 .map((v) => propOptions.find((o) => o.value === v))
                 .filter(Boolean) as SelectOption[];
-              onChange?.(newValues, newOptions);
+              onChange?.(newValues, newOpts);
             }
             break;
           case "Tab":
-            close();
+            closeDropdown();
             break;
         }
       },
@@ -666,27 +691,31 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         isControlled,
         propOptions,
         onChange,
-        open,
-        close,
+        openDropdown,
+        closeDropdown,
         handleSelect,
         handleCreate,
         creatable,
       ],
     );
 
-    /* ── Render helpers ── */
+    /* ── Helpers ── */
     const isSelected = (val: string) => selectedValues.includes(val);
     const canShowClear = clearable && selectedValues.length > 0 && !disabled;
     const isLoading = loading || asyncLoading;
 
+    /* ── Trigger content ── */
     const renderTriggerContent = () => {
       if (selectedOptions.length === 0) {
-        return <span className="text-slate-500 truncate">{placeholder}</span>;
+        return (
+          <span className={cn("truncate", theme.placeholderText)}>
+            {placeholder}
+          </span>
+        );
       }
 
-      if (renderValue) {
+      if (renderValue)
         return renderValue(multiple ? selectedOptions : selectedOptions[0]);
-      }
 
       if (multiple) {
         if (showSelectedCount && selectedOptions.length > 2) {
@@ -697,7 +726,9 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   key={opt.value}
                   className={cn(
                     "select-tag-in inline-flex items-center gap-1 rounded-lg border",
-                    "bg-[#D4AF37]/8 border-[#D4AF37]/20 text-[#F5D76E]",
+                    theme.tagBg,
+                    theme.tagBorder,
+                    theme.tagText,
                     sz.tag,
                   )}
                 >
@@ -706,7 +737,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   <button
                     type="button"
                     onClick={(e) => removeTag(opt.value, e)}
-                    className="shrink-0 rounded p-0.5 hover:bg-white/10 transition-colors"
+                    className={cn(
+                      "shrink-0 rounded p-0.5 transition-colors",
+                      theme.tagRemoveHover,
+                    )}
                     aria-label={`حذف ${opt.label}`}
                   >
                     <Icons.X />
@@ -716,7 +750,9 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               <span
                 className={cn(
                   "inline-flex items-center rounded-lg border",
-                  "bg-white/4 border-white/10 text-slate-400",
+                  theme.countBg,
+                  theme.countBorder,
+                  theme.countText,
                   sz.tag,
                 )}
               >
@@ -733,7 +769,9 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 key={opt.value}
                 className={cn(
                   "select-tag-in inline-flex items-center gap-1 rounded-lg border",
-                  "bg-[#D4AF37]/8 border-[#D4AF37]/20 text-[#F5D76E]",
+                  theme.tagBg,
+                  theme.tagBorder,
+                  theme.tagText,
                   sz.tag,
                 )}
               >
@@ -742,7 +780,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 <button
                   type="button"
                   onClick={(e) => removeTag(opt.value, e)}
-                  className="shrink-0 rounded p-0.5 hover:bg-white/10 transition-colors"
+                  className={cn(
+                    "shrink-0 rounded p-0.5 transition-colors",
+                    theme.tagRemoveHover,
+                  )}
                   aria-label={`حذف ${opt.label}`}
                 >
                   <Icons.X />
@@ -756,13 +797,16 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       // Single
       const opt = selectedOptions[0];
       return (
-        <span className="flex items-center gap-2 truncate text-white">
+        <span
+          className={cn("flex items-center gap-2 truncate", theme.triggerText)}
+        >
           {opt.icon && <span className="shrink-0">{opt.icon}</span>}
           <span className="truncate">{opt.label}</span>
         </span>
       );
     };
 
+    /* ── Option item ── */
     const renderOptionItem = (opt: SelectOption, idx: number) => {
       const selected = isSelected(opt.value);
       const highlighted = idx === highlightIndex;
@@ -785,7 +829,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               sz.option,
               animation.colors,
               opt.disabled && "pointer-events-none opacity-40",
-              highlighted && "bg-white/4",
+              highlighted && (isDark ? "bg-white/4" : "bg-black/4"),
             )}
           >
             {renderOption(opt, selected)}
@@ -811,28 +855,25 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             animation.colors,
             interactive.touch,
             opt.disabled && "pointer-events-none opacity-40",
-            highlighted && !selected && "bg-white/4",
-            selected && "bg-[#D4AF37]/8",
+            highlighted && !selected && (isDark ? "bg-white/4" : "bg-black/4"),
+            selected && theme.optionBgSelected,
           )}
         >
-          {/* Icon / Avatar */}
           {opt.icon && (
             <span
               className={cn(
                 "shrink-0 ml-2.5",
-                selected ? "text-[#F5D76E]" : "text-slate-400",
+                selected ? theme.optionTextSelected : theme.optionDescText,
               )}
             >
               {opt.icon}
             </span>
           )}
-
-          {/* Label + Description */}
           <div className="flex-1 min-w-0">
             <span
               className={cn(
                 "block truncate font-medium",
-                selected ? "text-[#F5D76E]" : "text-slate-200",
+                selected ? theme.optionTextSelected : theme.optionText,
               )}
             >
               {opt.label}
@@ -840,29 +881,26 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             {opt.description && (
               <span
                 className={cn(
-                  "block truncate mt-0.5",
-                  "text-[10px] leading-tight",
-                  selected ? "text-[#D4AF37]/60" : "text-slate-500",
+                  "block truncate mt-0.5 text-[10px] leading-tight",
+                  selected ? theme.optionDescSelected : theme.optionDescText,
                 )}
               >
                 {opt.description}
               </span>
             )}
           </div>
-
-          {/* Check */}
           {selected && (
-            <span className="shrink-0 text-[#F5D76E] mr-2">
+            <span className={cn("shrink-0 mr-2", theme.checkColor)}>
               <Icons.Check />
             </span>
           )}
-
-          {/* Multiple checkbox visual */}
           {multiple && !selected && (
             <span
               className={cn(
                 "shrink-0 mr-2 flex h-4 w-4 items-center justify-center rounded border",
-                highlighted ? "border-[#D4AF37]/30" : "border-white/15",
+                highlighted
+                  ? theme.checkboxBorderHighlight
+                  : theme.checkboxBorder,
               )}
             />
           )}
@@ -870,22 +908,29 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       );
     };
 
-    /* ── Render dropdown content ── */
+    /* ── Dropdown content ── */
     const renderDropdownContent = () => {
-      // Loading state
       if (isLoading) {
         return (
           <div className="flex flex-col items-center justify-center py-8 gap-2">
-            <Icons.Spinner />
-            <span className="text-xs text-slate-500">در حال بارگذاری…</span>
+            <span className={theme.spinnerColor}>
+              <Icons.Spinner />
+            </span>
+            <span className={cn("text-xs", theme.emptyText)}>
+              در حال بارگذاری…
+            </span>
           </div>
         );
       }
 
-      // Empty state
       if (filteredOptions.length === 0 && !creatable) {
         return (
-          <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-500">
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center py-8 gap-2",
+              theme.emptyText,
+            )}
+          >
             <Icons.Empty />
             <span className="text-xs">
               {search ? noResultsMessage : emptyMessage}
@@ -896,39 +941,33 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
 
       let flatIndex = 0;
 
-      // Grouped rendering
       if (grouped && groupedOptions) {
         return (
           <>
-            {/* Ungrouped items first */}
-            {groupedOptions.ungrouped.map((opt) => {
-              const idx = flatIndex++;
-              return renderOptionItem(opt, idx);
-            })}
-
-            {/* Groups */}
+            {groupedOptions.ungrouped.map((opt) =>
+              renderOptionItem(opt, flatIndex++),
+            )}
             {Object.entries(groupedOptions.groups).map(([groupName, opts]) => (
               <div key={groupName}>
-                {/* Group header */}
                 <div
                   className={cn(
-                    "sticky top-0 z-10 px-3.5 py-2",
-                    "bg-[#0B0905]/95 backdrop-blur-sm",
-                    "border-b border-white/4",
+                    "sticky top-0 z-10 px-3.5 py-2 backdrop-blur-sm border-b",
+                    theme.groupBg,
+                    theme.groupBorder,
                   )}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider",
+                      theme.groupText,
+                    )}
+                  >
                     {groupName}
                   </span>
                 </div>
-                {opts.map((opt) => {
-                  const idx = flatIndex++;
-                  return renderOptionItem(opt, idx);
-                })}
+                {opts.map((opt) => renderOptionItem(opt, flatIndex++))}
               </div>
             ))}
-
-            {/* Creatable */}
             {creatable && search.trim() && (
               <button
                 type="button"
@@ -936,7 +975,8 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 className={cn(
                   "flex w-full items-center gap-2 rounded-xl text-right",
                   sz.option,
-                  "text-[#F5D76E] hover:bg-[#D4AF37]/6",
+                  theme.createText,
+                  theme.createHover,
                   animation.colors,
                 )}
               >
@@ -948,12 +988,9 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         );
       }
 
-      // Flat rendering
       return (
         <>
           {filteredOptions.map((opt, i) => renderOptionItem(opt, i))}
-
-          {/* Creatable */}
           {creatable &&
             search.trim() &&
             !filteredOptions.some((o) => o.label === search.trim()) && (
@@ -963,7 +1000,8 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 className={cn(
                   "flex w-full items-center gap-2 rounded-xl text-right",
                   sz.option,
-                  "text-[#F5D76E] hover:bg-[#D4AF37]/6",
+                  theme.createText,
+                  theme.createHover,
                   animation.colors,
                 )}
               >
@@ -992,7 +1030,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
           )}
           onKeyDown={handleKeyDown}
         >
-          {/* Hidden inputs for form submission */}
           {name &&
             selectedValues.map((v) => (
               <input
@@ -1003,18 +1040,23 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               />
             ))}
 
-          {/* ── Label ── */}
+          {/* Label */}
           {label && (
             <label
               htmlFor={id}
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400"
+              className={cn(
+                "mb-1.5 block text-xs font-semibold uppercase tracking-wider",
+                theme.labelText,
+              )}
             >
               {label}
-              {required && <span className="mr-1 text-[#D4AF37]">*</span>}
+              {required && (
+                <span className={cn("mr-1", theme.requiredStar)}>*</span>
+              )}
             </label>
           )}
 
-          {/* ── Trigger Button ── */}
+          {/* Trigger */}
           <div
             ref={triggerRef as unknown as React.RefObject<HTMLDivElement>}
             id={id}
@@ -1023,111 +1065,120 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             aria-haspopup="listbox"
             aria-label={label || placeholder}
             tabIndex={disabled ? -1 : 0}
-            onClick={disabled ? undefined : toggle}
+            onClick={disabled ? undefined : toggleDropdown}
             onKeyDown={
               disabled
                 ? undefined
                 : (e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      toggle();
+                      toggleDropdown();
                     }
                   }
             }
             className={cn(
               "group flex w-full cursor-pointer items-center justify-between rounded-xl border text-right outline-none select-none",
-              "bg-white/[0.035] backdrop-blur-sm",
+              theme.triggerBg,
+              "backdrop-blur-sm",
               sz.trigger,
               error
-                ? "border-red-500/40"
+                ? theme.triggerBorderError
                 : isOpen
-                  ? "border-[#D4AF37]/30 ring-2 ring-[#D4AF37]/15"
-                  : borders.subtle,
-              !disabled && !error && "hover:border-[#D4AF37]/18",
+                  ? theme.triggerBorderOpen
+                  : cn("border", theme.triggerBorder),
+              !disabled && !error && theme.triggerHover,
               disabled && "pointer-events-none opacity-50 cursor-not-allowed",
               animation.base,
               focus.ring,
             )}
           >
-            {/* Value display */}
             <div className="flex-1 min-w-0 truncate">
               {renderTriggerContent()}
             </div>
-
-            {/* Right side actions */}
             <div className="flex items-center gap-1 shrink-0 mr-2">
-              {/* Loading */}
               {isLoading && (
-                <span className="text-[#D4AF37]">
+                <span className={theme.spinnerColor}>
                   <Icons.Spinner />
                 </span>
               )}
-
-              {/* Clear */}
               {canShowClear && !isLoading && (
                 <span
                   role="button"
                   tabIndex={0}
                   onClick={(e) => {
                     e.stopPropagation();
-                    clear();
+                    clearValue();
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       e.stopPropagation();
-                      clear();
+                      clearValue();
                     }
                   }}
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-md",
-                    "text-slate-500 hover:text-red-400 hover:bg-red-500/10",
-                    "transition-colors duration-150 cursor-pointer",
+                    "flex h-5 w-5 items-center justify-center rounded-md transition-colors duration-150 cursor-pointer",
+                    theme.clearText,
+                    theme.clearHover,
                   )}
                   aria-label="پاک کردن"
                 >
                   <Icons.X />
                 </span>
               )}
-
-              {/* Chevron */}
               <Icons.ChevronDown
                 className={cn(
-                  "h-4 w-4 text-slate-500 transition-transform duration-200",
-                  isOpen && "rotate-180 text-[#D4AF37]",
+                  "h-4 w-4 transition-transform duration-200",
+                  theme.clearText,
+                  isOpen && cn("rotate-180", theme.checkColor),
                 )}
               />
             </div>
           </div>
 
-          {/* ── Error ── */}
-          {error && <p className="mt-1 text-[11px] text-red-400">{error}</p>}
-
-          {/* ── Helper Text ── */}
-          {helperText && !error && (
-            <p className="mt-1 text-[11px] text-slate-500">{helperText}</p>
+          {/* Error */}
+          {error && (
+            <p className={cn("mt-1 text-[11px]", theme.errorText)}>{error}</p>
           )}
 
-          {/* ── Dropdown ── */}
+          {/* Helper */}
+          {helperText && !error && (
+            <p className={cn("mt-1 text-[11px]", theme.helperText)}>
+              {helperText}
+            </p>
+          )}
+
+          {/* Dropdown */}
           {isOpen && (
             <div
               role="listbox"
               aria-multiselectable={multiple}
               className={cn(
-                "absolute z-[60] w-full overflow-hidden",
-                layout.radius.md,
-                borders.light,
-                "bg-[#0B0905]/98 backdrop-blur-2xl",
-                shadows.card,
+                "absolute z-[60] w-full overflow-hidden rounded-xl border",
+                theme.dropdownBg,
+                "border",
+                theme.dropdownBorder,
+                theme.dropdownShadow,
                 dropDirection === "bottom"
                   ? "top-full mt-1.5 select-dropdown-in"
                   : "bottom-full mb-1.5 select-dropdown-in-up",
               )}
             >
-              {/* Search bar */}
+              {/* Search */}
               {searchable && (
-                <div className="relative border-b border-white/6 p-1.5">
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
+                <div
+                  className={cn(
+                    "relative border-b p-1.5",
+                    "border",
+                    theme.dropdownDivider,
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute right-4 top-1/2 -translate-y-1/2",
+                      theme.emptyText,
+                    )}
+                  >
                     <Icons.Search />
                   </span>
                   <input
@@ -1137,30 +1188,39 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={searchPlaceholder}
                     className={cn(
-                      "w-full rounded-lg border-0 bg-white/3 pr-9 pl-3 text-white placeholder-slate-500 outline-none",
+                      "w-full rounded-lg border-0 pr-9 pl-3 outline-none",
+                      theme.searchBg,
+                      theme.searchText,
                       sz.search,
                       animation.base,
-                      "focus:bg-white/5",
+                      theme.searchFocusBg,
                     )}
+                    style={{ ["--tw-placeholder-opacity" as string]: 1 }}
                     autoComplete="off"
                     aria-label="جستجو در گزینه‌ها"
                   />
                 </div>
               )}
 
-              {/* Max selections warning */}
+              {/* Max warning */}
               {multiple &&
                 maxSelections &&
                 selectedValues.length >= maxSelections && (
-                  <div className="px-3.5 py-2 border-b border-white/4">
-                    <span className="text-[11px] text-amber-400/80">
+                  <div
+                    className={cn(
+                      "px-3.5 py-2 border-b",
+                      "border",
+                      theme.dropdownDivider,
+                    )}
+                  >
+                    <span className={cn("text-[11px]", theme.warningText)}>
                       حداکثر {toPersianDigits(maxSelections)} گزینه قابل انتخاب
                       است
                     </span>
                   </div>
                 )}
 
-              {/* Options list */}
+              {/* Options */}
               <div
                 ref={listRef}
                 className="overflow-y-auto p-1.5"
@@ -1169,10 +1229,16 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 {renderDropdownContent()}
               </div>
 
-              {/* Footer: selected count */}
+              {/* Footer */}
               {multiple && selectedValues.length > 0 && (
-                <div className="flex items-center justify-between border-t border-white/6 px-3.5 py-2">
-                  <span className="text-[11px] text-slate-500">
+                <div
+                  className={cn(
+                    "flex items-center justify-between border-t px-3.5 py-2",
+                    "border",
+                    theme.dropdownDivider,
+                  )}
+                >
+                  <span className={cn("text-[11px]", theme.footerText)}>
                     {toPersianDigits(selectedValues.length)} مورد انتخاب شده
                     {maxSelections && (
                       <span> از {toPersianDigits(maxSelections)}</span>
@@ -1181,8 +1247,11 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   {clearable && (
                     <button
                       type="button"
-                      onClick={clear}
-                      className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors"
+                      onClick={clearValue}
+                      className={cn(
+                        "text-[11px] transition-colors",
+                        theme.footerClearText,
+                      )}
                     >
                       پاک کردن همه
                     </button>
@@ -1198,5 +1267,4 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
 );
 
 CustomSelect.displayName = "CustomSelect";
-
 export default CustomSelect;

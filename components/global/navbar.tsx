@@ -15,6 +15,7 @@ import {
   interactive,
   accentTokens,
 } from "@/lib/design/design-system";
+import { usePathname } from "next/navigation";
 
 /* ──────────────────────────────────────────────
    KEYFRAMES
@@ -129,6 +130,7 @@ export default function SmartLandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { scrolled, hidden, atTop } = useScrollState();
   const activeSection = useActiveSection(navItems.map((i) => i.href));
+  const pathName = usePathname();
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -154,7 +156,9 @@ export default function SmartLandingNavbar() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
-
+  if (pathName === "/admin") {
+    return null;
+  }
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: navKeyframes }} />
@@ -170,7 +174,7 @@ export default function SmartLandingNavbar() {
       )}
 
       <header
-      dir="rtl"
+        dir="rtl"
         className={cn(
           "fixed top-0 left-0 right-0 z-50 px-3 transition-all  duration-500 ease-out",
           scrolled ? "pt-2 sm:pt-2" : "pt-3 sm:pt-4",
