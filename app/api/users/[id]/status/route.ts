@@ -1,0 +1,33 @@
+import { NextResponse } from "next/server";
+import { compose } from "@/lib/auth/compose";
+import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
+import { AuthRequest } from "@/lib/auth/types";
+import User from "@/models/users";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+const VALID_STATUSES = ["active", "inactive", "blocked", "pending"];
+
+// PATCH /api/users/[id]/status
+export const PATCH = compose(
+    withDB(),
+    withAuth(),
+    withStatus("active"),
+    withRole("admin", "superAdmin")
+)(async (req: AuthRequest, ctx: RouteContext) => {
+    const { id } = await ctx.params;
+    const { status } = await req.json();
+
+    if (!VALID_STATUSES.includes(status)) {
+        return NextResponse.json({ message: `status must be one of: ${VALID_STATUSES.join(", ")}` }, { status: 400 });
+    }
+
+    const user = await User.findByIdAndUpdate(
+        id,
+        { status, updatedBy: req.ctx.user!._id },
+        { new: true }
+    ).select("status role phoneNumber firstName lastName");
+
+    if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
+    return NextResponse.json({ user });
+});

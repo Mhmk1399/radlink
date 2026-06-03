@@ -1,77 +1,123 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import { BlockData, BlockSettings, StyleMap } from "./blocks";
 
-const pageSchema = new Schema({
-    title: {
-        type: String,
-        required: true,
-    },
-    description: {
-        type: String,
-    },
-    url: {
-        type: String,
-        required: true,
-        unique: true,
-    },
-    jason: {
-        type: Object,
-        required: true,
-    },
-    selectedtemplate: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Template",
-    },
-    owner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    bgimage: {
-        type: String,
-    },
-    blocks:{
-    type: [Object],
-    required: true,
-    },
-    logo: {
-        type: String,
-    },
-    favicon: {
-        type: String,
-    },
-    pagedata: {
-        type: Object,
-    },
-    extraServices: {
-        type: Object,
-    },
-    subscription: {
-        type: Object,
-    },
+// A block embedded inside a page is a snapshot of the master Block at the time
+// it was added. Edits here don't affect the master block and vice versa.
+export interface PageBlock {
+    blockId: Types.ObjectId;   // ref back to master Block (for sync if needed)
+    type: string;
+    order: number;             // render order on the page
+
+    // Snapshot of master block data — page owner can override
+    data: BlockData;
+    settings: BlockSettings;
+
+    // Style overrides on top of the template skin.
+    // Merged with template.style at render time: template style < block style < pageBlock styleOverride
+    styleOverride: StyleMap;
+}
+
+export interface IPage extends Document {
+    title: string;
+    description?: string;
+    url: string;               // unique slug
+
+    owner: Types.ObjectId;
+
+    // Template provides the global style skin
+    template?: Types.ObjectId;
+
+    // Embedded block snapshots — ordered array
+    blocks: PageBlock[];
+
+    // Page-level style overrides on top of template (optional)
+    styleOverride?: StyleMap;
+
+    // Media
+    logo?: string;
+    favicon?: string;
+
+    // SEO
     seo: {
-        title: {
-            type: String,
-        },
-        description: {
-            type: String,
-        },
-        keywords: {
-            type: [String],
-        },
-    },
-    settings: {
-        type: Object,
-    },
-    stats: {
-        views: {
-            type: Number,
-            default: 0,
-        },
-        visitors: {
-            type: Number,
-            default: 0,
-        },
-    },
-}, { timestamps: true });
+        title?: string;
+        description?: string;
+        keywords?: string[];
+    };
 
-export default mongoose.model('Page', pageSchema);
+    // Feature flags / integrations
+    extraServices?: Record<string, unknown>;
+    subscription?: Record<string, unknown>;
+    settings?: Record<string, unknown>;
+
+    stats: {
+        views: number;
+        visitors: number;
+    };
+
+    isPublished: boolean;
+
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const PageBlockSchema = new Schema<PageBlock>(
+    {
+        blockId:       { type: Schema.Types.ObjectId, ref: "Block", required: true },
+        type:          { type: String, required: true },
+        order:         { type: Number, required: true, default: 0 },
+        data:          { type: Schema.Types.Mixed, default: {} },
+        settings:      { type: Schema.Types.Mixed, default: {} },
+        styleOverride: { type: Schema.Types.Mixed, default: {} },
+    },
+    { _id: false }
+);
+
+const PageSchema = new Schema<IPage>(
+    {
+        title:       { type: String, required: true, trim: true },
+        description: { type: String, trim: true },
+        url:         { type: String, required: true, unique: true, trim: true, index: true },
+
+        owner:    { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+        template: { type: Schema.Types.ObjectId, ref: "Template" },
+
+        blocks: { type: [PageBlockSchema], default: [] },
+
+        styleOverride: { type: Schema.Types.Mixed, default: {} },
+
+        logo:    { type: String, trim: true },
+        favicon: { type: String, trim: true },
+
+        seo: {
+            title:       String,
+            description: String,
+            keywords:    [String],
+        },
+
+        extraServices: { type: Schema.Types.Mixed, default: {} },
+        subscription:  { type: Schema.Types.Mixed, default: {} },
+        settings:      { type: Schema.Types.Mixed, default: {} },
+
+        stats: {
+            views:    { type: Number, default: 0, min: 0 },
+            visitors: { type: Number, default: 0, min: 0 },
+        },
+
+        isPublished: { type: Boolean, default: false, index: true },
+    },
+    { timestamps: true }
+);
+
+PageSchema.set("toJSON", {
+    transform: (_doc, ret) => {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+    },
+});
+
+const Page: Model<IPage> =
+    mongoose.models.Page || mongoose.model<IPage>("Page", PageSchema);
+
+export default Page;
