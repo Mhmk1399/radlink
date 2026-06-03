@@ -10,7 +10,7 @@
 //
 // ─────────────────────────────────────────────────────────────────
 
- import { ReactNode } from "react";
+import { ReactNode } from "react";
 import { KeyedMutator } from "swr/_internal";
 
 /* ══════════════════════════════════════════════
