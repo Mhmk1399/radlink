@@ -1,3 +1,4 @@
+// SimplePageBuilder.tsx
 "use client";
 
 import React, {
@@ -44,7 +45,6 @@ import {
   HiOutlineCheck,
   HiOutlineTrash,
   HiOutlineDocumentDuplicate,
-  HiOutlineBars3,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
 } from "react-icons/hi2";
@@ -62,6 +62,7 @@ import type {
 } from "@/types/blocks/builder.types";
 import PhonePreviewModal from "./PhoneLivePreview";
 import { FaTrash } from "react-icons/fa";
+import { HiOutlineEye } from "react-icons/hi2";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -72,85 +73,6 @@ type Breakpoint = "mobile" | "tablet" | "desktop";
 /* ================================================================== */
 /*  Helpers                                                            */
 /* ================================================================== */
-
-function ClearAllConfirmModal({
-  open,
-  blocksCount,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean;
-  blocksCount: number;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onCancel]);
-
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      dir="rtl"
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onCancel();
-      }}
-    >
-      <div className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_30px_90px_-30px_rgba(0,0,0,0.35)]">
-        <div className="p-5">
-          <div className="mb-4 flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl">
-              <FaTrash size={20} className="text-red-600" />
-            </div>
-            <div>
-              <h2 className="text-[15px] font-black text-neutral-900">
-                حذف همه بلاک‌ها؟
-              </h2>
-              <p className="mt-1.5 text-[12px] leading-6 text-neutral-500">
-                با تأیید این گزینه، همه {blocksCount} بلاک صفحه حذف می‌شوند. این
-                عملیات قابل بازگشت نیست.
-              </p>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2.5 text-[11px] leading-5 text-red-600">
-            اگر فقط می‌خواهید یک بلاک را حذف کنید، از پنل ویرایش همان بلاک
-            استفاده کنید.
-          </div>
-        </div>
-        <div className="flex gap-2 border-t border-neutral-100 bg-neutral-50 p-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[12px] font-bold text-neutral-600 transition hover:bg-neutral-100 active:scale-[0.98]"
-          >
-            انصراف
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-[12px] font-bold text-white shadow-[0_16px_35px_-18px_rgba(220,38,38,0.9)] transition hover:bg-red-700 active:scale-[0.98]"
-          >
-            بله، حذف کن
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
 
 const STORAGE_KEY = "page-builder-blocks";
 
@@ -220,6 +142,87 @@ function loadFromStorage(): PageBlock[] | null {
 }
 
 /* ================================================================== */
+/*  Clear All Confirm Modal                                            */
+/* ================================================================== */
+
+function ClearAllConfirmModal({
+  open,
+  blocksCount,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  blocksCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-200"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <div className="w-full max-w-[380px] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 overflow-hidden rounded-[28px] border border-red-100 bg-white shadow-[0_32px_100px_-20px_rgba(0,0,0,0.4)]">
+        <div className="p-6">
+          {/* Icon */}
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-50/50">
+            <FaTrash size={22} className="text-red-500" />
+          </div>
+
+          <h2 className="text-center text-[16px] font-black text-neutral-900">
+            حذف همه بلاک‌ها؟
+          </h2>
+          <p className="mt-2 text-center text-[13px] leading-6 text-neutral-500">
+            همه{" "}
+            <span className="font-bold text-neutral-700">{blocksCount}</span>{" "}
+            بلاک حذف می‌شوند.
+            <br />
+            این عملیات قابل بازگشت نیست.
+          </p>
+        </div>
+
+        <div className="flex gap-3 bg-neutral-50/80 px-5 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-2xl border border-neutral-200 bg-white px-4 py-3.5 text-[13px] font-bold text-neutral-600 transition-all hover:bg-neutral-100 active:scale-[0.97]"
+          >
+            انصراف
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-2xl bg-red-500 px-4 py-3.5 text-[13px] font-bold text-white shadow-lg shadow-red-500/25 transition-all hover:bg-red-600 active:scale-[0.97]"
+          >
+            حذف همه
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/* ================================================================== */
 /*  Block Catalog Modal                                                */
 /* ================================================================== */
 
@@ -233,60 +236,89 @@ function BlockCatalogModal({
   onAdd: (type: string) => void;
 }) {
   const available = useMemo(() => Object.values(blockRegistry), []);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handler);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4"
       dir="rtl"
     >
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-lg max-h-[600px] overflow-auto rounded-3xl border border-neutral-200 bg-white p-6 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.15)]">
-        <div className="mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100">
-              <HiOutlineSquares2X2 size={18} className="text-neutral-600" />
-            </div>
+      <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[600px] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300 overflow-hidden rounded-t-[28px] sm:rounded-[28px] border border-neutral-200/60 bg-white shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.15)] sm:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.15)]">
+        {/* Handle bar (mobile) */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-neutral-300" />
+        </div>
+
+        {/* Header */}
+        <div className="px-5 pb-4 pt-4 sm:pt-5">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-[15px] font-bold text-neutral-800">
+              <h2 className="text-[17px] font-black text-neutral-900">
                 افزودن بلاک
               </h2>
-              <p className="text-[11px] text-neutral-400">
-                یک بلاک انتخاب کن تا به صفحه اضافه شود
+              <p className="mt-1 text-[12px] text-neutral-400">
+                بلاک موردنظر رو انتخاب کن
               </p>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 text-neutral-400 transition hover:bg-neutral-50 hover:text-neutral-600"
-          >
-            <HiOutlineXMark size={16} />
-          </button>
-        </div>
-        <div className="grid grid-cols-1 gap-3">
-          {available.map((item) => (
             <button
-              key={item.type}
               type="button"
-              onClick={() => {
-                onAdd(item.type);
-                onClose();
-              }}
-              className="group flex max-h-[104px] flex-col items-start rounded-2xl border border-neutral-100 bg-white p-3 text-right transition hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/5"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 transition hover:bg-neutral-200 hover:text-neutral-600"
             >
-              <div className="text-sm font-bold text-black flex items-center gap-1 group-hover:text-[#D4AF37]">
-                <span className="text-xl">{item.icon}</span>
-                {item.label}
-              </div>
-              <span className="line-clamp-2 text-xs leading-5 text-slate-400">
-                {item.description}
-              </span>
+              <HiOutlineXMark size={18} />
             </button>
-          ))}
+          </div>
+        </div>
+
+        {/* Block list */}
+        <div className="overflow-y-auto px-4 pb-6 max-h-[calc(85vh-120px)] sm:max-h-[440px]">
+          <div className="grid grid-cols-1 gap-2">
+            {available.map((item) => (
+              <button
+                key={item.type}
+                type="button"
+                onClick={() => {
+                  onAdd(item.type);
+                  onClose();
+                }}
+                className="group flex items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-sm active:scale-[0.98]"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-xl transition-all duration-200 group-hover:bg-emerald-100 group-hover:scale-110">
+                  {item.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-bold text-neutral-800 group-hover:text-emerald-700">
+                    {item.label}
+                  </div>
+                  <p className="mt-0.5 line-clamp-1 text-[12px] leading-5 text-neutral-400">
+                    {item.description}
+                  </p>
+                </div>
+                <HiOutlinePlus
+                  size={18}
+                  className="shrink-0 text-neutral-300 transition group-hover:text-emerald-500"
+                />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>,
@@ -302,18 +334,16 @@ function SaveIndicator({ saved }: { saved: boolean }) {
   return (
     <div
       className={[
-        "flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-semibold transition-all duration-300",
-        saved
-          ? "bg-emerald-50 text-emerald-600 shadow-[0_0_12px_-4px_rgba(16,185,129,0.3)]"
-          : "bg-neutral-100 text-neutral-400",
+        "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all duration-500",
+        saved ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600",
       ].join(" ")}
     >
       {saved ? (
-        <HiOutlineCheck size={13} />
+        <HiOutlineCheck size={12} />
       ) : (
-        <HiOutlineArrowPath size={13} className="animate-spin" />
+        <HiOutlineArrowPath size={12} className="animate-spin" />
       )}
-      {saved ? "ذخیره شد" : "در حال ذخیره..."}
+      {saved ? "ذخیره شد" : "ذخیره..."}
     </div>
   );
 }
@@ -374,7 +404,7 @@ function PageMetaModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[400] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[400] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
       dir="rtl"
       role="dialog"
       aria-modal="true"
@@ -382,43 +412,50 @@ function PageMetaModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)]">
+      <div className="w-full sm:max-w-md animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300 overflow-hidden rounded-t-[28px] sm:rounded-[28px] border border-white/60 bg-white shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)]">
+        {/* Handle bar (mobile) */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-neutral-300" />
+        </div>
+
         <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
           <div>
-            <h2 className="text-[15px] font-black text-neutral-900">
-              {pageId ? "ویرایش اطلاعات صفحه" : "ساخت صفحه جدید"}
+            <h2 className="text-[16px] font-black text-neutral-900">
+              {pageId ? "ویرایش صفحه" : "ساخت صفحه جدید"}
             </h2>
-            <p className="mt-0.5 text-[11px] text-neutral-400">
-              عنوان، آدرس و توضیح صفحه را وارد کنید
+            <p className="mt-0.5 text-[12px] text-neutral-400">
+              اطلاعات صفحه رو وارد کن
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 text-neutral-400 transition hover:bg-neutral-50 hover:text-neutral-600"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 transition hover:bg-neutral-200 hover:text-neutral-600"
           >
             <HiOutlineXMark size={16} />
           </button>
         </div>
-        <div className="space-y-4 p-5">
+
+        <div className="space-y-5 p-5">
           <div>
-            <label className="mb-1.5 block text-[12px] font-bold text-neutral-700">
-              عنوان صفحه <span className="text-red-500">*</span>
+            <label className="mb-2 block text-[13px] font-bold text-neutral-700">
+              عنوان صفحه <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="مثلاً: فروشگاه لوازم خانگی"
-              className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[14px] text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+              className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
             />
           </div>
+
           <div>
-            <label className="mb-1.5 block text-[12px] font-bold text-neutral-700">
-              آدرس صفحه (slug) <span className="text-red-500">*</span>
+            <label className="mb-2 block text-[13px] font-bold text-neutral-700">
+              آدرس (slug) <span className="text-red-400">*</span>
             </label>
-            <div className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 transition focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-100">
-              <span className="shrink-0 border-l border-neutral-200 bg-neutral-100 px-3 py-3 font-mono text-[11px] text-neutral-500">
+            <div className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50/80 transition focus-within:border-neutral-400 focus-within:ring-4 focus-within:ring-neutral-100">
+              <span className="shrink-0 border-l border-neutral-200 bg-neutral-100/80 px-3 py-3.5 font-mono text-[12px] text-neutral-400">
                 /ir.
               </span>
               <input
@@ -426,37 +463,37 @@ function PageMetaModal({
                 value={url}
                 onChange={(e) => onUrlChange(slugify(e.target.value))}
                 placeholder="my-page"
-                className="min-w-0 flex-1 bg-transparent px-3 py-3 font-mono text-[14px] text-neutral-900 outline-none placeholder:text-neutral-400"
+                className="min-w-0 flex-1 bg-transparent px-3 py-3.5 font-mono text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300"
                 dir="ltr"
               />
             </div>
-            <p className="mt-1.5 text-[11px] text-neutral-400">
-              فقط حروف لاتین، اعداد و خط‌تیره مجاز است
-            </p>
           </div>
+
           <div>
-            <label className="mb-1.5 block text-[12px] font-bold text-neutral-700">
+            <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               توضیح کوتاه
             </label>
             <textarea
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
-              placeholder="یک توضیح کوتاه برای این صفحه..."
+              placeholder="یک توضیح کوتاه..."
               rows={3}
-              className="w-full resize-none rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[14px] text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+              className="w-full resize-none rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
             />
           </div>
+
           {saveError && (
-            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] text-red-600">
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-600">
               {saveError}
             </div>
           )}
         </div>
-        <div className="flex gap-2 border-t border-neutral-100 bg-neutral-50 p-4">
+
+        <div className="flex gap-3 border-t border-neutral-100 bg-neutral-50/50 p-4">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[12px] font-bold text-neutral-600 transition hover:bg-neutral-100 active:scale-[0.98]"
+            className="flex-1 rounded-2xl border border-neutral-200 bg-white px-4 py-3.5 text-[13px] font-bold text-neutral-600 transition-all hover:bg-neutral-100 active:scale-[0.97]"
           >
             انصراف
           </button>
@@ -464,13 +501,9 @@ function PageMetaModal({
             type="button"
             onClick={onSave}
             disabled={isSaving || !title.trim() || !url.trim()}
-            className="flex-1 rounded-2xl bg-emerald-600 px-4 py-3 text-[12px] font-bold text-white shadow-[0_8px_24px_-8px_rgba(5,150,105,0.5)] transition hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-2xl bg-emerald-500 px-4 py-3.5 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving
-              ? "در حال ذخیره..."
-              : pageId
-                ? "ذخیره تغییرات"
-                : "ساخت صفحه"}
+            {isSaving ? "ذخیره..." : pageId ? "ذخیره تغییرات" : "ساخت صفحه"}
           </button>
         </div>
       </div>
@@ -506,7 +539,6 @@ function SidebarSortableItem({
     transform,
     transition,
     isDragging,
-    isSorting,
   } = useSortable({
     id: block.instanceId,
     transition: {
@@ -526,39 +558,52 @@ function SidebarSortableItem({
       ref={setNodeRef}
       style={style}
       className={[
-        "group relative flex items-center gap-2 rounded-2xl border p-2 transition-colors duration-200",
+        "group relative flex items-center gap-2.5 rounded-2xl border-2 p-2.5 transition-all duration-200",
         isDragging
-          ? "border-neutral-300 bg-neutral-50 opacity-50 shadow-none"
+          ? "border-emerald-300 bg-emerald-50/50 opacity-60 shadow-lg shadow-emerald-100"
           : isSelected
-            ? "border-neutral-300 bg-neutral-50 shadow-sm"
-            : "border-transparent hover:border-neutral-200 hover:bg-neutral-50/60",
+            ? "border-neutral-900 bg-neutral-50 shadow-sm"
+            : "border-transparent hover:border-neutral-200 hover:bg-neutral-50/80",
       ].join(" ")}
     >
-      {/* Drag handle — separate activator */}
+      {/* ── Drag handle ── */}
       <button
         ref={setActivatorNodeRef}
         type="button"
         {...attributes}
         {...listeners}
-        className="flex h-7 w-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing"
+        className={[
+          "flex h-9 w-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg transition-all duration-200",
+          isDragging
+            ? "bg-emerald-100 text-emerald-600"
+            : "text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing",
+        ].join(" ")}
         aria-label="جابه‌جایی"
       >
-        <HiOutlineBars3 size={13} />
+        {/* 6-dot grip icon */}
+        <svg width="12" height="20" viewBox="0 0 12 20" fill="currentColor">
+          <circle cx="3" cy="3" r="1.5" />
+          <circle cx="9" cy="3" r="1.5" />
+          <circle cx="3" cy="10" r="1.5" />
+          <circle cx="9" cy="10" r="1.5" />
+          <circle cx="3" cy="17" r="1.5" />
+          <circle cx="9" cy="17" r="1.5" />
+        </svg>
       </button>
 
-      {/* Icon */}
+      {/* ── Icon ── */}
       <div
         className={[
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[14px] transition-colors duration-200",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[15px] transition-all duration-200",
           isSelected
-            ? "bg-neutral-900 text-white shadow-sm"
-            : "bg-neutral-100 text-neutral-500 group-hover:bg-neutral-200",
+            ? "bg-neutral-900 text-white shadow-md shadow-neutral-900/20"
+            : "bg-neutral-100 text-neutral-500 group-hover:bg-neutral-200/80",
         ].join(" ")}
       >
         {config?.icon ?? "□"}
       </div>
 
-      {/* Label — clickable */}
+      {/* ── Label (click to select) ── */}
       <button
         type="button"
         onClick={onSelect}
@@ -566,21 +611,21 @@ function SidebarSortableItem({
       >
         <p
           className={[
-            "truncate text-[11px] font-bold leading-tight",
+            "truncate text-[12px] font-bold leading-tight",
             isSelected ? "text-neutral-900" : "text-neutral-700",
           ].join(" ")}
         >
           {config?.label ?? block.type}
         </p>
-        <p className="truncate text-[10px] leading-tight text-neutral-400">
-          #{block.order + 1}
+        <p className="truncate text-[10px] leading-tight text-neutral-400 mt-0.5">
+          بلاک {block.order + 1}
         </p>
       </button>
 
-      {/* Quick actions */}
+      {/* ── Quick actions ── */}
       <div
         className={[
-          "flex shrink-0 items-center gap-0.5 transition-opacity duration-150",
+          "flex shrink-0 items-center gap-0.5 transition-all duration-200",
           isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
         ].join(" ")}
       >
@@ -590,10 +635,10 @@ function SidebarSortableItem({
             e.stopPropagation();
             onDuplicate();
           }}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-200 hover:text-neutral-600"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition-all hover:bg-neutral-200 hover:text-neutral-600"
           title="کپی"
         >
-          <HiOutlineDocumentDuplicate size={12} />
+          <HiOutlineDocumentDuplicate size={13} />
         </button>
         <button
           type="button"
@@ -601,10 +646,10 @@ function SidebarSortableItem({
             e.stopPropagation();
             onDelete();
           }}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-500"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition-all hover:bg-red-50 hover:text-red-500"
           title="حذف"
         >
-          <HiOutlineTrash size={12} />
+          <HiOutlineTrash size={13} />
         </button>
       </div>
     </div>
@@ -612,25 +657,27 @@ function SidebarSortableItem({
 }
 
 /* ================================================================== */
-/*  Drag Overlay — shared between sidebar & canvas                     */
+/*  Drag Overlay                                                       */
 /* ================================================================== */
 
 function UnifiedDragOverlay({ block }: { block: PageBlock }) {
   const config = blockRegistry[block.type as keyof typeof blockRegistry];
   return (
     <div
-      className="pointer-events-none w-64 rounded-2xl border border-neutral-300 bg-white/95 p-3 shadow-2xl backdrop-blur-sm"
+      className="pointer-events-none w-64 rounded-2xl border-2 border-emerald-400 bg-white p-3 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] ring-4 ring-emerald-100"
       style={{ cursor: "grabbing" }}
     >
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-[14px] text-white shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-[15px] text-white shadow-sm">
           {config?.icon ?? "□"}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-bold text-neutral-800">
+          <p className="truncate text-[13px] font-bold text-neutral-800">
             {config?.label ?? block.type}
           </p>
-          <p className="text-[10px] text-neutral-400">رها کن تا جابه‌جا شود</p>
+          <p className="text-[11px] text-emerald-600 font-medium">
+            رها کن برای جابه‌جایی ↕
+          </p>
         </div>
       </div>
     </div>
@@ -638,7 +685,7 @@ function UnifiedDragOverlay({ block }: { block: PageBlock }) {
 }
 
 /* ================================================================== */
-/*  Blocks Sidebar (desktop only)                                      */
+/*  Blocks Sidebar                                                     */
 /* ================================================================== */
 
 function BlocksSidebar({
@@ -673,24 +720,26 @@ function BlocksSidebar({
   return (
     <aside
       className={[
-        "sticky top-[73px] hidden h-[calc(100dvh-73px)] shrink-0 flex-col border-l border-neutral-200/60 bg-white/95 backdrop-blur-xl transition-[width] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] lg:flex",
-        collapsed ? "w-[52px]" : "w-[272px]",
+        "sticky top-[73px] hidden h-[calc(100dvh-73px)] shrink-0 flex-col border-l border-neutral-200/60 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] lg:flex",
+        collapsed ? "w-[56px]" : "w-[280px]",
       ].join(" ")}
     >
       {/* Header */}
       <div
         className={[
-          "flex shrink-0 items-center border-b border-neutral-100 px-2.5 py-2.5",
+          "flex shrink-0 items-center border-b border-neutral-100 px-3 py-3",
           collapsed ? "justify-center" : "justify-between",
         ].join(" ")}
       >
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <HiOutlineSquares2X2 size={14} className="text-neutral-500" />
-            <span className="text-[11px] font-bold text-neutral-700">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900">
+              <HiOutlineSquares2X2 size={13} className="text-white" />
+            </div>
+            <span className="text-[13px] font-bold text-neutral-800">
               بلاک‌ها
             </span>
-            <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-bold text-neutral-500 tabular-nums">
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neutral-100 px-1.5 text-[10px] font-bold text-neutral-500 tabular-nums">
               {blocks.length}
             </span>
           </div>
@@ -698,20 +747,20 @@ function BlocksSidebar({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
           title={collapsed ? "باز کردن" : "بستن"}
         >
           {collapsed ? (
-            <HiOutlineChevronLeft size={13} />
+            <HiOutlineChevronLeft size={14} />
           ) : (
-            <HiOutlineChevronRight size={13} />
+            <HiOutlineChevronRight size={14} />
           )}
         </button>
       </div>
 
-      {/* ── Collapsed: icon-only list ── */}
+      {/* ── Collapsed: icon-only ── */}
       {collapsed ? (
-        <div className="flex flex-1 flex-col items-center gap-1 overflow-y-auto py-2 scrollbar-none">
+        <div className="flex flex-1 flex-col items-center gap-1.5 overflow-y-auto py-3 scrollbar-none">
           {sortedBlocks.map((block) => {
             const config =
               blockRegistry[block.type as keyof typeof blockRegistry];
@@ -722,9 +771,9 @@ function BlocksSidebar({
                 type="button"
                 onClick={() => onSelectBlock(block.instanceId)}
                 className={[
-                  "flex h-8 w-8 items-center justify-center rounded-xl text-[13px] transition-all duration-200",
+                  "flex h-9 w-9 items-center justify-center rounded-xl text-[14px] transition-all duration-200",
                   isSelected
-                    ? "bg-neutral-900 text-white shadow-sm scale-105"
+                    ? "bg-neutral-900 text-white shadow-md shadow-neutral-900/20 scale-110"
                     : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 hover:scale-105",
                 ].join(" ")}
                 title={config?.label ?? block.type}
@@ -736,26 +785,26 @@ function BlocksSidebar({
           <button
             type="button"
             onClick={onAddBlock}
-            className="mt-1 flex h-8 w-8 items-center justify-center rounded-xl border border-dashed border-neutral-300 text-neutral-400 transition-colors hover:border-neutral-400 hover:text-neutral-600"
+            className="mt-2 flex h-9 w-9 items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 text-neutral-400 transition hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50"
             title="افزودن بلاک"
           >
-            <HiOutlinePlus size={13} />
+            <HiOutlinePlus size={14} />
           </button>
         </div>
       ) : (
         <>
           {/* ── Expanded: sortable list ── */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden px-1.5 py-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-200">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-200">
             {sortedBlocks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-100">
-                  <HiOutlineSquares2X2 size={20} className="text-neutral-300" />
+              <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100">
+                  <HiOutlineSquares2X2 size={28} className="text-neutral-300" />
                 </div>
-                <p className="text-[11px] font-semibold text-neutral-500">
+                <p className="text-[14px] font-bold text-neutral-600">
                   هنوز بلاکی نداری
                 </p>
-                <p className="mt-1 text-[10px] text-neutral-400">
-                  از دکمه زیر اضافه کن
+                <p className="mt-1.5 text-[12px] text-neutral-400 leading-5">
+                  از دکمه زیر اولین بلاک رو اضافه کن
                 </p>
               </div>
             ) : (
@@ -763,7 +812,15 @@ function BlocksSidebar({
                 items={blockIds}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="space-y-0.5">
+                {/* Drag instruction */}
+                <div className="mb-2 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+                  <span className="text-[13px]">💡</span>
+                  <span className="text-[10px] font-medium text-amber-700">
+                    با گرفتن نقاط، ترتیب بلاک‌ها رو عوض کن
+                  </span>
+                </div>
+
+                <div className="space-y-1">
                   {sortedBlocks.map((block) => (
                     <SidebarSortableItem
                       key={block.instanceId}
@@ -780,13 +837,13 @@ function BlocksSidebar({
           </div>
 
           {/* Add button */}
-          <div className="shrink-0 border-t border-neutral-100 p-2.5">
+          <div className="shrink-0 border-t border-neutral-100 p-3">
             <button
               type="button"
               onClick={onAddBlock}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/50 px-3 py-2.5 text-[11px] font-semibold text-neutral-500 transition-colors hover:border-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-3 py-3 text-[12px] font-bold text-white shadow-md shadow-neutral-900/10 transition-all hover:bg-neutral-800 hover:shadow-lg active:scale-[0.98]"
             >
-              <HiOutlinePlus size={13} />
+              <HiOutlinePlus size={14} />
               افزودن بلاک
             </button>
           </div>
@@ -820,7 +877,7 @@ export default function SimplePageBuilder({
   const [blocks, setBlocks] = useState<PageBlock[]>(
     externalBlocks && externalBlocks.length > 0
       ? externalBlocks
-      : initialState.blocks
+      : initialState.blocks,
   );
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(
     externalBlocks && externalBlocks.length > 0
@@ -845,9 +902,23 @@ export default function SimplePageBuilder({
   const [justSaved, setJustSaved] = useState(true);
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [pageMetaOpen, setPageMetaOpen] = useState(false);
-  const [pageDescription, setPageDescription] = useState(initialDescription || "");
+  const [pageDescription, setPageDescription] = useState(
+    initialDescription || "",
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── Scroll detection ── */
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 100);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   /* ── Server save ── */
 
@@ -867,7 +938,11 @@ export default function SimplePageBuilder({
           url: pageUrl,
           description: pageDescription,
           blocks,
-          seo: { title: pageTitle, description: pageDescription, keywords: [] },
+          seo: {
+            title: pageTitle,
+            description: pageDescription,
+            keywords: [],
+          },
           settings: { direction: "rtl" },
         }),
       });
@@ -902,7 +977,11 @@ export default function SimplePageBuilder({
           url: pageUrl,
           description: pageDescription,
           blocks,
-          seo: { title: pageTitle, description: pageDescription, keywords: [] },
+          seo: {
+            title: pageTitle,
+            description: pageDescription,
+            keywords: [],
+          },
           settings: { direction: "rtl" },
         }),
       });
@@ -971,7 +1050,6 @@ export default function SimplePageBuilder({
   }, [blocks, storageHydrated]);
 
   useEffect(() => {
-    // If external blocks were provided, don't override with localStorage
     if (externalBlocks && externalBlocks.length > 0) {
       setStorageHydrated(true);
       return;
@@ -990,7 +1068,7 @@ export default function SimplePageBuilder({
     setStorageHydrated(true);
   }, [externalBlocks]);
 
-  /* ── SINGLE shared DndContext sensors ── */
+  /* ── Sensors ── */
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1168,7 +1246,7 @@ export default function SimplePageBuilder({
     setClearConfirmOpen(false);
   }, []);
 
-  /* ── SINGLE DnD handlers (sidebar + canvas share this) ── */
+  /* ── DnD handlers ── */
 
   const handleDragStart = useCallback((e: DragStartEvent) => {
     setActiveBlockId(String(e.active.id));
@@ -1210,86 +1288,83 @@ export default function SimplePageBuilder({
         droppable: { strategy: MeasuringStrategy.Always },
       }}
     >
-      <div
-        dir="rtl"
-        className="min-h-screen overflow-x-hidden bg-gradient-to-b from-neutral-50 to-blue-100/90"
-      >
+      <div dir="rtl" className="min-h-screen overflow-x-hidden bg-[#f5f5f7]">
         {/* ═══════════ Header ═══════════ */}
-        <header className="sticky top-0 z-40 border-b border-neutral-200/50 bg-white/80 backdrop-blur-2xl">
-          <div className="px-4 pb-3 pt-[calc(env(safe-area-inset-top,0)+12px)] md:pb-3 md:pt-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center justify-between gap-3 sm:justify-start">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-neutral-900 to-neutral-700 text-[12px] font-black text-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.3)]">
-                    ص
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="truncate text-[14px] font-extrabold text-neutral-900 sm:text-[15px]">
-                        صفحه‌ساز
-                      </h1>
-                      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-neutral-500 ring-1 ring-neutral-200/60">
-                        {blocks.length} بلاک
-                      </span>
-                    </div>
-                  </div>
+        <header className="sticky top-0 z-40 border-b border-neutral-200/60 bg-white/90 backdrop-blur-2xl">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              {/* Left side */}
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-[13px] font-black text-white shadow-lg shadow-neutral-900/20">
+                  ص
+                </div>
+                <div className="hidden sm:block">
+                  <h1 className="text-[15px] font-extrabold text-neutral-900">
+                    صفحه‌ساز
+                  </h1>
                 </div>
                 <SaveIndicator saved={justSaved} />
+                <span className="hidden sm:inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-neutral-400">
+                  {blocks.length} بلاک
+                </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Right side — actions */}
+              <div className="flex items-center gap-2">
+                {/* Preview */}
                 <button
                   type="button"
                   onClick={() => setIsPhonePreviewOpen(true)}
-                  className="group inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-neutral-200/80 bg-white px-3.5 py-2 text-[12px] font-semibold text-neutral-700 shadow-sm transition-all hover:border-neutral-300 hover:bg-neutral-50 hover:shadow-md active:scale-[0.97] sm:text-[13px]"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
                 >
-                  <span className="text-[14px] transition-transform group-hover:scale-110">
-                    📱
+                  <HiOutlineEye size={16} />
+                  <span className="hidden sm:inline text-[12px] font-semibold">
+                    پیش‌نمایش
                   </span>
-                  <span className="whitespace-nowrap">پیش‌نمایش</span>
                 </button>
 
+                {/* Save / Create */}
                 <button
                   type="button"
                   onClick={() => setPageMetaOpen(true)}
                   disabled={isServerSaving}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-bold text-white shadow-[0_4px_16px_-6px_rgba(5,150,105,0.5)] transition-all hover:bg-emerald-700 hover:shadow-[0_8px_24px_-8px_rgba(5,150,105,0.5)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 sm:text-[13px]"
+                  className="flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-[12px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isServerSaving ? (
-                    <>
-                      <HiOutlineArrowPath size={15} className="animate-spin" />
-                      <span className="whitespace-nowrap">ذخیره...</span>
-                    </>
+                    <HiOutlineArrowPath size={14} className="animate-spin" />
                   ) : pageId ? (
-                    <>
-                      <HiOutlineCheck size={15} />
-                      <span className="whitespace-nowrap">ذخیره تغییرات</span>
-                    </>
+                    <HiOutlineCheck size={14} />
                   ) : (
-                    <>
-                      <HiOutlinePlus size={15} />
-                      <span className="whitespace-nowrap">ساخت صفحه</span>
-                    </>
+                    <HiOutlinePlus size={14} />
                   )}
+                  <span className="hidden sm:inline">
+                    {isServerSaving
+                      ? "ذخیره..."
+                      : pageId
+                        ? "ذخیره"
+                        : "ساخت صفحه"}
+                  </span>
                 </button>
 
+                {/* Add block */}
                 <button
                   type="button"
                   onClick={() => setCatalogOpen(true)}
-                  className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 py-2 text-[12px] font-bold text-white shadow-[0_4px_16px_-6px_rgba(0,0,0,0.4)] transition-all hover:bg-neutral-800 hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.4)] active:scale-[0.97] sm:text-[13px]"
+                  className="flex h-10 items-center gap-2 rounded-xl bg-neutral-900 px-4 text-[12px] font-bold text-white shadow-lg shadow-neutral-900/15 transition-all hover:bg-neutral-800 hover:shadow-xl active:scale-95"
                 >
-                  <HiOutlinePlus size={15} />
-                  <span className="whitespace-nowrap">افزودن بلاک</span>
+                  <HiOutlinePlus size={14} />
+                  <span className="hidden sm:inline">بلاک جدید</span>
                 </button>
 
+                {/* Clear */}
                 {blocks.length > 0 && (
                   <button
                     type="button"
                     onClick={requestClearAllBlocks}
-                    className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-red-200/80 bg-red-50/60 px-3 py-2 text-[12px] font-semibold text-red-600 transition-all hover:bg-red-100 active:scale-[0.97] sm:text-[13px]"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-500 transition-all hover:bg-red-100 active:scale-95"
+                    title="پاک کردن همه"
                   >
-                    <HiOutlineXMark size={14} />
-                    <span className="whitespace-nowrap">پاک کردن</span>
+                    <HiOutlineTrash size={15} />
                   </button>
                 )}
               </div>
@@ -1313,53 +1388,76 @@ export default function SimplePageBuilder({
 
           {/* Canvas */}
           <main className="mx-auto min-w-0 max-w-5xl flex-1 px-4 pb-32 pt-6">
+            {/* Quick tips */}
             {blocks.length > 0 && (
-              <div className="mb-5 flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="rounded-lg bg-white px-2.5 py-1.5 font-medium text-neutral-500 shadow-sm ring-1 ring-neutral-100">
-                  کلیک = انتخاب بخش
-                </span>
-                <span className="rounded-lg bg-white px-2.5 py-1.5 font-medium text-neutral-500 shadow-sm ring-1 ring-neutral-100">
-                  دابل‌کلیک = ویرایش متن
-                </span>
-                <span className="rounded-lg bg-white px-2.5 py-1.5 font-medium text-neutral-500 shadow-sm ring-1 ring-neutral-100">
-                  دستگیره = جابه‌جایی
-                </span>
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                {[
+                  { emoji: "👆", text: "کلیک = انتخاب" },
+                  { emoji: "✏️", text: "دابل‌کلیک = ویرایش" },
+                  { emoji: "↕️", text: "دراگ = جابه‌جایی" },
+                ].map((tip) => (
+                  <span
+                    key={tip.text}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-neutral-500 shadow-sm ring-1 ring-neutral-100"
+                  >
+                    <span className="text-[12px]">{tip.emoji}</span>
+                    {tip.text}
+                  </span>
+                ))}
               </div>
             )}
 
+            {/* Canvas area */}
             <div
               className={[
-                "rounded-3xl border bg-white p-4 transition-all duration-300 sm:p-6",
+                "rounded-[24px] border-2 bg-white transition-all duration-300",
                 activeBlockId
-                  ? "border-neutral-400 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.15)]"
-                  : "border-neutral-200/80 shadow-sm",
+                  ? "border-emerald-300 shadow-xl shadow-emerald-100/50"
+                  : "border-neutral-200/60 shadow-sm",
+                sortedBlocks.length > 0 ? "p-4 sm:p-6" : "",
               ].join(" ")}
             >
               {sortedBlocks.length === 0 ? (
-                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-gradient-to-b from-neutral-50/50 to-transparent px-6 text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-neutral-100 shadow-sm">
-                    <HiOutlineSquares2X2
-                      size={28}
-                      className="text-neutral-400"
-                    />
+                /* ── Empty state ── */
+                <div className="flex min-h-[500px] flex-col items-center justify-center rounded-[20px] px-8 text-center">
+                  <div className="relative mb-6">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-neutral-100 to-neutral-50 shadow-inner">
+                      <HiOutlineSquares2X2
+                        size={40}
+                        className="text-neutral-300"
+                      />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+                      <HiOutlinePlus size={16} />
+                    </div>
                   </div>
-                  <p className="text-[15px] font-bold text-neutral-700">
-                    هنوز بلاکی اضافه نشده
+
+                  <h2 className="text-[18px] font-black text-neutral-800">
+                    صفحه‌ت رو بساز
+                  </h2>
+                  <p className="mt-2 max-w-sm text-[14px] leading-7 text-neutral-400">
+                    با اضافه کردن بلاک‌ها، صفحه دلخواهت رو طراحی کن.
+                    <br />
+                    هر بلاک قابل ویرایش و جابه‌جاییه.
                   </p>
-                  <p className="mt-1.5 max-w-xs text-[12px] leading-5 text-neutral-400">
-                    با دکمه «افزودن بلاک» شروع کن. تنظیمات هر بلاک از نوار بالا
-                    قابل دسترسی است.
-                  </p>
+
                   <button
                     type="button"
                     onClick={() => setCatalogOpen(true)}
-                    className="mt-5 flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-3 text-[13px] font-bold text-white shadow-[0_4px_16px_-6px_rgba(0,0,0,0.4)] transition hover:bg-neutral-800 active:scale-[0.97]"
+                    className="mt-8 flex items-center gap-2.5 rounded-2xl bg-neutral-900 px-7 py-4 text-[14px] font-bold text-white shadow-xl shadow-neutral-900/20 transition-all hover:bg-neutral-800 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <HiOutlinePlus size={16} />
+                    <HiOutlinePlus size={18} />
                     اولین بلاک رو اضافه کن
                   </button>
+
+                  <div className="mt-6 flex items-center gap-2 text-[12px] text-neutral-400">
+                    <span className="h-px w-8 bg-neutral-200" />
+                    یا از سایدبار سمت راست استفاده کن
+                    <span className="h-px w-8 bg-neutral-200" />
+                  </div>
                 </div>
               ) : (
+                /* ── Block list ── */
                 <SortableContext
                   items={blockIds}
                   strategy={verticalListSortingStrategy}
@@ -1384,14 +1482,18 @@ export default function SimplePageBuilder({
               )}
             </div>
 
+            {/* Bottom add button */}
             {sortedBlocks.length > 0 && (
-              <div className="mt-4 flex justify-center">
+              <div className="mt-5 flex justify-center">
                 <button
                   type="button"
                   onClick={() => setCatalogOpen(true)}
-                  className="flex items-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-3.5 text-[13px] font-semibold text-neutral-500 shadow-sm transition hover:border-neutral-400 hover:text-neutral-700 active:scale-[0.98]"
+                  className="group flex items-center gap-2.5 rounded-2xl border-2 border-dashed border-neutral-300 bg-white px-8 py-4 text-[13px] font-semibold text-neutral-400 shadow-sm transition-all hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/50 hover:shadow-md active:scale-[0.98]"
                 >
-                  <HiOutlinePlus size={16} />
+                  <HiOutlinePlus
+                    size={16}
+                    className="transition-transform group-hover:rotate-90"
+                  />
                   افزودن بلاک جدید
                 </button>
               </div>
@@ -1400,7 +1502,7 @@ export default function SimplePageBuilder({
         </div>
       </div>
 
-      {/* ═══════════ Drag Overlay (portal) ═══════════ */}
+      {/* ═══════════ Drag Overlay ═══════════ */}
       <DragOverlay
         dropAnimation={{
           duration: 300,
@@ -1444,6 +1546,7 @@ export default function SimplePageBuilder({
         schema={selectedSchema}
         selectedElementId={selectedElementId}
         breakpoint={breakpoint}
+        isScrolled={isScrolled}
         onBreakpointChange={setBreakpoint}
         onUpdateContent={updateSelectedContent}
         onUpdateStyle={updateSelectedElementStyle}

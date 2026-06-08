@@ -1,3 +1,4 @@
+// DynamicIslandPanel.tsx
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -44,6 +45,7 @@ type DynamicIslandPanelProps = {
   schema: BlockSchema | null;
   selectedElementId: string | null;
   breakpoint: Breakpoint;
+  isScrolled?: boolean;
   onBreakpointChange: (breakpoint: Breakpoint) => void;
   onUpdateContent: (key: string, value: unknown) => void;
   onUpdateStyle: (
@@ -231,7 +233,7 @@ function Dropdown({
     <div
       ref={ref}
       className={[
-        "absolute top-full z-[300] mt-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-[0_24px_80px_-16px_rgba(0,0,0,0.12)] transition-all duration-200",
+        "absolute top-full z-[300] mt-3 overflow-hidden rounded-2xl border border-neutral-200/80 bg-white shadow-[0_24px_80px_-16px_rgba(0,0,0,0.12)] transition-all duration-200",
         width,
         align === "right"
           ? "right-0"
@@ -285,19 +287,19 @@ function CustomColorPicker({
   const rgb = hexToRgb(color);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <HiOutlineEyeDropper size={14} className="text-neutral-500" />
-          <span className="text-[13px] font-semibold text-neutral-800">
+          <span className="text-[13px] font-bold text-neutral-800">
             {label}
           </span>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
         >
           <HiOutlineXMark size={14} />
         </button>
@@ -332,13 +334,12 @@ function CustomColorPicker({
           />
         </button>
 
-        <div className="flex flex-1 flex-col justify-center gap-1.5">
-          {/* text-base (16px) prevents iOS zoom */}
+        <div className="flex flex-1 flex-col justify-center gap-2">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => handleInput(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 font-mono text-base text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+            className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 font-mono text-base text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
             dir="ltr"
             placeholder="#000000"
           />
@@ -356,10 +357,10 @@ function CustomColorPicker({
 
       {/* Presets */}
       <div>
-        <p className="mb-2 text-[11px] font-semibold text-neutral-500">
+        <p className="mb-2.5 text-[11px] font-bold text-neutral-500">
           پالت رنگ
         </p>
-        <div className="grid grid-cols-7 gap-[6px]">
+        <div className="grid grid-cols-7 gap-2">
           {COLOR_PRESETS.map((preset) => {
             const active = preset.toLowerCase() === color.toLowerCase();
             return (
@@ -371,12 +372,12 @@ function CustomColorPicker({
                   setInputValue(preset);
                 }}
                 className={[
-                  "relative aspect-square w-full rounded-[10px] transition-all hover:scale-110 hover:shadow-md",
+                  "relative aspect-square w-full rounded-xl transition-all hover:scale-110 hover:shadow-md",
                   isLightColor(preset)
                     ? "ring-1 ring-neutral-200 hover:ring-neutral-300"
                     : "hover:ring-1 hover:ring-neutral-300",
                   active
-                    ? "ring-2 ring-neutral-800 ring-offset-2 ring-offset-white"
+                    ? "ring-2 ring-neutral-800 ring-offset-2 ring-offset-white scale-110"
                     : "",
                 ].join(" ")}
                 style={{ backgroundColor: preset }}
@@ -386,7 +387,7 @@ function CustomColorPicker({
                   <span className="absolute inset-0 flex items-center justify-center">
                     <span
                       className={[
-                        "h-2 w-2 rounded-full shadow-sm",
+                        "h-2.5 w-2.5 rounded-full shadow-sm",
                         isLightColor(preset) ? "bg-neutral-800" : "bg-white",
                       ].join(" ")}
                     />
@@ -439,28 +440,28 @@ function InlineColorWithPicker({
         type="button"
         onClick={() => setOpenPickerKey(isOpen ? null : styleKey)}
         className={[
-          "group flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 transition-all",
+          "group flex items-center gap-2 rounded-xl px-2 py-2 transition-all",
           isOpen ? "bg-neutral-100" : "hover:bg-neutral-50",
         ].join(" ")}
         title={label}
       >
         <span
           className={[
-            "block h-5 w-5 rounded-full shadow-sm transition-transform group-hover:scale-110",
+            "block h-5 w-5 rounded-lg shadow-sm transition-transform group-hover:scale-110",
             isLightColor(color)
               ? "ring-1 ring-neutral-300"
               : "ring-1 ring-neutral-200",
           ].join(" ")}
           style={{ backgroundColor: color }}
         />
-        <span className="text-[11px] font-medium text-neutral-600 transition group-hover:text-neutral-800">
+        <span className="text-[11px] font-semibold text-neutral-600 transition group-hover:text-neutral-800">
           {label}
         </span>
       </button>
 
       <div
         className={[
-          "absolute right-0 top-full z-[400] mt-2.5 w-72 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_24px_80px_-16px_rgba(0,0,0,0.12)] transition-all duration-200",
+          "absolute right-0 top-full z-[400] mt-3 w-72 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-[0_24px_80px_-16px_rgba(0,0,0,0.12)] transition-all duration-200",
           isOpen
             ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
             : "pointer-events-none -translate-y-2 scale-95 opacity-0",
@@ -501,7 +502,7 @@ function InlineSlider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 transition hover:bg-neutral-50">
+    <div className="flex items-center gap-2 rounded-xl px-2 py-2 transition hover:bg-neutral-50">
       <span className="text-neutral-500" title={label}>
         {icon}
       </span>
@@ -515,7 +516,6 @@ function InlineSlider({
         className="h-[3px] w-14 cursor-pointer appearance-none rounded-full bg-neutral-200 xl:w-[70px] [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-125"
         aria-label={label}
       />
-      {/* 16px font to prevent iOS zoom */}
       <input
         type="text"
         inputMode="numeric"
@@ -525,7 +525,7 @@ function InlineSlider({
           const n = Number(e.target.value);
           if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, n)));
         }}
-        className="w-9 rounded-lg border border-neutral-200 bg-neutral-50 px-1 py-0.5 text-center text-base font-medium text-neutral-700 outline-none transition focus:border-neutral-400 focus:bg-white sm:text-[11px]"
+        className="w-10 rounded-lg border border-neutral-200 bg-neutral-50 px-1 py-1 text-center text-base font-medium text-neutral-700 outline-none transition focus:border-neutral-400 focus:bg-white sm:text-[11px]"
         dir="ltr"
       />
       <span className="text-[10px] font-medium text-neutral-400">{unit}</span>
@@ -545,6 +545,7 @@ type ToolbarProps = {
   selLabel: string;
   selectedElementId: string | null;
   breakpoint: Breakpoint;
+  isScrolled?: boolean;
   onBreakpointChange: (bp: Breakpoint) => void;
   onUpdateContent: (key: string, value: unknown) => void;
   onUpdateStyle: (
@@ -565,6 +566,7 @@ function DesktopToolbar({
   selLabel,
   selectedElementId,
   breakpoint,
+  isScrolled,
   onUpdateContent,
   onUpdateStyle,
   onDeleteBlock,
@@ -572,7 +574,9 @@ function DesktopToolbar({
 }: ToolbarProps) {
   const [openDropdown, setOpenDropdown] = useState<DropdownId>(null);
   const [openColorPicker, setOpenColorPicker] = useState<string | null>(null);
+  const [openNumericDropdown, setOpenNumericDropdown] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const numericBtnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const allowedKeys = selSchema?.allowedStyleKeys ?? [];
   const style: EditableStyleMap | null = selEl ? selEl.style : null;
@@ -611,6 +615,7 @@ function DesktopToolbar({
   const toggle = (id: DropdownId) => {
     setOpenDropdown((prev) => (prev === id ? null : id));
     setOpenColorPicker(null);
+    setOpenNumericDropdown(null);
   };
 
   const hasInline =
@@ -620,29 +625,32 @@ function DesktopToolbar({
 
   return (
     <div
-      className="fixed inset-x-0 top-14 z-[100] flex justify-center px-3 pt-2.5"
+      className={[
+        "fixed inset-x-0 z-[100] flex justify-center px-4 pt-3 transition-all duration-500 ease-out",
+        isScrolled ? "top-0" : "top-[60px]",
+      ].join(" ")}
       dir="rtl"
     >
       <div className="relative w-full max-w-5xl" ref={barRef}>
-        <div className="flex items-center rounded-2xl border border-neutral-200/80 bg-white/[0.97] px-2 py-[5px] shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_32px_-8px_rgba(0,0,0,0.06)] backdrop-blur-xl">
-          {/* ▸ Block */}
-          <div className="flex shrink-0 items-center gap-2 rounded-xl bg-neutral-50 px-3 py-[6px]">
-            <span className="relative flex h-[7px] w-[7px]">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-25" />
-              <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-emerald-500" />
+        <div className="flex items-center rounded-2xl border border-neutral-200/60 bg-white/[0.98] px-2.5 py-[6px] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_40px_-12px_rgba(0,0,0,0.08)] backdrop-blur-2xl">
+          {/* ▸ Block badge */}
+          <div className="flex shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3 py-[7px]">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-[11px] font-bold text-neutral-800">
+            <span className="text-[12px] font-bold text-emerald-700">
               {schema.label}
             </span>
           </div>
 
-          {/* ▸ Element */}
+          {/* ▸ Selected element */}
           {selectedElementId && (
             <>
               <Sep />
-              <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-50 px-2 py-1">
-                <HiOutlineSwatch size={11} className="text-neutral-400" />
-                <span className="max-w-[90px] truncate text-[10px] font-semibold text-neutral-600">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-100 px-2.5 py-1.5">
+                <HiOutlineSwatch size={12} className="text-neutral-400" />
+                <span className="max-w-[100px] truncate text-[11px] font-semibold text-neutral-600">
                   {selLabel}
                 </span>
               </div>
@@ -651,7 +659,7 @@ function DesktopToolbar({
 
           <Sep />
 
-          {/* ▸ Content */}
+          {/* ▸ Content dropdown */}
           {hasContent && (
             <div className="relative">
               <BarBtn
@@ -675,7 +683,7 @@ function DesktopToolbar({
             </div>
           )}
 
-          {/* ▸ Style */}
+          {/* ▸ Style dropdown */}
           {selectedElementId && allowedKeys.length > 0 && (
             <div className="relative">
               <BarBtn
@@ -705,7 +713,7 @@ function DesktopToolbar({
             </div>
           )}
 
-          {/* ▸ Inline */}
+          {/* ▸ Inline controls */}
           {hasInline && (
             <>
               <Sep />
@@ -737,15 +745,114 @@ function DesktopToolbar({
                   style![key] as ResponsiveValue<string | number> | undefined,
                   breakpoint,
                 );
+                const isOpen = openNumericDropdown === key;
                 return (
-                  <InlineSlider
+                  <div
                     key={key}
-                    icon={numericIcons[key]}
-                    label={STYLE_LABELS[key]}
-                    value={toNum(raw)}
-                    {...cfg}
-                    onChange={(v) => fire(key, v)}
-                  />
+                    ref={(el) => {(numericBtnRefs.current[key] = el)}}
+                    className="relative"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenNumericDropdown(isOpen ? null : key);
+                        setOpenDropdown(null);
+                        setOpenColorPicker(null);
+                      }}
+                      className={[
+                        "flex items-center gap-1.5 rounded-xl px-2.5 py-2 transition-all",
+                        isOpen
+                          ? "bg-neutral-900 text-white"
+                          : "text-neutral-500 hover:bg-neutral-100",
+                      ].join(" ")}
+                      title={STYLE_LABELS[key]}
+                    >
+                      <span className={isOpen ? "text-white" : "text-neutral-500"}>
+                        {numericIcons[key]}
+                      </span>
+                      <span className="text-[11px] font-semibold">
+                        {toNum(raw)}{cfg.unit}
+                      </span>
+                      {isOpen ? (
+                        <HiOutlineChevronUp size={10} />
+                      ) : (
+                        <HiOutlineChevronDown size={10} />
+                      )}
+                    </button>
+
+                    <div
+                      className={[
+                        "absolute right-0 top-full z-[400] mt-3 w-64 rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-[0_24px_80px_-16px_rgba(0,0,0,0.12)] transition-all duration-200",
+                        isOpen
+                          ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+                          : "pointer-events-none -translate-y-2 scale-95 opacity-0",
+                      ].join(" ")}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[13px] font-bold text-neutral-800">
+                            {STYLE_LABELS[key]}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setOpenNumericDropdown(null)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
+                          >
+                            <HiOutlineXMark size={14} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min={cfg.min}
+                            max={cfg.max}
+                            step={cfg.step}
+                            value={toNum(raw)}
+                            onChange={(e) => fire(key, Number(e.target.value))}
+                            className="h-[4px] flex-1 cursor-pointer appearance-none rounded-full bg-neutral-200 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-125"
+                          />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={toNum(raw)}
+                            onChange={(e) => {
+                              const n = Number(e.target.value);
+                              if (Number.isFinite(n))
+                                fire(key, Math.max(cfg.min, Math.min(cfg.max, n)));
+                            }}
+                            className="w-16 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-2 text-center text-[13px] font-medium text-neutral-700 outline-none transition focus:border-neutral-400 focus:bg-white"
+                            dir="ltr"
+                          />
+                          <span className="text-[11px] font-medium text-neutral-400">
+                            {cfg.unit}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2">
+                          {[cfg.min, Math.floor((cfg.max - cfg.min) / 3) + cfg.min, Math.floor((cfg.max - cfg.min) * 2 / 3) + cfg.min, cfg.max].map(
+                            (preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => fire(key, preset)}
+                                className={[
+                                  "rounded-lg border px-2 py-2 text-[11px] font-semibold transition-all",
+                                  toNum(raw) === preset
+                                    ? "border-neutral-900 bg-neutral-900 text-white"
+                                    : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50",
+                                ].join(" ")}
+                              >
+                                {preset}{cfg.unit}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
 
@@ -772,12 +879,12 @@ function DesktopToolbar({
                       open={openDropdown === "animation"}
                       onClose={() => setOpenDropdown(null)}
                       anchorRef={barRef}
-                      width="w-60"
+                      width="w-64"
                     >
-                      <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                      <p className="mb-3 px-1 text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                         انیمیشن ورود
                       </p>
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         {ANIMATION_OPTIONS.map((opt) => {
                           const active =
                             ((style!.animation as AnimationType) ?? "none") ===
@@ -788,27 +895,34 @@ function DesktopToolbar({
                               type="button"
                               onClick={() => fire("animation", opt.value)}
                               className={[
-                                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right transition-all",
+                                "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right transition-all",
                                 active
-                                  ? "bg-neutral-100 text-neutral-900"
+                                  ? "bg-neutral-900 text-white"
                                   : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800",
                               ].join(" ")}
                             >
                               <span
                                 className={[
-                                  "flex h-6 w-6 items-center justify-center rounded-full border text-[12px] transition",
+                                  "flex h-7 w-7 items-center justify-center rounded-lg text-[13px] transition",
                                   active
-                                    ? "border-neutral-400 bg-neutral-800 text-white"
-                                    : "border-neutral-200 bg-neutral-50",
+                                    ? "bg-white/20 text-white"
+                                    : "bg-neutral-100",
                                 ].join(" ")}
                               >
                                 {opt.icon}
                               </span>
                               <div>
-                                <div className="text-[12px] font-semibold">
+                                <div className="text-[12px] font-bold">
                                   {opt.label}
                                 </div>
-                                <div className="text-[10px] text-neutral-400">
+                                <div
+                                  className={[
+                                    "text-[10px]",
+                                    active
+                                      ? "text-white/60"
+                                      : "text-neutral-400",
+                                  ].join(" ")}
+                                >
                                   {opt.desc}
                                 </div>
                               </div>
@@ -847,9 +961,9 @@ function DesktopToolbar({
                   onDuplicateBlock();
                   setOpenDropdown(null);
                 }}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-medium text-neutral-700 transition hover:bg-neutral-50"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium text-neutral-700 transition hover:bg-neutral-50"
               >
-                <HiOutlineDocumentDuplicate size={15} />
+                <HiOutlineDocumentDuplicate size={16} />
                 کپی بلاک
               </button>
               <div className="mx-2 my-1.5 h-px bg-neutral-100" />
@@ -859,9 +973,9 @@ function DesktopToolbar({
                   onDeleteBlock();
                   setOpenDropdown(null);
                 }}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[12px] font-medium text-red-500 transition hover:bg-red-50"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-medium text-red-500 transition hover:bg-red-50"
               >
-                <HiOutlineTrash size={15} />
+                <HiOutlineTrash size={16} />
                 حذف بلاک
               </button>
             </Dropdown>
@@ -873,11 +987,11 @@ function DesktopToolbar({
 }
 
 /* ================================================================== */
-/*  Micro                                                              */
+/*  Micro components                                                   */
 /* ================================================================== */
 
 function Sep() {
-  return <span className="mx-1 h-5 w-px shrink-0 bg-neutral-200/80" />;
+  return <span className="mx-1.5 h-5 w-px shrink-0 bg-neutral-200/60" />;
 }
 
 function BarBtn({
@@ -898,26 +1012,26 @@ function BarBtn({
       type="button"
       onClick={onClick}
       className={[
-        "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-all",
+        "flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[12px] font-semibold transition-all",
         active
-          ? "bg-neutral-100 text-neutral-900"
-          : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700",
-        compact ? "px-1.5" : "",
+          ? "bg-neutral-900 text-white"
+          : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700",
+        compact ? "px-2" : "",
       ].join(" ")}
     >
       {icon}
       {label && <span className="hidden xl:inline">{label}</span>}
       {active ? (
-        <HiOutlineChevronUp size={9} />
+        <HiOutlineChevronUp size={10} />
       ) : (
-        <HiOutlineChevronDown size={9} />
+        <HiOutlineChevronDown size={10} />
       )}
     </button>
   );
 }
 
 /* ================================================================== */
-/*  Mobile                                                             */
+/*  Mobile Island                                                      */
 /* ================================================================== */
 
 function MobileIsland({
@@ -941,77 +1055,92 @@ function MobileIsland({
     if (!selectedElementId && tab === "style") setTab("content");
   }, [selectedElementId, tab]);
 
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   const hasContent = schema.contentFields.length > 0;
   const hasStyle = Boolean(selSchema?.allowedStyleKeys?.length);
 
-  const TABS: Array<{ key: PanelTab; label: string; icon: React.ReactNode }> = [
+  const TABS: Array<{
+    key: PanelTab;
+    label: string;
+    icon: React.ReactNode;
+  }> = [
     { key: "content", label: "محتوا", icon: <HiOutlinePencil size={16} /> },
     { key: "style", label: "ظاهر", icon: <HiOutlinePaintBrush size={16} /> },
     {
       key: "actions",
-      label: "تنظیمات",
+      label: "عملیات",
       icon: <HiOutlineCog6Tooth size={16} />,
     },
   ];
 
   return (
     <>
-      {/* Pill */}
+      {/* ── Floating pill ── */}
       <div
-        className="fixed inset-x-0 top-0 z-[100] flex justify-center px-4 pt-2"
+        className="fixed inset-x-0 bottom-0 z-[100] flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,8px)+8px)]"
         dir="rtl"
       >
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full max-w-sm items-center gap-2.5 rounded-2xl border border-neutral-200/80 bg-white/[0.97] px-3.5 py-2.5 shadow-[0_2px_16px_-4px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-all active:scale-[0.98]"
+          className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white/[0.98] px-4 py-3.5 shadow-[0_-4px_24px_-6px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all active:scale-[0.98]"
         >
-          <span className="relative flex h-[7px] w-[7px]">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-25" />
-            <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-emerald-500" />
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
-          <span className="text-[12px] font-bold text-neutral-800">
+          <span className="text-[13px] font-bold text-neutral-800">
             {schema.label}
           </span>
 
           {selectedElementId && (
             <>
-              <span className="h-3.5 w-px bg-neutral-200" />
-              <span className="truncate text-[11px] text-neutral-400">
+              <span className="h-4 w-px bg-neutral-200" />
+              <span className="truncate text-[12px] text-neutral-400">
                 {selLabel}
               </span>
             </>
           )}
 
           <span className="flex-1" />
-          <span className="flex items-center gap-1 text-[11px] font-medium text-neutral-400">
+          <span className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3 py-1.5 text-[11px] font-bold text-white">
             ویرایش
-            <HiOutlineChevronDown size={11} />
+            <HiOutlineChevronUp size={10} />
           </span>
         </button>
       </div>
 
-      {/* Fullscreen */}
+      {/* ── Fullscreen panel ── */}
       {open &&
         createPortal(
           <div
-            className="fixed inset-0 z-[200] flex flex-col bg-white text-neutral-900"
+            className="fixed inset-0 z-[200] flex flex-col bg-white text-neutral-900 animate-in slide-in-from-bottom duration-300"
             dir="rtl"
           >
             {/* Header */}
-            <header className="flex shrink-0 items-center gap-2.5 border-b border-neutral-100 px-4 py-3">
-              <span className="relative flex h-[7px] w-[7px]">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-25" />
-                <span className="relative inline-flex h-[7px] w-[7px] rounded-full bg-emerald-500" />
+            <header className="flex shrink-0 items-center gap-3 border-b border-neutral-100 px-4 py-3.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="text-[13px] font-bold text-neutral-800">
+              <span className="text-[14px] font-bold text-neutral-800">
                 {schema.label}
               </span>
 
               {selectedElementId && (
                 <>
                   <span className="h-4 w-px bg-neutral-200" />
-                  <span className="rounded-lg bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-500">
+                  <span className="rounded-lg bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold text-neutral-500">
                     {selLabel}
                   </span>
                 </>
@@ -1022,26 +1151,26 @@ function MobileIsland({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 text-neutral-400 transition hover:bg-neutral-50 hover:text-neutral-600"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200 hover:text-neutral-700"
                 aria-label="بستن"
               >
-                <HiOutlineXMark size={18} />
+                <HiOutlineXMark size={20} />
               </button>
             </header>
 
             {/* Tabs */}
-            <nav className="shrink-0 px-4 pb-1 pt-3">
-              <div className="flex gap-[3px] rounded-[14px] bg-neutral-100 p-[3px]">
+            <nav className="shrink-0 px-4 pb-1.5 pt-3.5">
+              <div className="flex gap-1 rounded-2xl bg-neutral-100 p-1">
                 {TABS.map((t) => (
                   <button
                     key={t.key}
                     type="button"
                     onClick={() => setTab(t.key)}
                     className={[
-                      "flex flex-1 items-center justify-center gap-1.5 rounded-[11px] py-2.5 text-[13px] transition-all duration-200",
+                      "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-[13px] transition-all duration-200",
                       tab === t.key
                         ? "bg-white font-bold text-neutral-800 shadow-sm"
-                        : "font-medium text-neutral-400",
+                        : "font-medium text-neutral-400 active:bg-white/50",
                     ].join(" ")}
                   >
                     {t.icon}
@@ -1054,7 +1183,7 @@ function MobileIsland({
             {/* Body */}
             <div
               className={[
-                "flex-1 overflow-y-auto overscroll-contain px-4 pb-12 pt-4",
+                "flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom,16px)+16px)] pt-4",
                 CUSTOM_SCROLLBAR,
               ].join(" ")}
             >
@@ -1090,14 +1219,14 @@ function MobileIsland({
                   ) : (
                     <EmptyState
                       icon={<HiOutlinePaintBrush size={28} />}
-                      title="استایل قابل ویرایش ندارد"
-                      desc="برای این المنت style قابل ویرایشی تعریف نشده."
+                      title="استایل قابل ویرایشی ندارد"
+                      desc="برای این المنت استایلی تعریف نشده."
                     />
                   )
                 ) : (
                   <EmptyState
                     icon={<HiOutlineSwatch size={28} />}
-                    title="المنت انتخاب کن"
+                    title="یه المنت انتخاب کن"
                     desc="روی بخش موردنظر داخل بلاک کلیک کن."
                   />
                 ))}
@@ -1110,9 +1239,9 @@ function MobileIsland({
                       onDuplicateBlock();
                       setOpen(false);
                     }}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-[14px] font-semibold text-neutral-700 transition active:scale-[0.98] hover:bg-neutral-100"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-neutral-200 bg-white px-4 py-4.5 text-[15px] font-bold text-neutral-700 transition-all active:scale-[0.98] hover:bg-neutral-50"
                   >
-                    <HiOutlineDocumentDuplicate size={18} />
+                    <HiOutlineDocumentDuplicate size={20} />
                     کپی بلاک
                   </button>
 
@@ -1122,9 +1251,9 @@ function MobileIsland({
                       onDeleteBlock();
                       setOpen(false);
                     }}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-[14px] font-semibold text-red-600 transition active:scale-[0.98] hover:bg-red-100"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-4.5 text-[15px] font-bold text-red-600 transition-all active:scale-[0.98] hover:bg-red-100"
                   >
-                    <HiOutlineTrash size={18} />
+                    <HiOutlineTrash size={20} />
                     حذف بلاک
                   </button>
                 </div>
@@ -1151,10 +1280,10 @@ function EmptyState({
   desc: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-neutral-100 bg-neutral-50 px-6 py-14 text-center">
+    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50/50 px-6 py-16 text-center">
       <span className="mb-3 text-neutral-300">{icon}</span>
-      <p className="text-[14px] font-semibold text-neutral-600">{title}</p>
-      <p className="mt-1.5 text-[12px] leading-5 text-neutral-400">{desc}</p>
+      <p className="text-[15px] font-bold text-neutral-600">{title}</p>
+      <p className="mt-2 text-[13px] leading-6 text-neutral-400">{desc}</p>
     </div>
   );
 }
@@ -1168,6 +1297,7 @@ export function DynamicIslandPanel({
   schema,
   selectedElementId,
   breakpoint,
+  isScrolled = false,
   onBreakpointChange,
   onUpdateContent,
   onUpdateStyle,
@@ -1199,6 +1329,7 @@ export function DynamicIslandPanel({
     selLabel,
     selectedElementId,
     breakpoint,
+    isScrolled,
     onBreakpointChange,
     onUpdateContent,
     onUpdateStyle,
