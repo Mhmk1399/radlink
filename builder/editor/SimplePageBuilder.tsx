@@ -800,19 +800,41 @@ function BlocksSidebar({
 /*  Main Component                                                     */
 /* ================================================================== */
 
-export default function SimplePageBuilder() {
+type SimplePageBuilderProps = {
+  pageId?: string;
+  initialBlocks?: PageBlock[];
+  initialTitle?: string;
+  initialDescription?: string;
+  initialUrl?: string;
+};
+
+export default function SimplePageBuilder({
+  pageId: initialPageId,
+  initialBlocks: externalBlocks,
+  initialTitle,
+  initialDescription,
+  initialUrl,
+}: SimplePageBuilderProps = {}) {
   const initialState = useMemo(() => createInitialBuilderState(), []);
 
-  const [blocks, setBlocks] = useState<PageBlock[]>(initialState.blocks);
+  const [blocks, setBlocks] = useState<PageBlock[]>(
+    externalBlocks && externalBlocks.length > 0
+      ? externalBlocks
+      : initialState.blocks
+  );
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(
-    initialState.selectedBlockId,
+    externalBlocks && externalBlocks.length > 0
+      ? externalBlocks[0]?.instanceId || null
+      : initialState.selectedBlockId,
   );
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
-    initialState.selectedElementId,
+    externalBlocks && externalBlocks.length > 0
+      ? "container"
+      : initialState.selectedElementId,
   );
-  const [pageId, setPageId] = useState<string | null>(null);
-  const [pageTitle, setPageTitle] = useState("صفحه جدید");
-  const [pageUrl, setPageUrl] = useState("new-page");
+  const [pageId, setPageId] = useState<string | null>(initialPageId || null);
+  const [pageTitle, setPageTitle] = useState(initialTitle || "صفحه جدید");
+  const [pageUrl, setPageUrl] = useState(initialUrl || "new-page");
   const [isServerSaving, setIsServerSaving] = useState(false);
   const [serverSaveError, setServerSaveError] = useState<string | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
@@ -823,7 +845,7 @@ export default function SimplePageBuilder() {
   const [justSaved, setJustSaved] = useState(true);
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [pageMetaOpen, setPageMetaOpen] = useState(false);
-  const [pageDescription, setPageDescription] = useState("");
+  const [pageDescription, setPageDescription] = useState(initialDescription || "");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -949,6 +971,12 @@ export default function SimplePageBuilder() {
   }, [blocks, storageHydrated]);
 
   useEffect(() => {
+    // If external blocks were provided, don't override with localStorage
+    if (externalBlocks && externalBlocks.length > 0) {
+      setStorageHydrated(true);
+      return;
+    }
+
     const stored = loadFromStorage();
     if (stored && stored.length > 0) {
       const normalized = normalizeOrder(stored);
@@ -960,7 +988,7 @@ export default function SimplePageBuilder() {
       setSelectedElementId(normalized[0] ? "container" : null);
     }
     setStorageHydrated(true);
-  }, []);
+  }, [externalBlocks]);
 
   /* ── SINGLE shared DndContext sensors ── */
 

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { FaArrowRight, FaGlobe } from "react-icons/fa6";
+import { HiOutlinePencil } from "react-icons/hi2";
 import type { ColumnDef } from "@/types/table";
 import type { Page } from "@/types/index";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
@@ -9,6 +10,7 @@ import DynamicTable from "@/components/global/DynamicTable";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { FaFileAlt } from "react-icons/fa";
 import { toast } from "../ui/CustomToast";
+import { useRouter } from "next/navigation";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -84,6 +86,7 @@ export default function PagesSection({
   navigate: (section: AdminSection) => void;
 }) {
   const t = useThemeTokens();
+  const router = useRouter();
 
   const transformResponse = useMemo(
     () => (json: unknown) => {
@@ -185,19 +188,42 @@ export default function PagesSection({
               ? String(row.url)
               : `/${String(row.url).replace(/^\/+/, "")}`
             : "";
-          return href ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                window.open(href, "_blank");
-              }}
-              title="مشاهده صفحه"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-100"
-            >
-              <FaGlobe className="h-4 w-4" />
-            </button>
-          ) : null;
+
+          const pageId = String(row._id || row.id || "");
+
+          return (
+            <div className="flex items-center gap-1">
+              {/* Edit button */}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (pageId) {
+                    router.push(`/builder/${pageId}`);
+                  }
+                }}
+                title="ویرایش صفحه"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg  text-violet-600 transition hover:bg-violet-200"
+              >
+                <HiOutlinePencil className="h-4 w-4" />
+              </button>
+
+              {/* View button */}
+              {href ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    window.open(href, "_blank");
+                  }}
+                  title="مشاهده صفحه"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg   text-slate-600 transition hover:bg-slate-200"
+                >
+                  <FaGlobe className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+          );
         }}
         emptyMessage="صفحه‌ای یافت نشد"
       />
