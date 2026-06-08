@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "@/components/ui/CustomToast";
 import {
@@ -37,27 +38,87 @@ const authKeyframes = `
 `;
 
 /* ══════════════════════════════════════════════
-   TYPES & FAKE DATA
+   TYPES
    ══════════════════════════════════════════════ */
 
 type AuthStep = "phone" | "otp" | "register" | "success";
 
-interface FakeUser {
-  phone: string;
-  name: string;
-  registered: boolean;
+// Matches backend IUser shape returned from verify-otp & /me
+interface BackendUser {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber: string;
+  email?: string;
+  role: string;
+  status: string;
+  isPhoneVerified: boolean;
 }
 
-const FAKE_USERS: FakeUser[] = [
-  { phone: "09121234567", name: "علی رضایی", registered: true },
-  { phone: "09351112233", name: "سارا احمدی", registered: true },
-  { phone: "09199998877", name: "مهدی کریمی", registered: true },
-];
+const OTP_LENGTH = 6; // Backend generates 6-digit OTP
+const OTP_EXPIRY = 120; // seconds — matches backend 2 * 60_000 ms
+const RESEND_COOLDOWN = 60; // seconds — matches backend 60_000 ms
 
-const FAKE_OTP = "12345";
-const OTP_LENGTH = 5;
-const OTP_EXPIRY = 120; // seconds
-const RESEND_COOLDOWN = 60; // seconds
+/* ══════════════════════════════════════════════
+   API HELPERS
+   ══════════════════════════════════════════════ */
+
+async function apiSendOtp(phoneNumber: string): Promise<void> {
+  const res = await fetch("/api/auth/send-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phoneNumber }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    // Surface backend message directly so Persian/English messages show correctly
+    throw { status: res.status, message: data.message ?? "خطا در ارسال کد" };
+  }
+}
+
+async function apiVerifyOtp(
+  phoneNumber: string,
+  otp: string,
+): Promise<{ token: string; user: BackendUser }> {
+  const res = await fetch("/api/auth/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phoneNumber, otp }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw { status: res.status, message: data.message ?? "خطا در تأیید کد" };
+  }
+
+  return data;
+}
+
+async function apiUpdateProfile(
+  token: string,
+  firstName: string,
+  lastName: string,
+): Promise<BackendUser> {
+  const res = await fetch("/api/auth/me", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ firstName, lastName }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw { status: res.status, message: data.message ?? "خطا در ثبت اطلاعات" };
+  }
+
+  return data.user ?? data;
+}
 
 /* ══════════════════════════════════════════════
    HELPERS
@@ -85,8 +146,25 @@ function secondsToTimer(s: number): string {
   return toFarsiDigits(`${m}:${sec.toString().padStart(2, "0")}`);
 }
 
+/** Map backend error status codes to Persian messages */
+function resolveErrorMessage(
+  err: { status?: number; message?: string },
+  context: "send" | "verify",
+): string {
+  if (err.status === 429) return "لطفاً ۶۰ ثانیه صبر کنید و دوباره تلاش کنید.";
+  if (err.status === 403)
+    return "حساب شما مسدود شده است. با پشتیبانی تماس بگیرید.";
+  if (err.status === 401) {
+    return context === "verify"
+      ? "کد وارد شده اشتباه یا منقضی شده است."
+      : "خطا در احراز هویت.";
+  }
+  if (err.status === 400) return "اطلاعات وارد شده نامعتبر است.";
+  return err.message ?? "خطای سرور. لطفاً دوباره تلاش کنید.";
+}
+
 /* ══════════════════════════════════════════════
-   SHARED UI
+   SHARED UI (unchanged from original)
    ══════════════════════════════════════════════ */
 
 function LogoMark() {
@@ -184,7 +262,7 @@ function SuccessCheck() {
 }
 
 /* ══════════════════════════════════════════════
-   OTP INPUT
+   OTP INPUT — updated length to 6 digits
    ══════════════════════════════════════════════ */
 
 function OtpInput({
@@ -224,12 +302,10 @@ function OtpInput({
       arr[index - 1] = "";
       onChange(arr.join(""));
     }
-    if (e.key === "ArrowLeft" && index < length - 1) {
+    if (e.key === "ArrowLeft" && index < length - 1)
       inputsRef.current[index + 1]?.focus();
-    }
-    if (e.key === "ArrowRight" && index > 0) {
+    if (e.key === "ArrowRight" && index > 0)
       inputsRef.current[index - 1]?.focus();
-    }
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -267,7 +343,7 @@ function OtpInput({
           onPaste={handlePaste}
           aria-label={`رقم ${i + 1} کد تأیید`}
           className={cn(
-            "h-14 w-11 rounded-xl border text-center text-xl font-bold text-white caret-yellow-400 outline-none sm:h-16 sm:w-13",
+            "h-14 w-10 rounded-xl border text-center text-xl font-bold text-white caret-yellow-400 outline-none sm:h-16 sm:w-12",
             animation.smooth,
             disabled ? "opacity-50 cursor-not-allowed" : "",
             error
@@ -290,25 +366,29 @@ function OtpInput({
    ══════════════════════════════════════════════ */
 
 export default function AuthPage() {
+  const router = useRouter();
+
   // ── State ──
   const [step, setStep] = useState<AuthStep>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpError, setOtpError] = useState(false);
   const [timer, setTimer] = useState(OTP_EXPIRY);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isExistingUser, setIsExistingUser] = useState(false);
+  const [currentUser, setCurrentUser] = useState<BackendUser | null>(null);
+  const [authToken, setAuthToken] = useState("");
   const [animKey, setAnimKey] = useState(0);
 
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
   // ── Timer ──
   useEffect(() => {
-    if (step !== "otp") return;
-    if (timer <= 0) return;
+    if (step !== "otp" || timer <= 0) return;
     const id = setInterval(() => setTimer((t) => t - 1), 1000);
     return () => clearInterval(id);
   }, [step, timer]);
@@ -320,11 +400,12 @@ export default function AuthPage() {
     return () => clearInterval(id);
   }, [resendCooldown]);
 
-  // ── Auto-submit OTP ──
+  // ── Auto-submit OTP when all digits filled ──
   useEffect(() => {
     if (otp.length === OTP_LENGTH && step === "otp") {
       handleVerifyOtp();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
   // ── Focus phone input on mount ──
@@ -338,9 +419,12 @@ export default function AuthPage() {
     setError("");
   };
 
-  // ── STEP 1: Send OTP ──
+  /* ────────────────────────────────────────────
+     STEP 1: Send OTP → POST /api/auth/send-otp
+  ──────────────────────────────────────────── */
   const handleSendOtp = useCallback(async () => {
     const cleanPhone = phone.replace(/\D/g, "");
+
     if (!isValidIranPhone(cleanPhone)) {
       setError("شماره موبایل معتبر نیست");
       toast.error("لطفاً یک شماره موبایل معتبر وارد کنید.");
@@ -350,23 +434,31 @@ export default function AuthPage() {
     setLoading(true);
     setError("");
 
-    // Fake API delay
-    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      await apiSendOtp(cleanPhone);
 
-    const existingUser = FAKE_USERS.find((u) => u.phone === cleanPhone);
-    setIsExistingUser(!!existingUser);
+      toast.info(`کد تأیید به ${formatPhone(cleanPhone)} ارسال شد.`, {
+        title: "کد ارسال شد",
+      });
 
-    toast.info(`کد تأیید به ${formatPhone(cleanPhone)} ارسال شد.`, {
-      title: "کد ارسال شد",
-    });
-
-    setLoading(false);
-    setTimer(OTP_EXPIRY);
-    setResendCooldown(RESEND_COOLDOWN);
-    changeStep("otp");
+      setTimer(OTP_EXPIRY);
+      setResendCooldown(RESEND_COOLDOWN);
+      changeStep("otp");
+    } catch (err: any) {
+      const msg = resolveErrorMessage(err, "send");
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   }, [phone]);
 
-  // ── STEP 2: Verify OTP ──
+  /* ────────────────────────────────────────────
+     STEP 2: Verify OTP → POST /api/auth/verify-otp
+     Backend returns { token, user }
+     - isPhoneVerified + firstName set → existing user
+     - firstName not set              → new user, go to register
+  ──────────────────────────────────────────── */
   const handleVerifyOtp = useCallback(async () => {
     if (otp.length !== OTP_LENGTH) return;
 
@@ -374,33 +466,46 @@ export default function AuthPage() {
     setOtpError(false);
     setError("");
 
-    await new Promise((r) => setTimeout(r, 1200));
+    try {
+      const cleanPhone = phone.replace(/\D/g, "");
+      const { token, user } = await apiVerifyOtp(cleanPhone, otp);
 
-    if (otp !== FAKE_OTP) {
+      // Persist token — use httpOnly cookie in production via a dedicated API route
+      localStorage.setItem("auth_token", token);
+      setAuthToken(token);
+      setCurrentUser(user);
+
+      const hasProfile = Boolean(user.firstName);
+      setIsExistingUser(hasProfile);
+
+      if (hasProfile) {
+        const displayName = [user.firstName, user.lastName]
+          .filter(Boolean)
+          .join(" ");
+        toast.success(`خوش آمدی ${displayName}!`, { title: "ورود موفق" });
+        changeStep("success");
+      } else {
+        toast.info("لطفاً اطلاعات خود را تکمیل کنید.", { title: "ثبت‌نام" });
+        changeStep("register");
+      }
+    } catch (err: any) {
       setOtpError(true);
-      setError("کد وارد شده اشتباه است");
-      toast.error("کد تأیید اشتباه است. لطفاً دوباره تلاش کنید.");
-      setLoading(false);
+      const msg = resolveErrorMessage(err, "verify");
+      setError(msg);
+      toast.error(msg);
       setOtp("");
-      return;
+    } finally {
+      setLoading(false);
     }
+  }, [otp, phone]);
 
-    setLoading(false);
-
-    if (isExistingUser) {
-      const user = FAKE_USERS.find((u) => u.phone === phone.replace(/\D/g, ""));
-      toast.success(`خوش آمدی ${user?.name}!`, { title: "ورود موفق" });
-      changeStep("success");
-    } else {
-      toast.info("لطفاً اطلاعات خود را تکمیل کنید.", { title: "ثبت‌نام" });
-      changeStep("register");
-    }
-  }, [otp, isExistingUser, phone]);
-
-  // ── STEP 3: Register ──
+  /* ────────────────────────────────────────────
+     STEP 3: Register → PATCH /api/auth/me
+     Updates firstName + lastName on the user doc
+  ──────────────────────────────────────────── */
   const handleRegister = useCallback(async () => {
-    if (name.trim().length < 2) {
-      setError("نام و نام خانوادگی الزامی است");
+    if (firstName.trim().length < 2) {
+      setError("نام الزامی است (حداقل ۲ کاراکتر)");
       toast.warning("لطفاً نام خود را وارد کنید.");
       return;
     }
@@ -408,34 +513,60 @@ export default function AuthPage() {
     setLoading(true);
     setError("");
 
-    await new Promise((r) => setTimeout(r, 1800));
+    try {
+      const updatedUser = await apiUpdateProfile(
+        authToken,
+        firstName.trim(),
+        lastName.trim(),
+      );
 
-    toast.success(`حساب شما ساخته شد. خوش آمدی ${name}!`, {
-      title: "ثبت‌نام موفق",
-    });
+      setCurrentUser(updatedUser);
 
-    setLoading(false);
-    changeStep("success");
-  }, [name]);
+      const displayName = [firstName.trim(), lastName.trim()]
+        .filter(Boolean)
+        .join(" ");
+      toast.success(`حساب شما ساخته شد. خوش آمدی ${displayName}!`, {
+        title: "ثبت‌نام موفق",
+      });
 
-  // ── Resend OTP ──
+      changeStep("success");
+    } catch (err: any) {
+      const msg = resolveErrorMessage(err, "send");
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [firstName, lastName, authToken]);
+
+  /* ────────────────────────────────────────────
+     Resend OTP
+  ──────────────────────────────────────────── */
   const handleResendOtp = useCallback(async () => {
     if (resendCooldown > 0) return;
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
 
-    setTimer(OTP_EXPIRY);
-    setResendCooldown(RESEND_COOLDOWN);
-    setOtp("");
-    setOtpError(false);
-    setError("");
-    setLoading(false);
+    try {
+      const cleanPhone = phone.replace(/\D/g, "");
+      await apiSendOtp(cleanPhone);
 
-    toast.success("کد جدید ارسال شد.", { title: "ارسال مجدد" });
-  }, [resendCooldown]);
+      setTimer(OTP_EXPIRY);
+      setResendCooldown(RESEND_COOLDOWN);
+      setOtp("");
+      setOtpError(false);
+      setError("");
 
-  // ── Back ──
+      toast.success("کد جدید ارسال شد.", { title: "ارسال مجدد" });
+    } catch (err: any) {
+      const msg = resolveErrorMessage(err, "send");
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [resendCooldown, phone]);
+
+  // ── Back to phone step ──
   const handleBack = () => {
     setOtp("");
     setOtpError(false);
@@ -443,6 +574,17 @@ export default function AuthPage() {
     changeStep("phone");
   };
 
+  // ── After success, redirect to dashboard ──
+  useEffect(() => {
+    if (step === "success") {
+      const id = setTimeout(() => router.push("/dashboard"), 3000);
+      return () => clearTimeout(id);
+    }
+  }, [step, router]);
+
+  /* ════════════════════════════════════════════
+     RENDER
+  ════════════════════════════════════════════ */
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: authKeyframes }} />
@@ -520,7 +662,6 @@ export default function AuthPage() {
                 </div>
 
                 <div className="mt-8 space-y-4">
-                  {/* Phone Input */}
                   <div>
                     <label
                       htmlFor="phone"
@@ -535,11 +676,11 @@ export default function AuthPage() {
                         type="tel"
                         dir="ltr"
                         inputMode="numeric"
-                        placeholder="0912 345 6789"
-                        maxLength={13}
+                        placeholder="09123456789"
+                        maxLength={11}
                         value={phone}
                         onChange={(e) => {
-                          setPhone(e.target.value.replace(/[^0-9\s]/g, ""));
+                          setPhone(e.target.value.replace(/[^0-9]/g, ""));
                           setError("");
                         }}
                         onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
@@ -570,7 +711,6 @@ export default function AuthPage() {
                       </div>
                     </div>
 
-                    {/* Error */}
                     {error && (
                       <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
                         <svg
@@ -589,63 +729,19 @@ export default function AuthPage() {
                     )}
                   </div>
 
-                  {/* Submit */}
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    disabled={loading || !phone.replace(/\D/g, "").length}
+                    disabled={loading || phone.replace(/\D/g, "").length !== 11}
                     className={cn(
                       components.ctaPrimary,
                       "w-full justify-center py-3.5",
-                      loading && "pointer-events-none opacity-80",
+                      (loading || phone.replace(/\D/g, "").length !== 11) &&
+                        "pointer-events-none opacity-60",
                     )}
                   >
                     {loading ? <LoadingDots /> : "دریافت کد تأیید"}
                   </button>
-
-                  {/* Test hint */}
-                  <div
-                    className={cn(
-                      "mt-2 rounded-xl border p-3",
-                      borders.subtle,
-                      backgrounds.surface.glassMedium,
-                      "text-center",
-                    )}
-                  >
-                    <p className={cn(typography.labelSmall, "text-slate-500")}>
-                      برای تست از شماره‌های زیر استفاده کنید:
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap justify-center gap-2">
-                      {FAKE_USERS.map((u) => (
-                        <button
-                          key={u.phone}
-                          type="button"
-                          onClick={() => setPhone(u.phone)}
-                          className={cn(
-                            "rounded-lg border px-2 py-1 text-[10px] font-mono",
-                            borders.subtle,
-                            "text-slate-400",
-                            animation.base,
-                            "hover:text-yellow-300 hover:border-yellow-400/20 hover:bg-yellow-400/4",
-                          )}
-                        >
-                          {u.phone}
-                        </button>
-                      ))}
-                    </div>
-                    <p
-                      className={cn(
-                        "mt-1.5",
-                        typography.labelSmall,
-                        "text-slate-500",
-                      )}
-                    >
-                      یا هر شماره دیگری (کاربر جدید) — کد:{" "}
-                      <span className="font-mono text-yellow-300">
-                        {FAKE_OTP}
-                      </span>
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
@@ -694,9 +790,9 @@ export default function AuthPage() {
                         "text-slate-400",
                       )}
                     >
-                      کد ارسال شده به{" "}
+                      کد ۶ رقمی ارسال شده به{" "}
                       <span dir="ltr" className="font-mono text-yellow-300">
-                        {formatPhone(phone.replace(/\D/g, ""))}
+                        {formatPhone(phone)}
                       </span>{" "}
                       را وارد کنید
                     </p>
@@ -715,7 +811,6 @@ export default function AuthPage() {
                     disabled={loading}
                   />
 
-                  {/* Error */}
                   {error && (
                     <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
                       <svg
@@ -779,7 +874,6 @@ export default function AuthPage() {
                     </button>
                   </div>
 
-                  {/* Verify button */}
                   <button
                     type="button"
                     onClick={handleVerifyOtp}
@@ -819,7 +913,7 @@ export default function AuthPage() {
                 </div>
 
                 <div className="mt-8 space-y-4">
-                  {/* Phone display */}
+                  {/* Verified phone badge */}
                   <div
                     className={cn(
                       "flex items-center gap-3 rounded-xl border px-4 py-3",
@@ -842,28 +936,28 @@ export default function AuthPage() {
                       dir="ltr"
                       className="text-sm font-mono text-slate-300"
                     >
-                      {formatPhone(phone.replace(/\D/g, ""))}
+                      {formatPhone(phone)}
                     </span>
                     <span className="mr-auto text-[10px] text-emerald-400">
                       تأیید شده
                     </span>
                   </div>
 
-                  {/* Name Input */}
+                  {/* First name */}
                   <div>
                     <label
-                      htmlFor="name"
+                      htmlFor="firstName"
                       className="mb-2 block text-xs font-medium text-slate-300"
                     >
-                      نام و نام خانوادگی
+                      نام <span className="text-red-400">*</span>
                     </label>
                     <input
-                      id="name"
+                      id="firstName"
                       type="text"
-                      placeholder="مثلاً: علی رضایی"
-                      value={name}
+                      placeholder="مثلاً: علی"
+                      value={firstName}
                       onChange={(e) => {
-                        setName(e.target.value);
+                        setFirstName(e.target.value);
                         setError("");
                       }}
                       onKeyDown={(e) => e.key === "Enter" && handleRegister()}
@@ -879,33 +973,62 @@ export default function AuthPage() {
                         loading && "opacity-60 cursor-not-allowed",
                       )}
                     />
-                    {error && (
-                      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
-                        <svg
-                          viewBox="0 0 16 16"
-                          fill="currentColor"
-                          className="h-3.5 w-3.5"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {error}
-                      </p>
-                    )}
                   </div>
 
-                  {/* Submit */}
+                  {/* Last name */}
+                  <div>
+                    <label
+                      htmlFor="lastName"
+                      className="mb-2 block text-xs font-medium text-slate-300"
+                    >
+                      نام خانوادگی
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      placeholder="مثلاً: رضایی"
+                      value={lastName}
+                      onChange={(e) => {
+                        setLastName(e.target.value);
+                        setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                      disabled={loading}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+                        animation.smooth,
+                        cn(borders.light, backgrounds.surface.glass),
+                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
+                        loading && "opacity-60 cursor-not-allowed",
+                      )}
+                    />
+                  </div>
+
+                  {error && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                        className="h-3.5 w-3.5"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      {error}
+                    </p>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleRegister}
-                    disabled={loading || name.trim().length < 2}
+                    disabled={loading || firstName.trim().length < 2}
                     className={cn(
                       components.ctaPrimary,
                       "w-full justify-center py-3.5",
-                      (loading || name.trim().length < 2) &&
+                      (loading || firstName.trim().length < 2) &&
                         "opacity-60 pointer-events-none",
                     )}
                   >

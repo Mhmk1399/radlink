@@ -427,17 +427,30 @@ export function BannerBlock({
                   mode={mode}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
-                  className={isEditor ? "inline-flex max-w-full" : undefined}
                 >
-                  <InlineEditableText
-                    value={data.buttonText}
-                    dataKey="buttonText"
-                    instanceId={block.instanceId}
-                    mode={mode}
-                    onUpdateContent={onUpdateContent}
+                  <StyledButton
+                    href={data.buttonUrl || undefined}
+                    onClick={(event) => {
+                      if (mode === "editor") {
+                        event.preventDefault();
+                      }
+                    }}
+                    $styleCss={responsiveStyleToCss(
+                      buttonElement.style,
+                      "banner-button",
+                      { mobileOnly: mode === "editor" },
+                    )}
                   >
-                    {(text) => text}
-                  </InlineEditableText>
+                    <InlineEditableText
+                      value={data.buttonText}
+                      dataKey="buttonText"
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      onUpdateContent={onUpdateContent}
+                    >
+                      {(text) => text}
+                    </InlineEditableText>
+                  </StyledButton>
                 </EditablePart>
               )}
             </div>

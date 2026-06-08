@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────
 "use client";
 
-import React, { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import { SECTION_META, type AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
@@ -17,6 +17,7 @@ const DashboardSection = lazy(
   () => import("@/components/admin/DashboardSection"),
 );
 const UsersSection = lazy(() => import("@/components/admin/UsersSection"));
+const PagesSection = lazy(() => import("@/components/admin/PagesSection"));
 
 function SectionSkeleton() {
   const t = useThemeTokens();
@@ -90,6 +91,8 @@ function SectionRouter({
       return <DashboardSection navigate={navigate} />;
     case "users":
       return <UsersSection navigate={navigate} />;
+    case "pages":
+      return <PagesSection navigate={navigate} />;
     default:
       return <ComingSoon section={section} navigate={navigate} />;
   }

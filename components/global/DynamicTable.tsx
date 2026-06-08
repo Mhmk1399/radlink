@@ -1367,6 +1367,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   fetcher,
   transformResponse,
   headers,
+  updateMethod = "PUT",
   swrConfig,
   enabled = true,
   onError,
@@ -1460,6 +1461,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     serverSide,
     serverPaginationParams,
     transformPaginatedResponse,
+    updateMethod,
   });
 
   const data = staticData ?? fetchedData;

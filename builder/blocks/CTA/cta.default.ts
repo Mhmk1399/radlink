@@ -20,7 +20,7 @@ export function createDefaultCtaBlock(order: number): PageBlock {
                 "همین حالا اقدام کنید و اولین قدم را برای دریافت خدمات یا ثبت سفارش بردارید.",
             primaryButtonText: "شروع کنید",
             primaryButtonUrl: "",
-            secondaryButtonText: "مشاهده اطلاعات بیشتر",
+            secondaryButtonText: "مشاهده    ",
             secondaryButtonUrl: "",
             showDescription: true,
             showPrimaryButton: true,

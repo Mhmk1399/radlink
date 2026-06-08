@@ -3,6 +3,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import User from "@/models/users";
 
 // Returns the logged-in user + their fully resolved access map.
 // Frontend fetches this once on login and caches it — no per-component access calls needed.
@@ -32,4 +33,36 @@ export const GET = compose(
     };
 
     return NextResponse.json({ user, access: serialized });
+});
+
+export const PATCH = compose(
+    withDB(),
+    withAuth({ allowUnverifiedPhone: false }),
+    withStatus("active")
+)(async (req: AuthRequest) => {
+    const user = req.ctx.user!;
+    const { firstName, lastName } = await req.json();
+
+    if (!firstName || typeof firstName !== "string" || firstName.trim().length < 2) {
+        return NextResponse.json(
+            { message: "firstName is required and must be at least 2 characters" },
+            { status: 400 }
+        );
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        user._id,
+        {
+            firstName: firstName.trim(),
+            lastName: lastName?.trim() || "",
+            updatedBy: user._id,
+        },
+        { new: true }
+    );
+
+    if (!updatedUser) {
+        return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ user: updatedUser });
 });

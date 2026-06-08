@@ -10,16 +10,12 @@ export const mapLinksSchema: BlockSchema = {
         { key: "googleMapsUrl", label: "لینک گوگل مپ", type: "url" },
         { key: "neshanUrl", label: "لینک نشان", type: "url" },
         { key: "baladUrl", label: "لینک بلد", type: "url" },
-        { key: "wazeUrl", label: "لینک ویز", type: "url" },
-        { key: "appleMapsUrl", label: "لینک اپل مپ", type: "url" },
-        { key: "showTitle", label: "نمایش عنوان", type: "boolean" },
+         { key: "showTitle", label: "نمایش عنوان", type: "boolean" },
         { key: "showDescription", label: "نمایش توضیحات", type: "boolean" },
         { key: "showGoogleMaps", label: "نمایش گوگل مپ", type: "boolean" },
         { key: "showNeshan", label: "نمایش نشان", type: "boolean" },
         { key: "showBalad", label: "نمایش بلد", type: "boolean" },
-        { key: "showWaze", label: "نمایش ویز", type: "boolean" },
-        { key: "showAppleMaps", label: "نمایش اپل مپ", type: "boolean" },
-        { key: "openInNewTab", label: "باز شدن در تب جدید", type: "boolean" },
+         { key: "openInNewTab", label: "باز شدن در تب جدید", type: "boolean" },
     ],
     elements: {
         container: {

@@ -75,6 +75,7 @@ export interface DynamicTableProps<T extends object> {
     fetcher?: (url: string) => Promise<T[]>;
     transformResponse?: (raw: unknown) => T[];
     headers?: Record<string, string>;
+    updateMethod?: "PUT" | "PATCH";
     swrConfig?: SWRConfiguration<T[]>;
     enabled?: boolean;
     onError?: (error: Error) => void;

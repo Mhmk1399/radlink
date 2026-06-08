@@ -29,7 +29,7 @@ export default function RootLayout({
         {/* <Navbar /> */}
         <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
         {/* <DynamicIsland /> */}
-        <SmartLandingFooter />
+        {/* <SmartLandingFooter /> */}
       </body>
     </html>
   );

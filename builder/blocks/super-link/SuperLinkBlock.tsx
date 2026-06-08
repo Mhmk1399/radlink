@@ -136,17 +136,22 @@ const iconAnimationCss = (anim: IconAnimation) => {
 /*  Styled components                                                  */
 /* ------------------------------------------------------------------ */
 
-const StyledContainer = styled.div<{ $styleCss: string }>`
-  ${sharedBlockKeyframes(PREFIX)}
+const StyledContainer = styled.a<{ $styleCss: string }>`
+  ${sharedBlockKeyframes("super-link-container")}
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px;
   text-decoration: none;
   cursor: pointer;
+  border-style: solid;
   transition:
     transform 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
     transform: translateY(-1px);
@@ -303,12 +308,29 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
       e.preventDefault();
     }
   };
+  const handleContainerSelect = (event: React.MouseEvent) => {
+    if (!isEditor) return;
 
+    event.preventDefault();
+    event.stopPropagation();
+
+    onSelectElement?.(block.instanceId, "container");
+  };
   /* ---------- inner content ---------- */
   const innerContent = (
     <StyledContainer
-      $styleCss={containerStyle}
-      dir={block.settings?.direction ?? "rtl"}
+      as={isEditor || !hasUrl ? "div" : "a"}
+      href={!isEditor && hasUrl ? url : undefined}
+      target={!isEditor && hasUrl && openInNewTab ? "_blank" : undefined}
+      rel={
+        !isEditor && hasUrl && openInNewTab ? "noopener noreferrer" : undefined
+      }
+      onClick={isEditor ? handleContainerSelect : undefined}
+      $styleCss={responsiveStyleToCss(
+        block.elements.container.style,
+        "super-link-container",
+        { mobileOnly: mode === "editor" },
+      )}
     >
       {/* Icon */}
       <EditablePart
@@ -318,7 +340,17 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
         selectedElementId={selectedElementId}
         onSelectElement={onSelectElement}
       >
-        <StyledIcon $styleCss={iconStyle} $iconAnim={iconAnimation}>
+        <StyledIcon
+          $iconAnim={iconAnimation}
+          onClick={(event) => {
+            if (isEditor) event.stopPropagation();
+          }}
+          $styleCss={responsiveStyleToCss(
+            block.elements.icon.style,
+            "super-link-icon",
+            { mobileOnly: mode === "editor" },
+          )}
+        >
           <IconComp />
         </StyledIcon>
       </EditablePart>
@@ -388,29 +420,116 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
 
   /* ---------- render ---------- */
   return (
-    <EditablePart
-      instanceId={block.instanceId}
-      elementId="container"
-      mode={mode}
-      selectedElementId={selectedElementId}
-      onSelectElement={onSelectElement}
-    >
-      {isEditor ? (
-        <div onClick={handleClick}>{innerContent}</div>
-      ) : hasUrl ? (
-        <a
-          href={url}
-          target={openInNewTab ? "_blank" : undefined}
-          rel={openInNewTab ? "noopener noreferrer" : undefined}
-          onClick={handleClick}
-          className="no-underline block"
-        >
-          {innerContent}
-        </a>
-      ) : (
-        <div>{innerContent}</div>
+    <StyledContainer
+      as={isEditor || !hasUrl ? "div" : "a"}
+      href={!isEditor && hasUrl ? url : undefined}
+      target={!isEditor && hasUrl && openInNewTab ? "_blank" : undefined}
+      rel={
+        !isEditor && hasUrl && openInNewTab ? "noopener noreferrer" : undefined
+      }
+      onClick={isEditor ? handleContainerSelect : undefined}
+      $styleCss={responsiveStyleToCss(
+        block.elements.container.style,
+        "super-link-container",
+        { mobileOnly: mode === "editor" },
       )}
-    </EditablePart>
+    >
+      <EditablePart
+        instanceId={block.instanceId}
+        elementId="icon"
+        mode={mode}
+        selectedElementId={selectedElementId}
+        onSelectElement={onSelectElement}
+      >
+        <StyledIcon
+        $iconAnim={iconAnimation}
+          $styleCss={responsiveStyleToCss(
+            block.elements.icon.style,
+            "super-link-icon",
+            { mobileOnly: mode === "editor" },
+          )}
+        >
+          <IconComp />
+        </StyledIcon>
+      </EditablePart>
+
+      <div className="min-w-0 flex-1">
+        <EditablePart
+          instanceId={block.instanceId}
+          elementId="title"
+          mode={mode}
+          selectedElementId={selectedElementId}
+          onSelectElement={onSelectElement}
+        >
+          <StyledTitle
+            $styleCss={responsiveStyleToCss(
+              block.elements.title.style,
+              "super-link-title",
+              { mobileOnly: mode === "editor" },
+            )}
+          >
+            <InlineEditableText
+              value={title}
+              dataKey="title"
+              instanceId={block.instanceId}
+              mode={mode}
+              onUpdateContent={onUpdateContent}
+            >
+              {(text) => text}
+            </InlineEditableText>
+          </StyledTitle>
+        </EditablePart>
+
+        {showDescription && (
+          <EditablePart
+            instanceId={block.instanceId}
+            elementId="description"
+            mode={mode}
+            selectedElementId={selectedElementId}
+            onSelectElement={onSelectElement}
+          >
+            <StyledDescription
+              $styleCss={responsiveStyleToCss(
+                block.elements.description.style,
+                "super-link-description",
+                { mobileOnly: mode === "editor" },
+              )}
+            >
+              <InlineEditableText
+                value={description}
+                dataKey="description"
+                instanceId={block.instanceId}
+                mode={mode}
+                multiline
+                onUpdateContent={onUpdateContent}
+              >
+                {(text) => text}
+              </InlineEditableText>
+            </StyledDescription>
+          </EditablePart>
+        )}
+      </div>
+
+      {showArrow && (
+        <EditablePart
+          instanceId={block.instanceId}
+          elementId="arrow"
+          mode={mode}
+          selectedElementId={selectedElementId}
+          onSelectElement={onSelectElement}
+        >
+          <StyledArrow
+            $styleCss={responsiveStyleToCss(
+              block.elements.arrow.style,
+              "super-link-arrow",
+              { mobileOnly: mode === "editor" },
+            )}
+          >
+            ←
+          </StyledArrow>
+        </EditablePart>
+      )}
+    </StyledContainer>
   );
 };
 

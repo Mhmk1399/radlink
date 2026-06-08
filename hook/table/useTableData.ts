@@ -20,7 +20,7 @@ export interface ServerPaginationParams {
     filters?: Record<string, string>;
 }
 
- 
+
 
 export interface UseTableDataOptions<T> {
     endpoint: string;
@@ -28,6 +28,7 @@ export interface UseTableDataOptions<T> {
     transformResponse?: (raw: unknown) => T[];
     swrConfig?: SWRConfiguration<T[]>;
     headers?: Record<string, string>;
+    updateMethod?: "PUT" | "PATCH";
     enabled?: boolean;
 
     /** Enable server-side pagination */
@@ -132,6 +133,7 @@ export function useTableData<T extends Record<string, unknown>>(
         swrConfig,
         headers = {},
         enabled = true,
+        updateMethod = "PUT",
         serverSide = false,
         serverPaginationParams,
         transformPaginatedResponse,
@@ -196,7 +198,7 @@ export function useTableData<T extends Record<string, unknown>>(
         data: rawData,
         error,
         isLoading,
-        
+
         isValidating,
         mutate,
     } = useSWR<T[]>(swrKey, finalFetcher, {
@@ -248,7 +250,7 @@ export function useTableData<T extends Record<string, unknown>>(
             const url = id ? `${endpoint}/${id}` : endpoint;
 
             const res = await fetch(url, {
-                method: "PUT",
+                method: updateMethod,
                 headers: {
                     "Content-Type": "application/json",
                     ...headersRef.current,

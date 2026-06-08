@@ -327,6 +327,7 @@ export default function ProductCardsBlock({
             </StyledDescription>
           </EditablePart>
         )}
+        <br />
 
         {/* Empty state */}
         {products.length === 0 && isEditor && (

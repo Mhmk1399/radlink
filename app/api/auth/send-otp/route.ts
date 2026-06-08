@@ -2,15 +2,13 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
+import otpStore from "@/lib/auth/otp-store";
 import User from "@/models/users";
 
 // In production replace this with a real SMS provider (e.g. Kavenegar, Twilio)
 async function sendSms(phone: string, otp: string) {
     console.log(`[OTP] ${phone} → ${otp}`);
 }
-
-// OTP store: in production use Redis or a DB field
-const otpStore = new Map<string, { otp: string; expiresAt: number }>();
 
 export const POST = compose(withDB())(async (req: AuthRequest) => {
     const { phoneNumber } = await req.json();
