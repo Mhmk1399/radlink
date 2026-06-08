@@ -15,7 +15,7 @@ import {
   focus,
   interactive,
 } from "@/lib/design/design-system";
-import DynamicTable, { ColumnDef } from "@/components/global/DynamicTable";
+import DynamicTable from "@/components/global/DynamicTable";
 import {
   FaUsers,
   FaCircleCheck,
@@ -29,6 +29,7 @@ import {
   FaKey,
 } from "react-icons/fa6";
 import { toast } from "@/components/ui/CustomToast";
+import { ColumnDef } from "@/types/table";
 /* ══════════════════════════════════════════════
    تایپ کاربر
    ══════════════════════════════════════════════ */

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
+import { connectDB } from "@/lib/data/db";
 import { verifyToken } from "@/lib/auth/jwt";
 import { AuthRequest } from "@/lib/auth/types";
 import User, { UserRole, UserStatus } from "@/models/users";

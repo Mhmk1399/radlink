@@ -4,7 +4,7 @@ import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import Template from "@/models/template";
-import Block, { IBlock } from "@/models/blocks";
+import { IBlock } from "@/models/blocks";
 
 // POST /api/pages
 // If templateId is provided, snapshots the template's blocks into the page.
@@ -32,21 +32,21 @@ export const POST = compose(
 
         // Snapshot each block — page owns its own copy
         blocks = template.blocks.map((b: IBlock, index: number) => ({
-            blockId:       b._id,
-            type:          b.type,
-            order:         index,
-            data:          { ...b.data },
-            settings:      { ...b.settings },
+            blockId: b._id,
+            type: b.type,
+            order: index,
+            data: { ...b.data },
+            settings: { ...b.settings },
             styleOverride: {},             // no overrides at creation time
         }));
     }
 
     const page = await Page.create({
         title, url, description,
-        owner:    user._id,
+        owner: user._id,
         template: templateId ?? undefined,
         blocks,
-        seo:      seo      ?? {},
+        seo: seo ?? {},
         settings: settings ?? {},
     });
 
@@ -61,8 +61,8 @@ export const GET = compose(
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
     const { searchParams } = new URL(req.url);
-    const page        = Math.max(1, Number(searchParams.get("page")  ?? 1));
-    const limit       = Math.min(100, Number(searchParams.get("limit") ?? 20));
+    const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+    const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isPublished = searchParams.get("isPublished");
 
     const isAdmin = ["admin", "superAdmin"].includes(user.role);

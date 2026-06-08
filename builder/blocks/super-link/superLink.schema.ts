@@ -1,0 +1,102 @@
+import type { BlockSchema } from "@/types/blocks/builder.types";
+
+export const superLinkSchema: BlockSchema = {
+    type: "superLink",
+    label: "سوپر لینک",
+    description:
+        "کارت لینک قدرتمند با آیکون، عنوان، توضیحات و انیمیشن آیکون — مناسب برای لینک شبکه اجتماعی، تماس، دانلود و هر لینک دیگر",
+    contentFields: [
+        { key: "title", label: "عنوان", type: "text" },
+        { key: "description", label: "توضیحات", type: "textarea" },
+        { key: "url", label: "لینک", type: "url" },
+        {
+            key: "iconName",
+            label: "آیکون",
+            type: "select",
+            options: [
+                { value: "link", label: "لینک" },
+                { value: "instagram", label: "اینستاگرام" },
+                { value: "whatsapp", label: "واتساپ" },
+                { value: "telegram", label: "تلگرام" },
+                { value: "phone", label: "تماس" },
+                { value: "email", label: "ایمیل" },
+                { value: "website", label: "وب‌سایت" },
+                { value: "location", label: "موقعیت مکانی" },
+                { value: "youtube", label: "یوتیوب" },
+                { value: "linkedin", label: "لینکدین" },
+                { value: "facebook", label: "فیسبوک" },
+                { value: "twitter", label: "توییتر" },
+                { value: "shop", label: "فروشگاه" },
+                { value: "calendar", label: "رزرو / تقویم" },
+                { value: "user", label: "پروفایل" },
+                { value: "download", label: "دانلود" },
+                { value: "star", label: "ویژه" },
+                { value: "heart", label: "علاقه‌مندی" },
+                { value: "play", label: "ویدئو" },
+                { value: "file", label: "فایل" },
+            ],
+        },
+        {
+            key: "iconAnimation",
+            label: "انیمیشن آیکون",
+            type: "select",
+            options: [
+                { value: "none", label: "بدون انیمیشن" },
+                { value: "pulse", label: "ضربان" },
+                { value: "bounce", label: "پرش" },
+                { value: "rotate", label: "چرخش" },
+                { value: "wiggle", label: "لرزش" },
+                { value: "float", label: "شناور" },
+            ],
+        },
+        { key: "showDescription", label: "نمایش توضیحات", type: "boolean" },
+        { key: "showArrow", label: "نمایش فلش", type: "boolean" },
+        { key: "openInNewTab", label: "باز شدن در تب جدید", type: "boolean" },
+    ],
+    elements: {
+        container: {
+            label: "کانتینر",
+            allowedStyleKeys: [
+                "color",
+                "backgroundColor",
+                "fontSize",
+                "borderRadius",
+                "borderColor",
+                "borderWidth",
+                "animation",
+            ],
+        },
+        icon: {
+            label: "آیکون",
+            allowedStyleKeys: [
+                "color",
+                "backgroundColor",
+                "fontSize",
+                "borderRadius",
+                "borderColor",
+                "borderWidth",
+                "animation",
+            ],
+        },
+        title: {
+            label: "عنوان",
+            allowedStyleKeys: ["color", "fontSize", "animation"],
+        },
+        description: {
+            label: "توضیحات",
+            allowedStyleKeys: ["color", "fontSize"],
+        },
+        arrow: {
+            label: "فلش",
+            allowedStyleKeys: [
+                "color",
+                "backgroundColor",
+                "fontSize",
+                "borderRadius",
+                "borderColor",
+                "borderWidth",
+                "animation",
+            ],
+        },
+    },
+};
