@@ -1,6 +1,7 @@
 "use server";
 
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { connectDB } from "@/lib/data/db";
 import Page from "@/models/pages";
 import PageRenderer from "./PageRenderer";
@@ -9,13 +10,53 @@ type Props = {
   params: Promise<{ url: string }>;
 };
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { url } = await params;
+
+  await connectDB();
+  const page = await Page.findOne({ url }).lean();
+
+  if (!page) {
+    return {
+      title: "صفحه یافت نشد",
+    };
+  }
+
+  const favicon = String(
+    page.settings?.favicon || page.favicon || "/favicon.ico",
+  );
+  const appleIcon = String(
+    page.settings?.appleTouchIcon || "/apple-touch-icon.png",
+  );
+
+  return {
+    title: String(page.seo?.title || page.title || "صفحه"),
+    description: String(page.seo?.description || page.description || ""),
+    keywords: Array.isArray(page.seo?.keywords)
+      ? (page.seo.keywords as string[])
+      : [],
+    icons: {
+      icon: favicon,
+      shortcut: favicon,
+      apple: appleIcon,
+    },
+    openGraph: {
+      title: String(page.seo?.title || page.title || ""),
+      description: String(page.seo?.description || page.description || ""),
+      images: page.seo?.ogImage ? [String(page.seo.ogImage)] : [],
+      type: "website",
+      locale: "fa_IR",
+    },
+  };
+}
+
 export default async function PageRoute({ params }: Props) {
   const { url } = await params;
 
   await connectDB();
 
   const page = await Page.findOne({ url }).lean();
-  console.log(page)
+  console.log(page);
 
   if (!page) return notFound();
 
@@ -34,7 +75,15 @@ export default async function PageRoute({ params }: Props) {
       </header>
 
       <section className="space-y-6 overflow-hidden">
-        <PageRenderer blocks={page.blocks ?? []} />
+        <PageRenderer
+          blocks={page.blocks ?? []}
+          pageData={{
+            title: page.title,
+            description: page.description,
+            favicon: page.favicon,
+            settings: page.settings,
+          }}
+        />
       </section>
     </div>
   );

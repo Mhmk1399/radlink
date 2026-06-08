@@ -1,8 +1,57 @@
 "use client";
 
- import { blockRegistry } from "@/builder/blocks/blockRegistry";
+import { useEffect } from "react";
+import { blockRegistry } from "@/builder/blocks/blockRegistry";
 
-export default function PageRenderer({ blocks }: { blocks: any[] }) {
+type PageData = {
+  title?: string;
+  description?: string;
+  favicon?: string;
+  settings?: {
+    favicon?: string;
+    appleTouchIcon?: string;
+  };
+};
+
+export default function PageRenderer({ 
+  blocks, 
+  pageData 
+}: { 
+  blocks: any[];
+  pageData?: PageData;
+}) {
+  useEffect(() => {
+    if (!pageData) return;
+
+    // Update favicon dynamically
+    const faviconUrl = pageData.settings?.favicon || pageData.favicon;
+    if (faviconUrl) {
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (link) {
+        link.href = faviconUrl;
+      } else {
+        const newLink = document.createElement('link');
+        newLink.rel = 'icon';
+        newLink.href = faviconUrl;
+        document.head.appendChild(newLink);
+      }
+    }
+
+    // Update apple-touch-icon
+    const appleIcon = pageData.settings?.appleTouchIcon;
+    if (appleIcon) {
+      let appleLink = document.querySelector("link[rel~='apple-touch-icon']") as HTMLLinkElement;
+      if (appleLink) {
+        appleLink.href = appleIcon;
+      } else {
+        appleLink = document.createElement('link');
+        appleLink.rel = 'apple-touch-icon';
+        appleLink.href = appleIcon;
+        document.head.appendChild(appleLink);
+      }
+    }
+  }, [pageData]);
+
   return (
     <div className="space-y-6">
       {blocks.map((b) => {

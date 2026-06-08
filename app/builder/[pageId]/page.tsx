@@ -72,6 +72,24 @@ export default function EditPageBuilder() {
           description: page.description || "",
           url: page.url || "new-page",
         });
+
+        // Update favicon dynamically
+        if (page.favicon) {
+          const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+          if (link) {
+            link.href = page.favicon;
+          } else {
+            const newLink = document.createElement('link');
+            newLink.rel = 'icon';
+            newLink.href = page.favicon;
+            document.head.appendChild(newLink);
+          }
+        }
+
+        // Update document title
+        if (page.title) {
+          document.title = `${page.title} - ویرایش`;
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "خطا در بارگذاری صفحه");
       } finally {
