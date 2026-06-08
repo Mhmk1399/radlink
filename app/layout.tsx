@@ -4,6 +4,7 @@ import Navbar from "@/components/global/navbar";
 import { estedad } from "@/next-persian-fonts/estedad";
 import SmartLandingFooter from "@/components/global/footer";
 import { Toaster } from "@/components/ui/CustomToast";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import DynamicIsland from "@/components/ui/DynamicIsland";
 import { StyledComponentsRegistry } from "@/lib/registry";
  
@@ -25,6 +26,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {" "}
+        <ToastProvider />
         <Toaster position="top-right" maxToasts={5} />
         {/* <Navbar /> */}
         <StyledComponentsRegistry>{children}</StyledComponentsRegistry>

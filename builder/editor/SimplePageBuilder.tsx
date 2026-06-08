@@ -47,6 +47,11 @@ import {
   HiOutlineDocumentDuplicate,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
+  HiOutlineChevronUp,
+  HiOutlineChevronDown,
+  HiOutlineArrowUturnRight,
+  HiOutlineArrowUturnLeft,
+  HiOutlineQuestionMarkCircle,
 } from "react-icons/hi2";
 
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
@@ -69,6 +74,441 @@ import { HiOutlineEye } from "react-icons/hi2";
 /* ================================================================== */
 
 type Breakpoint = "mobile" | "tablet" | "desktop";
+
+/* ================================================================== */
+/*  Toast Notification System                                          */
+/* ================================================================== */
+
+type ToastType = "success" | "error" | "info";
+
+interface ToastItem {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
+function ToastContainer({
+  toasts,
+  onDismiss,
+}: {
+  toasts: ToastItem[];
+  onDismiss: (id: string) => void;
+}) {
+  if (toasts.length === 0) return null;
+
+  return createPortal(
+    <div
+      className="fixed bottom-6 left-1/2 z-[600] flex -translate-x-1/2 flex-col-reverse items-center gap-2"
+      dir="rtl"
+    >
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={[
+            "flex items-center gap-3 rounded-2xl px-5 py-3.5 shadow-xl backdrop-blur-xl animate-in slide-in-from-bottom-4 fade-in duration-300",
+            toast.type === "success"
+              ? "border border-emerald-200 bg-emerald-50/95 text-emerald-700"
+              : toast.type === "error"
+                ? "border border-red-200 bg-red-50/95 text-red-700"
+                : "border border-blue-200 bg-blue-50/95 text-blue-700",
+          ].join(" ")}
+        >
+          {toast.type === "success" && <HiOutlineCheck size={16} />}
+          {toast.type === "error" && <HiOutlineXMark size={16} />}
+          {toast.type === "info" && <HiOutlineQuestionMarkCircle size={16} />}
+          <span className="text-[13px] font-semibold">{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => onDismiss(toast.id)}
+            className="mr-1 rounded-lg p-1 opacity-50 transition hover:opacity-100"
+          >
+            <HiOutlineXMark size={14} />
+          </button>
+        </div>
+      ))}
+    </div>,
+    document.body,
+  );
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const show = useCallback((message: string, type: ToastType = "info") => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  }, []);
+
+  const dismiss = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  return { toasts, show, dismiss };
+}
+
+/* ================================================================== */
+/*  Undo/Redo History Hook                                             */
+/* ================================================================== */
+
+function useHistory<T>(initial: T, maxSize = 30) {
+  const [past, setPast] = useState<T[]>([]);
+  const [present, setPresent] = useState<T>(initial);
+  const [future, setFuture] = useState<T[]>([]);
+  const skipRecordRef = useRef(false);
+
+  const push = useCallback(
+    (newState: T) => {
+      if (skipRecordRef.current) {
+        skipRecordRef.current = false;
+        setPresent(newState);
+        return;
+      }
+      setPast((prev) => [...prev.slice(-maxSize), present]);
+      setPresent(newState);
+      setFuture([]);
+    },
+    [present, maxSize],
+  );
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return;
+    const previous = past[past.length - 1];
+    setPast((prev) => prev.slice(0, -1));
+    setFuture((prev) => [present, ...prev]);
+    skipRecordRef.current = true;
+    setPresent(previous);
+  }, [past, present]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setFuture((prev) => prev.slice(1));
+    setPast((prev) => [...prev, present]);
+    skipRecordRef.current = true;
+    setPresent(next);
+  }, [future, present]);
+
+  return {
+    state: present,
+    set: push,
+    undo,
+    redo,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    historySize: past.length,
+  };
+}
+
+/* ================================================================== */
+/*  Keyboard Shortcuts Bar                                             */
+/* ================================================================== */
+
+function ShortcutsHint({ visible }: { visible: boolean }) {
+  if (!visible) return null;
+
+  const shortcuts = [
+    { keys: "Ctrl+Z", label: "برگشت" },
+    { keys: "Ctrl+Y", label: "بعدی" },
+    { keys: "Ctrl+D", label: "کپی بلاک" },
+    { keys: "Del", label: "حذف" },
+    { keys: "Ctrl+S", label: "ذخیره" },
+  ];
+
+  return (
+    <div className="fixed bottom-4 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 rounded-2xl border border-neutral-200/60 bg-white/95 px-5 py-2.5 shadow-lg backdrop-blur-xl md:flex">
+      {shortcuts.map((s, i) => (
+        <React.Fragment key={s.keys}>
+          {i > 0 && <span className="h-4 w-px bg-neutral-200" />}
+          <div className="flex items-center gap-1.5">
+            <kbd className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-neutral-500">
+              {s.keys}
+            </kbd>
+            <span className="text-[10px] font-medium text-neutral-400">
+              {s.label}
+            </span>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Block Quick Actions Overlay (on canvas hover)                      */
+/* ================================================================== */
+
+function BlockQuickActions({
+  block,
+  totalBlocks,
+  onMoveUp,
+  onMoveDown,
+  onDuplicate,
+  onDelete,
+}: {
+  block: PageBlock;
+  totalBlocks: number;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  const isFirst = block.order === 0;
+  const isLast = block.order === totalBlocks - 1;
+
+  return (
+    <div className="absolute -top-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-neutral-200 bg-white px-1.5 py-1 shadow-lg opacity-0 transition-all duration-200 group-hover/block:opacity-100">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onMoveUp();
+        }}
+        disabled={isFirst}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed"
+        title="انتقال بالا"
+      >
+        <HiOutlineChevronUp size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onMoveDown();
+        }}
+        disabled={isLast}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed"
+        title="انتقال پایین"
+      >
+        <HiOutlineChevronDown size={14} />
+      </button>
+      <span className="h-4 w-px bg-neutral-200" />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDuplicate();
+        }}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
+        title="کپی"
+      >
+        <HiOutlineDocumentDuplicate size={13} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-red-50 hover:text-red-500"
+        title="حذف"
+      >
+        <HiOutlineTrash size={13} />
+      </button>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Breadcrumb Navigation                                              */
+/* ================================================================== */
+
+function SelectionBreadcrumb({
+  blockLabel,
+  elementLabel,
+  onClickBlock,
+  onClickPage,
+}: {
+  blockLabel: string | null;
+  elementLabel: string | null;
+  onClickBlock: () => void;
+  onClickPage: () => void;
+}) {
+  if (!blockLabel) return null;
+
+  return (
+    <div className="mb-4 flex items-center gap-1.5 text-[11px]" dir="rtl">
+      <button
+        type="button"
+        onClick={onClickPage}
+        className="font-medium text-neutral-400 transition hover:text-neutral-600"
+      >
+        صفحه
+      </button>
+      <span className="text-neutral-300">/</span>
+      <button
+        type="button"
+        onClick={onClickBlock}
+        className={[
+          "font-semibold transition",
+          elementLabel
+            ? "text-neutral-500 hover:text-neutral-700"
+            : "text-neutral-800",
+        ].join(" ")}
+      >
+        {blockLabel}
+      </button>
+      {elementLabel && (
+        <>
+          <span className="text-neutral-300">/</span>
+          <span className="font-bold text-neutral-800">{elementLabel}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  Onboarding Coach Marks                                             */
+/* ================================================================== */
+
+function OnboardingOverlay({
+  step,
+  onNext,
+  onSkip,
+}: {
+  step: number;
+  onNext: () => void;
+  onSkip: () => void;
+}) {
+  const steps = [
+    {
+      title: "🎉 به صفحه‌ساز خوش اومدی!",
+      desc: "با دکمه «بلاک جدید» اولین بلاکت رو اضافه کن.",
+      position: "top-20 left-1/2 -translate-x-1/2",
+    },
+    {
+      title: "📦 بلاک‌ها",
+      desc: "از سایدبار سمت راست، بلاک‌هات رو مدیریت و مرتب کن.",
+      position: "top-28 right-72",
+    },
+    {
+      title: "🎨 ویرایش",
+      desc: "روی هر بخش کلیک کن و از نوار بالا استایل و محتوا رو تغییر بده.",
+      position: "top-20 left-1/2 -translate-x-1/2",
+    },
+  ];
+
+  if (step >= steps.length) return null;
+  const current = steps[step];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[700]" dir="rtl">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
+      <div
+        className={`absolute ${current.position} z-10 w-72 animate-in zoom-in-95 slide-in-from-bottom-2 duration-300`}
+      >
+        <div className="rounded-2xl border border-white/80 bg-white p-5 shadow-2xl">
+          <h3 className="text-[14px] font-black text-neutral-900">
+            {current.title}
+          </h3>
+          <p className="mt-2 text-[12px] leading-5 text-neutral-500">
+            {current.desc}
+          </p>
+          <div className="mt-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-[11px] font-medium text-neutral-400 transition hover:text-neutral-600"
+            >
+              رد شو
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {steps.map((_, i) => (
+                  <span
+                    key={i}
+                    className={[
+                      "h-1.5 rounded-full transition-all",
+                      i === step
+                        ? "w-4 bg-neutral-800"
+                        : "w-1.5 bg-neutral-300",
+                    ].join(" ")}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={onNext}
+                className="rounded-xl bg-neutral-900 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-neutral-800 active:scale-95"
+              >
+                {step < steps.length - 1 ? "بعدی" : "شروع!"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function useOnboarding() {
+  const [step, setStep] = useState(-1); // -1 = done/hidden
+
+  useEffect(() => {
+    try {
+      const done = localStorage.getItem("builder-onboarding-done");
+      if (!done) setStep(0);
+    } catch {
+      /* SSR */
+    }
+  }, []);
+
+  const next = useCallback(() => {
+    setStep((prev) => {
+      const nextStep = prev + 1;
+      if (nextStep >= 3) {
+        try {
+          localStorage.setItem("builder-onboarding-done", "true");
+        } catch {
+          /* */
+        }
+        return -1;
+      }
+      return nextStep;
+    });
+  }, []);
+
+  const skip = useCallback(() => {
+    setStep(-1);
+    try {
+      localStorage.setItem("builder-onboarding-done", "true");
+    } catch {
+      /* */
+    }
+  }, []);
+
+  return { step, next, skip, isActive: step >= 0 };
+}
+
+/* ================================================================== */
+/*  Block Count Progress                                               */
+/* ================================================================== */
+
+function BlockCountBadge({ count }: { count: number }) {
+  const maxSuggested = 12;
+  const percentage = Math.min((count / maxSuggested) * 100, 100);
+
+  return (
+    <div className="hidden items-center gap-2 sm:flex">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-100">
+        <div
+          className={[
+            "h-full rounded-full transition-all duration-500",
+            percentage > 80 ? "bg-amber-400" : "bg-emerald-400",
+          ].join(" ")}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+      <span className="text-[10px] font-bold tabular-nums text-neutral-400">
+        {count}/{maxSuggested}
+      </span>
+    </div>
+  );
+}
 
 /* ================================================================== */
 /*  Helpers                                                            */
@@ -183,11 +623,9 @@ function ClearAllConfirmModal({
     >
       <div className="w-full max-w-[380px] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 overflow-hidden rounded-[28px] border border-red-100 bg-white shadow-[0_32px_100px_-20px_rgba(0,0,0,0.4)]">
         <div className="p-6">
-          {/* Icon */}
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-50/50">
             <FaTrash size={22} className="text-red-500" />
           </div>
-
           <h2 className="text-center text-[16px] font-black text-neutral-900">
             حذف همه بلاک‌ها؟
           </h2>
@@ -199,7 +637,6 @@ function ClearAllConfirmModal({
             این عملیات قابل بازگشت نیست.
           </p>
         </div>
-
         <div className="flex gap-3 bg-neutral-50/80 px-5 py-4">
           <button
             type="button"
@@ -236,9 +673,24 @@ function BlockCatalogModal({
   onAdd: (type: string) => void;
 }) {
   const available = useMemo(() => Object.values(blockRegistry), []);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return available;
+    const q = searchQuery.toLowerCase();
+    return available.filter(
+      (item) =>
+        item.label.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q) ||
+        item.type.toLowerCase().includes(q),
+    );
+  }, [available, searchQuery]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSearchQuery("");
+      return;
+    }
     document.body.style.overflow = "hidden";
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -262,20 +714,18 @@ function BlockCatalogModal({
         onClick={onClose}
       />
       <div className="relative w-full sm:max-w-lg max-h-[85vh] sm:max-h-[600px] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300 overflow-hidden rounded-t-[28px] sm:rounded-[28px] border border-neutral-200/60 bg-white shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.15)] sm:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.15)]">
-        {/* Handle bar (mobile) */}
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-neutral-300" />
         </div>
 
-        {/* Header */}
-        <div className="px-5 pb-4 pt-4 sm:pt-5">
+        <div className="px-5 pb-3 pt-4 sm:pt-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-[17px] font-black text-neutral-900">
                 افزودن بلاک
               </h2>
               <p className="mt-1 text-[12px] text-neutral-400">
-                بلاک موردنظر رو انتخاب کن
+                {filtered.length} بلاک موجود
               </p>
             </div>
             <button
@@ -286,39 +736,62 @@ function BlockCatalogModal({
               <HiOutlineXMark size={18} />
             </button>
           </div>
+
+          {/* Search */}
+          <div className="mt-3">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="جستجوی بلاک..."
+              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-[14px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+              autoFocus
+            />
+          </div>
         </div>
 
-        {/* Block list */}
-        <div className="overflow-y-auto px-4 pb-6 max-h-[calc(85vh-120px)] sm:max-h-[440px]">
-          <div className="grid grid-cols-1 gap-2">
-            {available.map((item) => (
-              <button
-                key={item.type}
-                type="button"
-                onClick={() => {
-                  onAdd(item.type);
-                  onClose();
-                }}
-                className="group flex items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-sm active:scale-[0.98]"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-xl transition-all duration-200 group-hover:bg-emerald-100 group-hover:scale-110">
-                  {item.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-bold text-neutral-800 group-hover:text-emerald-700">
-                    {item.label}
+        <div className="overflow-y-auto px-4 pb-6 max-h-[calc(85vh-180px)] sm:max-h-[380px]">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="text-3xl mb-3">🔍</span>
+              <p className="text-[14px] font-semibold text-neutral-500">
+                بلاکی پیدا نشد
+              </p>
+              <p className="mt-1 text-[12px] text-neutral-400">
+                عبارت دیگه‌ای جستجو کن
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2">
+              {filtered.map((item) => (
+                <button
+                  key={item.type}
+                  type="button"
+                  onClick={() => {
+                    onAdd(item.type);
+                    onClose();
+                  }}
+                  className="group flex items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-sm active:scale-[0.98]"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-xl transition-all duration-200 group-hover:bg-emerald-100 group-hover:scale-110">
+                    {item.icon}
                   </div>
-                  <p className="mt-0.5 line-clamp-1 text-[12px] leading-5 text-neutral-400">
-                    {item.description}
-                  </p>
-                </div>
-                <HiOutlinePlus
-                  size={18}
-                  className="shrink-0 text-neutral-300 transition group-hover:text-emerald-500"
-                />
-              </button>
-            ))}
-          </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14px] font-bold text-neutral-800 group-hover:text-emerald-700">
+                      {item.label}
+                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-[12px] leading-5 text-neutral-400">
+                      {item.description}
+                    </p>
+                  </div>
+                  <HiOutlinePlus
+                    size={18}
+                    className="shrink-0 text-neutral-300 transition group-hover:text-emerald-500"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>,
@@ -413,11 +886,9 @@ function PageMetaModal({
       }}
     >
       <div className="w-full sm:max-w-md animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300 overflow-hidden rounded-t-[28px] sm:rounded-[28px] border border-white/60 bg-white shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)]">
-        {/* Handle bar (mobile) */}
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-neutral-300" />
         </div>
-
         <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
           <div>
             <h2 className="text-[16px] font-black text-neutral-900">
@@ -435,7 +906,6 @@ function PageMetaModal({
             <HiOutlineXMark size={16} />
           </button>
         </div>
-
         <div className="space-y-5 p-5">
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
@@ -449,7 +919,6 @@ function PageMetaModal({
               className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
             />
           </div>
-
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               آدرس (slug) <span className="text-red-400">*</span>
@@ -468,7 +937,6 @@ function PageMetaModal({
               />
             </div>
           </div>
-
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               توضیح کوتاه
@@ -481,14 +949,12 @@ function PageMetaModal({
               className="w-full resize-none rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
             />
           </div>
-
           {saveError && (
             <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-600">
               {saveError}
             </div>
           )}
         </div>
-
         <div className="flex gap-3 border-t border-neutral-100 bg-neutral-50/50 p-4">
           <button
             type="button"
@@ -566,7 +1032,6 @@ function SidebarSortableItem({
             : "border-transparent hover:border-neutral-200 hover:bg-neutral-50/80",
       ].join(" ")}
     >
-      {/* ── Drag handle ── */}
       <button
         ref={setActivatorNodeRef}
         type="button"
@@ -580,7 +1045,6 @@ function SidebarSortableItem({
         ].join(" ")}
         aria-label="جابه‌جایی"
       >
-        {/* 6-dot grip icon */}
         <svg width="12" height="20" viewBox="0 0 12 20" fill="currentColor">
           <circle cx="3" cy="3" r="1.5" />
           <circle cx="9" cy="3" r="1.5" />
@@ -591,7 +1055,6 @@ function SidebarSortableItem({
         </svg>
       </button>
 
-      {/* ── Icon ── */}
       <div
         className={[
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[15px] transition-all duration-200",
@@ -603,7 +1066,6 @@ function SidebarSortableItem({
         {config?.icon ?? "□"}
       </div>
 
-      {/* ── Label (click to select) ── */}
       <button
         type="button"
         onClick={onSelect}
@@ -622,7 +1084,6 @@ function SidebarSortableItem({
         </p>
       </button>
 
-      {/* ── Quick actions ── */}
       <div
         className={[
           "flex shrink-0 items-center gap-0.5 transition-all duration-200",
@@ -724,7 +1185,6 @@ function BlocksSidebar({
         collapsed ? "w-[56px]" : "w-[280px]",
       ].join(" ")}
     >
-      {/* Header */}
       <div
         className={[
           "flex shrink-0 items-center border-b border-neutral-100 px-3 py-3",
@@ -758,7 +1218,6 @@ function BlocksSidebar({
         </button>
       </div>
 
-      {/* ── Collapsed: icon-only ── */}
       {collapsed ? (
         <div className="flex flex-1 flex-col items-center gap-1.5 overflow-y-auto py-3 scrollbar-none">
           {sortedBlocks.map((block) => {
@@ -793,7 +1252,6 @@ function BlocksSidebar({
         </div>
       ) : (
         <>
-          {/* ── Expanded: sortable list ── */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-200">
             {sortedBlocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
@@ -812,14 +1270,12 @@ function BlocksSidebar({
                 items={blockIds}
                 strategy={verticalListSortingStrategy}
               >
-                {/* Drag instruction */}
                 <div className="mb-2 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
                   <span className="text-[13px]">💡</span>
                   <span className="text-[10px] font-medium text-amber-700">
                     با گرفتن نقاط، ترتیب بلاک‌ها رو عوض کن
                   </span>
                 </div>
-
                 <div className="space-y-1">
                   {sortedBlocks.map((block) => (
                     <SidebarSortableItem
@@ -836,7 +1292,6 @@ function BlocksSidebar({
             )}
           </div>
 
-          {/* Add button */}
           <div className="shrink-0 border-t border-neutral-100 p-3">
             <button
               type="button"
@@ -874,11 +1329,16 @@ export default function SimplePageBuilder({
 }: SimplePageBuilderProps = {}) {
   const initialState = useMemo(() => createInitialBuilderState(), []);
 
-  const [blocks, setBlocks] = useState<PageBlock[]>(
+  /* ── Undo/Redo history ── */
+  const history = useHistory<PageBlock[]>(
     externalBlocks && externalBlocks.length > 0
       ? externalBlocks
       : initialState.blocks,
   );
+
+  const blocks = history.state;
+  const setBlocks = history.set;
+
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(
     externalBlocks && externalBlocks.length > 0
       ? externalBlocks[0]?.instanceId || null
@@ -907,18 +1367,88 @@ export default function SimplePageBuilder({
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── Scroll detection ── */
+  /* ── Toast ── */
+  const toast = useToast();
 
+  /* ── Onboarding ── */
+  const onboarding = useOnboarding();
+
+  /* ── Scroll detection ── */
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 100);
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  /* ── Keyboard shortcuts ── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isInput =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable);
+
+      if (isInput) return;
+
+      // Ctrl+Z = Undo
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        history.undo();
+        toast.show("برگشت به حالت قبل", "info");
+        return;
+      }
+
+      // Ctrl+Y or Ctrl+Shift+Z = Redo
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.key === "z" && e.shiftKey))
+      ) {
+        e.preventDefault();
+        history.redo();
+        toast.show("اعمال مجدد", "info");
+        return;
+      }
+
+      // Ctrl+D = Duplicate
+      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault();
+        if (selectedBlockId) {
+          duplicateBlockById(selectedBlockId);
+          toast.show("بلاک کپی شد", "success");
+        }
+        return;
+      }
+
+      // Delete or Backspace = Delete block
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedBlockId) {
+          removeBlockById(selectedBlockId);
+          toast.show("بلاک حذف شد", "success");
+        }
+        return;
+      }
+
+      // Ctrl+S = Save
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        setPageMetaOpen(true);
+        return;
+      }
+
+      // ? = Toggle shortcuts
+      if (e.key === "?") {
+        setShowShortcuts((p) => !p);
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [history, selectedBlockId, toast]);
 
   /* ── Server save ── */
 
@@ -949,16 +1479,17 @@ export default function SimplePageBuilder({
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.message ?? "خطا در ساخت صفحه");
       setPageId(json.page?.id ?? json.page?._id ?? null);
+      toast.show("صفحه با موفقیت ساخته شد! 🎉", "success");
       return json.page;
     } catch (error) {
-      setServerSaveError(
-        error instanceof Error ? error.message : "خطا در ساخت صفحه",
-      );
+      const msg = error instanceof Error ? error.message : "خطا در ساخت صفحه";
+      setServerSaveError(msg);
+      toast.show(msg, "error");
       return null;
     } finally {
       setIsServerSaving(false);
     }
-  }, [pageTitle, pageUrl, pageDescription, blocks]);
+  }, [pageTitle, pageUrl, pageDescription, blocks, toast]);
 
   const updatePageOnServer = useCallback(async () => {
     if (!pageId) return createPageOnServer();
@@ -987,16 +1518,25 @@ export default function SimplePageBuilder({
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.message ?? "خطا در ذخیره صفحه");
+      toast.show("تغییرات ذخیره شد ✅", "success");
       return json.page;
     } catch (error) {
-      setServerSaveError(
-        error instanceof Error ? error.message : "خطا در ذخیره صفحه",
-      );
+      const msg = error instanceof Error ? error.message : "خطا در ذخیره صفحه";
+      setServerSaveError(msg);
+      toast.show(msg, "error");
       return null;
     } finally {
       setIsServerSaving(false);
     }
-  }, [pageId, pageTitle, pageUrl, pageDescription, blocks, createPageOnServer]);
+  }, [
+    pageId,
+    pageTitle,
+    pageUrl,
+    pageDescription,
+    blocks,
+    createPageOnServer,
+    toast,
+  ]);
 
   const handleMetaSave = useCallback(async () => {
     const savedPage = await updatePageOnServer();
@@ -1034,6 +1574,18 @@ export default function SimplePageBuilder({
 
   const selectedSchema = selectedConfig?.schema ?? null;
 
+  // Breadcrumb labels
+  const selectedBlockLabel = selectedBlock
+    ? (blockRegistry[selectedBlock.type as keyof typeof blockRegistry]?.label ??
+      selectedBlock.type)
+    : null;
+
+  const selectedElementLabel = useMemo(() => {
+    if (!selectedElementId || !selectedSchema) return null;
+    const elementSchema = selectedSchema.elements[selectedElementId as keyof typeof selectedSchema.elements];
+    return elementSchema?.label ?? selectedElementId;
+  }, [selectedElementId, selectedSchema]);
+
   /* ── Storage sync ── */
 
   useEffect(() => {
@@ -1054,7 +1606,6 @@ export default function SimplePageBuilder({
       setStorageHydrated(true);
       return;
     }
-
     const stored = loadFromStorage();
     if (stored && stored.length > 0) {
       const normalized = normalizeOrder(stored);
@@ -1086,11 +1637,12 @@ export default function SimplePageBuilder({
       const config = blockRegistry[type as keyof typeof blockRegistry];
       if (!config) return;
       const next = config.createDefaultBlock(sortedBlocks.length);
-      setBlocks((prev) => normalizeOrder([...prev, next]));
+      setBlocks(normalizeOrder([...blocks, next]));
       setSelectedBlockId(next.instanceId);
       setSelectedElementId("container");
+      toast.show(`بلاک "${config.label}" اضافه شد`, "success");
     },
-    [sortedBlocks.length],
+    [sortedBlocks.length, blocks, setBlocks, toast],
   );
 
   const removeBlockById = useCallback(
@@ -1105,12 +1657,15 @@ export default function SimplePageBuilder({
         setSelectedElementId(next ? "container" : null);
       }
     },
-    [sortedBlocks, selectedBlockId],
+    [sortedBlocks, selectedBlockId, setBlocks],
   );
 
   const removeSelectedBlock = useCallback(() => {
-    if (selectedBlockId) removeBlockById(selectedBlockId);
-  }, [selectedBlockId, removeBlockById]);
+    if (selectedBlockId) {
+      removeBlockById(selectedBlockId);
+      toast.show("بلاک حذف شد", "success");
+    }
+  }, [selectedBlockId, removeBlockById, toast]);
 
   const duplicateBlockById = useCallback(
     (id: string) => {
@@ -1120,23 +1675,38 @@ export default function SimplePageBuilder({
         ...cloneBlock(sortedBlocks[idx]),
         order: sortedBlocks[idx].order + 1,
       };
-      setBlocks((prev) => {
-        const sorted = [...prev].sort((a, b) => a.order - b.order);
-        const i = sorted.findIndex((b) => b.instanceId === id);
-        if (i === -1) return prev;
-        const n = [...sorted];
-        n.splice(i + 1, 0, dup);
-        return normalizeOrder(n);
-      });
+      const sorted = [...blocks].sort((a, b) => a.order - b.order);
+      const i = sorted.findIndex((b) => b.instanceId === id);
+      if (i === -1) return;
+      const n = [...sorted];
+      n.splice(i + 1, 0, dup);
+      setBlocks(normalizeOrder(n));
       setSelectedBlockId(dup.instanceId);
       setSelectedElementId("container");
     },
-    [sortedBlocks],
+    [sortedBlocks, blocks, setBlocks],
   );
 
   const duplicateSelectedBlock = useCallback(() => {
-    if (selectedBlockId) duplicateBlockById(selectedBlockId);
-  }, [selectedBlockId, duplicateBlockById]);
+    if (selectedBlockId) {
+      duplicateBlockById(selectedBlockId);
+      toast.show("بلاک کپی شد", "success");
+    }
+  }, [selectedBlockId, duplicateBlockById, toast]);
+
+  /* ── Move block up/down ── */
+
+  const moveBlock = useCallback(
+    (id: string, direction: "up" | "down") => {
+      const sorted = [...blocks].sort((a, b) => a.order - b.order);
+      const idx = sorted.findIndex((b) => b.instanceId === id);
+      if (idx === -1) return;
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= sorted.length) return;
+      setBlocks(normalizeOrder(arrayMove(sorted, idx, targetIdx)));
+    },
+    [blocks, setBlocks],
+  );
 
   /* ── Selection ── */
 
@@ -1162,28 +1732,28 @@ export default function SimplePageBuilder({
   const updateSelectedContent = useCallback(
     (key: string, value: unknown) => {
       if (!selectedBlockId) return;
-      setBlocks((prev) =>
-        prev.map((b) =>
+      setBlocks(
+        blocks.map((b) =>
           b.instanceId !== selectedBlockId
             ? b
             : { ...b, data: { ...b.data, [key]: value } },
         ),
       );
     },
-    [selectedBlockId],
+    [selectedBlockId, blocks, setBlocks],
   );
 
   const handleInlineUpdateContent = useCallback(
     (instanceId: string, key: string, value: string) => {
-      setBlocks((prev) =>
-        prev.map((b) =>
+      setBlocks(
+        blocks.map((b) =>
           b.instanceId !== instanceId
             ? b
             : { ...b, data: { ...b.data, [key]: value } },
         ),
       );
     },
-    [],
+    [blocks, setBlocks],
   );
 
   const updateSelectedElementStyle = useCallback(
@@ -1193,8 +1763,8 @@ export default function SimplePageBuilder({
       value: string | number | AnimationType,
     ) => {
       if (!selectedBlockId) return;
-      setBlocks((prev) =>
-        prev.map((b) => {
+      setBlocks(
+        blocks.map((b) => {
           if (b.instanceId !== selectedBlockId) return b;
           const el = b.elements[elementId];
           if (!el) return b;
@@ -1229,7 +1799,7 @@ export default function SimplePageBuilder({
         }),
       );
     },
-    [selectedBlockId],
+    [selectedBlockId, blocks, setBlocks],
   );
 
   /* ── Clear all ── */
@@ -1244,7 +1814,8 @@ export default function SimplePageBuilder({
     setSelectedElementId(null);
     localStorage.removeItem(STORAGE_KEY);
     setClearConfirmOpen(false);
-  }, []);
+    toast.show("همه بلاک‌ها حذف شدند", "success");
+  }, [setBlocks, toast]);
 
   /* ── DnD handlers ── */
 
@@ -1252,21 +1823,23 @@ export default function SimplePageBuilder({
     setActiveBlockId(String(e.active.id));
   }, []);
 
-  const handleDragEnd = useCallback((e: DragEndEvent) => {
-    setActiveBlockId(null);
-    const { active, over } = e;
-    if (!over) return;
-    const aId = String(active.id);
-    const oId = String(over.id);
-    if (aId === oId) return;
-    setBlocks((prev) => {
-      const sorted = [...prev].sort((a, b) => a.order - b.order);
+  const handleDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      setActiveBlockId(null);
+      const { active, over } = e;
+      if (!over) return;
+      const aId = String(active.id);
+      const oId = String(over.id);
+      if (aId === oId) return;
+      const sorted = [...blocks].sort((a, b) => a.order - b.order);
       const oi = sorted.findIndex((b) => b.instanceId === aId);
       const ni = sorted.findIndex((b) => b.instanceId === oId);
-      if (oi === -1 || ni === -1) return prev;
-      return normalizeOrder(arrayMove(sorted, oi, ni));
-    });
-  }, []);
+      if (oi === -1 || ni === -1) return;
+      setBlocks(normalizeOrder(arrayMove(sorted, oi, ni)));
+      toast.show("ترتیب بلاک‌ها تغییر کرد", "info");
+    },
+    [blocks, setBlocks, toast],
+  );
 
   const handleDragCancel = useCallback(() => {
     setActiveBlockId(null);
@@ -1304,13 +1877,40 @@ export default function SimplePageBuilder({
                   </h1>
                 </div>
                 <SaveIndicator saved={justSaved} />
-                <span className="hidden sm:inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-neutral-400">
-                  {blocks.length} بلاک
-                </span>
+                <BlockCountBadge count={blocks.length} />
               </div>
 
               {/* Right side — actions */}
               <div className="flex items-center gap-2">
+                {/* Undo/Redo */}
+                <div className="hidden items-center gap-1 md:flex">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      history.undo();
+                      toast.show("برگشت", "info");
+                    }}
+                    disabled={!history.canUndo}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="برگشت (Ctrl+Z)"
+                  >
+                    <HiOutlineArrowUturnRight size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      history.redo();
+                      toast.show("بعدی", "info");
+                    }}
+                    disabled={!history.canRedo}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="بعدی (Ctrl+Y)"
+                  >
+                    <HiOutlineArrowUturnLeft size={15} />
+                  </button>
+                </div>
+ 
+
                 {/* Preview */}
                 <button
                   type="button"
@@ -1379,8 +1979,14 @@ export default function SimplePageBuilder({
             blocks={sortedBlocks}
             selectedBlockId={selectedBlockId}
             onSelectBlock={handleSelectBlock}
-            onDeleteBlock={removeBlockById}
-            onDuplicateBlock={duplicateBlockById}
+            onDeleteBlock={(id) => {
+              removeBlockById(id);
+              toast.show("بلاک حذف شد", "success");
+            }}
+            onDuplicateBlock={(id) => {
+              duplicateBlockById(id);
+              toast.show("بلاک کپی شد", "success");
+            }}
             onAddBlock={() => setCatalogOpen(true)}
             collapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed((p) => !p)}
@@ -1388,13 +1994,29 @@ export default function SimplePageBuilder({
 
           {/* Canvas */}
           <main className="mx-auto min-w-0 max-w-5xl flex-1 px-4 pb-32 pt-6">
+            {/* Breadcrumb */}
+            <SelectionBreadcrumb
+              blockLabel={selectedBlockLabel}
+              elementLabel={
+                selectedElementId === "container" ? null : selectedElementLabel
+              }
+              onClickBlock={() => {
+                if (selectedBlockId) handleSelectBlock(selectedBlockId);
+              }}
+              onClickPage={() => {
+                setSelectedBlockId(null);
+                setSelectedElementId(null);
+              }}
+            />
+
             {/* Quick tips */}
-            {blocks.length > 0 && (
+            {blocks.length > 0 && blocks.length <= 2 && (
               <div className="mb-5 flex flex-wrap items-center gap-2">
                 {[
                   { emoji: "👆", text: "کلیک = انتخاب" },
                   { emoji: "✏️", text: "دابل‌کلیک = ویرایش" },
                   { emoji: "↕️", text: "دراگ = جابه‌جایی" },
+                  { emoji: "⌨️", text: "? = میان‌بر" },
                 ].map((tip) => (
                   <span
                     key={tip.text}
@@ -1418,7 +2040,6 @@ export default function SimplePageBuilder({
               ].join(" ")}
             >
               {sortedBlocks.length === 0 ? (
-                /* ── Empty state ── */
                 <div className="flex min-h-[500px] flex-col items-center justify-center rounded-[20px] px-8 text-center">
                   <div className="relative mb-6">
                     <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-neutral-100 to-neutral-50 shadow-inner">
@@ -1427,7 +2048,7 @@ export default function SimplePageBuilder({
                         className="text-neutral-300"
                       />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+                    <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 animate-bounce">
                       <HiOutlinePlus size={16} />
                     </div>
                   </div>
@@ -1457,7 +2078,6 @@ export default function SimplePageBuilder({
                   </div>
                 </div>
               ) : (
-                /* ── Block list ── */
                 <SortableContext
                   items={blockIds}
                   strategy={verticalListSortingStrategy}
@@ -1467,7 +2087,23 @@ export default function SimplePageBuilder({
                       <div
                         key={block.instanceId}
                         data-block-id={block.instanceId}
+                        className="group/block relative"
                       >
+                        {/* Quick actions on hover */}
+                        <BlockQuickActions
+                          block={block}
+                          totalBlocks={sortedBlocks.length}
+                          onMoveUp={() => moveBlock(block.instanceId, "up")}
+                          onMoveDown={() => moveBlock(block.instanceId, "down")}
+                          onDuplicate={() => {
+                            duplicateBlockById(block.instanceId);
+                            toast.show("بلاک کپی شد", "success");
+                          }}
+                          onDelete={() => {
+                            removeBlockById(block.instanceId);
+                            toast.show("بلاک حذف شد", "success");
+                          }}
+                        />
                         <DraggableBlockItem
                           block={block}
                           selectedBlockId={selectedBlockId}
@@ -1564,6 +2200,17 @@ export default function SimplePageBuilder({
         onCancel={() => setClearConfirmOpen(false)}
         onConfirm={confirmClearAllBlocks}
       />
+
+      {/* ═══════════ New UX features ═══════════ */}
+      <ShortcutsHint visible={showShortcuts} />
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
+      {onboarding.isActive && (
+        <OnboardingOverlay
+          step={onboarding.step}
+          onNext={onboarding.next}
+          onSkip={onboarding.skip}
+        />
+      )}
     </DndContext>
   );
 }
