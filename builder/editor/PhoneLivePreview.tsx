@@ -139,9 +139,8 @@ export default function PhonePreviewModal({
 
             {/* Phone body */}
             <div
-              className="relative overflow-hidden rounded-[52px] bg-gradient-to-b from-zinc-800 via-zinc-900 to-black p-[6px] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_40px_100px_-20px_rgba(0,0,0,0.7),0_0_40px_rgba(139,92,246,0.12)]"
+              className="relative max-w-85 overflow-hidden rounded-[52px] bg-gradient-to-b from-zinc-800 via-zinc-900 to-black p-[6px] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_40px_100px_-20px_rgba(0,0,0,0.7),0_0_40px_rgba(139,92,246,0.12)]"
               style={{
-                width: "min(372px, calc(100vw - 44px))",
                 height: "min(806px, calc(100dvh - 82px))",
               }}
             >
@@ -160,12 +159,16 @@ export default function PhonePreviewModal({
               {/* Inner bezel */}
               <div className="relative h-full w-full overflow-hidden rounded-[46px] ring-1 ring-white/[0.06]">
                 {/* Screen */}
-                <div className="relative h-full w-full bg-white">
+                <div className="relative h-full w-full bg-white px-2">
                   {/* ── Status bar ─────────────────────────────────── */}
                   <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-end justify-between px-7 pb-1 pt-3">
                     {/* Time */}
                     <span className="text-[14px] font-bold text-black">
-                      ۹:۴۱
+                      {new Date().toLocaleTimeString("fa-IR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
                     </span>
 
                     {/* Status icons */}
@@ -306,6 +309,7 @@ export default function PhonePreviewModal({
                               key={block.instanceId}
                               block={block}
                               mode="preview"
+                              
                             />
                           );
                         })

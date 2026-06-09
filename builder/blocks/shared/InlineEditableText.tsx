@@ -82,7 +82,7 @@ export function InlineEditableText({
             save();
           }
         }}
-        className="w-full rounded-md bg-white/95 px-2 py-1 text-black outline outline-2 outline-[#3b82f6]"
+        className="w-full rounded-md bg-white/95 px-2 py-1 text-black shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_12px_-2px_rgba(59,130,246,0.25)]"
         dir="auto"
       />
     );
@@ -107,7 +107,7 @@ export function InlineEditableText({
           cancel();
         }
       }}
-      className="w-full rounded-md bg-white/95 px-2 py-1 text-black outline outline-2 outline-[#3b82f6]"
+      className="w-full rounded-md bg-white/95 px-2 py-1 text-black shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_12px_-2px_rgba(59,130,246,0.25)]"
       dir="auto"
     />
   );

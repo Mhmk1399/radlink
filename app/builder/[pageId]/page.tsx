@@ -28,7 +28,7 @@ function LoadingScreen() {
 }
 
 const SimplePageBuilder = dynamic(
-  () => import("@/builder/editor/SimplePageBuilder"),
+  () => import("@/builder/editor/PageBuilder"),
   {
     ssr: false,
     loading: () => <LoadingScreen />,

@@ -22,10 +22,6 @@ import {
   HiOutlineSwatch,
   HiOutlineChevronUp,
   HiOutlineEyeDropper,
-  HiOutlineDevicePhoneMobile,
-  HiOutlineDeviceTablet,
-  HiOutlineComputerDesktop,
-  HiOutlineCheck,
   HiOutlineAdjustmentsHorizontal,
 } from "react-icons/hi2";
 
@@ -173,32 +169,6 @@ const CUSTOM_SCROLLBAR = [
   "hover:[&::-webkit-scrollbar-thumb]:bg-neutral-300",
 ].join(" ");
 
-const BREAKPOINT_OPTIONS: Array<{
-  value: Breakpoint;
-  label: string;
-  shortLabel: string;
-  icon: React.ReactNode;
-}> = [
-  {
-    value: "mobile",
-    label: "موبایل",
-    shortLabel: "M",
-    icon: <HiOutlineDevicePhoneMobile size={13} />,
-  },
-  {
-    value: "tablet",
-    label: "تبلت",
-    shortLabel: "T",
-    icon: <HiOutlineDeviceTablet size={13} />,
-  },
-  {
-    value: "desktop",
-    label: "دسکتاپ",
-    shortLabel: "D",
-    icon: <HiOutlineComputerDesktop size={13} />,
-  },
-];
-
 /* ================================================================== */
 /*  Helpers                                                            */
 /* ================================================================== */
@@ -289,88 +259,10 @@ function useIsDesktop(): boolean {
 }
 
 /* ================================================================== */
-/*  Breakpoint Switcher                                                */
-/* ================================================================== */
-
-function BreakpointSwitcher({
-  value,
-  onChange,
-  compact = false,
-}: {
-  value: Breakpoint;
-  onChange: (bp: Breakpoint) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-0.5 rounded-xl bg-neutral-100 p-0.5">
-      {BREAKPOINT_OPTIONS.map((bp) => (
-        <button
-          key={bp.value}
-          type="button"
-          onClick={() => onChange(bp.value)}
-          className={[
-            "flex items-center justify-center gap-1 rounded-lg transition-all duration-200",
-            compact ? "px-1.5 py-1" : "px-2 py-1.5",
-            value === bp.value
-              ? "bg-white text-neutral-900 shadow-sm"
-              : "text-neutral-400 hover:text-neutral-600",
-          ].join(" ")}
-          title={bp.label}
-        >
-          {bp.icon}
-          {!compact && (
-            <span className="hidden text-[10px] font-bold xl:inline">
-              {bp.shortLabel}
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/* ================================================================== */
-/*  Save-pulse indicator (local micro-feedback)                        */
-/* ================================================================== */
-
-function SavePulse({ visible }: { visible: boolean }) {
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold transition-all duration-300",
-        visible
-          ? "bg-emerald-50 text-emerald-600 opacity-100 scale-100"
-          : "opacity-0 scale-75",
-      ].join(" ")}
-    >
-      <HiOutlineCheck size={10} />
-      اعمال شد
-    </span>
-  );
-}
-
-/* ================================================================== */
 /*  Dropdown                                                           */
 /* ================================================================== */
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
-}
-
-function resolveWidthPx(width: string): number {
-  const map: Record<string, number> = {
-    "w-52": 208,
-    "w-64": 256,
-    "w-72": 288,
-    "w-80": 320,
-    "w-[380px]": 380,
-  };
-
-  if (map[width]) return map[width];
-
-  const match = width.match(/w-\[(\d+)px\]/);
-  if (match) return Number(match[1]);
-
-  return 320;
 }
 
 function FloatingPortalPanel({
@@ -859,90 +751,6 @@ function InlineColorWithPicker({
 }
 
 /* ================================================================== */
-/*  Inline Slider                                                      */
-/* ================================================================== */
-
-function InlineSlider({
-  icon,
-  label,
-  value,
-  min,
-  max,
-  step,
-  unit,
-  onChange,
-  feedbackActive,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  onChange: (v: number) => void;
-  feedbackActive?: boolean;
-}) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipValue, setTooltipValue] = useState(value);
-
-  return (
-    <div
-      className={[
-        "flex shrink-0 items-center gap-2 rounded-xl px-2 py-2 transition-all",
-        feedbackActive
-          ? "bg-emerald-50 ring-1 ring-emerald-200"
-          : "hover:bg-neutral-50",
-      ].join(" ")}
-    >
-      <span className="text-neutral-500" title={label}>
-        {icon}
-      </span>
-      <div className="relative">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onMouseDown={() => setShowTooltip(true)}
-          onMouseUp={() => setShowTooltip(false)}
-          onTouchStart={() => setShowTooltip(true)}
-          onTouchEnd={() => setShowTooltip(false)}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            setTooltipValue(v);
-            onChange(v);
-          }}
-          className="h-[3px] w-14 cursor-pointer appearance-none rounded-full bg-neutral-200 xl:w-[70px] [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-125"
-          aria-label={label}
-        />
-        {showTooltip && (
-          <div className="pointer-events-none absolute -top-8 left-1/2 z-[500] -translate-x-1/2 rounded-lg bg-neutral-900 px-2 py-1 text-[10px] font-bold text-white shadow-lg">
-            {tooltipValue}
-            {unit}
-            <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-neutral-900" />
-          </div>
-        )}
-      </div>
-      <input
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={value}
-        onChange={(e) => {
-          const n = Number(e.target.value);
-          if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, n)));
-        }}
-        className="w-10 rounded-lg border border-neutral-200 bg-neutral-50 px-1 py-1 text-center text-base font-medium text-neutral-700 outline-none transition focus:border-neutral-400 focus:bg-white sm:text-[11px]"
-        dir="ltr"
-      />
-      <span className="text-[10px] font-medium text-neutral-400">{unit}</span>
-    </div>
-  );
-}
-
-/* ================================================================== */
 /*  Desktop Toolbar                                                    */
 /* ================================================================== */
 
@@ -990,7 +798,6 @@ function DesktopToolbar({
   );
   const numericBtnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const barRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const feedback = useMicroFeedback();
   const contentTriggerRef = useRef<HTMLDivElement>(null);
@@ -1080,9 +887,10 @@ function DesktopToolbar({
 
   return (
     <div
+      data-tour="tour-inspector-panel"
       className={[
         "fixed inset-x-0 z-[100] flex justify-center px-4 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]",
-        isCompact ? "top-1 pt-1" : "top-[60px] pt-3",
+        isCompact ? "top-12 pt-1" : "top-[60px] pt-3",
       ].join(" ")}
       dir="rtl"
     >

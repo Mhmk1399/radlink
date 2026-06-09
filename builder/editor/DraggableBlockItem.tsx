@@ -55,8 +55,8 @@ export function DraggableBlockItem({
       }}
       className={`relative rounded-3xl transition-all duration-200 ${
         selectedBlockId === block.instanceId
-          ? "outline outline-2 outline-neutral-400 outline-offset-4 shadow-lg"
-          : "hover:outline hover:outline-1 hover:outline-neutral-300"
+          ? "shadow-[0_0_0_2px_rgba(0,0,0,0.1),0_8px_30px_-8px_rgba(0,0,0,0.15),0_0_0_4px_rgba(59,130,246,0.4)]"
+          : "shadow-[0_2px_8px_rgba(0,0,0,0.06),0_4px_16px_-4px_rgba(0,0,0,0.08)]"
       }`}
     >
       {/* Drag Handle */}

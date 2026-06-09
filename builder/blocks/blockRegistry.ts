@@ -54,7 +54,7 @@ import { superLinkSchema } from "./super-link/superLink.schema";
 import MessengerLinksBlock from "./messenger/MessengerLinksBlock";
 import { messengerLinksSchema } from "./messenger/messengerLinks.schema";
 import { createDefaultMessengerLinksBlock } from "./messenger/messengerLinks.default";
-import { storyHighlightsSchema, } from "./story/story.schema";
+import { storyHighlightsSchema } from "./story/story.schema";
 import { createDefaultStoryHighlightsBlock } from "./story/story.default";
 import StoryHighlightsBlock from "./story/StoryBlock";
 import ProductCardsBlock from "./product-cards/ProductCardsBlock";
@@ -64,7 +64,26 @@ import BookingFormBlock from "./booking-form/BookingFormBlock";
 import { bookingFormSchema } from "./booking-form/bookingForm.schema";
 import { createDefaultBookingFormBlock } from "./booking-form/bookingForm.default";
 
-
+import React from "react";
+import {
+    HiOutlinePhoto,
+    HiOutlineRectangleGroup,
+    HiOutlineLink,
+    HiOutlineBolt,
+    HiOutlineFilm,
+    HiOutlineDocumentText,
+    HiOutlineStar,
+    HiOutlineQuestionMarkCircle,
+    HiOutlinePhone,
+    HiOutlineMapPin,
+    HiOutlineRocketLaunch,
+    HiOutlineClock,
+    HiOutlineMinus,
+    HiOutlineChatBubbleLeftRight,
+    HiOutlinePlayCircle,
+    HiOutlineShoppingBag,
+    HiOutlineCalendarDays,
+} from "react-icons/hi2";
 
 export type BlockCategory =
     | "hero"
@@ -80,7 +99,7 @@ export const blockRegistry = {
         type: "banner",
         label: "بنر",
         description: "برای معرفی اصلی صفحه، کمپین، برند یا پیام مهم.",
-        icon: "🖼️",
+        icon: React.createElement(HiOutlinePhoto, { size: 18 }),
         category: "hero",
         component: BannerBlock,
         schema: bannerSchema,
@@ -91,7 +110,7 @@ export const blockRegistry = {
         type: "slider",
         label: "اسلایدر",
         description: "اسلاید تصویری با متن، دکمه، پس‌زمینه و ناوبری.",
-        icon: "🎞️",
+        icon: React.createElement(HiOutlineRectangleGroup, { size: 18 }),
         category: "hero",
         component: SliderBlock,
         schema: sliderSchema,
@@ -102,7 +121,7 @@ export const blockRegistry = {
         type: "simpleLink",
         label: "لینک ساده",
         description: "یک لینک کوتاه و سریع برای هدایت کاربر.",
-        icon: "🔗",
+        icon: React.createElement(HiOutlineLink, { size: 18 }),
         category: "link",
         component: SimpleLinkBlock,
         schema: simpleLinkSchema,
@@ -113,7 +132,7 @@ export const blockRegistry = {
         type: "superLink",
         label: "سوپر لینک",
         description: "لینک پیشرفته با آیکون، توضیح، فلش و انیمیشن.",
-        icon: "⚡",
+        icon: React.createElement(HiOutlineBolt, { size: 18 }),
         category: "link",
         component: SuperLinkBlock,
         schema: superLinkSchema,
@@ -124,7 +143,7 @@ export const blockRegistry = {
         type: "video",
         label: "ویدئو",
         description: "نمایش ویدئوی معرفی، محصول، آموزش یا کمپین.",
-        icon: "🎬",
+        icon: React.createElement(HiOutlineFilm, { size: 18 }),
         category: "media",
         component: VideoBlock,
         schema: videoSchema,
@@ -135,7 +154,7 @@ export const blockRegistry = {
         type: "richText",
         label: "متن",
         description: "برای نوشتن متن، توضیحات، معرفی یا درباره ما.",
-        icon: "📝",
+        icon: React.createElement(HiOutlineDocumentText, { size: 18 }),
         category: "content",
         component: RichTextBlock,
         schema: richTextSchema,
@@ -146,7 +165,7 @@ export const blockRegistry = {
         type: "testimonial",
         label: "نظر مشتری",
         description: "نمایش نظر، تجربه، امتیاز و مشخصات مشتری.",
-        icon: "⭐",
+        icon: React.createElement(HiOutlineStar, { size: 18 }),
         category: "content",
         component: TestimonialBlock,
         schema: testimonialSchema,
@@ -157,7 +176,7 @@ export const blockRegistry = {
         type: "faq",
         label: "سوالات پرتکرار",
         description: "نمایش سوال و جواب‌ها به شکل آکاردئونی.",
-        icon: "❓",
+        icon: React.createElement(HiOutlineQuestionMarkCircle, { size: 18 }),
         category: "content",
         component: FAQBlock,
         schema: faqSchema,
@@ -168,7 +187,7 @@ export const blockRegistry = {
         type: "contactInfo",
         label: "اطلاعات تماس",
         description: "شماره تماس، واتساپ، ایمیل، آدرس و راه‌های ارتباطی.",
-        icon: "☎️",
+        icon: React.createElement(HiOutlinePhone, { size: 18 }),
         category: "contact",
         component: ContactInfoBlock,
         schema: contactInfoSchema,
@@ -179,7 +198,7 @@ export const blockRegistry = {
         type: "mapLinks",
         label: "لینک نقشه",
         description: "لینک مسیریابی در گوگل مپ، نشان، بلد، ویز و اپل مپ.",
-        icon: "📍",
+        icon: React.createElement(HiOutlineMapPin, { size: 18 }),
         category: "contact",
         component: MapLinksBlock,
         schema: mapLinksSchema,
@@ -190,7 +209,7 @@ export const blockRegistry = {
         type: "cta",
         label: "دعوت به اقدام",
         description: "تشویق کاربر برای خرید، تماس، رزرو یا ثبت درخواست.",
-        icon: "🚀",
+        icon: React.createElement(HiOutlineRocketLaunch, { size: 18 }),
         category: "conversion",
         component: CTABlock,
         schema: ctaSchema,
@@ -201,7 +220,7 @@ export const blockRegistry = {
         type: "countdown",
         label: "شمارش معکوس",
         description: "برای کمپین، تخفیف، رویداد یا مهلت ثبت‌نام.",
-        icon: "⏳",
+        icon: React.createElement(HiOutlineClock, { size: 18 }),
         category: "conversion",
         component: CountdownBlock,
         schema: countdownSchema,
@@ -212,50 +231,55 @@ export const blockRegistry = {
         type: "separator",
         label: "جداکننده",
         description: "خط یا جداکننده برای فاصله‌گذاری بین بخش‌ها.",
-        icon: "➖",
+        icon: React.createElement(HiOutlineMinus, { size: 18 }),
         category: "utility",
         component: SeparatorBlock,
         schema: separatorSchema,
         createDefaultBlock: createDefaultSeparatorBlock,
     },
+
     messengerLinks: {
         type: "messengerLinks",
         label: "پیام‌رسان‌ها",
         description:
             "لینک شبکه‌ها و پیام‌رسان‌ها مثل تلگرام، واتساپ، اینستاگرام، ایتا، سروش، روبیکا و موارد دیگر.",
-        icon: "💬",
+        icon: React.createElement(HiOutlineChatBubbleLeftRight, { size: 18 }),
         category: "contact",
         component: MessengerLinksBlock,
         schema: messengerLinksSchema,
         createDefaultBlock: createDefaultMessengerLinksBlock,
     },
+
     storyHighlights: {
         type: "storyHighlights",
         label: "استوری‌ها",
         description:
             "استوری‌های دایره‌ای شبیه اینستاگرام با نمایش تمام‌صفحه و اسلاید خودکار.",
-        icon: "🟣",
+        icon: React.createElement(HiOutlinePlayCircle, { size: 18 }),
         category: "media",
         component: StoryHighlightsBlock,
         schema: storyHighlightsSchema,
         createDefaultBlock: createDefaultStoryHighlightsBlock,
     },
+
     productCards: {
         type: "productCards",
         label: "کارت محصولات",
         description:
             "نمایش چند محصول در یک ردیف اسکرولی با عکس، توضیح، قیمت و دکمه.",
-        icon: "🛍️",
+        icon: React.createElement(HiOutlineShoppingBag, { size: 18 }),
         category: "conversion",
         component: ProductCardsBlock,
         schema: productCardsSchema,
         createDefaultBlock: createDefaultProductCardsBlock,
     },
+
     bookingForm: {
         type: "bookingForm",
         label: "فرم رزرو",
-        description: "فرم رزرو با نام، شماره تماس، ایمیل، تقویم فارسی و انتخاب ساعت.",
-        icon: "📅",
+        description:
+            "فرم رزرو با نام، شماره تماس، ایمیل، تقویم فارسی و انتخاب ساعت.",
+        icon: React.createElement(HiOutlineCalendarDays, { size: 18 }),
         category: "conversion",
         component: BookingFormBlock,
         schema: bookingFormSchema,

@@ -44,8 +44,9 @@ export function EditablePart({
       data-editable-element={elementId}
       className={cn(
         className,
-        "cursor-pointer transition-[outline-color,box-shadow]",
-        isSelected && "outline outline-2 outline-[#3b82f6] outline-offset-2",
+        "cursor-pointer transition-all duration-200",
+        isSelected &&
+          "shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_12px_-2px_rgba(59,130,246,0.25)]",
       )}
       onClick={(event) => {
         event.stopPropagation();

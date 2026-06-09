@@ -817,7 +817,7 @@ export default function BookingFormBlock({
               </div>
             )}
 
-            <div>
+            {/* <div>
               <EditablePart
                 instanceId={block.instanceId}
                 elementId="fieldLabel"
@@ -915,7 +915,7 @@ export default function BookingFormBlock({
                   {fieldErrors.selectedTime}
                 </p>
               )}
-            </div>
+            </div> */}
 
             {showNote && (
               <div>
