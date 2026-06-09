@@ -493,10 +493,28 @@ function CustomColorPicker({
   const [inputValue, setInputValue] = useState(color);
   const [recentColors, setRecentColors] = useState<string[]>([]);
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const isUpdatingRef = useRef(false);
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setInputValue(color);
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+
+    syncTimeoutRef.current = setTimeout(() => {
+      setInputValue(color);
+    }, 50);
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
   }, [color]);
+
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setRecentColors(getRecentColors());
@@ -512,9 +530,20 @@ function CustomColorPicker({
   };
 
   const handleColorChange = (newColor: string) => {
+    // UI محلی سریع آپدیت بشه
+    setInputValue(newColor);
+
+    // اگر هنوز در بازه قفل هستیم، رد کن
+    if (isUpdatingRef.current) return;
+
+    isUpdatingRef.current = true;
+
     onChange(newColor);
-    addRecentColor(newColor);
-    setRecentColors(getRecentColors());
+
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    updateTimeoutRef.current = setTimeout(() => {
+      isUpdatingRef.current = false;
+    }, 100);
   };
 
   const rgb = hexToRgb(color);

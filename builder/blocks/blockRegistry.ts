@@ -286,6 +286,7 @@ export const blockRegistry = {
         createDefaultBlock: createDefaultBookingFormBlock,
     },
 } as const;
+console.log(Object.keys(blockRegistry));
 
 export type BlockType = keyof typeof blockRegistry;
 

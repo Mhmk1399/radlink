@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="fa"
       className={`${estedad.className}   h-full antialiased`}
       suppressHydrationWarning
     >

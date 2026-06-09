@@ -9,14 +9,17 @@ import {
 } from "@dnd-kit/sortable";
 import {
   HiOutlinePlus,
-  HiOutlineSquares2X2,
   HiOutlineChevronUp,
   HiOutlineChevronDown,
   HiOutlineTrash,
   HiOutlineDocumentDuplicate,
 } from "react-icons/hi2";
-import { DraggableBlockItem } from "@/builder/editor/DraggableBlockItem";
+import {
+  DraggableBlockItem,
+  DropGap,
+} from "@/builder/editor/DraggableBlockItem";
 import type { PageBlock } from "@/types/blocks/builder.types";
+import { SmartSuggestions } from "./SmartSuggestions";
 
 /* ================================================================== */
 /*  Block Quick Actions (hover overlay)                                */
@@ -209,6 +212,7 @@ export function CanvasContent({
   onDuplicateBlock,
   onDeleteBlock,
   onOpenCatalog,
+  onApplyTemplate,
 }: {
   sortedBlocks: PageBlock[];
   blockIds: string[];
@@ -222,79 +226,107 @@ export function CanvasContent({
   onDuplicateBlock: (id: string) => void;
   onDeleteBlock: (id: string) => void;
   onOpenCatalog: () => void;
+  onApplyTemplate: (blockTypes: string[]) => void;
 }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "canvas-drop-zone" });
+  const isPaletteDragging = activePaletteType !== null;
+  const isActive = isOver || isOverCanvas;
+
+  // ── Empty state ──
+  if (sortedBlocks.length === 0) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={[
+          "rounded-3xl border-2 transition-all duration-300",
+          isActive
+            ? "border-blue-400 bg-blue-50/50 shadow-[inset_0_0_40px_rgba(59,130,246,0.06)]"
+            : "border-neutral-200/60 bg-white/80",
+        ].join(" ")}
+      >
+        {isActive ? (
+          /* حالت drag فعال */
+          <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 scale-110 animate-bounce">
+              <span className="text-3xl">📦</span>
+            </div>
+            <p className="text-[15px] font-bold text-blue-700">اینجا رها کن!</p>
+            <p className="mt-2 text-[13px] text-blue-500">بلاک اضافه می‌شه</p>
+          </div>
+        ) : (
+          /* Smart Suggestions */
+          <SmartSuggestions
+            onApplyTemplate={onApplyTemplate}
+            onOpenCatalog={onOpenCatalog}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
-    <CanvasDropZone
-      isOverCanvas={isOverCanvas && activePaletteType !== null}
-      hasBlocks={sortedBlocks.length > 0}
-    >
-      {sortedBlocks.length === 0 ? (
-        /* ─── Empty state ─── */
-        <div className="flex min-h-[500px] flex-col items-center justify-center rounded-[20px] px-8 text-center">
-          <div className="relative mb-6">
-            <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-neutral-100 to-neutral-50 shadow-inner">
-              <HiOutlineSquares2X2 size={40} className="text-neutral-300" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 flex h-8 w-8 animate-bounce items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-              <HiOutlinePlus size={16} />
-            </div>
-          </div>
-          <h2 className="text-[18px] font-black text-neutral-800">
-            صفحه‌ت رو بساز
-          </h2>
-          <p className="mt-2 max-w-sm text-[14px] leading-7 text-neutral-400">
-            از سایدبار سمت راست بلاک دلخواه رو بکش و اینجا رها کن.
-            <br />
-            یا روی دکمه زیر کلیک کن.
-          </p>
-          <button
-            type="button"
-            onClick={onOpenCatalog}
-            className="mt-8 flex items-center gap-2.5 rounded-2xl bg-neutral-900 px-7 py-4 text-[14px] font-bold text-white shadow-xl shadow-neutral-900/20 transition-all hover:scale-[1.02] hover:bg-neutral-800 hover:shadow-2xl active:scale-[0.98]"
-          >
-            <HiOutlinePlus size={18} />
-            اولین بلاک رو اضافه کن
-          </button>
-          <div className="mt-6 flex items-center gap-2 text-[12px] text-neutral-400">
-            <span className="h-px w-8 bg-neutral-200" />
-            یا از سایدبار بکش و بنداز
-            <span className="h-px w-8 bg-neutral-200" />
-          </div>
-        </div>
-      ) : (
-        /* ─── Blocks list ─── */
-        <SortableContext
-          items={blockIds}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-4">
-            {sortedBlocks.map((block, index) => (
-              <div
-                key={block.instanceId}
-                data-block-id={block.instanceId}
-                data-tour={index === 0 ? "tour-canvas-first-block" : undefined}
-                className="group/block relative"
-              >
-                <BlockQuickActions
-                  block={block}
-                  totalBlocks={sortedBlocks.length}
-                  onMoveUp={() => onMoveBlock(block.instanceId, "up")}
-                  onMoveDown={() => onMoveBlock(block.instanceId, "down")}
-                  onDuplicate={() => onDuplicateBlock(block.instanceId)}
-                  onDelete={() => onDeleteBlock(block.instanceId)}
-                />
+    <div ref={setNodeRef} className="relative">
+      <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
+        {sortedBlocks.map((block, index) => (
+          <div key={block.instanceId}>
+            {/* ── Gap قبل از هر بلاک (فقط وقتی palette drag فعاله) ── */}
+            {isPaletteDragging && (
+              <DropGap id={`gap-before-${block.instanceId}`} isActive={false} />
+            )}
+            <div className={block.hidden ? "relative" : ""}>
+              {block.hidden && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center rounded-3xl bg-neutral-100/80 backdrop-blur-[2px] border-2 border-dashed border-neutral-300">
+                  <div className="flex items-center gap-2.5 rounded-xl bg-white px-4 py-2.5 shadow-sm border border-neutral-200">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-neutral-400"
+                    >
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                    <span className="text-[11px] font-bold text-neutral-500">
+                      مخفی در پیش‌نمایش
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className={block.hidden ? "opacity-30 grayscale" : ""}>
+                {" "}
+                {/* ── خود بلاک ── */}
                 <DraggableBlockItem
                   block={block}
                   selectedBlockId={selectedBlockId}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                   onUpdateContent={onUpdateContent}
+                  onMoveBlock={onMoveBlock}
+                  onDuplicateBlock={onDuplicateBlock}
+                  onDeleteBlock={onDeleteBlock}
+                  isFirst={index === 0}
+                  isLast={index === sortedBlocks.length - 1}
+                  index={index} // ← اضافه شد
                 />
               </div>
-            ))}
+            </div>
+
+            {/* ── Gap بعد از آخرین بلاک ── */}
+            {isPaletteDragging && index === sortedBlocks.length - 1 && (
+              <DropGap id={`gap-after-${block.instanceId}`} isActive={false} />
+            )}
+
+            {/* ── فاصله بین بلاک‌ها (وقتی drag نیست) ── */}
+            {!isPaletteDragging && index < sortedBlocks.length - 1 && (
+              <div className="h-5" />
+            )}
           </div>
-        </SortableContext>
-      )}
-    </CanvasDropZone>
+        ))}
+      </SortableContext>
+    </div>
   );
 }

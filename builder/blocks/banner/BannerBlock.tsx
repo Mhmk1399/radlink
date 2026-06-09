@@ -5,8 +5,7 @@ import styled, { css } from "styled-components";
 
 import type {
   ResponsiveValue,
-  AnimationType,
-  EditableStyleMap,
+   EditableStyleMap,
   BlockElement,
   PageBlock,
   EditorMode,

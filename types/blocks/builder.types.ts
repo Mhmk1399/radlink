@@ -40,6 +40,8 @@ export type EditorMode = "editor" | "preview" | "public";
 
 export type PageBlock = {
     instanceId: string;
+    hidden?: boolean;
+
     blockId?: string;
     type: string;
     version: number;

@@ -186,6 +186,8 @@ export interface PageBlock {
     // Frontend unique instance id.
     // This is what drag/drop, selection, editing, and rendering use.
     instanceId: string;
+    hidden?: boolean;
+
 
     // Optional reference to master Block.
     // Not required because many blocks are created from frontend blockRegistry.
@@ -459,7 +461,7 @@ const PageSchema = new Schema<IPage>(
     }
 );
 
- 
+
 
 
 /* ================================================================== */

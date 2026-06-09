@@ -128,3 +128,49 @@ export function useOnboarding() {
 
     return { step, next, skip, isActive: step >= 0 };
 }
+
+
+
+export function useUndoableAction(timeout = 5000) {
+    const [pending, setPending] = useState<{
+        message: string;
+        undoFn: () => void;
+    } | null>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const execute = useCallback(
+        (message: string, action: () => void, undoFn: () => void) => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+
+            action();
+            setPending({ message, undoFn });
+
+            timerRef.current = setTimeout(() => {
+                setPending(null);
+            }, timeout);
+        },
+        [timeout],
+    );
+
+    const undo = useCallback(() => {
+        if (!pending) return;
+        if (timerRef.current) clearTimeout(timerRef.current);
+        pending.undoFn();
+        setPending(null);
+    }, [pending]);
+
+    const dismiss = useCallback(() => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setPending(null);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, []);
+
+    return { pending, execute, undo, dismiss };
+}
+
+

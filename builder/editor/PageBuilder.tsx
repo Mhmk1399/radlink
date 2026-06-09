@@ -24,6 +24,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
+import { pointerWithin } from "@dnd-kit/core";
 
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { DynamicIslandPanel } from "@/builder/editor/DynamicIslandPanel";
@@ -53,17 +54,17 @@ import {
 } from "@/helper/builder.helpers";
 import {
   useHistory,
-  useOnboarding,
   useToast,
+  useUndoableAction,
 } from "@/hook/builder/useBuilderHooks";
 import { BuilderHeader } from "../BuilderHeader";
 import { BlocksSidebar } from "../BuilderSidebar";
 import { CanvasContent, SelectionBreadcrumb } from "../BuilderCanvas";
 import {
-  OnboardingOverlay,
   PaletteDragOverlay,
   ShortcutsHint,
   ToastContainer,
+  UndoSnackbar,
   UnifiedDragOverlay,
 } from "../BuilderOverlays";
 import {
@@ -303,28 +304,79 @@ export default function SimplePageBuilder({
     },
     [sortedBlocks.length, blocks, setBlocks, toast],
   );
+  const collisionDetection = useCallback(
+    (args: Parameters<typeof closestCenter>[0]) => {
+      // اول gap‌ها رو چک کن (اولویت بالاتر)
+      const pointerCollisions = pointerWithin(args);
+      const gapCollisions = pointerCollisions.filter((c) =>
+        String(c.id).startsWith("gap-"),
+      );
+
+      if (gapCollisions.length > 0) {
+        return gapCollisions;
+      }
+
+      // بعد closestCenter برای بقیه
+      return closestCenter(args);
+    },
+    [],
+  );
+
+  const undoable = useUndoableAction();
 
   const removeBlockById = useCallback(
     (id: string) => {
       const idx = sortedBlocks.findIndex((b) => b.instanceId === id);
       if (idx === -1) return;
-      const remaining = sortedBlocks.filter((b) => b.instanceId !== id);
-      const next = remaining[idx] ?? remaining[idx - 1] ?? null;
-      setBlocks(normalizeOrder(remaining));
-      if (selectedBlockId === id) {
-        setSelectedBlockId(next?.instanceId ?? null);
-        setSelectedElementId(next ? "container" : null);
-      }
+
+      const blockToRemove = sortedBlocks[idx];
+      const config =
+        blockRegistry[blockToRemove.type as keyof typeof blockRegistry];
+      const label = config?.label ?? blockToRemove.type;
+
+      // snapshot قبل از حذف
+      const snapshotBlocks = [...blocks];
+      const snapshotSelectedId = selectedBlockId;
+      const snapshotElementId = selectedElementId;
+
+      undoable.execute(
+        `بلاک "${label}" حذف شد`,
+        // action
+        () => {
+          const remaining = sortedBlocks.filter((b) => b.instanceId !== id);
+          const next = remaining[idx] ?? remaining[idx - 1] ?? null;
+          setBlocks(normalizeOrder(remaining));
+          if (selectedBlockId === id) {
+            setSelectedBlockId(next?.instanceId ?? null);
+            setSelectedElementId(next ? "container" : null);
+          }
+        },
+        // undo
+        () => {
+          setBlocks(snapshotBlocks);
+          setSelectedBlockId(snapshotSelectedId);
+          setSelectedElementId(snapshotElementId);
+          toast.show("بلاک برگشت! ↩️", "success");
+        },
+      );
     },
-    [sortedBlocks, selectedBlockId, setBlocks],
+    [
+      sortedBlocks,
+      selectedBlockId,
+      selectedElementId,
+      blocks,
+      setBlocks,
+      undoable,
+      toast,
+    ],
   );
 
   const removeSelectedBlock = useCallback(() => {
     if (selectedBlockId) {
       removeBlockById(selectedBlockId);
-      toast.show("بلاک حذف شد", "success");
+      // دیگه toast.show نمیخواد چون snackbar نشون میده
     }
-  }, [selectedBlockId, removeBlockById, toast]);
+  }, [selectedBlockId, removeBlockById]);
 
   const duplicateBlockById = useCallback(
     (id: string) => {
@@ -364,7 +416,17 @@ export default function SimplePageBuilder({
     },
     [blocks, setBlocks],
   );
-
+  const reorderBlocks = useCallback(
+    (activeId: string, overId: string) => {
+      const sorted = [...blocks].sort((a, b) => a.order - b.order);
+      const oldIndex = sorted.findIndex((b) => b.instanceId === activeId);
+      const newIndex = sorted.findIndex((b) => b.instanceId === overId);
+      if (oldIndex === -1 || newIndex === -1) return;
+      setBlocks(normalizeOrder(arrayMove(sorted, oldIndex, newIndex)));
+      toast.show("ترتیب بلاک‌ها تغییر کرد", "info");
+    },
+    [blocks, setBlocks, toast],
+  );
   /* ── Selection ── */
   const handleSelectElement = useCallback(
     (instanceId: string, elementId: string) => {
@@ -455,6 +517,20 @@ export default function SimplePageBuilder({
       );
     },
     [selectedBlockId, blocks, setBlocks],
+  );
+
+  const toggleBlockVisibility = useCallback(
+    (id: string) => {
+      setBlocks(
+        blocks.map((b) =>
+          b.instanceId !== id ? b : { ...b, hidden: !b.hidden },
+        ),
+      );
+      const block = blocks.find((b) => b.instanceId === id);
+      const isNowHidden = !block?.hidden;
+      toast.show(isNowHidden ? "بلاک مخفی شد 👁️‍🗨️" : "بلاک نمایان شد 👁️", "info");
+    },
+    [blocks, setBlocks, toast],
   );
 
   /* ── Clear all ── */
@@ -590,6 +666,26 @@ export default function SimplePageBuilder({
     setIsOverCanvas(e.over?.id === "canvas-drop-zone");
   }, []);
 
+  const applyTemplate = useCallback(
+    (blockTypes: string[]) => {
+      const newBlocks: PageBlock[] = [];
+      blockTypes.forEach((type, index) => {
+        const config = blockRegistry[type as keyof typeof blockRegistry];
+        if (config) {
+          newBlocks.push(config.createDefaultBlock(index));
+        }
+      });
+
+      if (newBlocks.length === 0) return;
+
+      setBlocks(normalizeOrder(newBlocks));
+      setSelectedBlockId(newBlocks[0].instanceId);
+      setSelectedElementId("container");
+      toast.show(`قالب با ${newBlocks.length} بلاک اعمال شد! 🎉`, "success");
+    },
+    [setBlocks, toast],
+  );
+
   const handleDragEnd = useCallback(
     (e: DragEndEvent) => {
       const { active, over } = e;
@@ -601,22 +697,62 @@ export default function SimplePageBuilder({
 
       if (!over) return;
 
-      // Case 1: Palette → Canvas
+      const overId = String(over.id);
+
+      // ═══ Case 1: Palette → Canvas ═══
       if (data?.fromPalette) {
         const blockType = data.blockType as string;
-        const overId = String(over.id);
+        const config = blockRegistry[blockType as keyof typeof blockRegistry];
+        if (!config) return;
 
+        // ── Drop روی gap بین بلاک‌ها ──
+        if (overId.startsWith("gap-before-")) {
+          const targetId = overId.replace("gap-before-", "");
+          const targetIndex = sortedBlocks.findIndex(
+            (b) => b.instanceId === targetId,
+          );
+          if (targetIndex !== -1) {
+            const newBlock = config.createDefaultBlock(targetIndex);
+            const sorted = [...blocks].sort((a, b) => a.order - b.order);
+            const n = [...sorted];
+            n.splice(targetIndex, 0, newBlock);
+            setBlocks(normalizeOrder(n));
+            setSelectedBlockId(newBlock.instanceId);
+            setSelectedElementId("container");
+            toast.show(`بلاک "${config.label}" اضافه شد`, "success");
+            return;
+          }
+        }
+
+        if (overId.startsWith("gap-after-")) {
+          const targetId = overId.replace("gap-after-", "");
+          const targetIndex = sortedBlocks.findIndex(
+            (b) => b.instanceId === targetId,
+          );
+          if (targetIndex !== -1) {
+            const newBlock = config.createDefaultBlock(targetIndex + 1);
+            const sorted = [...blocks].sort((a, b) => a.order - b.order);
+            const n = [...sorted];
+            n.splice(targetIndex + 1, 0, newBlock);
+            setBlocks(normalizeOrder(n));
+            setSelectedBlockId(newBlock.instanceId);
+            setSelectedElementId("container");
+            toast.show(`بلاک "${config.label}" اضافه شد`, "success");
+            return;
+          }
+        }
+
+        // ── Drop روی canvas خالی یا خود بلاک ──
         if (overId === "canvas-drop-zone") {
           addBlock(blockType);
           return;
         }
 
+        // ── Drop روی یک بلاک موجود (بعدش اضافه بشه) ──
         const existingBlockIndex = sortedBlocks.findIndex(
           (b) => b.instanceId === overId,
         );
         if (existingBlockIndex !== -1) {
-          const config = blockRegistry[blockType as keyof typeof blockRegistry];
-          if (!config) return;
           const newBlock = config.createDefaultBlock(existingBlockIndex + 1);
           const sorted = [...blocks].sort((a, b) => a.order - b.order);
           const n = [...sorted];
@@ -628,18 +764,21 @@ export default function SimplePageBuilder({
           return;
         }
 
+        // fallback
         addBlock(blockType);
         return;
       }
 
-      // Case 2: Reordering
+      // ═══ Case 2: Reordering بلاک‌های موجود ═══
       const aId = String(active.id);
-      const oId = String(over.id);
-      if (aId === oId) return;
+      if (aId === overId) return;
+
+      // اگر روی gap رها شد، gap رو نادیده بگیر
+      if (overId.startsWith("gap-")) return;
 
       const sorted = [...blocks].sort((a, b) => a.order - b.order);
       const oi = sorted.findIndex((b) => b.instanceId === aId);
-      const ni = sorted.findIndex((b) => b.instanceId === oId);
+      const ni = sorted.findIndex((b) => b.instanceId === overId);
       if (oi === -1 || ni === -1) return;
       setBlocks(normalizeOrder(arrayMove(sorted, oi, ni)));
       toast.show("ترتیب بلاک‌ها تغییر کرد", "info");
@@ -660,7 +799,7 @@ export default function SimplePageBuilder({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection} // ← عوض شد
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -699,14 +838,14 @@ export default function SimplePageBuilder({
             blocks={sortedBlocks}
             selectedBlockId={selectedBlockId}
             onSelectBlock={handleSelectBlock}
-            onDeleteBlock={(id) => {
-              removeBlockById(id);
-              toast.show("بلاک حذف شد", "success");
-            }}
+            onDeleteBlock={(id) => removeBlockById(id)}
             onDuplicateBlock={(id) => {
               duplicateBlockById(id);
               toast.show("بلاک کپی شد", "success");
             }}
+            onMoveBlock={moveBlock}
+            onReorder={reorderBlocks}
+            onToggleVisibility={toggleBlockVisibility} // ← اضافه
             onAddBlock={() => setCatalogOpen(true)}
             collapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed((p) => !p)}
@@ -733,6 +872,7 @@ export default function SimplePageBuilder({
 
             {/* Canvas */}
             <CanvasContent
+              onApplyTemplate={applyTemplate}
               sortedBlocks={sortedBlocks}
               blockIds={blockIds}
               selectedBlockId={selectedBlockId}
@@ -852,6 +992,13 @@ export default function SimplePageBuilder({
         forceRun={forceTourRun}
         onForceRunHandled={() => setForceTourRun(false)}
       />
+      {undoable.pending && (
+        <UndoSnackbar
+          message={undoable.pending.message}
+          onUndo={undoable.undo}
+          onDismiss={undoable.dismiss}
+        />
+      )}
     </DndContext>
   );
 }
