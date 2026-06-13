@@ -3,22 +3,20 @@
 // ─────────────────────────────────────────────────────────────────
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import  { useMemo } from "react";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { gradients } from "@/lib/design/tokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   FaUsers,
-  FaUserCheck,
-  FaUserClock,
-  FaUserSlash,
   FaArrowRight,
   FaPowerOff,
 } from "react-icons/fa6";
-import { ColumnDef } from "@/types/table";
+import type { ColumnDef } from "@/types/table";
 import DynamicTable from "../global/DynamicTable";
-import { toast } from "../ui/CustomToast";
+import type {   UserRole, UserStatus } from "@/types/index";
+import { toast } from "@/components/ui/CustomToast";
 
 /* ══════════════════════════════════════════════
    HELPERS
@@ -28,150 +26,53 @@ function cn(...c: (string | false | null | undefined)[]): string {
   return c.filter(Boolean).join(" ");
 }
 
-function toPersianDigits(n: number | string): string {
-  const p = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-  return String(n).replace(/\d/g, (d) => p[parseInt(d)]);
-}
-
-function todayFaDate() {
-  return new Date().toLocaleDateString("fa-IR");
+function formatFaDate(value?: string | Date) {
+  if (!value) return "—";
+  try {
+    return new Date(String(value)).toLocaleDateString("fa-IR");
+  } catch {
+    return String(value);
+  }
 }
 
 /* ══════════════════════════════════════════════
-   TYPES
+   TYPES  (aligned with Mongoose IUser)
    ══════════════════════════════════════════════ */
 
-type UserRole = "user" | "agent" | "admin" | "superAdmin";
-type UserStatus = "active" | "inactive" | "blocked" | "pending";
-
-interface UserRow {
+type UserRow = {
+  _id: string;
   id: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   phoneNumber: string;
   email?: string;
+  avatarUrl?: string;
+  nationalCode?: string;
+  fatherName?: string;
   role: UserRole;
   status: UserStatus;
-  department: string;
-  createdAt: string;
-  isPhoneVerified: boolean;
+  permissions: string[]; // populated or raw ObjectId strings
+  limits: {
+    files: number;
+    blocks: number;
+    pages: number;
+    landingPages: number;
+  };
   lastLoginAt?: string;
-  notes?: string;
-  [key: string]: unknown;
-}
+  lastOtpRequestAt?: string;
+  phoneVerifiedAt?: string;
+  isPhoneVerified: boolean;
+  isDeleted: boolean;
+  agentid?: string; // matches model field name (lowercase)
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 /* ══════════════════════════════════════════════
-   FAKE DATA
-   ══════════════════════════════════════════════ */
-
-const INITIAL_USERS: UserRow[] = [
-  {
-    id: "1",
-    name: "سارا جانسون",
-    phoneNumber: "09121234567",
-    email: "sara@company.com",
-    role: "admin",
-    status: "active",
-    department: "فنی",
-    createdAt: "۱۴۰۳/۰۶/۱۲",
-    isPhoneVerified: true,
-    lastLoginAt: "۱۴۰۳/۰۷/۱۰",
-    notes: "مدیر ارشد سیستم",
-  },
-  {
-    id: "2",
-    name: "محمد احمدی",
-    phoneNumber: "09123334455",
-    email: "m.ahmadi@company.com",
-    role: "agent",
-    status: "active",
-    department: "فروش",
-    createdAt: "۱۴۰۳/۰۵/۲۱",
-    isPhoneVerified: true,
-    lastLoginAt: "۱۴۰۳/۰۷/۱۱",
-    notes: "نماینده فعال تهران",
-  },
-  {
-    id: "3",
-    name: "فاطمه رضایی",
-    phoneNumber: "09125556677",
-    email: "fatemeh@company.com",
-    role: "user",
-    status: "pending",
-    department: "مشتریان",
-    createdAt: "۱۴۰۳/۰۷/۰۱",
-    isPhoneVerified: false,
-    lastLoginAt: "—",
-    notes: "در انتظار تأیید",
-  },
-  {
-    id: "4",
-    name: "علی حسینی",
-    phoneNumber: "09124445566",
-    email: "ali@company.com",
-    role: "superAdmin",
-    status: "active",
-    department: "مدیریت",
-    createdAt: "۱۴۰۳/۰۴/۱۸",
-    isPhoneVerified: true,
-    lastLoginAt: "۱۴۰۳/۰۷/۱۱",
-    notes: "سوپر ادمین سیستم",
-  },
-  {
-    id: "5",
-    name: "نگار شریفی",
-    phoneNumber: "09127778899",
-    email: "negar@company.com",
-    role: "user",
-    status: "inactive",
-    department: "پشتیبانی",
-    createdAt: "۱۴۰۳/۰۳/۲۸",
-    isPhoneVerified: true,
-    lastLoginAt: "۱۴۰۳/۰۶/۳۰",
-    notes: "کاربر غیرفعال",
-  },
-  {
-    id: "6",
-    name: "رضا مرادی",
-    phoneNumber: "09120001122",
-    email: "reza@company.com",
-    role: "agent",
-    status: "blocked",
-    department: "نمایندگان",
-    createdAt: "۱۴۰۳/۰۲/۱۰",
-    isPhoneVerified: false,
-    lastLoginAt: "۱۴۰۳/۰۶/۰۹",
-    notes: "نیاز به بررسی مجدد",
-  },
-  {
-    id: "7",
-    name: "زهرا کریمی",
-    phoneNumber: "09129998877",
-    email: "zahra@company.com",
-    role: "user",
-    status: "active",
-    department: "محتوا",
-    createdAt: "۱۴۰۳/۰۶/۲۲",
-    isPhoneVerified: true,
-    lastLoginAt: "۱۴۰۳/۰۷/۰۹",
-    notes: "کاربر بخش محتوا",
-  },
-  {
-    id: "8",
-    name: "امیر نادری",
-    phoneNumber: "09126667788",
-    email: "amir@company.com",
-    role: "admin",
-    status: "active",
-    department: "عملیات",
-    createdAt: "۱۴۰۳/۰۵/۰۷",
-    isPhoneVerified: true,
-    lastLoginAt: "۱۴۰۳/۰۷/۱۱",
-    notes: "ادمین عملیاتی",
-  },
-];
-
-/* ══════════════════════════════════════════════
-   UI PARTS
+   BADGE COMPONENTS
    ══════════════════════════════════════════════ */
 
 function RoleBadge({ role }: { role: UserRole }) {
@@ -194,14 +95,16 @@ function RoleBadge({ role }: { role: UserRole }) {
     },
   };
 
+  const entry = map[role] ?? map.user;
+
   return (
     <span
       className={cn(
         "inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-        map[role].className,
+        entry.className,
       )}
     >
-      {map[role].label}
+      {entry.label}
     </span>
   );
 }
@@ -233,15 +136,17 @@ function StatusBadge({ status }: { status: UserStatus }) {
     },
   };
 
+  const entry = map[status] ?? map.pending;
+
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-        map[status].className,
+        entry.className,
       )}
     >
-      <span className={cn("h-1.5 w-1.5 rounded-full", map[status].dot)} />
-      {map[status].label}
+      <span className={cn("h-1.5 w-1.5 rounded-full", entry.dot)} />
+      {entry.label}
     </span>
   );
 }
@@ -261,50 +166,8 @@ function VerifyBadge({ verified }: { verified: boolean }) {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  className,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  className: string;
-}) {
-  const t = useThemeTokens();
-
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border p-4",
-        t.cardBg,
-        "border",
-        t.borderSubtle,
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl border",
-            className,
-          )}
-        >
-          {icon}
-        </div>
-        <div>
-          <p className={cn("text-xl font-bold", t.textPrimary)}>
-            {toPersianDigits(value)}
-          </p>
-          <p className={cn("text-[11px]", t.textMuted)}>{label}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ══════════════════════════════════════════════
-   COMPONENT
+   MAIN COMPONENT
    ══════════════════════════════════════════════ */
 
 export default function UsersSection({
@@ -315,82 +178,95 @@ export default function UsersSection({
   const t = useThemeTokens();
   const { isDark } = useTheme();
 
-  const [users, setUsers] = useState<UserRow[]>(INITIAL_USERS);
+  /* ── Auth header ─────────────────────────── */
+  const token =
+    typeof window !== "undefined"
+      ? (localStorage.getItem("auth_token") ?? "")
+      : "";
 
-  /* ──────────────────────────────────────────
-     STATS
-     ────────────────────────────────────────── */
-  const stats = useMemo(
-    () => ({
-      total: users.length,
-      active: users.filter((u) => u.status === "active").length,
-      pending: users.filter((u) => u.status === "pending").length,
-      blocked: users.filter((u) => u.status === "blocked").length,
-    }),
-    [users],
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  /* ── Transform API response → UserRow[] ── */
+  const transformResponse = useMemo(
+    () =>
+      (json: unknown): UserRow[] => {
+        // Support both { users: [...] } and plain [...]
+        const raw =
+          typeof json === "object" &&
+          json !== null &&
+          "users" in json &&
+          Array.isArray((json as any).users)
+            ? (json as any).users
+            : Array.isArray(json)
+              ? json
+              : [];
+
+        return raw.map((u: any) => {
+          const userId = String(u._id ?? u.id ?? "");
+
+          return {
+            ...u,
+            _id: userId,
+            id: userId,
+            // Build virtual fullName if not present
+            fullName:
+              u.fullName ||
+              [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+              "",
+            // Normalise agentid (model uses lowercase)
+            agentid: u.agentid
+              ? typeof u.agentid === "object"
+                ? String(u.agentid._id ?? u.agentid.id ?? u.agentid)
+                : String(u.agentid)
+              : undefined,
+            // Normalise permissions (ObjectId[] → string[])
+            permissions: Array.isArray(u.permissions)
+              ? u.permissions.map((p: any) =>
+                  typeof p === "object" ? String(p._id ?? p.id ?? p) : String(p),
+                )
+              : [],
+            // Ensure limits always exists
+            limits: {
+              files: u.limits?.files ?? 0,
+              blocks: u.limits?.blocks ?? 0,
+              pages: u.limits?.pages ?? 0,
+              landingPages: u.limits?.landingPages ?? 0,
+            },
+            // Normalise createdBy / updatedBy
+            createdBy: u.createdBy
+              ? typeof u.createdBy === "object"
+                ? String(u.createdBy._id ?? u.createdBy.id ?? u.createdBy)
+                : String(u.createdBy)
+              : undefined,
+            updatedBy: u.updatedBy
+              ? typeof u.updatedBy === "object"
+                ? String(u.updatedBy._id ?? u.updatedBy.id ?? u.updatedBy)
+                : String(u.updatedBy)
+              : undefined,
+          } as UserRow;
+        });
+      },
+    [],
   );
 
-  /* ──────────────────────────────────────────
-     CRUD
-     ────────────────────────────────────────── */
-  const handleCreate = useCallback(async (item: Partial<UserRow>) => {
-    const newUser: UserRow = {
-      id: String(Date.now()),
-      name: String(item.name ?? ""),
-      phoneNumber: String(item.phoneNumber ?? ""),
-      email: String(item.email ?? ""),
-      role: (item.role as UserRole) ?? "user",
-      status: (item.status as UserStatus) ?? "pending",
-      department: String(item.department ?? ""),
-      createdAt: todayFaDate(),
-      isPhoneVerified: Boolean(item.isPhoneVerified ?? false),
-      lastLoginAt: "—",
-      notes: String(item.notes ?? ""),
-    };
-
-    await new Promise((r) => setTimeout(r, 300));
-    setUsers((prev) => [newUser, ...prev]);
-  }, []);
-
-  const handleUpdate = useCallback(async (item: UserRow) => {
-    await new Promise((r) => setTimeout(r, 300));
-    setUsers((prev) =>
-      prev.map((u) => (u.id === item.id ? { ...u, ...item } : u)),
-    );
-  }, []);
-
-  const handleDelete = useCallback(async (item: UserRow) => {
-    await new Promise((r) => setTimeout(r, 300));
-    setUsers((prev) => prev.filter((u) => u.id !== item.id));
-  }, []);
-
-  const toggleUserStatus = useCallback(async (user: UserRow) => {
-    await new Promise((r) => setTimeout(r, 200));
-
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === user.id
-          ? {
-              ...u,
-              status: u.status === "active" ? "inactive" : "active",
-            }
-          : u,
-      ),
-    );
-  }, []);
-
-  /* ──────────────────────────────────────────
-     COLUMNS
-     ────────────────────────────────────────── */
+  /* ── Column definitions ────────────────── */
   const columns: ColumnDef<UserRow>[] = useMemo(
     () => [
       {
-        key: "name",
-        label: "نام",
+        key: "fullName",
+        label: "نام و نام خانوادگی",
         sortable: true,
-        required: true,
         placeholder: "نام کامل",
         copyable: true,
+        render: (value, row) => (
+          <span className="font-semibold">
+            {String(
+              value ||
+                `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim() ||
+                "—",
+            )}
+          </span>
+        ),
       },
       {
         key: "phoneNumber",
@@ -400,6 +276,11 @@ export default function UsersSection({
         inputType: "tel",
         placeholder: "09120000000",
         copyable: true,
+        render: (value) => (
+          <span className="font-mono text-sm tracking-wide">
+            {String(value ?? "—")}
+          </span>
+        ),
       },
       {
         key: "email",
@@ -407,6 +288,27 @@ export default function UsersSection({
         sortable: true,
         inputType: "email",
         placeholder: "user@example.com",
+        copyable: true,
+        hideOnMobile: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">
+            {String(value ?? "—")}
+          </span>
+        ),
+      },
+      {
+        key: "nationalCode",
+        label: "کد ملی",
+        sortable: true,
+        placeholder: "کد ملی",
+        copyable: true,
+        hideOnMobile: true,
+      },
+      {
+        key: "fatherName",
+        label: "نام پدر",
+        sortable: true,
+        placeholder: "نام پدر",
         copyable: true,
         hideOnMobile: true,
       },
@@ -441,14 +343,50 @@ export default function UsersSection({
         copyable: false,
       },
       {
-        key: "department",
-        label: "بخش",
+        key: "agentid",
+        label: "نماینده",
         sortable: true,
-        filterable: true,
-        required: true,
-        placeholder: "مثلاً فنی",
-        hideOnMobile: true,
+        placeholder: "شناسه نماینده",
         copyable: true,
+        hideOnMobile: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">
+            {String(value ?? "—")}
+          </span>
+        ),
+      },
+      {
+        key: "permissions",
+        label: "دسترسی‌ها",
+        render: (value) => {
+          const perms = value as string[];
+          if (!perms?.length) return "—";
+          return (
+            <span className="text-sm text-slate-400">
+              {perms.length > 3
+                ? `${perms.slice(0, 3).join("، ")} و ${perms.length - 3} مورد دیگر`
+                : perms.join("، ")}
+            </span>
+          );
+        },
+        hideOnMobile: true,
+        copyable: false,
+      },
+      {
+        key: "limits",
+        label: "محدودیت‌ها",
+        render: (value) => {
+          const l = value as UserRow["limits"];
+          if (!l) return "—";
+          return (
+            <span className="text-xs text-slate-500">
+              فایل: {l.files} · بلوک: {l.blocks} · صفحه: {l.pages} · لندینگ:{" "}
+              {l.landingPages}
+            </span>
+          );
+        },
+        hideOnMobile: true,
+        copyable: false,
       },
       {
         key: "isPhoneVerified",
@@ -459,6 +397,70 @@ export default function UsersSection({
         hideOnMobile: true,
       },
       {
+        key: "lastLoginAt",
+        label: "آخرین ورود",
+        sortable: true,
+        dateFilter: true,
+        hideOnMobile: true,
+        copyable: true,
+        render: (value) => <span>{formatFaDate(value as string)}</span>,
+      },
+      {
+        key: "lastOtpRequestAt" as any,
+        label: "آخرین درخواست OTP",
+        sortable: true,
+        dateFilter: true,
+        hideOnMobile: true,
+        copyable: true,
+        render: (value) => <span>{formatFaDate(value as string)}</span>,
+      },
+      {
+        key: "phoneVerifiedAt",
+        label: "تاریخ تأیید موبایل",
+        sortable: true,
+        dateFilter: true,
+        hideOnMobile: true,
+        copyable: true,
+        render: (value) => <span>{formatFaDate(value as string)}</span>,
+      },
+      {
+        key: "isDeleted",
+        label: "حذف شده",
+        render: (value) => (
+          <span
+            className={cn(
+              "text-[11px] font-medium",
+              value ? "text-red-400" : "text-slate-500",
+            )}
+          >
+            {value ? "بله" : "خیر"}
+          </span>
+        ),
+        hideOnMobile: true,
+      },
+      {
+        key: "createdBy",
+        label: "ایجاد شده توسط",
+        hideOnMobile: true,
+        copyable: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">
+            {String(value ?? "—")}
+          </span>
+        ),
+      },
+      {
+        key: "updatedBy",
+        label: "به‌روزرسانی توسط",
+        hideOnMobile: true,
+        copyable: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">
+            {String(value ?? "—")}
+          </span>
+        ),
+      },
+      {
         key: "createdAt",
         label: "تاریخ ایجاد",
         sortable: true,
@@ -466,24 +468,28 @@ export default function UsersSection({
         editable: false,
         hideOnMobile: true,
         copyable: true,
+        render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
       {
-        key: "notes",
-        label: "یادداشت",
-        inputType: "textarea",
-        placeholder: "یادداشت داخلی",
+        key: "updatedAt",
+        label: "آخرین بروزرسانی",
+        sortable: true,
+        dateFilter: true,
+        editable: false,
         hideOnMobile: true,
         copyable: true,
+        render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
     ],
     [],
   );
 
+  /* ══════════════════════════════════════════
+     RENDER
+     ══════════════════════════════════════════ */
   return (
     <div dir="rtl" className="space-y-6">
-      {/* ──────────────────────────────────────
-         SECTION HEADER
-         ────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -516,11 +522,9 @@ export default function UsersSection({
           onClick={() => navigate("dashboard")}
           className={cn(
             "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all",
-            "border",
-            t.borderSubtle,
-            t.cardBg,
+            `border ${t.borderAccent}`,
+            t.textAccent,
             t.hoverBg,
-            t.textSecondary,
           )}
         >
           <FaArrowRight className="h-3.5 w-3.5" />
@@ -528,52 +532,27 @@ export default function UsersSection({
         </button>
       </div>
 
-      {/* ──────────────────────────────────────
-         STATS
-         ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          icon={<FaUsers className="h-4 w-4" />}
-          label="کل کاربران"
-          value={stats.total}
-          className={cn(
-            "bg-white/4",
-            isDark
-              ? "border-[#D4AF37]/15 text-[#F5D76E]"
-              : "border-[#D4AF37]/12 text-[#B8860B]",
-          )}
-        />
-        <StatCard
-          icon={<FaUserCheck className="h-4 w-4" />}
-          label="فعال"
-          value={stats.active}
-          className="bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-        />
-        <StatCard
-          icon={<FaUserClock className="h-4 w-4" />}
-          label="در انتظار"
-          value={stats.pending}
-          className="bg-amber-500/10 border-amber-500/20 text-amber-400"
-        />
-        <StatCard
-          icon={<FaUserSlash className="h-4 w-4" />}
-          label="مسدود"
-          value={stats.blocked}
-          className="bg-red-500/10 border-red-500/20 text-red-400"
-        />
-      </div>
-
-      {/* ──────────────────────────────────────
-         TABLE
-         ────────────────────────────────────── */}
+      {/* ── Table ──────────────────────────── */}
       <DynamicTable<UserRow>
-        endpoint=""
-        data={users}
-        enabled={false}
+        endpoint="/api/users"
+        updateMethod="PATCH"
+        onUpdate={async (item, builtInUpdate) => {
+          await builtInUpdate(item);
+          toast.success("اطلاعات کاربر ویرایش شد");
+        }}
+        onDelete={async (item, builtInDelete) => {
+          await builtInDelete(item);
+          toast.success("کاربر حذف شد");
+        }}
+        onCreate={async (item, builtInCreate) => {
+          await builtInCreate(item);
+          toast.success("کاربر جدید ایجاد شد");
+        }}
         columns={columns}
         title="لیست کاربران"
-        subtitle={`${toPersianDigits(users.length)} کاربر ثبت شده`}
-        primaryKey="id"
+        subtitle="مشاهده، جستجو و مرور تمامی کاربران"
+        primaryKey="_id"
+        headers={headers}
         pageSize={8}
         pageSizes={[5, 8, 10, 20]}
         searchable
@@ -582,47 +561,36 @@ export default function UsersSection({
         exportFileName="users"
         stickyHeader
         showRowNumbers
-        doubleClickToEdit
         enableCellCopy
-        pullToRefresh={false}
-        canCreate
-        canUpdate
-        canDelete
+        transformResponse={transformResponse}
+        rowActions={(row) => {
+          const isActive = row.status === "active";
+
+          return (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Wire to: PATCH /api/users/:id  { status: "active" | "inactive" }
+                  toast.success(
+                    isActive ? "کاربر غیرفعال شد" : "کاربر فعال شد",
+                  );
+                }}
+                title={isActive ? "غیرفعال کردن" : "فعال کردن"}
+                className={cn(
+                  "inline-flex h-8 w-8 items-center justify-center rounded-lg transition",
+                  isActive
+                    ? "text-emerald-500 hover:bg-emerald-500/10"
+                    : "text-slate-400 hover:bg-slate-500/10",
+                )}
+              >
+                <FaPowerOff className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        }}
         emptyMessage="کاربری یافت نشد"
-        onCreate={async (item) => {
-          await handleCreate(item);
-        }}
-        onUpdate={async (item) => {
-          await handleUpdate(item);
-          toast.success("تغییر اعمال شد");
-        }}
-        onDelete={async (item) => {
-          await handleDelete(item);
-          toast.success("حذف اعمال شد");
-        }}
-        rowActions={(row) => (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleUserStatus(row);
-            }}
-            title={row.status === "active" ? "غیرفعال کردن" : "فعال کردن"}
-            aria-label={
-              row.status === "active"
-                ? `غیرفعال کردن ${row.name}`
-                : `فعال کردن ${row.name}`
-            }
-            className={cn(
-              "inline-flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
-              row.status === "active"
-                ? "text-emerald-400/80 hover:bg-emerald-500/10 hover:text-emerald-400"
-                : "text-slate-500 hover:bg-slate-500/10 hover:text-slate-300",
-            )}
-          >
-            <FaPowerOff className="h-3.5 w-3.5" />
-          </button>
-        )}
       />
     </div>
   );

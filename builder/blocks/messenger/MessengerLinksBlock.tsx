@@ -379,6 +379,8 @@ export default function MessengerLinksBlock({
           </EditablePart>
         )}
 
+        <br />
+
         {/* Empty state in editor */}
         {visibleServices.length === 0 && isEditor && (
           <p className="text-center text-sm text-gray-400 py-8">

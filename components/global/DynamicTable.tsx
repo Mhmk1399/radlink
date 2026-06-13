@@ -324,6 +324,7 @@ function getDatePickerVariables(isDark: boolean): CSSProperties {
       : "0 12px 40px -10px rgba(0,0,0,0.12)",
   } as CSSProperties;
 }
+
 function useTableTheme() {
   const t = useThemeTokens();
   const { isDark } = useTheme();
@@ -787,6 +788,7 @@ function PaginationBtn({
     </button>
   );
 }
+
 /* ── Filter Dropdown ── */
 function FilterDropdown({
   label,
@@ -971,7 +973,7 @@ function DateRangeFilter({
                 : borders.subtle + " text-slate-400",
               animation.base,
               focus.ring,
-              "hover:border-[#D4AF37]/18 hover:text-white",
+              "hover:border-[#D4AF37]/18 hover:text-gray-500",
               "max-w-70",
             )}
           >
@@ -1955,7 +1957,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         {isValidating && !isLoading && (
           <div
             className={cn(
-              "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5 border",
+              "mb-3 flex flex-row-reverse items-center justify-between rounded-xl px-4 py-2.5 border",
               t.activeBg,
               t.borderAccent,
             )}
@@ -1963,7 +1965,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             aria-live="polite"
           >
             <div className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
-            <span>در حال بروزرسانی…</span>
+            <span className="text-gray-500">در حال بروزرسانی…</span>
           </div>
         )}
 
@@ -2968,7 +2970,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-400">
             <Icon.AlertTriangle />
           </div>
-          <h3 className={cn(typography.h4, "mb-2")}>تأیید حذف</h3>
+          <h3 className={cn(typography.h4, "mb-2 text-gray-500")}>تأیید حذف</h3>
           <p className="text-sm text-slate-400 mb-6">
             آیا از حذف این رکورد اطمینان دارید؟ این عملیات قابل بازگشت نیست.
           </p>
@@ -3017,7 +3019,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <button
               type="button"
               onClick={closeModal}
-              className={cn(components.ghostButton, "h-9 text-xs px-5")}
+              className={cn(  "h-9  mt-1 text-xs text-gray-400 px-5")}
             >
               انصراف
             </button>
