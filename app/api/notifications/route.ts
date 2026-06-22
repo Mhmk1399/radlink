@@ -13,9 +13,9 @@ export const POST = compose(
 )(async (req: AuthRequest) => {
     const { userId, message, closeable, isGlobal } = await req.json();
 
-    if (!message) return NextResponse.json({ message: "message is required" }, { status: 400 });
+    if (!message) return NextResponse.json({ message: "متن پیام الزامی است." }, { status: 400 });
     if (!isGlobal && !userId) {
-        return NextResponse.json({ message: "userId is required for non-global notifications" }, { status: 400 });
+        return NextResponse.json({ message: "برای اعلان‌های غیرعمومی شناسه کاربر الزامی است." }, { status: 400 });
     }
 
     const notification = await Notification.create({

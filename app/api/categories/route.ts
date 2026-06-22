@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Category from "@/models/category";
+import Template from "@/models/template";
+
+function normalizeTemplateIds(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) =>
+            typeof item === "object" && item !== null
+                ? String((item as Record<string, unknown>)._id ?? (item as Record<string, unknown>).id ?? "")
+                : String(item ?? "")
+        )
+        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+}
 
 export const POST = compose(
     withDB(),
@@ -10,10 +23,24 @@ export const POST = compose(
     withStatus("active"),
     withRole("admin", "superAdmin")
 )(async (req: AuthRequest) => {
-    const { name, description } = await req.json();
-    if (!name) return NextResponse.json({ message: "name is required" }, { status: 400 });
+    const { name, description, templates, templateIds } = await req.json();
+    if (!name) return NextResponse.json({ message: "نام دسته‌بندی الزامی است." }, { status: 400 });
 
-    const category = await Category.create({ name, description });
+    const normalizedTemplateIds = normalizeTemplateIds(templates ?? templateIds);
+
+    const category = await Category.create({
+        name,
+        description,
+        templates: normalizedTemplateIds,
+    });
+
+    if (normalizedTemplateIds.length > 0) {
+        await Template.updateMany(
+            { _id: { $in: normalizedTemplateIds } },
+            { $set: { category: category._id } }
+        );
+    }
+
     return NextResponse.json({ category }, { status: 201 });
 });
 
@@ -23,8 +50,28 @@ export const GET = compose(
     withStatus("active")
 )(async (req: AuthRequest) => {
     const { searchParams } = new URL(req.url);
-    const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
-    const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
+    const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+    const limit = Math.min(100, Number(searchParams.get("limit") ?? searchParams.get("pageSize") ?? 100));
+    const mode = searchParams.get("mode");
+
+    if (mode === "options") {
+        const categories = await Category.find()
+            .select("name")
+            .sort({ name: 1 })
+            .limit(limit)
+            .lean();
+
+        return NextResponse.json({
+            categories: categories.map((category) => ({
+                _id: category._id,
+                id: String(category._id),
+                name: category.name,
+            })),
+            total: categories.length,
+            page: 1,
+            limit,
+        });
+    }
 
     const [categories, total] = await Promise.all([
         Category.find()

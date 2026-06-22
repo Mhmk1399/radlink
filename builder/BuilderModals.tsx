@@ -1,12 +1,25 @@
 // builder/components/BuilderModals.tsx
 "use client";
 
-import   { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { HiOutlinePlus, HiOutlineXMark } from "react-icons/hi2";
+import {
+  HiOutlineCloudArrowUp,
+  HiOutlinePhoto,
+  HiOutlinePlus,
+  HiOutlineTrash,
+  HiOutlineXMark,
+} from "react-icons/hi2";
 import { FaTrash } from "react-icons/fa";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { slugify } from "@/helper/builder.helpers";
+
+type CatalogBlock = {
+  type: string;
+  label: string;
+  description?: string;
+  icon: ReactNode;
+};
 
 /* ================================================================== */
 /*  Clear All Confirm Modal                                            */
@@ -94,12 +107,17 @@ export function BlockCatalogModal({
   open,
   onClose,
   onAdd,
+  availableBlocks,
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (type: string) => void;
+  availableBlocks?: CatalogBlock[];
 }) {
-  const available = useMemo(() => Object.values(blockRegistry), []);
+  const available = useMemo(
+    () => availableBlocks ?? Object.values(blockRegistry),
+    [availableBlocks],
+  );
   const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -233,31 +251,106 @@ export function BlockCatalogModal({
 
 export function PageMetaModal({
   open,
+  mode = "page",
   title,
   description,
   url,
   pageId,
+  categoryId,
+  categoryOptions = [],
+  thumbnail,
   onTitleChange,
   onDescriptionChange,
   onUrlChange,
+  onCategoryIdChange,
+  onThumbnailChange,
   onClose,
   onSave,
   isSaving,
   saveError,
 }: {
   open: boolean;
+  mode?: "page" | "template";
   title: string;
   description: string;
   url: string;
   pageId: string | null;
+  categoryId?: string;
+  categoryOptions?: Array<{ value: string; label: string }>;
+  thumbnail?: string;
   onTitleChange: (v: string) => void;
   onDescriptionChange: (v: string) => void;
   onUrlChange: (v: string) => void;
+  onCategoryIdChange?: (v: string) => void;
+  onThumbnailChange?: (v: string) => void;
   onClose: () => void;
   onSave: () => void;
   isSaving: boolean;
   saveError: string | null;
 }) {
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const [isThumbnailDragging, setIsThumbnailDragging] = useState(false);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
+  const [thumbnailUploadError, setThumbnailUploadError] = useState<string | null>(null);
+
+  const handleThumbnailFile = useCallback(
+    async (file: File | null | undefined) => {
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setThumbnailUploadError("فقط فایل تصویر قابل آپلود است.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setThumbnailUploadError("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+        return;
+      }
+
+      try {
+        setIsThumbnailUploading(true);
+        setThumbnailUploadError(null);
+
+        const token = localStorage.getItem("auth_token");
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/uploads", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          body: formData,
+        });
+        const json = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            json?.message ?? json?.error ?? "آپلود تصویر با خطا مواجه شد.",
+          );
+        }
+
+        const uploadedUrl =
+          typeof json?.url === "string"
+            ? json.url
+            : typeof json?.data?.url === "string"
+              ? json.data.url
+              : "";
+
+        if (!uploadedUrl) {
+          throw new Error("آدرس تصویر از سرور دریافت نشد.");
+        }
+
+        onThumbnailChange?.(uploadedUrl);
+      } catch (error) {
+        setThumbnailUploadError(
+          error instanceof Error ? error.message : "آپلود تصویر با خطا مواجه شد.",
+        );
+      } finally {
+        setIsThumbnailUploading(false);
+      }
+    },
+    [onThumbnailChange],
+  );
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -275,7 +368,7 @@ export function PageMetaModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[400] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
+      className="fixed inset-0  z-[400] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
       dir="rtl"
       role="dialog"
       aria-modal="true"
@@ -283,17 +376,25 @@ export function PageMetaModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full animate-in slide-in-from-bottom-6 duration-300 overflow-hidden rounded-t-[28px] border border-white/60 bg-white shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] sm:max-w-md sm:rounded-[28px] sm:zoom-in-95">
+      <div className="w-full animate-in slide-in-from-bottom-6 max-h-150 overflow-scroll duration-300 rounded-t-[28px] border border-white/60 bg-white shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] sm:max-w-lg sm:rounded-[28px] sm:zoom-in-95">
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-neutral-300" />
         </div>
         <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
           <div>
             <h2 className="text-[16px] font-black text-neutral-900">
-              {pageId ? "ویرایش صفحه" : "ساخت صفحه جدید"}
+              {mode === "template"
+                ? pageId
+                  ? "ویرایش تمپلیت"
+                  : "ساخت تمپلیت جدید"
+                : pageId
+                  ? "ویرایش صفحه"
+                  : "ساخت صفحه جدید"}
             </h2>
             <p className="mt-0.5 text-[12px] text-neutral-400">
-              اطلاعات صفحه رو وارد کن
+              {mode === "template"
+                ? "اطلاعات تمپلیت رو وارد کن"
+                : "اطلاعات صفحه رو وارد کن"}
             </p>
           </div>
           <button
@@ -307,7 +408,8 @@ export function PageMetaModal({
         <div className="space-y-5 p-5">
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
-              عنوان صفحه <span className="text-red-400">*</span>
+              {mode === "template" ? "نام تمپلیت" : "عنوان صفحه"}{" "}
+              <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -317,24 +419,236 @@ export function PageMetaModal({
               className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
             />
           </div>
-          <div>
-            <label className="mb-2 block text-[13px] font-bold text-neutral-700">
-              آدرس (slug) <span className="text-red-400">*</span>
-            </label>
-            <div className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50/80 transition focus-within:border-neutral-400 focus-within:ring-4 focus-within:ring-neutral-100">
-              <span className="shrink-0 border-l border-neutral-200 bg-neutral-100/80 px-3 py-3.5 font-mono text-[12px] text-neutral-400">
-                /ir.
-              </span>
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => onUrlChange(slugify(e.target.value))}
-                placeholder="my-page"
-                className="min-w-0 flex-1 bg-transparent px-3 py-3.5 font-mono text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300"
-                dir="ltr"
-              />
+          {mode === "page" ? (
+            <div>
+              <label className="mb-2 block text-[13px] font-bold text-neutral-700">
+                آدرس (slug) <span className="text-red-400">*</span>
+              </label>
+              <div className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50/80 transition focus-within:border-neutral-400 focus-within:ring-4 focus-within:ring-neutral-100">
+                <span className="shrink-0 border-l border-neutral-200 bg-neutral-100/80 px-3 py-3.5 font-mono text-[12px] text-neutral-400">
+                  /ir.
+                </span>
+                {false ? (
+                  <>
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (!isThumbnailUploading) setIsThumbnailDragging(true);
+                  }}
+                  onDragLeave={() => setIsThumbnailDragging(false)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsThumbnailDragging(false);
+                    if (!isThumbnailUploading) {
+                      void handleThumbnailFile(event.dataTransfer.files?.[0]);
+                    }
+                  }}
+                  onClick={() => {
+                    if (!isThumbnailUploading) thumbnailInputRef.current?.click();
+                  }}
+                  className={[
+                    "relative flex min-h-36 cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition",
+                    isThumbnailDragging
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-neutral-200 bg-neutral-50/80 hover:border-neutral-300 hover:bg-white",
+                    isThumbnailUploading ? "pointer-events-none" : "",
+                  ].join(" ")}
+                >
+                  {thumbnail ? (
+                    <img
+                      src={thumbnail}
+                      alt="Template thumbnail preview"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : null}
+                  <div
+                    className={[
+                      "relative z-10 flex w-full flex-col items-center justify-center px-4 py-6 text-center",
+                      thumbnail ? "bg-black/45 text-white" : "text-neutral-500",
+                    ].join(" ")}
+                  >
+                    {isThumbnailUploading ? (
+                      <>
+                        <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+                        <p className="text-[13px] font-bold">در حال آپلود تصویر...</p>
+                      </>
+                    ) : (
+                      <>
+                        {thumbnail ? (
+                          <HiOutlinePhoto className="mb-2 h-8 w-8" />
+                        ) : (
+                          <HiOutlineCloudArrowUp className="mb-2 h-8 w-8 text-neutral-300" />
+                        )}
+                        <p className="text-[13px] font-bold">
+                          {thumbnail ? "برای تغییر تصویر کلیک کنید" : "تصویر را اینجا بکشید یا کلیک کنید"}
+                        </p>
+                        <p className="mt-1 text-[11px] opacity-75">
+                          JPG, PNG, WebP یا GIF - حداکثر ۵MB
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    ref={thumbnailInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(event) => {
+                      void handleThumbnailFile(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                  />
+                </div>
+                {thumbnail ? (
+                  <button
+                    type="button"
+                    onClick={() => onThumbnailChange?.("")}
+                    disabled={isThumbnailUploading}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[12px] font-bold text-red-500 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <HiOutlineTrash className="h-4 w-4" />
+                    حذف تصویر
+                  </button>
+                ) : null}
+                {thumbnailUploadError ? (
+                  <p className="mt-2 text-[12px] font-medium text-red-500">
+                    {thumbnailUploadError}
+                  </p>
+                ) : null}
+                  </>
+                ) : null}
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => onUrlChange(slugify(e.target.value))}
+                  placeholder="my-page"
+                  className="min-w-0 flex-1 bg-transparent px-3 py-3.5 font-mono text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300"
+                  dir="ltr"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div>
+                <label className="mb-2 block text-[13px] font-bold text-neutral-700">
+                  دسته بندی تمپلیت
+                </label>
+                <select
+                  value={categoryId ?? ""}
+                  onChange={(e) => onCategoryIdChange?.(e.target.value)}
+                  className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+                >
+                  <option value="">بدون دسته بندی</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-[13px] font-bold text-neutral-700">
+                  تصویر بندانگشتی
+                </label>
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (!isThumbnailUploading) setIsThumbnailDragging(true);
+                  }}
+                  onDragLeave={() => setIsThumbnailDragging(false)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsThumbnailDragging(false);
+                    if (!isThumbnailUploading) {
+                      void handleThumbnailFile(event.dataTransfer.files?.[0]);
+                    }
+                  }}
+                  onClick={() => {
+                    if (!isThumbnailUploading) thumbnailInputRef.current?.click();
+                  }}
+                  className={[
+                    "relative flex min-h-36 cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition",
+                    isThumbnailDragging
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-neutral-200 bg-neutral-50/80 hover:border-neutral-300 hover:bg-white",
+                    isThumbnailUploading ? "pointer-events-none" : "",
+                  ].join(" ")}
+                >
+                  {thumbnail ? (
+                    <img
+                      src={thumbnail}
+                      alt="Template thumbnail preview"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : null}
+                  <div
+                    className={[
+                      "relative z-10 flex w-full flex-col items-center justify-center px-4 py-6 text-center",
+                      thumbnail ? "bg-black/45 text-white" : "text-neutral-500",
+                    ].join(" ")}
+                  >
+                    {isThumbnailUploading ? (
+                      <>
+                        <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+                        <p className="text-[13px] font-bold">در حال آپلود تصویر...</p>
+                      </>
+                    ) : (
+                      <>
+                        {thumbnail ? (
+                          <HiOutlinePhoto className="mb-2 h-8 w-8" />
+                        ) : (
+                          <HiOutlineCloudArrowUp className="mb-2 h-8 w-8 text-neutral-300" />
+                        )}
+                        <p className="text-[13px] font-bold">
+                          {thumbnail ? "برای تغییر تصویر کلیک کنید" : "تصویر را اینجا بکشید یا کلیک کنید"}
+                        </p>
+                        <p className="mt-1 text-[11px] opacity-75">
+                          JPG, PNG, WebP یا GIF - حداکثر ۵MB
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    ref={thumbnailInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(event) => {
+                      void handleThumbnailFile(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                  />
+                </div>
+                {thumbnail ? (
+                  <button
+                    type="button"
+                    onClick={() => onThumbnailChange?.("")}
+                    disabled={isThumbnailUploading}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[12px] font-bold text-red-500 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <HiOutlineTrash className="h-4 w-4" />
+                    حذف تصویر
+                  </button>
+                ) : null}
+                {thumbnailUploadError ? (
+                  <p className="mt-2 text-[12px] font-medium text-red-500">
+                    {thumbnailUploadError}
+                  </p>
+                ) : null}
+                <input
+                  type="url"
+                  value={thumbnail ?? ""}
+                  onChange={(e) => {
+                    setThumbnailUploadError(null);
+                    onThumbnailChange?.(e.target.value);
+                  }}
+                  placeholder="https://example.com/template.jpg"
+                  className="mt-3 w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-left font-mono text-[13px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+                  dir="ltr"
+                />
+              </div>
+            </>
+          )}
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               توضیح کوتاه
@@ -364,10 +678,18 @@ export function PageMetaModal({
           <button
             type="button"
             onClick={onSave}
-            disabled={isSaving || !title.trim() || !url.trim()}
+            disabled={
+              isSaving || !title.trim() || (mode === "page" && !url.trim())
+            }
             className="flex-1 rounded-2xl bg-emerald-500 px-4 py-3.5 text-[13px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving ? "ذخیره..." : pageId ? "ذخیره تغییرات" : "ساخت صفحه"}
+            {isSaving
+              ? "ذخیره..."
+              : pageId
+                ? "ذخیره تغییرات"
+                : mode === "template"
+                  ? "ساخت تمپلیت"
+                  : "ساخت صفحه"}
           </button>
         </div>
       </div>

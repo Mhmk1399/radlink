@@ -1,12 +1,16 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import { StyleSheetManager } from "styled-components";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import type { PageBlock } from "@/types/blocks/builder.types";
-
-/* ================================================================ */
-/*  Types                                                            */
-/* ================================================================ */
 
 type PhonePreviewModalProps = {
   open: boolean;
@@ -14,40 +18,193 @@ type PhonePreviewModalProps = {
   onClose: () => void;
 };
 
-/* ================================================================ */
-/*  Component                                                        */
-/* ================================================================ */
+const PREVIEW_ROOT_ID = "phone-preview-root";
+
+function clonePreviewStyles(targetDocument: Document) {
+  targetDocument.head
+    .querySelectorAll("[data-phone-preview-cloned]")
+    .forEach((node) => node.remove());
+
+  document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
+    const clone = node.cloneNode(true) as HTMLElement;
+    clone.setAttribute("data-phone-preview-cloned", "true");
+    targetDocument.head.appendChild(clone);
+  });
+}
+
+function buildIframeDocument() {
+  return `<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="${window.location.origin}/" />
+    <style>
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        background: #ffffff;
+        color-scheme: light;
+        direction: rtl;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      html::-webkit-scrollbar,
+      body::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+      #${PREVIEW_ROOT_ID} {
+        width: 100%;
+        min-height: 100%;
+        padding-top: 62px;
+        padding-bottom: 48px;
+        background: #ffffff;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      #${PREVIEW_ROOT_ID}::-webkit-scrollbar,
+      #${PREVIEW_ROOT_ID} *::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="${PREVIEW_ROOT_ID}"></div>
+  </body>
+</html>`;
+}
+
+function EmptyPreview() {
+  return (
+    <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100">
+        <span className="text-2xl">📄</span>
+      </div>
+      <p className="text-sm font-medium text-slate-500">
+        هنوز بلاکی اضافه نشده است
+      </p>
+      <p className="text-xs text-slate-400">
+        بلاک‌ها را در ویرایشگر اضافه کنید تا اینجا نمایش داده شوند.
+      </p>
+    </div>
+  );
+}
+
+function PhonePreviewContent({ blocks }: { blocks: PageBlock[] }) {
+  if (blocks.length === 0) return <EmptyPreview />;
+
+  return (
+    <>
+      {blocks.map((block) => {
+        const config = blockRegistry[block.type as keyof typeof blockRegistry];
+
+        if (!config) {
+          return (
+            <div
+              key={block.instanceId}
+              className="mx-3 mb-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600"
+            >
+              بلاک «{block.type}» ثبت نشده است
+            </div>
+          );
+        }
+
+        const BlockComponent = config.component as React.ComponentType<{
+          block: PageBlock;
+          mode: "preview";
+        }>;
+
+        return (
+          <BlockComponent key={block.instanceId} block={block} mode="preview" />
+        );
+      })}
+    </>
+  );
+}
+
+function LiveClock() {
+  const fmt = () =>
+    new Date().toLocaleTimeString("fa-IR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+  const [time, setTime] = useState(fmt);
+
+  useEffect(() => {
+    const id = setInterval(() => setTime(fmt()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return <>{time}</>;
+}
 
 export default function PhonePreviewModal({
   open,
   blocks,
   onClose,
 }: PhonePreviewModalProps) {
-  /* ── sorted blocks ─────────────────────────────────────────────── */
-  const sortedBlocks = React.useMemo(
+  const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => a.order - b.order),
     [blocks],
   );
 
-  /* ── animation state ───────────────────────────────────────────── */
   const [visible, setVisible] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [iframeDocument, setIframeDocument] = useState<Document | null>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const prepareIframe = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(buildIframeDocument());
+    doc.close();
+    clonePreviewStyles(doc);
+    setIframeDocument(doc);
+  }, []);
 
   useEffect(() => {
     if (open) {
       setVisible(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating(true));
-      });
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => setAnimating(true)),
+      );
     } else {
       setAnimating(false);
-      const timer = setTimeout(() => setVisible(false), 350);
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => {
+        setIframeDocument(null);
+        setVisible(false);
+      }, 400);
+      return () => clearTimeout(t);
     }
   }, [open]);
 
-  /* ── body scroll lock ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (!visible) return;
+    const af = requestAnimationFrame(prepareIframe);
+    return () => cancelAnimationFrame(af);
+  }, [prepareIframe, visible]);
+
   useEffect(() => {
     if (!visible) return;
     const prev = document.body.style.overflow;
@@ -57,291 +214,375 @@ export default function PhonePreviewModal({
     };
   }, [visible]);
 
-  /* ── keyboard ──────────────────────────────────────────────────── */
   const stableOnClose = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
     if (!visible) return;
-    const handler = (e: KeyboardEvent) => {
+    const fn = (e: KeyboardEvent) => {
       if (e.key === "Escape") stableOnClose();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [visible, stableOnClose]);
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [stableOnClose, visible]);
 
-  /* ── backdrop click ────────────────────────────────────────────── */
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (phoneRef.current && !phoneRef.current.contains(e.target as Node)) {
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (phoneRef.current && !phoneRef.current.contains(e.target as Node))
       onClose();
-    }
   };
 
   if (!visible) return null;
 
-  /* ── render ────────────────────────────────────────────────────── */
+  const previewRoot = iframeDocument?.getElementById(PREVIEW_ROOT_ID) ?? null;
+
   return (
     <div
-      className="fixed inset-0 z-[9999]"
+      className="fixed inset-0 z-[9999] overflow-hidden"
       dir="rtl"
       role="dialog"
       aria-modal="true"
-      aria-label="پیش‌نمایش موبایل"
+      aria-label="پیش نمایش موبایل"
       onClick={handleBackdropClick}
     >
-      {/* ── Backdrop ─────────────────────────────────────────────── */}
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 transition-all duration-300"
+        className="absolute inset-0"
         style={{
-          backgroundColor: animating
-            ? "rgba(2, 6, 23, 0.85)"
-            : "rgba(2, 6, 23, 0)",
-          backdropFilter: animating ? "blur(24px)" : "blur(0px)",
-          WebkitBackdropFilter: animating ? "blur(24px)" : "blur(0px)",
+          backgroundColor: animating ? "rgba(0,0,0,0.92)" : "rgba(0,0,0,0)",
+          backdropFilter: animating ? "blur(40px) saturate(180%)" : "blur(0px)",
+          WebkitBackdropFilter: animating
+            ? "blur(40px) saturate(180%)"
+            : "blur(0px)",
+          transition:
+            "background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease",
         }}
       />
 
-      {/* ── Ambient light blobs ──────────────────────────────────── */}
+      {/* Ambient glows */}
       <div
-        className="pointer-events-none absolute inset-0 overflow-hidden transition-opacity duration-500"
-        style={{ opacity: animating ? 1 : 0 }}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          opacity: animating ? 1 : 0,
+          transition: "opacity 600ms ease",
+        }}
       >
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-violet-600/20 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-cyan-500/15 blur-[120px]" />
-        <div className="absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fuchsia-500/10 blur-[100px]" />
+        <div className="absolute -left-1/4 -top-1/4 h-175 w-175 rounded-full bg-violet-700/20 blur-[180px]" />
+        <div className="absolute -bottom-1/4 -right-1/4 h-175 w-175 rounded-full bg-blue-600/10 blur-[180px]" />
       </div>
 
-      {/* ── Content ──────────────────────────────────────────────── */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-4 overflow-y-auto p-3 sm:gap-5 sm:p-5">
-        {/* ── Header ───────────────────────────────────────────────── */}
-        <div
-          className="flex w-full max-w-[440px] items-start justify-between gap-3 transition-all duration-500"
-          style={{
-            opacity: animating ? 1 : 0,
-            transform: animating ? "translateY(0)" : "translateY(-20px)",
-          }}
-        ></div>
-
-        {/* ── Phone Device ─────────────────────────────────────────── */}
+      {/* Scroll + center container */}
+      <div
+        className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-5 overflow-y-auto p-5"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {/* ── Phone ── */}
         <div
           ref={phoneRef}
-          className="transition-all duration-500 ease-out"
+          className="relative shrink-0"
           style={{
+            width: "min(350px, calc(100vw - 24px))",
+            height: "min(844px, calc(100dvh - 108px))",
             opacity: animating ? 1 : 0,
             transform: animating
               ? "translateY(0) scale(1)"
-              : "translateY(40px) scale(0.92)",
+              : "translateY(56px) scale(0.86)",
+            transition:
+              "opacity 480ms cubic-bezier(0.34,1.56,0.64,1), transform 480ms cubic-bezier(0.34,1.56,0.64,1)",
           }}
         >
-          {/* Outer glow ring */}
-          <div className="relative">
-            {/* Glow behind phone */}
-            <div className="pointer-events-none absolute -inset-8 rounded-[64px] bg-gradient-to-b from-violet-500/10 via-transparent to-cyan-500/10 blur-2xl" />
+          {/* Halo glow */}
+          <div
+            className="pointer-events-none absolute rounded-[68px]"
+            style={{
+              inset: "-36px",
+              zIndex: -1,
+              background:
+                "radial-gradient(ellipse at 50% 22%, rgba(139,92,246,0.25) 0%, transparent 65%)",
+              filter: "blur(24px)",
+            }}
+          />
 
-            {/* Phone body */}
+          {/* Titanium frame */}
+          <div
+            className="absolute inset-0 rounded-[52px]"
+            style={{
+              background:
+                "linear-gradient(155deg, #D2D2D7 0%, #A0A0A5 10%, #4C4C50 32%, #1C1C1E 50%, #4C4C50 68%, #A0A0A5 88%, #D2D2D7 100%)",
+              padding: "2px",
+              boxShadow:
+                "0 0 0 0.5px rgba(255,255,255,0.08), " +
+                "0 52px 120px -16px rgba(0,0,0,0.95), " +
+                "0 0 80px -10px rgba(139,92,246,0.14)",
+            }}
+          >
+            {/* Dark bezel */}
             <div
-              className="relative max-w-85 overflow-hidden rounded-[52px] bg-gradient-to-b from-zinc-800 via-zinc-900 to-black p-[6px] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_40px_100px_-20px_rgba(0,0,0,0.7),0_0_40px_rgba(139,92,246,0.12)]"
-              style={{
-                height: "min(806px, calc(100dvh - 82px))",
-              }}
+              className="relative h-full w-full overflow-hidden rounded-[50px]"
+              style={{ background: "#050505" }}
             >
-              {/* Side buttons (volume + power) */}
-              <div className="pointer-events-none">
-                {/* Silent switch */}
-                <div className="absolute -left-[2px] top-[100px] h-6 w-[3px] rounded-l-sm bg-zinc-700" />
-                {/* Volume up */}
-                <div className="absolute -left-[2px] top-[140px] h-10 w-[3px] rounded-l-sm bg-zinc-700" />
-                {/* Volume down */}
-                <div className="absolute -left-[2px] top-[185px] h-10 w-[3px] rounded-l-sm bg-zinc-700" />
-                {/* Power */}
-                <div className="absolute -right-[2px] top-[160px] h-14 w-[3px] rounded-r-sm bg-zinc-700" />
-              </div>
+              {/* Screen surface */}
+              <div className="absolute inset-1 overflow-hidden rounded-[46px] bg-white">
+                {/* Status bar — always LTR like a real phone */}
+                <div
+                  dir="ltr"
+                  className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-13.5 items-end justify-between px-6 pb-2"
+                >
+                  <span
+                    className="text-[13.5px] font-semibold text-black"
+                    style={{ letterSpacing: "-0.3px" }}
+                  >
+                    <LiveClock />
+                  </span>
 
-              {/* Inner bezel */}
-              <div className="relative h-full w-full overflow-hidden rounded-[46px] ring-1 ring-white/[0.06]">
-                {/* Screen */}
-                <div className="relative h-full w-full bg-white px-2">
-                  {/* ── Status bar ─────────────────────────────────── */}
-                  <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-end justify-between px-7 pb-1 pt-3">
-                    {/* Time */}
-                    <span className="text-[14px] font-bold text-black">
-                      {new Date().toLocaleTimeString("fa-IR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })}
-                    </span>
-
-                    {/* Status icons */}
-                    <div className="flex items-center gap-1">
-                      {/* Signal */}
-                      <svg
-                        width="17"
+                  <div className="flex items-center gap-1.25">
+                    {/* Cellular */}
+                    <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                      <rect
+                        x="0"
+                        y="8"
+                        width="3"
+                        height="4"
+                        rx="0.5"
+                        fill="black"
+                      />
+                      <rect
+                        x="4.5"
+                        y="5.5"
+                        width="3"
+                        height="6.5"
+                        rx="0.5"
+                        fill="black"
+                      />
+                      <rect
+                        x="9"
+                        y="3"
+                        width="3"
+                        height="9"
+                        rx="0.5"
+                        fill="black"
+                      />
+                      <rect
+                        x="13.5"
+                        y="0"
+                        width="3"
                         height="12"
-                        viewBox="0 0 17 12"
-                        fill="none"
-                        className="text-black"
-                      >
-                        <rect
-                          x="0"
-                          y="8"
-                          width="3"
-                          height="4"
-                          rx="0.5"
-                          fill="currentColor"
-                        />
-                        <rect
-                          x="4.5"
-                          y="5.5"
-                          width="3"
-                          height="6.5"
-                          rx="0.5"
-                          fill="currentColor"
-                        />
-                        <rect
-                          x="9"
-                          y="3"
-                          width="3"
-                          height="9"
-                          rx="0.5"
-                          fill="currentColor"
-                        />
-                        <rect
-                          x="13.5"
-                          y="0"
-                          width="3"
-                          height="12"
-                          rx="0.5"
-                          fill="currentColor"
-                        />
-                      </svg>
+                        rx="0.5"
+                        fill="black"
+                      />
+                    </svg>
 
-                      {/* WiFi */}
-                      <svg
-                        width="16"
-                        height="12"
-                        viewBox="0 0 16 12"
-                        fill="none"
-                        className="text-black"
-                      >
-                        <path
-                          d="M8 10.5a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5zM4.1 8.2a5.5 5.5 0 017.8 0M1.5 5.5a9 9 0 0113 0"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                    {/* WiFi */}
+                    <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                      <circle cx="8" cy="11.2" r="1.3" fill="black" />
+                      <path
+                        d="M4.3 7.9a5.2 5.2 0 017.4 0"
+                        stroke="black"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M1.1 4.8a9.9 9.9 0 0113.8 0"
+                        stroke="black"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
 
-                      {/* Battery */}
-                      <div className="flex items-center gap-[2px]">
-                        <div className="h-[11px] w-[22px] rounded-[3px] border-[1.5px] border-black p-[1.5px]">
-                          <div className="h-full w-[75%] rounded-[1px] bg-black" />
-                        </div>
-                        <div className="h-[5px] w-[1.5px] rounded-r-[1px] bg-black opacity-50" />
+                    {/* Battery */}
+                    <div className="flex items-center gap-[1.5px]">
+                      <div
+                        style={{
+                          position: "relative",
+                          width: "24px",
+                          height: "12px",
+                          borderRadius: "3px",
+                          border: "1.5px solid black",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "1.5px",
+                            left: "1.5px",
+                            bottom: "1.5px",
+                            right: "28%",
+                            borderRadius: "1px",
+                            background: "black",
+                          }}
+                        />
                       </div>
+                      <div
+                        style={{
+                          width: "2px",
+                          height: "5.5px",
+                          borderRadius: "0 1.5px 1.5px 0",
+                          background: "rgba(0,0,0,0.38)",
+                        }}
+                      />
                     </div>
                   </div>
+                </div>
 
-                  {/* ── Dynamic Island ─────────────────────────────── */}
-                  <div className="pointer-events-none absolute left-1/2 top-2 z-40 -translate-x-1/2">
-                    <div className="flex h-[32px] w-[120px] items-center justify-center rounded-full bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
-                      {/* Camera dot */}
-                      <div className="absolute right-[26px] h-[10px] w-[10px] rounded-full bg-zinc-900 ring-1 ring-zinc-700/50">
-                        <div className="absolute left-1/2 top-1/2 h-[4px] w-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-400/30" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── Scrollable content ─────────────────────────── */}
+                {/* Dynamic Island */}
+                <div className="pointer-events-none absolute left-1/2 top-2.5 z-40 -translate-x-1/2">
                   <div
-                    className="h-full w-full overflow-y-auto overflow-x-hidden"
                     style={{
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
+                      position: "relative",
+                      width: "126px",
+                      height: "37px",
+                      borderRadius: "20px",
+                      background: "#000",
+                      boxShadow: "0 0 0 1.5px rgba(255,255,255,0.05)",
                     }}
                   >
-                    <style>{`
-                      .phone-scroll-content::-webkit-scrollbar {
-                        display: none;
-                      }
-                    `}</style>
-
-                    <div className="phone-scroll-content min-h-full pb-10 pt-[58px]">
-                      {sortedBlocks.length === 0 ? (
-                        <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 text-center">
-                          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100">
-                            <span className="text-2xl">📄</span>
-                          </div>
-                          <p className="text-sm font-medium text-slate-500">
-                            هنوز بلاکی اضافه نشده است
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            بلاک‌ها را در ویرایشگر اضافه کنید تا اینجا نمایش
-                            داده شوند.
-                          </p>
-                        </div>
-                      ) : (
-                        sortedBlocks.map((block) => {
-                          const config =
-                            blockRegistry[
-                              block.type as keyof typeof blockRegistry
-                            ];
-
-                          if (!config) {
-                            return (
-                              <div
-                                key={block.instanceId}
-                                className="mx-3 mb-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600"
-                              >
-                                بلاک «{block.type}» ثبت نشده است
-                              </div>
-                            );
-                          }
-
-                          const BlockComponent =
-                            config.component as React.ComponentType<{
-                              block: PageBlock;
-                              mode: "preview";
-                            }>;
-
-                          return (
-                            <BlockComponent
-                              key={block.instanceId}
-                              block={block}
-                              mode="preview"
-                              
-                            />
-                          );
-                        })
-                      )}
+                    {/* Front camera */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: "22px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: "11px",
+                        height: "11px",
+                        borderRadius: "50%",
+                        background: "#1A1A1A",
+                        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.07)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: "2.5px",
+                          borderRadius: "50%",
+                          background: "rgba(99,102,241,0.22)",
+                        }}
+                      />
                     </div>
                   </div>
+                </div>
 
-                  {/* ── Home indicator ─────────────────────────────── */}
-                  <div className="pointer-events-none absolute bottom-[6px] left-1/2 z-30 -translate-x-1/2">
-                    <div className="h-[5px] w-[130px] rounded-full bg-black/80" />
-                  </div>
+                {/* Content iframe */}
+                <iframe
+                  ref={iframeRef}
+                  title="پیش نمایش واقعی موبایل"
+                  className="h-full w-full border-0"
+                  style={{ scrollbarWidth: "none" }}
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                />
+
+                {iframeDocument && previewRoot
+                  ? createPortal(
+                      <StyleSheetManager target={iframeDocument.head}>
+                        <PhonePreviewContent blocks={sortedBlocks} />
+                      </StyleSheetManager>,
+                      previewRoot,
+                    )
+                  : null}
+
+                {/* Screen glass sheen */}
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-[46px]"
+                  style={{
+                    background:
+                      "linear-gradient(148deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.01) 38%, transparent 55%)",
+                  }}
+                />
+
+                {/* Home indicator */}
+                <div className="pointer-events-none absolute bottom-2 left-1/2 z-30 -translate-x-1/2">
+                  <div
+                    className="rounded-full bg-black/70"
+                    style={{ width: "134px", height: "5px" }}
+                  />
                 </div>
               </div>
             </div>
-
-            {/* Reflection highlight */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 rounded-t-[52px] bg-gradient-to-b from-white/[0.04] to-transparent" />
           </div>
+
+          {/* ── Physical buttons ── */}
+          {/* Mute / Ring */}
+          <div
+            className="pointer-events-none absolute rounded-l-xs"
+            style={{
+              left: "-3px",
+              top: "112px",
+              width: "3px",
+              height: "28px",
+              background: "linear-gradient(to right, #505053, #8E8E92)",
+            }}
+          />
+          {/* Volume + */}
+          <div
+            className="pointer-events-none absolute rounded-l-xs"
+            style={{
+              left: "-3px",
+              top: "154px",
+              width: "3px",
+              height: "60px",
+              background: "linear-gradient(to right, #505053, #8E8E92)",
+            }}
+          />
+          {/* Volume − */}
+          <div
+            className="pointer-events-none absolute rounded-l-xs"
+            style={{
+              left: "-3px",
+              top: "226px",
+              width: "3px",
+              height: "60px",
+              background: "linear-gradient(to right, #505053, #8E8E92)",
+            }}
+          />
+          {/* Power */}
+          <div
+            className="pointer-events-none absolute rounded-r-xs"
+            style={{
+              right: "-3px",
+              top: "180px",
+              width: "3px",
+              height: "76px",
+              background: "linear-gradient(to left, #505053, #8E8E92)",
+            }}
+          />
+
+          {/* Frame top highlight */}
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 rounded-t-[52px]"
+            style={{
+              height: "48%",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.055) 0%, transparent 100%)",
+            }}
+          />
         </div>
 
-        {/* ── Footer ───────────────────────────────────────────────── */}
-        <div
-          className="flex flex-col items-center gap-2 transition-all duration-500"
+        {/* ── Close button ── */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="flex shrink-0 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.07] px-5 py-2.5 text-[13px] text-white/50 backdrop-blur-sm hover:border-white/20 hover:bg-white/12 hover:text-white/80"
           style={{
             opacity: animating ? 1 : 0,
             transform: animating ? "translateY(0)" : "translateY(20px)",
+            transition:
+              "opacity 500ms 220ms ease, transform 500ms 220ms cubic-bezier(0.34,1.56,0.64,1), background-color 200ms, border-color 200ms, color 200ms",
           }}
         >
-          <p className="text-center text-[11px] text-slate-500">
-            Esc یا کلیک بیرون گوشی → بستن
-          </p>
-        </div>
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path
+              d="M1 1l9 9M10 1L1 10"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span>بستن</span>
+          <kbd className="rounded border border-white/12 bg-white/8 px-1.5 py-0.5 text-[10px] font-mono leading-none">
+            Esc
+          </kbd>
+        </button>
       </div>
     </div>
   );

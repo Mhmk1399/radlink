@@ -5,6 +5,7 @@
 
 import  { useMemo } from "react";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
+import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { gradients } from "@/lib/design/tokens";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -33,6 +34,23 @@ function formatFaDate(value?: string | Date) {
   } catch {
     return String(value);
   }
+}
+
+function formatUserRef(value: unknown) {
+  if (!value) return undefined;
+  if (typeof value !== "object") return String(value);
+
+  const record = value as Record<string, unknown>;
+  const fullName = [record.firstName, record.lastName]
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    fullName ||
+    (typeof record.phoneNumber === "string" ? record.phoneNumber : "") ||
+    String(record._id ?? record.id ?? "")
+  );
 }
 
 /* ══════════════════════════════════════════════
@@ -177,6 +195,8 @@ export default function UsersSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
+  const { can } = useAccess();
+  const canUpdateUsers = can("admin.users", "update");
 
   /* ── Auth header ─────────────────────────── */
   const token =
@@ -219,10 +239,12 @@ export default function UsersSection({
                 ? String(u.agentid._id ?? u.agentid.id ?? u.agentid)
                 : String(u.agentid)
               : undefined,
-            // Normalise permissions (ObjectId[] → string[])
+            // Normalise permissions (populated docs or raw ObjectId strings)
             permissions: Array.isArray(u.permissions)
               ? u.permissions.map((p: any) =>
-                  typeof p === "object" ? String(p._id ?? p.id ?? p) : String(p),
+                  typeof p === "object"
+                    ? String(p.name ?? p._id ?? p.id ?? p)
+                    : String(p),
                 )
               : [],
             // Ensure limits always exists
@@ -233,16 +255,8 @@ export default function UsersSection({
               landingPages: u.limits?.landingPages ?? 0,
             },
             // Normalise createdBy / updatedBy
-            createdBy: u.createdBy
-              ? typeof u.createdBy === "object"
-                ? String(u.createdBy._id ?? u.createdBy.id ?? u.createdBy)
-                : String(u.createdBy)
-              : undefined,
-            updatedBy: u.updatedBy
-              ? typeof u.updatedBy === "object"
-                ? String(u.updatedBy._id ?? u.updatedBy.id ?? u.updatedBy)
-                : String(u.updatedBy)
-              : undefined,
+            createdBy: formatUserRef(u.createdBy),
+            updatedBy: formatUserRef(u.updatedBy),
           } as UserRow;
         });
       },
@@ -358,6 +372,7 @@ export default function UsersSection({
       {
         key: "permissions",
         label: "دسترسی‌ها",
+        editable: false,
         render: (value) => {
           const perms = value as string[];
           if (!perms?.length) return "—";
@@ -565,6 +580,7 @@ export default function UsersSection({
         transformResponse={transformResponse}
         rowActions={(row) => {
           const isActive = row.status === "active";
+          if (!canUpdateUsers) return null;
 
           return (
             <div className="flex items-center gap-1">

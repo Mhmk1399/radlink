@@ -29,4 +29,7 @@ const qrSchema = new mongoose.Schema({
     },
 });
 
-export default mongoose.model("QR", qrSchema);
+const QR: mongoose.Model<any> =
+    mongoose.models.QR || mongoose.model("QR", qrSchema);
+
+export default QR;

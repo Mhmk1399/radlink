@@ -16,7 +16,7 @@ export const PATCH = compose(
     const { id } = await ctx.params;
     const { assigneeId } = await req.json();
 
-    if (!assigneeId) return NextResponse.json({ message: "assigneeId is required" }, { status: 400 });
+    if (!assigneeId) return NextResponse.json({ message: "شناسه مسئول الزامی است." }, { status: 400 });
 
     const ticket = await Ticket.findByIdAndUpdate(
         id,
@@ -24,6 +24,6 @@ export const PATCH = compose(
         { new: true }
     ).populate("assignee", "firstName lastName phoneNumber");
 
-    if (!ticket) return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
+    if (!ticket) return NextResponse.json({ message: "تیکت پیدا نشد." }, { status: 404 });
     return NextResponse.json({ ticket });
 });

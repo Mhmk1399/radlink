@@ -2,12 +2,9 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
+import { generateQrImageDataUrl, generateUniqueQrShortcode } from "@/lib/qrCode";
 import QR from "@/models/qr";
 import Page from "@/models/pages";
-
-function generateShortcode(length = 8) {
-    return Math.random().toString(36).substring(2, 2 + length).toUpperCase();
-}
 
 // POST /api/qr — create QR for a page the user owns
 export const POST = compose(
@@ -19,24 +16,30 @@ export const POST = compose(
     const { pageId, targetUrl, imageurl } = await req.json();
 
     if (!pageId || !targetUrl) {
-        return NextResponse.json({ message: "pageId and targetUrl are required" }, { status: 400 });
+        return NextResponse.json({ message: "شناسه صفحه و آدرس مقصد الزامی هستند." }, { status: 400 });
     }
 
     const page = await Page.findById(pageId);
-    if (!page) return NextResponse.json({ message: "Page not found" }, { status: 404 });
+    if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
 
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
     if (!isAdmin && String(page.owner) !== String(user._id)) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
-    // Unique shortcode with collision retry
-    let shortcode = generateShortcode();
-    while (await QR.exists({ shortcode })) {
-        shortcode = generateShortcode();
-    }
+    const shortcode = await generateUniqueQrShortcode();
+    const qrImageUrl =
+        typeof imageurl === "string" && imageurl.trim()
+            ? imageurl.trim()
+            : await generateQrImageDataUrl(targetUrl);
 
-    const qr = await QR.create({ page: pageId, owner: user._id, targetUrl, imageurl, shortcode });
+    const qr = await QR.create({
+        page: pageId,
+        owner: user._id,
+        targetUrl,
+        imageurl: qrImageUrl,
+        shortcode,
+    });
     return NextResponse.json({ qr }, { status: 201 });
 });
 

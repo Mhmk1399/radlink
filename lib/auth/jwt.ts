@@ -8,6 +8,9 @@ export type JwtPayload = {
     userId: string;
     role: IUser["role"];
     status: IUser["status"];
+    firstName:string;
+    lastName:string;
+    phoneNumber:string;
 };
 
 export function signToken(payload: JwtPayload): string {

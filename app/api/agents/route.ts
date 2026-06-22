@@ -16,14 +16,14 @@ export const POST = compose(
     const { userId, type, postalCode, fixedNumber, pricePerLanding, companyName, ceoName, economicNumber, registrationNumber, limits } = body;
 
     if (!userId || !type) {
-        return NextResponse.json({ message: "userId and type are required" }, { status: 400 });
+        return NextResponse.json({ message: "شناسه کاربر و نوع نماینده الزامی هستند." }, { status: 400 });
     }
 
     const user = await User.findById(userId);
-    if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
+    if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
 
     const existing = await Agent.findOne({ user: userId });
-    if (existing) return NextResponse.json({ message: "Agent already exists for this user" }, { status: 409 });
+    if (existing) return NextResponse.json({ message: "برای این کاربر قبلا نماینده ساخته شده است." }, { status: 409 });
 
     const agent = await Agent.create({
         user: userId,

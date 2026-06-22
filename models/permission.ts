@@ -63,14 +63,7 @@ PermissionSchema.index({
     isActive: 1,
 });
 
-PermissionSchema.set("toJSON", {
-    transform: function (_doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-    },
-});
+
 
 const Permission: Model<IPermission> =
     mongoose.models.Permission ||

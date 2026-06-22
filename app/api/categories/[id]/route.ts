@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Category from "@/models/category";
+import Template from "@/models/template";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+function normalizeTemplateIds(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) =>
+            typeof item === "object" && item !== null
+                ? String((item as Record<string, unknown>)._id ?? (item as Record<string, unknown>).id ?? "")
+                : String(item ?? "")
+        )
+        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+}
 
 export const GET = compose(
     withDB(),
@@ -13,7 +26,7 @@ export const GET = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const category = await Category.findById(id).populate("templates", "name thumbnail").lean();
-    if (!category) return NextResponse.json({ message: "Category not found" }, { status: 404 });
+    if (!category) return NextResponse.json({ message: "دسته‌بندی پیدا نشد." }, { status: 404 });
     return NextResponse.json({ category });
 });
 
@@ -24,14 +37,54 @@ export const PATCH = compose(
     withRole("admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
-    const { name, description } = await req.json();
+    const body = await req.json();
+    const { name, description } = body;
 
-    const category = await Category.findByIdAndUpdate(
-        id,
-        { ...(name && { name }), ...(description !== undefined && { description }) },
-        { new: true, runValidators: true }
-    );
-    if (!category) return NextResponse.json({ message: "Category not found" }, { status: 404 });
+    const currentCategory = await Category.findById(id).select("templates");
+    if (!currentCategory) return NextResponse.json({ message: "دسته‌بندی پیدا نشد." }, { status: 404 });
+
+    const updates: Record<string, unknown> = {
+        ...(name && { name }),
+        ...(description !== undefined && { description }),
+    };
+
+    let nextTemplateIds: string[] | null = null;
+    if ("templates" in body || "templateIds" in body) {
+        nextTemplateIds = normalizeTemplateIds(body.templates ?? body.templateIds);
+        updates.templates = nextTemplateIds;
+    }
+
+    const category = await Category.findByIdAndUpdate(id, updates, {
+        new: true,
+        runValidators: true,
+    }).populate("templates", "name thumbnail");
+
+    if (!category) return NextResponse.json({ message: "دسته‌بندی پیدا نشد." }, { status: 404 });
+
+    if (nextTemplateIds) {
+        const previousTemplateIds = currentCategory.templates.map((templateId) =>
+            String(templateId)
+        );
+        const removedTemplateIds = previousTemplateIds.filter(
+            (templateId) => !nextTemplateIds?.includes(templateId)
+        );
+
+        await Promise.all([
+            nextTemplateIds.length
+                ? Template.updateMany(
+                      { _id: { $in: nextTemplateIds } },
+                      { $set: { category: id } }
+                  )
+                : Promise.resolve(),
+            removedTemplateIds.length
+                ? Template.updateMany(
+                      { _id: { $in: removedTemplateIds }, category: id },
+                      { $unset: { category: "" } }
+                  )
+                : Promise.resolve(),
+        ]);
+    }
+
     return NextResponse.json({ category });
 });
 
@@ -43,6 +96,7 @@ export const DELETE = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const category = await Category.findByIdAndDelete(id);
-    if (!category) return NextResponse.json({ message: "Category not found" }, { status: 404 });
-    return NextResponse.json({ message: "Category deleted" });
+    if (!category) return NextResponse.json({ message: "دسته‌بندی پیدا نشد." }, { status: 404 });
+    await Template.updateMany({ category: id }, { $unset: { category: "" } });
+    return NextResponse.json({ message: "دسته‌بندی حذف شد." });
 });

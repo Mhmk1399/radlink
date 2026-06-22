@@ -1,21 +1,47 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
-const categorySchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
+export interface ICategory extends Document {
+    name: string;
+    description?: string;
+    templates: Types.ObjectId[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const CategorySchema = new Schema<ICategory>(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+            index: true,
+        },
+        description: {
+            type: String,
+            trim: true,
+        },
+        templates: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Template",
+            },
+        ],
     },
-    description: {
-        type: String,
+    { timestamps: true }
+);
+
+CategorySchema.set("toJSON", {
+    transform: (_doc, ret) => {
+        const obj = ret as unknown as Record<string, unknown>;
+        obj.id = obj._id;
+        delete obj._id;
+        delete obj.__v;
+        return ret;
     },
-    templates: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Template",
-        }
-    ],
 });
 
-const Category = mongoose.model("Category", categorySchema);
+const Category: Model<ICategory> =
+    mongoose.models.Category ||
+    mongoose.model<ICategory>("Category", CategorySchema);
 
 export default Category;

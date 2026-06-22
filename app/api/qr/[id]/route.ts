@@ -18,10 +18,12 @@ export const GET = compose(
     withStatus("active")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
-    const qr = await QR.findById(id).populate("page", "title url").lean();
-    if (!qr) return NextResponse.json({ message: "QR not found" }, { status: 404 });
+    const qr = await QR.findById(id).populate("page", "title url").lean() as
+        | { owner?: unknown }
+        | null;
+    if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
     if (!canAccess(req.ctx.user, String(qr.owner))) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     return NextResponse.json({ qr });
 });
@@ -35,14 +37,14 @@ export const PATCH = compose(
     const body = await req.json();
 
     const qr = await QR.findById(id);
-    if (!qr) return NextResponse.json({ message: "QR not found" }, { status: 404 });
+    if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
     if (!canAccess(req.ctx.user, String(qr.owner))) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
     const allowed = ["targetUrl", "imageurl", "isActive"];
     for (const key of allowed) {
-        if (key in body) (qr as Record<string, unknown>)[key] = body[key];
+        if (key in body) (qr as unknown as Record<string, unknown>)[key] = body[key];
     }
 
     await qr.save();
@@ -56,10 +58,10 @@ export const DELETE = compose(
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const qr = await QR.findById(id);
-    if (!qr) return NextResponse.json({ message: "QR not found" }, { status: 404 });
+    if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
     if (!canAccess(req.ctx.user, String(qr.owner))) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     await qr.deleteOne();
-    return NextResponse.json({ message: "QR deleted" });
+    return NextResponse.json({ message: "کد QR حذف شد." });
 });

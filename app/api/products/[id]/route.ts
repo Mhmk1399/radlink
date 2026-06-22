@@ -13,7 +13,7 @@ export const GET = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const product = await Product.findById(id).lean();
-    if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 });
+    if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
     return NextResponse.json({ product });
 });
 
@@ -33,7 +33,7 @@ export const PATCH = compose(
     }
 
     const product = await Product.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
-    if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 });
+    if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
     return NextResponse.json({ product });
 });
 
@@ -45,6 +45,6 @@ export const DELETE = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const product = await Product.findByIdAndDelete(id);
-    if (!product) return NextResponse.json({ message: "Product not found" }, { status: 404 });
-    return NextResponse.json({ message: "Product deleted" });
+    if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
+    return NextResponse.json({ message: "محصول حذف شد." });
 });

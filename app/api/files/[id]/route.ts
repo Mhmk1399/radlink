@@ -19,9 +19,9 @@ export const GET = compose(
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const file = await File.findById(id).lean();
-    if (!file) return NextResponse.json({ message: "File not found" }, { status: 404 });
+    if (!file) return NextResponse.json({ message: "فایل پیدا نشد." }, { status: 404 });
     if (!canAccess(req.ctx.user, String(file.owner))) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     return NextResponse.json({ file });
 });
@@ -33,10 +33,10 @@ export const DELETE = compose(
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const file = await File.findById(id);
-    if (!file) return NextResponse.json({ message: "File not found" }, { status: 404 });
+    if (!file) return NextResponse.json({ message: "فایل پیدا نشد." }, { status: 404 });
     if (!canAccess(req.ctx.user, String(file.owner))) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     await file.deleteOne();
-    return NextResponse.json({ message: "File deleted" });
+    return NextResponse.json({ message: "فایل حذف شد." });
 });

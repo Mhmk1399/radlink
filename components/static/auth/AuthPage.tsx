@@ -45,14 +45,33 @@ type AuthStep = "phone" | "otp" | "register" | "success";
 
 // Matches backend IUser shape returned from verify-otp & /me
 interface BackendUser {
-  id: string;
+  _id: string;
   firstName?: string;
   lastName?: string;
+  agentid?: string;
   phoneNumber: string;
   email?: string;
-  role: string;
-  status: string;
+  avatarUrl?: string;
+  nationalCode?: string;
+  fatherName?: string;
+  role: "user" | "agent" | "admin" | "superAdmin";
+  status: "active" | "inactive" | "blocked" | "pending";
+  permissions: string[];
+  limits: {
+    files: number;
+    blocks: number;
+    pages: number;
+    landingPages: number;
+  };
+  lastLoginAt?: string;
+  lastOtpRequestAt?: string;
+  phoneVerifiedAt?: string;
   isPhoneVerified: boolean;
+  isDeleted: boolean;
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const OTP_LENGTH = 6; // Backend generates 6-digit OTP
@@ -99,8 +118,13 @@ async function apiVerifyOtp(
 
 async function apiUpdateProfile(
   token: string,
-  firstName: string,
-  lastName: string,
+  data: {
+    firstName: string;
+    lastName: string;
+    email?: string;
+    nationalCode?: string;
+    fatherName?: string;
+  }
 ): Promise<BackendUser> {
   const res = await fetch("/api/auth/me", {
     method: "PATCH",
@@ -108,16 +132,16 @@ async function apiUpdateProfile(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ firstName, lastName }),
+    body: JSON.stringify(data),
   });
 
-  const data = await res.json();
+  const response = await res.json();
 
   if (!res.ok) {
-    throw { status: res.status, message: data.message ?? "خطا در ثبت اطلاعات" };
+    throw { status: res.status, message: response.message ?? "خطا در ثبت اطلاعات" };
   }
 
-  return data.user ?? data;
+  return response.user ?? response;
 }
 
 /* ══════════════════════════════════════════════
@@ -374,6 +398,9 @@ export default function AuthPage() {
   const [otp, setOtp] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [nationalCode, setNationalCode] = useState("");
+  const [fatherName, setFatherName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpError, setOtpError] = useState(false);
@@ -514,11 +541,13 @@ export default function AuthPage() {
     setError("");
 
     try {
-      const updatedUser = await apiUpdateProfile(
-        authToken,
-        firstName.trim(),
-        lastName.trim(),
-      );
+      const updatedUser = await apiUpdateProfile(authToken, {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim() || undefined,
+        nationalCode: nationalCode.trim() || undefined,
+        fatherName: fatherName.trim() || undefined,
+      });
 
       setCurrentUser(updatedUser);
 
@@ -537,7 +566,7 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
-  }, [firstName, lastName, authToken]);
+  }, [firstName, lastName, email, nationalCode, fatherName, authToken]);
 
   /* ────────────────────────────────────────────
      Resend OTP
@@ -577,7 +606,7 @@ export default function AuthPage() {
   // ── After success, redirect to dashboard ──
   useEffect(() => {
     if (step === "success") {
-      const id = setTimeout(() => router.push("/dashboard"), 3000);
+      const id = setTimeout(() => router.push("/admin"), 3000);
       return () => clearTimeout(id);
     }
   }, [step, router]);
@@ -1004,6 +1033,97 @@ export default function AuthPage() {
                     />
                   </div>
 
+                  {/* Email */}
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="mb-2 block text-xs font-medium text-slate-300"
+                    >
+                      ایمیل
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      dir="ltr"
+                      placeholder="example@mail.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                      disabled={loading}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+                        animation.smooth,
+                        cn(borders.light, backgrounds.surface.glass),
+                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
+                        loading && "opacity-60 cursor-not-allowed",
+                      )}
+                    />
+                  </div>
+
+                  {/* National Code */}
+                  <div>
+                    <label
+                      htmlFor="nationalCode"
+                      className="mb-2 block text-xs font-medium text-slate-300"
+                    >
+                      کد ملی
+                    </label>
+                    <input
+                      id="nationalCode"
+                      type="text"
+                      dir="ltr"
+                      inputMode="numeric"
+                      placeholder="0123456789"
+                      maxLength={10}
+                      value={nationalCode}
+                      onChange={(e) => {
+                        setNationalCode(e.target.value.replace(/\D/g, ""));
+                        setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                      disabled={loading}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+                        animation.smooth,
+                        cn(borders.light, backgrounds.surface.glass),
+                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
+                        loading && "opacity-60 cursor-not-allowed",
+                      )}
+                    />
+                  </div>
+
+                  {/* Father Name */}
+                  <div>
+                    <label
+                      htmlFor="fatherName"
+                      className="mb-2 block text-xs font-medium text-slate-300"
+                    >
+                      نام پدر
+                    </label>
+                    <input
+                      id="fatherName"
+                      type="text"
+                      placeholder="مثلاً: محمد"
+                      value={fatherName}
+                      onChange={(e) => {
+                        setFatherName(e.target.value);
+                        setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                      disabled={loading}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+                        animation.smooth,
+                        cn(borders.light, backgrounds.surface.glass),
+                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
+                        loading && "opacity-60 cursor-not-allowed",
+                      )}
+                    />
+                  </div>
+
                   {error && (
                     <p className="flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
                       <svg
@@ -1082,7 +1202,7 @@ export default function AuthPage() {
                 </div>
 
                 <Link
-                  href="/dashboard"
+                  href="/admin"
                   className={cn(
                     components.ctaPrimary,
                     "w-full max-w-xs justify-center py-3.5",

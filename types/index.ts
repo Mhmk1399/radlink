@@ -242,6 +242,7 @@ export interface DynamicAccess {
 export interface Access extends BaseDocument {
     staticComponents: StaticComponentAccess[];
     dynamicAccess: DynamicAccess;
+    isActive: boolean;
 }
 
 export interface CreateAccessPayload {
@@ -251,6 +252,7 @@ export interface CreateAccessPayload {
 
 export interface UpdateAccessPayload extends Partial<CreateAccessPayload> {
     id: string;
+    isActive?: boolean;
 }
 
 export type PaginatedAccessResponse = PaginatedResponse<Access>;

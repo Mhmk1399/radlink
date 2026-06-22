@@ -19,7 +19,7 @@ export const PATCH = compose(
     const { status } = await req.json();
 
     if (!VALID_STATUSES.includes(status)) {
-        return NextResponse.json({ message: `status must be one of: ${VALID_STATUSES.join(", ")}` }, { status: 400 });
+        return NextResponse.json({ message: "وضعیت کاربر معتبر نیست." }, { status: 400 });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -28,6 +28,6 @@ export const PATCH = compose(
         { new: true }
     ).select("status role phoneNumber firstName lastName");
 
-    if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
+    if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
     return NextResponse.json({ user });
 });

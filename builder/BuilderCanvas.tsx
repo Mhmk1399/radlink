@@ -201,6 +201,7 @@ export function CanvasDropZone({
 
 export function CanvasContent({
   sortedBlocks,
+  availableBlockTypes,
   blockIds,
   selectedBlockId,
   selectedElementId,
@@ -215,6 +216,7 @@ export function CanvasContent({
   onApplyTemplate,
 }: {
   sortedBlocks: PageBlock[];
+  availableBlockTypes?: string[];
   blockIds: string[];
   selectedBlockId: string | null;
   selectedElementId: string | null;
@@ -258,6 +260,7 @@ export function CanvasContent({
           <SmartSuggestions
             onApplyTemplate={onApplyTemplate}
             onOpenCatalog={onOpenCatalog}
+            availableBlockTypes={availableBlockTypes}
           />
         )}
       </div>

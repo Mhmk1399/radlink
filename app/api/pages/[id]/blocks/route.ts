@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
+import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
 import { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import Block from "@/models/blocks";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function canAccess(user: AuthRequest["ctx"]["user"], ownerId: string) {
+async function canAccess(req: AuthRequest, ownerId: string) {
+    const user = req.ctx.user;
     if (!user) return false;
     if (["admin", "superAdmin"].includes(user.role)) return true;
-    return String(user._id) === ownerId;
+    if (String(user._id) === ownerId) return true;
+    const evaluated = await evaluateRequestAccess(req);
+    return evaluated.matched && evaluated.granted;
 }
 
 // PATCH /api/pages/[id]/blocks
@@ -30,24 +34,29 @@ export const PATCH = compose(
     const { action, ...payload } = await req.json();
 
     const page = await Page.findById(id);
-    if (!page) return NextResponse.json({ message: "Page not found" }, { status: 404 });
-    if (!canAccess(req.ctx.user, String(page.owner))) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
+    if (!(await canAccess(req, String(page.owner)))) {
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
     switch (action) {
         case "add": {
             // payload: { blockId }
             const masterBlock = await Block.findById(payload.blockId);
-            if (!masterBlock) return NextResponse.json({ message: "Block not found" }, { status: 404 });
+            if (!masterBlock) return NextResponse.json({ message: "بلاک پیدا نشد." }, { status: 404 });
 
             page.blocks.push({
+                instanceId:    `${masterBlock.type}-${Date.now()}`,
                 blockId:       masterBlock._id,
                 type:          masterBlock.type,
+                version:       masterBlock.version ?? 1,
                 order:         page.blocks.length,
+                isActive:      true,
                 data:          { ...masterBlock.data },
                 settings:      { ...masterBlock.settings },
+                elements:      { ...masterBlock.elements },
                 styleOverride: {},
+                
             });
             break;
         }
@@ -80,7 +89,7 @@ export const PATCH = compose(
             const target = page.blocks.find(
                 (b) => String(b.blockId) === String(payload.blockId)
             );
-            if (!target) return NextResponse.json({ message: "Block not on this page" }, { status: 404 });
+            if (!target) return NextResponse.json({ message: "این بلاک روی این صفحه وجود ندارد." }, { status: 404 });
 
             if (payload.data          !== undefined) target.data          = payload.data;
             if (payload.settings      !== undefined) target.settings      = payload.settings;
@@ -89,7 +98,7 @@ export const PATCH = compose(
         }
 
         default:
-            return NextResponse.json({ message: "Invalid action. Use: add | remove | reorder | update" }, { status: 400 });
+            return NextResponse.json({ message: "عملیات معتبر نیست. از add، remove، reorder یا update استفاده کنید." }, { status: 400 });
     }
 
     await page.save();

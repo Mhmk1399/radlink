@@ -24,9 +24,9 @@
 //         .populate("template", "name style thumbnail")
 //         .lean();
 
-//     if (!page) return NextResponse.json({ message: "Page not found" }, { status: 404 });
+//     if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
 //     if (!canAccess(req.ctx.user, String(page.owner))) {
-//         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+//         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
 //     }
 
 //     return NextResponse.json({ page });
@@ -43,9 +43,9 @@
 //     const body = await req.json();
 
 //     const page = await Page.findById(id);
-//     if (!page) return NextResponse.json({ message: "Page not found" }, { status: 404 });
+//     if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
 //     if (!canAccess(req.ctx.user, String(page.owner))) {
-//         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+//         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
 //     }
 
 //     const allowed = ["title", "description", "url", "template", "styleOverride", "logo", "favicon", "seo", "extraServices", "subscription", "settings", "isPublished"];
@@ -66,13 +66,13 @@
 //     const { id } = await ctx.params;
 
 //     const page = await Page.findById(id);
-//     if (!page) return NextResponse.json({ message: "Page not found" }, { status: 404 });
+//     if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
 //     if (!canAccess(req.ctx.user, String(page.owner))) {
-//         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+//         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
 //     }
 
 //     await page.deleteOne();
-//     return NextResponse.json({ message: "Page deleted" });
+//     return NextResponse.json({ message: "صفحه حذف شد." });
 // });
 // src/app/api/pages/[pageId]/route.ts
 
@@ -80,8 +80,11 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
+import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
+import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
 import type { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
+import User from "@/models/users";
 
 type RouteContext = {
     params: Promise<{
@@ -91,6 +94,14 @@ type RouteContext = {
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getOptionalObjectId(value: unknown) {
+    if (value === undefined || value === null || value === "") return undefined;
+    if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
+        return value;
+    }
+    return null;
 }
 
 function normalizeBlocks(blocks: unknown) {
@@ -125,8 +136,9 @@ function normalizeBlocks(blocks: unknown) {
             styleOverride: isObject(b.styleOverride) ? b.styleOverride : {},
         };
 
-        if (typeof b.blockId === "string" && mongoose.Types.ObjectId.isValid(b.blockId)) {
-            result.blockId = new mongoose.Types.ObjectId(b.blockId);
+        const rawBlockId = b.blockId ?? b._id ?? b.id;
+        if (typeof rawBlockId === "string" && mongoose.Types.ObjectId.isValid(rawBlockId)) {
+            result.blockId = new mongoose.Types.ObjectId(rawBlockId);
         }
 
         return result;
@@ -157,7 +169,10 @@ export const GET = compose(
         );
     }
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
+    const evaluated = await evaluateRequestAccess(req);
+    const isAdmin =
+        ["admin", "superAdmin"].includes(user.role) ||
+        (evaluated.matched && evaluated.granted);
 
     const query: Record<string, unknown> = {
         _id: id,
@@ -167,7 +182,10 @@ export const GET = compose(
         query.owner = user._id;
     }
 
-    const page = await Page.findOne(query).lean();
+    const page = await Page.findOne(query)
+        .populate("owner", "firstName lastName email phoneNumber")
+        .populate("template", "name thumbnail category")
+        .lean();
 
     if (!page) {
         return NextResponse.json(
@@ -197,6 +215,42 @@ export const PATCH = compose(
     const body = await req.json();
     const update: Record<string, unknown> = {};
 
+    const evaluated = await evaluateRequestAccess(req);
+    const isAdmin =
+        ["admin", "superAdmin"].includes(user.role) ||
+        (evaluated.matched && evaluated.granted);
+
+    const requestedOwnerId = getOptionalObjectId(body.ownerId);
+    if (requestedOwnerId === null) {
+        return NextResponse.json(
+            { message: "شناسه سازنده صفحه معتبر نیست." },
+            { status: 400 }
+        );
+    }
+
+    if (requestedOwnerId) {
+        if (!isAdmin) {
+            return NextResponse.json(
+                { message: "شما اجازه تغییر سازنده صفحه را ندارید." },
+                { status: 403 }
+            );
+        }
+
+        const ownerExists = await User.exists({
+            _id: requestedOwnerId,
+            isDeleted: { $ne: true },
+        });
+
+        if (!ownerExists) {
+            return NextResponse.json(
+                { message: "کاربر انتخاب‌شده برای سازنده صفحه پیدا نشد." },
+                { status: 404 }
+            );
+        }
+
+        update.owner = requestedOwnerId;
+    }
+
     if (typeof body.title === "string") {
         update.title = body.title.trim();
     }
@@ -224,7 +278,15 @@ export const PATCH = compose(
     }
 
     if (body.blocks !== undefined) {
+        const blockAccessError = await assertBuilderBlockAccess(req, body.blocks);
+        if (blockAccessError) return blockAccessError;
         update.blocks = normalizeBlocks(body.blocks);
+    }
+
+    if (typeof body.templateId === "string" && mongoose.Types.ObjectId.isValid(body.templateId)) {
+        update.template = body.templateId;
+    } else if (typeof body.template === "string" && mongoose.Types.ObjectId.isValid(body.template)) {
+        update.template = body.template;
     }
 
     if (isObject(body.seo)) {
@@ -256,8 +318,6 @@ export const PATCH = compose(
         update.publishedAt = body.isPublished ? new Date() : undefined;
     }
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
-
     const query: Record<string, unknown> = {
         _id: id,
     };
@@ -273,7 +333,10 @@ export const PATCH = compose(
             new: true,
             runValidators: true,
         }
-    );
+    )
+        .populate("owner", "firstName lastName email phoneNumber")
+        .populate("template", "name thumbnail category")
+        .lean({ virtuals: true });
 
     if (!page) {
         return NextResponse.json(
@@ -300,7 +363,10 @@ export const DELETE = compose(
         );
     }
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
+    const evaluated = await evaluateRequestAccess(req);
+    const isAdmin =
+        ["admin", "superAdmin"].includes(user.role) ||
+        (evaluated.matched && evaluated.granted);
 
     const query: Record<string, unknown> = {
         _id: id,

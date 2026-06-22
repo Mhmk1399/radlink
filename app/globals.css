@@ -46,3 +46,11 @@ body {
     }
   }
 }
+
+
+.sidebar-expanded {
+  width: 260px;
+}
+.sidebar-collapsed {
+  width: 72px;
+}

@@ -94,11 +94,16 @@ const TEMPLATES: Template[] = [
 export function SmartSuggestions({
   onApplyTemplate,
   onOpenCatalog,
+  availableBlockTypes,
 }: {
   onApplyTemplate: (blockTypes: string[]) => void;
   onOpenCatalog: () => void;
+  availableBlockTypes?: string[];
 }) {
-  const availableTypes = useMemo(() => new Set(Object.keys(blockRegistry)), []);
+  const availableTypes = useMemo(
+    () => new Set(availableBlockTypes ?? Object.keys(blockRegistry)),
+    [availableBlockTypes],
+  );
 
   // فقط قالب‌هایی که همه بلاک‌هاشون موجوده
   const validTemplates = useMemo(

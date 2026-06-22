@@ -147,10 +147,11 @@ AgentSchema.pre("validate", function (next) {
 
 AgentSchema.set("toJSON", {
     transform: function (_doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
-        return ret;
+        const obj = ret as unknown as Record<string, unknown>;
+        obj.id = obj._id;
+        delete obj._id;
+        delete obj.__v;
+        return obj;
     },
 });
 

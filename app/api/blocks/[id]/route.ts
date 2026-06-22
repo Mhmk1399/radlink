@@ -13,7 +13,7 @@ export const GET = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const block = await Block.findById(id).lean();
-    if (!block) return NextResponse.json({ message: "Block not found" }, { status: 404 });
+    if (!block) return NextResponse.json({ message: "بلاک پیدا نشد." }, { status: 404 });
     return NextResponse.json({ block });
 });
 
@@ -33,7 +33,7 @@ export const PATCH = compose(
     }
 
     const block = await Block.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
-    if (!block) return NextResponse.json({ message: "Block not found" }, { status: 404 });
+    if (!block) return NextResponse.json({ message: "بلاک پیدا نشد." }, { status: 404 });
 
     return NextResponse.json({ block });
 });
@@ -47,6 +47,6 @@ export const DELETE = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const block = await Block.findByIdAndUpdate(id, { isActive: false }, { new: true });
-    if (!block) return NextResponse.json({ message: "Block not found" }, { status: 404 });
-    return NextResponse.json({ message: "Block deactivated" });
+    if (!block) return NextResponse.json({ message: "بلاک پیدا نشد." }, { status: 404 });
+    return NextResponse.json({ message: "بلاک غیرفعال شد." });
 });

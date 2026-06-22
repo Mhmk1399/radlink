@@ -14,7 +14,7 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
     const { phoneNumber } = await req.json();
 
     if (!phoneNumber) {
-        return NextResponse.json({ message: "phoneNumber is required" }, { status: 400 });
+        return NextResponse.json({ message: "شماره موبایل الزامی است." }, { status: 400 });
     }
 
     // Upsert user — create if first time
@@ -24,13 +24,13 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
     }
 
     if (user.status === "blocked") {
-        return NextResponse.json({ message: "Account is blocked" }, { status: 403 });
+        return NextResponse.json({ message: "حساب کاربری مسدود است." }, { status: 403 });
     }
 
     // Rate limit: 1 OTP per 60s
     const lastRequest = user.lastOtpRequestAt?.getTime() ?? 0;
     if (Date.now() - lastRequest < 60_000) {
-        return NextResponse.json({ message: "Please wait before requesting a new OTP" }, { status: 429 });
+        return NextResponse.json({ message: "لطفا قبل از درخواست کد جدید کمی صبر کنید." }, { status: 429 });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -39,5 +39,5 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
     await User.findByIdAndUpdate(user._id, { lastOtpRequestAt: new Date() });
     await sendSms(phoneNumber, otp);
 
-    return NextResponse.json({ message: "OTP sent" });
+    return NextResponse.json({ message: "کد تایید ارسال شد." });
 });

@@ -16,13 +16,13 @@ export const PATCH = compose(
     const { id } = await ctx.params;
 
     const agent = await Agent.findById(id);
-    if (!agent) return NextResponse.json({ message: "Agent not found" }, { status: 404 });
+    if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
 
     agent.isActive = !agent.isActive;
     await agent.save();
 
     return NextResponse.json({
-        message: `Agent ${agent.isActive ? "activated" : "deactivated"}`,
+        message: agent.isActive ? "نماینده فعال شد." : "نماینده غیرفعال شد.",
         isActive: agent.isActive,
     });
 });

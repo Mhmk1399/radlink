@@ -80,11 +80,151 @@ import { BuilderTour } from "../BuilderTour";
 
 type SimplePageBuilderProps = {
   pageId?: string;
+  templateId?: string;
+  saveMode?: "page" | "template";
+  sourceTemplateId?: string;
   initialBlocks?: PageBlock[];
   initialTitle?: string;
   initialDescription?: string;
   initialUrl?: string;
+  initialCategoryId?: string;
+  initialThumbnail?: string;
 };
+
+type CategoryOption = {
+  value: string;
+  label: string;
+};
+
+type MasterBlockDefinition = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  type: string;
+  version?: number;
+  data?: Record<string, unknown>;
+  settings?: PageBlock["settings"];
+  elements?: PageBlock["elements"];
+  defaultBlock?: Partial<PageBlock>;
+  isActive?: boolean;
+};
+
+type CreatedPageResponse = {
+  _id?: unknown;
+  id?: unknown;
+  url?: unknown;
+  qr?: unknown;
+};
+
+let categoryOptionsCache: CategoryOption[] | null = null;
+let categoryOptionsRequestFailed = false;
+
+const BUILDER_META_SUFFIX = "Radlink Builder";
+
+function compactMetaText(value: string | undefined, fallback: string) {
+  const text = value?.trim() || fallback;
+  return text.replace(/\s+/g, " ");
+}
+
+function getBuilderActionLabel({
+  saveMode,
+  pageId,
+  templateId,
+  sourceTemplateId,
+}: {
+  saveMode: "page" | "template";
+  pageId: string | null;
+  templateId: string | null;
+  sourceTemplateId?: string;
+}) {
+  if (saveMode === "template") {
+    return templateId ? "Edit template" : "Create template";
+  }
+
+  if (pageId) return "Edit page";
+  if (sourceTemplateId) return "Create page from template";
+  return "Create page";
+}
+
+function upsertMetaTag(selector: string, attrs: Record<string, string>) {
+  let element = document.head.querySelector<HTMLMetaElement>(selector);
+
+  if (!element) {
+    element = document.createElement("meta");
+    document.head.appendChild(element);
+  }
+
+  Object.entries(attrs).forEach(([key, value]) => {
+    element?.setAttribute(key, value);
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getCreatedDocumentId(value: unknown) {
+  if (!isRecord(value)) return "";
+
+  const id = value._id ?? value.id;
+  return typeof id === "string" ? id : "";
+}
+
+function buildClientPageTargetUrl(pageUrl: unknown) {
+  const url = typeof pageUrl === "string" ? pageUrl.trim() : "";
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/${url.replace(/^\/+/, "")}`;
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function createInstanceId(type: string) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${type}-${Date.now()}`;
+}
+
+function createBlockFromMaster(
+  masterBlock: MasterBlockDefinition,
+  order: number,
+): PageBlock {
+  const snapshot = isRecord(masterBlock.defaultBlock)
+    ? masterBlock.defaultBlock
+    : {};
+  const type = masterBlock.type;
+
+  return {
+    instanceId: createInstanceId(type),
+    blockId: String(masterBlock._id ?? masterBlock.id ?? type),
+    type,
+    version: Number(snapshot.version ?? masterBlock.version ?? 1),
+    order,
+    isActive:
+      typeof snapshot.isActive === "boolean"
+        ? snapshot.isActive
+        : masterBlock.isActive !== false,
+    data: cloneJson(
+      (isRecord(snapshot.data) ? snapshot.data : masterBlock.data) ?? {},
+    ),
+    settings: cloneJson(
+      (isRecord(snapshot.settings) ? snapshot.settings : masterBlock.settings) ??
+        { direction: "rtl" },
+    ),
+    elements: cloneJson(
+      (isRecord(snapshot.elements) ? snapshot.elements : masterBlock.elements) ??
+        {},
+    ),
+  };
+}
 
 /* ================================================================== */
 /*  Component                                                          */
@@ -92,10 +232,15 @@ type SimplePageBuilderProps = {
 
 export default function SimplePageBuilder({
   pageId: initialPageId,
+  templateId: initialTemplateId,
+  saveMode = "page",
+  sourceTemplateId,
   initialBlocks: externalBlocks,
   initialTitle,
   initialDescription,
   initialUrl,
+  initialCategoryId,
+  initialThumbnail,
 }: SimplePageBuilderProps = {}) {
   const initialState = useMemo(() => createInitialBuilderState(), []);
 
@@ -122,11 +267,24 @@ export default function SimplePageBuilder({
 
   /* ── Page state ── */
   const [pageId, setPageId] = useState<string | null>(initialPageId || null);
+  const [templateId, setTemplateId] = useState<string | null>(
+    initialTemplateId || null,
+  );
   const [pageTitle, setPageTitle] = useState(initialTitle || "صفحه جدید");
   const [pageUrl, setPageUrl] = useState(initialUrl || "new-page");
   const [pageDescription, setPageDescription] = useState(
     initialDescription || "",
   );
+  const [templateCategoryId, setTemplateCategoryId] = useState(
+    initialCategoryId || "",
+  );
+  const [templateThumbnail, setTemplateThumbnail] = useState(
+    initialThumbnail || "",
+  );
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
+  const [masterBlocks, setMasterBlocks] = useState<
+    Record<string, MasterBlockDefinition>
+  >({});
 
   /* ── UI state ── */
   const [isServerSaving, setIsServerSaving] = useState(false);
@@ -170,6 +328,43 @@ export default function SimplePageBuilder({
     () => blocks.find((b) => b.instanceId === activeBlockId) ?? null,
     [activeBlockId, blocks],
   );
+  const allowedBlockTypes = useMemo(
+    () => new Set(Object.keys(masterBlocks)),
+    [masterBlocks],
+  );
+  const catalogBlocks = useMemo(
+    () =>
+      Object.values(masterBlocks)
+        .map((masterBlock) => {
+          const config =
+            blockRegistry[masterBlock.type as keyof typeof blockRegistry];
+          if (!config) return null;
+
+          return {
+            ...config,
+            type: masterBlock.type,
+            label: masterBlock.name ?? config.label,
+            description: masterBlock.description ?? config.description,
+            category: masterBlock.category ?? config.category,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    [masterBlocks],
+  );
+  const catalogBlockTypes = useMemo(
+    () => catalogBlocks.map((block) => block.type),
+    [catalogBlocks],
+  );
+
+  const createBlockFromSource = useCallback(
+    (type: string, order: number): PageBlock | null => {
+      const masterBlock = masterBlocks[type];
+      if (masterBlock) return createBlockFromMaster(masterBlock, order);
+
+      return null;
+    },
+    [masterBlocks],
+  );
 
   const selectedConfig = selectedBlock
     ? (blockRegistry[selectedBlock.type as keyof typeof blockRegistry] ?? null)
@@ -190,12 +385,175 @@ export default function SimplePageBuilder({
     return elementSchema?.label ?? selectedElementId;
   }, [selectedElementId, selectedSchema]);
 
+  const builderMetadata = useMemo(() => {
+    const actionLabel = getBuilderActionLabel({
+      saveMode,
+      pageId,
+      templateId,
+      sourceTemplateId,
+    });
+    const entityName = compactMetaText(
+      pageTitle,
+      saveMode === "template" ? "Untitled template" : "Untitled page",
+    );
+    const title = `${actionLabel}: ${entityName} | ${BUILDER_META_SUFFIX}`;
+    const description = compactMetaText(
+      pageDescription,
+      `${actionLabel} "${entityName}" in ${BUILDER_META_SUFFIX}.`,
+    );
+
+    return { title, description };
+  }, [pageDescription, pageId, pageTitle, saveMode, sourceTemplateId, templateId]);
+
+  useEffect(() => {
+    document.title = builderMetadata.title;
+    upsertMetaTag('meta[name="description"]', {
+      name: "description",
+      content: builderMetadata.description,
+    });
+    upsertMetaTag('meta[property="og:title"]', {
+      property: "og:title",
+      content: builderMetadata.title,
+    });
+    upsertMetaTag('meta[property="og:description"]', {
+      property: "og:description",
+      content: builderMetadata.description,
+    });
+  }, [builderMetadata]);
+
   /* ── Scroll detection ── */
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMasterBlocks() {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch("/api/blocks?mode=builder&limit=100", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(json?.message ?? "خطا در دریافت بلاک‌ها");
+
+        const raw: unknown[] = Array.isArray(json?.blocks)
+          ? json.blocks
+          : Array.isArray(json)
+            ? json
+            : [];
+        const next: Record<string, MasterBlockDefinition> = {};
+
+        raw.filter(isRecord).forEach((block) => {
+          const type = String(block.type ?? "");
+          if (!type) return;
+          next[type] = {
+            ...block,
+            type,
+            _id: typeof block._id === "string" ? block._id : undefined,
+            id: typeof block.id === "string" ? block.id : undefined,
+            name: typeof block.name === "string" ? block.name : undefined,
+            version: Number(block.version ?? 1),
+            data: isRecord(block.data) ? block.data : {},
+            settings: isRecord(block.settings)
+              ? (block.settings as PageBlock["settings"])
+              : { direction: "rtl" },
+            elements: isRecord(block.elements)
+              ? (block.elements as PageBlock["elements"])
+              : {},
+            defaultBlock: isRecord(block.defaultBlock)
+              ? (block.defaultBlock as Partial<PageBlock>)
+              : undefined,
+            isActive: block.isActive !== false,
+          };
+        });
+
+        if (!cancelled) setMasterBlocks(next);
+      } catch {
+        if (!cancelled) setMasterBlocks({});
+      }
+    }
+
+    loadMasterBlocks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (saveMode !== "template") return;
+
+    let cancelled = false;
+
+    if (categoryOptionsCache || categoryOptionsRequestFailed) {
+      setCategoryOptions(categoryOptionsCache ?? []);
+      return;
+    }
+
+    async function loadCategories() {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch("/api/categories?mode=options&limit=100", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          categoryOptionsCache = [];
+          categoryOptionsRequestFailed = true;
+          throw new Error(
+            typeof json?.message === "string"
+              ? json.message
+              : "خطا در دریافت دسته‌بندی‌ها",
+          );
+        }
+
+        const raw: unknown[] = Array.isArray(json?.categories)
+          ? json.categories
+          : Array.isArray(json)
+            ? json
+            : [];
+
+        if (!cancelled) {
+          const options =
+            raw
+              .filter(
+                (category): category is Record<string, unknown> =>
+                  typeof category === "object" && category !== null,
+              )
+              .map((category) => ({
+                value: String(category._id ?? category.id ?? ""),
+                label: String(category.name ?? "بدون نام"),
+              }))
+              .filter((option) => option.value);
+
+          categoryOptionsCache = options;
+          categoryOptionsRequestFailed = false;
+          setCategoryOptions(options);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          categoryOptionsCache = [];
+          categoryOptionsRequestFailed = true;
+          setCategoryOptions([]);
+          const msg =
+            error instanceof Error
+              ? error.message
+              : "خطا در دریافت دسته‌بندی‌ها";
+          toast.show(msg, "error");
+        }
+      }
+    }
+
+    loadCategories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [saveMode]);
 
   /* ── Keyboard shortcuts ── */
   useEffect(() => {
@@ -295,14 +653,28 @@ export default function SimplePageBuilder({
   const addBlock = useCallback(
     (type: string) => {
       const config = blockRegistry[type as keyof typeof blockRegistry];
-      if (!config) return;
-      const next = config.createDefaultBlock(sortedBlocks.length);
+      if (!allowedBlockTypes.has(type)) {
+        toast.show(
+          `شما دسترسی استفاده از بلاک "${config?.label ?? type}" را ندارید`,
+          "error",
+        );
+        return;
+      }
+      const next = createBlockFromSource(type, sortedBlocks.length);
+      if (!next) return;
       setBlocks(normalizeOrder([...blocks, next]));
       setSelectedBlockId(next.instanceId);
       setSelectedElementId("container");
-      toast.show(`بلاک "${config.label}" اضافه شد`, "success");
+      toast.show(`بلاک "${config?.label ?? type}" اضافه شد`, "success");
     },
-    [sortedBlocks.length, blocks, setBlocks, toast],
+    [
+      allowedBlockTypes,
+      blocks,
+      createBlockFromSource,
+      setBlocks,
+      sortedBlocks.length,
+      toast,
+    ],
   );
   const collisionDetection = useCallback(
     (args: Parameters<typeof closestCenter>[0]) => {
@@ -382,9 +754,18 @@ export default function SimplePageBuilder({
     (id: string) => {
       const idx = sortedBlocks.findIndex((b) => b.instanceId === id);
       if (idx === -1) return;
+      const sourceBlock = sortedBlocks[idx];
+      const config = blockRegistry[sourceBlock.type as keyof typeof blockRegistry];
+      if (!allowedBlockTypes.has(sourceBlock.type)) {
+        toast.show(
+          `شما دسترسی استفاده از بلاک "${config?.label ?? sourceBlock.type}" را ندارید`,
+          "error",
+        );
+        return;
+      }
       const dup = {
-        ...cloneBlock(sortedBlocks[idx]),
-        order: sortedBlocks[idx].order + 1,
+        ...cloneBlock(sourceBlock),
+        order: sourceBlock.order + 1,
       };
       const sorted = [...blocks].sort((a, b) => a.order - b.order);
       const i = sorted.findIndex((b) => b.instanceId === id);
@@ -395,7 +776,7 @@ export default function SimplePageBuilder({
       setSelectedBlockId(dup.instanceId);
       setSelectedElementId("container");
     },
-    [sortedBlocks, blocks, setBlocks],
+    [allowedBlockTypes, blocks, setBlocks, sortedBlocks, toast],
   );
 
   const duplicateSelectedBlock = useCallback(() => {
@@ -552,6 +933,47 @@ export default function SimplePageBuilder({
   /*  Server Save                                 */
   /* ════════════════════════════════════════════ */
 
+  const ensureQrForCreatedPage = useCallback(
+    async ({
+      page,
+      qr,
+      token,
+    }: {
+      page: CreatedPageResponse;
+      qr: unknown;
+      token: string | null;
+    }) => {
+      if (isRecord(qr)) return qr;
+
+      const pageIdForQr = getCreatedDocumentId(page);
+      const targetUrl = buildClientPageTargetUrl(page.url);
+
+      if (!pageIdForQr || !targetUrl) {
+        throw new Error("اطلاعات صفحه برای ساخت QR کامل نیست.");
+      }
+
+      const qrResponse = await fetch("/api/qr", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          pageId: pageIdForQr,
+          targetUrl,
+        }),
+      });
+      const qrJson = await qrResponse.json().catch(() => null);
+
+      if (!qrResponse.ok || !isRecord(qrJson?.qr)) {
+        throw new Error(qrJson?.message ?? "ساخت QR صفحه با خطا مواجه شد.");
+      }
+
+      return qrJson.qr;
+    },
+    [],
+  );
+
   const createPageOnServer = useCallback(async () => {
     try {
       setIsServerSaving(true);
@@ -567,6 +989,7 @@ export default function SimplePageBuilder({
           title: pageTitle,
           url: pageUrl,
           description: pageDescription,
+          templateId: sourceTemplateId,
           blocks,
           seo: {
             title: pageTitle,
@@ -578,9 +1001,23 @@ export default function SimplePageBuilder({
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.message ?? "خطا در ساخت صفحه");
-      setPageId(json.page?.id ?? json.page?._id ?? null);
+      const createdPage = isRecord(json?.page)
+        ? (json.page as CreatedPageResponse)
+        : null;
+
+      if (!createdPage) {
+        throw new Error("اطلاعات صفحه ساخته‌شده از سرور دریافت نشد.");
+      }
+
+      await ensureQrForCreatedPage({
+        page: createdPage,
+        qr: json?.qr,
+        token,
+      });
+
+      setPageId(getCreatedDocumentId(createdPage) || null);
       toast.show("صفحه با موفقیت ساخته شد! 🎉", "success");
-      return json.page;
+      return createdPage;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ساخت صفحه";
       setServerSaveError(msg);
@@ -589,7 +1026,15 @@ export default function SimplePageBuilder({
     } finally {
       setIsServerSaving(false);
     }
-  }, [pageTitle, pageUrl, pageDescription, blocks, toast]);
+  }, [
+    pageTitle,
+    pageUrl,
+    pageDescription,
+    sourceTemplateId,
+    blocks,
+    ensureQrForCreatedPage,
+    toast,
+  ]);
 
   const updatePageOnServer = useCallback(async () => {
     if (!pageId) return createPageOnServer();
@@ -607,6 +1052,7 @@ export default function SimplePageBuilder({
           title: pageTitle,
           url: pageUrl,
           description: pageDescription,
+          templateId: sourceTemplateId,
           blocks,
           seo: {
             title: pageTitle,
@@ -633,18 +1079,108 @@ export default function SimplePageBuilder({
     pageTitle,
     pageUrl,
     pageDescription,
+    sourceTemplateId,
     blocks,
     createPageOnServer,
     toast,
   ]);
 
+  const createTemplateOnServer = useCallback(async () => {
+    try {
+      setIsServerSaving(true);
+      setServerSaveError(null);
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: pageTitle,
+          description: pageDescription,
+          thumbnail: templateThumbnail,
+          categoryId: templateCategoryId || undefined,
+          builderBlocks: blocks,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.message ?? "خطا در ساخت تمپلیت");
+      setTemplateId(json.template?.id ?? json.template?._id ?? null);
+      toast.show("تمپلیت با موفقیت ساخته شد", "success");
+      return json.template;
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "خطا در ساخت تمپلیت";
+      setServerSaveError(msg);
+      toast.show(msg, "error");
+      return null;
+    } finally {
+      setIsServerSaving(false);
+    }
+  }, [
+    pageTitle,
+    pageDescription,
+    templateThumbnail,
+    templateCategoryId,
+    blocks,
+    toast,
+  ]);
+
+  const updateTemplateOnServer = useCallback(async () => {
+    if (!templateId) return createTemplateOnServer();
+
+    try {
+      setIsServerSaving(true);
+      setServerSaveError(null);
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch(`/api/templates/${templateId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: pageTitle,
+          description: pageDescription,
+          thumbnail: templateThumbnail,
+          categoryId: templateCategoryId || undefined,
+          builderBlocks: blocks,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.message ?? "خطا در ذخیره تمپلیت");
+      toast.show("تمپلیت ذخیره شد", "success");
+      return json.template;
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "خطا در ذخیره تمپلیت";
+      setServerSaveError(msg);
+      toast.show(msg, "error");
+      return null;
+    } finally {
+      setIsServerSaving(false);
+    }
+  }, [
+    templateId,
+    createTemplateOnServer,
+    pageTitle,
+    pageDescription,
+    templateThumbnail,
+    templateCategoryId,
+    blocks,
+    toast,
+  ]);
+
   const handleMetaSave = useCallback(async () => {
-    const savedPage = await updatePageOnServer();
-    if (savedPage) {
+    const saved = await (saveMode === "template"
+      ? updateTemplateOnServer()
+      : updatePageOnServer());
+    if (saved) {
       setJustSaved(true);
       setPageMetaOpen(false);
     }
-  }, [updatePageOnServer]);
+  }, [saveMode, updatePageOnServer, updateTemplateOnServer]);
 
   /* ════════════════════════════════════════════ */
   /*  DnD Handlers                                */
@@ -669,11 +1205,16 @@ export default function SimplePageBuilder({
   const applyTemplate = useCallback(
     (blockTypes: string[]) => {
       const newBlocks: PageBlock[] = [];
-      blockTypes.forEach((type, index) => {
-        const config = blockRegistry[type as keyof typeof blockRegistry];
-        if (config) {
-          newBlocks.push(config.createDefaultBlock(index));
-        }
+      const allowedTypes = blockTypes.filter((type) => allowedBlockTypes.has(type));
+
+      if (allowedTypes.length === 0) {
+        toast.show("برای استفاده از بلاک‌های این قالب دسترسی ندارید", "error");
+        return;
+      }
+
+      allowedTypes.forEach((type, index) => {
+        const block = createBlockFromSource(type, index);
+        if (block) newBlocks.push(block);
       });
 
       if (newBlocks.length === 0) return;
@@ -681,9 +1222,14 @@ export default function SimplePageBuilder({
       setBlocks(normalizeOrder(newBlocks));
       setSelectedBlockId(newBlocks[0].instanceId);
       setSelectedElementId("container");
-      toast.show(`قالب با ${newBlocks.length} بلاک اعمال شد! 🎉`, "success");
+      toast.show(
+        blockTypes.length > allowedTypes.length
+          ? `قالب با ${newBlocks.length} بلاک مجاز اعمال شد`
+          : `قالب با ${newBlocks.length} بلاک اعمال شد! 🎉`,
+        "success",
+      );
     },
-    [setBlocks, toast],
+    [allowedBlockTypes, createBlockFromSource, setBlocks, toast],
   );
 
   const handleDragEnd = useCallback(
@@ -703,6 +1249,13 @@ export default function SimplePageBuilder({
       if (data?.fromPalette) {
         const blockType = data.blockType as string;
         const config = blockRegistry[blockType as keyof typeof blockRegistry];
+        if (!allowedBlockTypes.has(blockType)) {
+          toast.show(
+            `شما دسترسی استفاده از بلاک "${config?.label ?? blockType}" را ندارید`,
+            "error",
+          );
+          return;
+        }
         if (!config) return;
 
         // ── Drop روی gap بین بلاک‌ها ──
@@ -712,7 +1265,8 @@ export default function SimplePageBuilder({
             (b) => b.instanceId === targetId,
           );
           if (targetIndex !== -1) {
-            const newBlock = config.createDefaultBlock(targetIndex);
+            const newBlock = createBlockFromSource(blockType, targetIndex);
+            if (!newBlock) return;
             const sorted = [...blocks].sort((a, b) => a.order - b.order);
             const n = [...sorted];
             n.splice(targetIndex, 0, newBlock);
@@ -730,7 +1284,8 @@ export default function SimplePageBuilder({
             (b) => b.instanceId === targetId,
           );
           if (targetIndex !== -1) {
-            const newBlock = config.createDefaultBlock(targetIndex + 1);
+            const newBlock = createBlockFromSource(blockType, targetIndex + 1);
+            if (!newBlock) return;
             const sorted = [...blocks].sort((a, b) => a.order - b.order);
             const n = [...sorted];
             n.splice(targetIndex + 1, 0, newBlock);
@@ -753,7 +1308,11 @@ export default function SimplePageBuilder({
           (b) => b.instanceId === overId,
         );
         if (existingBlockIndex !== -1) {
-          const newBlock = config.createDefaultBlock(existingBlockIndex + 1);
+          const newBlock = createBlockFromSource(
+            blockType,
+            existingBlockIndex + 1,
+          );
+          if (!newBlock) return;
           const sorted = [...blocks].sort((a, b) => a.order - b.order);
           const n = [...sorted];
           n.splice(existingBlockIndex + 1, 0, newBlock);
@@ -783,7 +1342,15 @@ export default function SimplePageBuilder({
       setBlocks(normalizeOrder(arrayMove(sorted, oi, ni)));
       toast.show("ترتیب بلاک‌ها تغییر کرد", "info");
     },
-    [blocks, sortedBlocks, setBlocks, toast, addBlock],
+    [
+      addBlock,
+      allowedBlockTypes,
+      blocks,
+      createBlockFromSource,
+      setBlocks,
+      sortedBlocks,
+      toast,
+    ],
   );
 
   const handleDragCancel = useCallback(() => {
@@ -812,7 +1379,7 @@ export default function SimplePageBuilder({
         <BuilderHeader
           blocksCount={blocks.length}
           justSaved={justSaved}
-          pageId={pageId}
+          pageId={saveMode === "template" ? templateId : pageId}
           isServerSaving={isServerSaving}
           canUndo={history.canUndo}
           canRedo={history.canRedo}
@@ -836,6 +1403,7 @@ export default function SimplePageBuilder({
           {/* Sidebar */}
           <BlocksSidebar
             blocks={sortedBlocks}
+            availableBlocks={catalogBlocks}
             selectedBlockId={selectedBlockId}
             onSelectBlock={handleSelectBlock}
             onDeleteBlock={(id) => removeBlockById(id)}
@@ -874,6 +1442,7 @@ export default function SimplePageBuilder({
             <CanvasContent
               onApplyTemplate={applyTemplate}
               sortedBlocks={sortedBlocks}
+              availableBlockTypes={catalogBlockTypes}
               blockIds={blockIds}
               selectedBlockId={selectedBlockId}
               selectedElementId={selectedElementId}
@@ -934,17 +1503,24 @@ export default function SimplePageBuilder({
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}
         onAdd={addBlock}
+        availableBlocks={catalogBlocks}
       />
 
       <PageMetaModal
         open={pageMetaOpen}
+        mode={saveMode}
         title={pageTitle}
         description={pageDescription}
         url={pageUrl}
-        pageId={pageId}
+        pageId={saveMode === "template" ? templateId : pageId}
+        categoryId={templateCategoryId}
+        categoryOptions={categoryOptions}
+        thumbnail={templateThumbnail}
         onTitleChange={setPageTitle}
         onDescriptionChange={setPageDescription}
         onUrlChange={setPageUrl}
+        onCategoryIdChange={setTemplateCategoryId}
+        onThumbnailChange={setTemplateThumbnail}
         onClose={() => setPageMetaOpen(false)}
         onSave={handleMetaSave}
         isSaving={isServerSaving}

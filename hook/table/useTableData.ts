@@ -92,6 +92,41 @@ function createDefaultFetcher<T>(
     };
 }
 
+function unwrapMutationResponse<T>(json: unknown): T | null {
+    if (!json || typeof json !== "object" || Array.isArray(json)) {
+        return (json ?? null) as T | null;
+    }
+
+    const record = json as Record<string, unknown>;
+    const knownKeys = [
+        "data",
+        "item",
+        "record",
+        "user",
+        "agent",
+        "page",
+        "template",
+        "category",
+        "block",
+        "product",
+        "ticket",
+        "notification",
+        "file",
+        "qr",
+        "permission",
+        "access",
+    ];
+
+    for (const key of knownKeys) {
+        const value = record[key];
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+            return value as T;
+        }
+    }
+
+    return json as T;
+}
+
 /* ══════════════════════════════════════════════
    BUILD URL WITH QUERY PARAMS
    ══════════════════════════════════════════════ */
@@ -115,6 +150,15 @@ function buildServerUrl(
             if (val) url.searchParams.set(`filter_${key}`, val);
         });
     }
+
+    return url.pathname + url.search;
+}
+
+function appendPathId(endpoint: string, id: unknown) {
+    if (!id) return endpoint;
+
+    const url = new URL(endpoint, window.location.origin);
+    url.pathname = `${url.pathname.replace(/\/+$/, "")}/${encodeURIComponent(String(id))}`;
 
     return url.pathname + url.search;
 }
@@ -229,7 +273,9 @@ export function useTableData<T extends Record<string, unknown>>(
                 throw err;
             }
 
-            const created = await res.json().catch(() => null);
+            const created = unwrapMutationResponse<T>(
+                await res.json().catch(() => null),
+            );
 
             await mutate(
                 (current) => {
@@ -247,7 +293,7 @@ export function useTableData<T extends Record<string, unknown>>(
     const update = useCallback(
         async (item: T, primaryKey: string = "id"): Promise<T | void> => {
             const id = item[primaryKey];
-            const url = id ? `${endpoint}/${id}` : endpoint;
+            const url = appendPathId(endpoint, id);
 
             const res = await fetch(url, {
                 method: updateMethod,
@@ -264,7 +310,9 @@ export function useTableData<T extends Record<string, unknown>>(
                 throw err;
             }
 
-            const updated = await res.json().catch(() => null);
+            const updated = unwrapMutationResponse<T>(
+                await res.json().catch(() => null),
+            );
 
             await mutate(
                 (current) => {
@@ -286,7 +334,7 @@ export function useTableData<T extends Record<string, unknown>>(
     const remove = useCallback(
         async (item: T, primaryKey: string = "id"): Promise<void> => {
             const id = item[primaryKey];
-            const url = id ? `${endpoint}/${id}` : endpoint;
+            const url = appendPathId(endpoint, id);
 
             const res = await fetch(url, {
                 method: "DELETE",

@@ -13,15 +13,22 @@ export async function resolveUserAccess(
     const cached = accessCache.get(cacheKey);
     if (cached) return cached;
 
-    if (!permissionIds.length) {
-        const empty = emptyAccess();
-        accessCache.set(cacheKey, empty);
-        return empty;
-    }
+    const userObjectId =
+        typeof userId === "string" && Types.ObjectId.isValid(userId)
+            ? new Types.ObjectId(userId)
+            : userId;
 
     // Single pipeline: match active permissions → lookup access docs → unwind
     const rows = await Permission.aggregate([
-        { $match: { _id: { $in: permissionIds }, isActive: true } },
+        {
+            $match: {
+                isActive: true,
+                $or: [
+                    { _id: { $in: permissionIds } },
+                    { assignedToUsers: userObjectId },
+                ],
+            },
+        },
         { $unwind: "$accesses" },
         {
             $lookup: {
@@ -32,6 +39,7 @@ export async function resolveUserAccess(
             },
         },
         { $unwind: "$access" },
+        { $match: { "access.isActive": { $ne: false } } },
         { $replaceRoot: { newRoot: "$access" } },
     ]);
 

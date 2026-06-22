@@ -11,6 +11,20 @@ type PageMetadata = {
   url: string;
 };
 
+function setClientMetadata(title: string, description: string) {
+  document.title = title;
+
+  let meta = document.head.querySelector<HTMLMetaElement>(
+    'meta[name="description"]',
+  );
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "description";
+    document.head.appendChild(meta);
+  }
+  meta.content = description;
+}
+
 function LoadingScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
@@ -19,7 +33,7 @@ function LoadingScreen() {
         <div className="inline-flex h-10 w-10 animate-spin rounded-full border-[3px] border-slate-700 border-t-violet-500" />
         <div>
           <h1 className="text-xl font-semibold tracking-wide text-white sm:text-2xl">
-            در حال بارگذاری...
+          ...  در حال بارگذاری
           </h1>
         </div>
       </div>
@@ -90,6 +104,12 @@ export default function EditPageBuilder() {
         if (page.title) {
           document.title = `${page.title} - ویرایش`;
         }
+        const metadataPageTitle = page.title || "Untitled page";
+        setClientMetadata(
+          `Edit page: ${metadataPageTitle} | Radlink Builder`,
+          page.description ||
+            `Edit page "${metadataPageTitle}" in Radlink Builder.`,
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : "خطا در بارگذاری صفحه");
       } finally {

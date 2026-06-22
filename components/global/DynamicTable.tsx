@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────────────────
 // components/ds/DynamicTable.tsx
-// ─────────────────────────────────────────────────────────────────
 "use client";
 
 import React, {
@@ -38,17 +36,13 @@ import {
 } from "react-icons/hi2";
 import { LuPackage } from "react-icons/lu";
 import {
-  backgrounds,
-  borders,
-  shadows,
-  typography,
-  layout,
+  
   animation,
   focus,
-  interactive,
-  components,
-  gradients,
+ 
 } from "@/lib/design/tokens";
+import { useAccess } from "@/hook/auth/useAccess";
+import { getAccessTargetForRequest } from "@/lib/auth/accessRules";
 import CustomSelect from "../ui/customSelect";
 import {
   useTableData,
@@ -65,15 +59,126 @@ import {
   SortDir,
 } from "@/types/table";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { CSSProperties } from "react";
+
+/* ══════════════════════════════════════════════
+   THEME TOKENS — soft, eye-friendly palette
+   ══════════════════════════════════════════════
+
+   Dark  → warm charcoal base (#1a1a1f) not pure black
+           muted warm-gold accents, lower contrast
+   Light → warm ivory/cream (#faf8f5) not pure white
+           rich bronze accents, gentle shadows
+   ══════════════════════════════════════════════ */
+
+const themeTokens = {
+  dark: {
+    // ── Surfaces ──────────────────────────────
+    pageBg: "bg-[#141418]",
+    cardBg: "bg-[#1c1c22]",
+    cardBgHover: "hover:bg-[#22222a]",
+    inputBg: "bg-[#1e1e26]",
+    modalBg: "bg-[#1a1a20]",
+    dropdownBg: "bg-[#1e1e26]/98 backdrop-blur-xl",
+    hoverBg: "hover:bg-[#ffffff08]",
+    activeBg: "bg-[#c9a84c]/8",
+    selectedBg: "bg-[#c9a84c]/[0.04]",
+
+    // ── Text ──────────────────────────────────
+    textPrimary: "text-[#e8e6e3]",
+    textSecondary: "text-[#9e9a93]",
+    textMuted: "text-[#706c65]",
+    textDisabled: "text-[#4a4740]",
+    textAccent: "text-[#d4b863]",
+    textError: "text-[#e87c7c]",
+    textOnAccent: "text-[#1a1a1f]",
+
+    // ── Borders ───────────────────────────────
+    borderSubtle: "border-[#2a2a32]",
+    borderInput: "border-[#2e2e38]",
+    borderAccent: "border-[#c9a84c]/20",
+    borderHover: "hover:border-[#3a3a44]",
+    divider: "border-[#2a2a32]/60",
+
+    // ── Shadows ───────────────────────────────
+    cardShadow: "shadow-[0_2px_12px_-4px_rgba(0,0,0,0.4)]",
+    dropdownShadow: "shadow-[0_8px_30px_-8px_rgba(0,0,0,0.5)]",
+
+    // ── Accent shades ─────────────────────────
+    accentSoft: "bg-[#c9a84c]/6",
+    accentMedium: "bg-[#c9a84c]/10",
+    accentGradient:
+      "bg-gradient-to-r from-[#a0833a] via-[#c9a84c] to-[#dfc06a]",
+    accentText: "#d4b863",
+    accentBorder: "#c9a84c",
+
+    // ── Status ────────────────────────────────
+    successBg: "bg-[#2a6e4e]/12",
+    successText: "text-[#6ec99a]",
+    errorBg: "bg-[#8c3a3a]/12",
+    errorText: "text-[#e87c7c]",
+    warningBg: "bg-[#8c6e2a]/12",
+    warningText: "text-[#d4b863]",
+  },
+
+  light: {
+    // ── Surfaces ──────────────────────────────
+    pageBg: "bg-[#f8f6f1]",
+    cardBg: "bg-white",
+    cardBgHover: "hover:bg-[#fafaf8]",
+    inputBg: "bg-[#f5f3ee]",
+    modalBg: "bg-white",
+    dropdownBg: "bg-white/98 backdrop-blur-xl",
+    hoverBg: "hover:bg-[#00000006]",
+    activeBg: "bg-[#8a7032]/6",
+    selectedBg: "bg-[#8a7032]/[0.03]",
+
+    // ── Text ──────────────────────────────────
+    textPrimary: "text-[#2c2a25]",
+    textSecondary: "text-[#6b665c]",
+    textMuted: "text-[#9e9788]",
+    textDisabled: "text-[#c4bfb4]",
+    textAccent: "text-[#7a6428]",
+    textError: "text-[#c44040]",
+    textOnAccent: "text-white",
+
+    // ── Borders ───────────────────────────────
+    borderSubtle: "border-[#e8e4dc]",
+    borderInput: "border-[#ddd9d0]",
+    borderAccent: "border-[#8a7032]/20",
+    borderHover: "hover:border-[#ccc7bc]",
+    divider: "border-[#e8e4dc]/70",
+
+    // ── Shadows ───────────────────────────────
+    cardShadow: "shadow-[0_1px_8px_-2px_rgba(0,0,0,0.06)]",
+    dropdownShadow: "shadow-[0_6px_24px_-6px_rgba(0,0,0,0.1)]",
+
+    // ── Accent shades ─────────────────────────
+    accentSoft: "bg-[#8a7032]/5",
+    accentMedium: "bg-[#8a7032]/8",
+    accentGradient: "bg-[#8a7032]",
+    accentText: "#7a6428",
+    accentBorder: "#8a7032",
+
+    // ── Status ────────────────────────────────
+    successBg: "bg-[#e6f5ed]",
+    successText: "text-[#2d7a50]",
+    errorBg: "bg-[#fce8e8]",
+    errorText: "text-[#c44040]",
+    warningBg: "bg-[#f5f0e0]",
+    warningText: "text-[#8a7032]",
+  },
+} as const;
+
 /* ══════════════════════════════════════════════
    DATEPICKER CUSTOM STYLES
    ══════════════════════════════════════════════ */
 
 const datePickerStyles = `
 .rmdp-container { direction: rtl !important; }
-
+.rmdp-wrapper {
+  position: fixed !important;
+}
 .rmdp-wrapper,
 .rmdp-shadow {
   background: var(--dt-bg) !important;
@@ -85,29 +190,24 @@ const datePickerStyles = `
   padding: 12px !important;
   font-family: inherit !important;
 }
-
 .rmdp-header {
   padding: 6px 4px 12px !important;
   border-bottom: 1px solid var(--dt-divider) !important;
   margin-bottom: 8px !important;
 }
-
 .rmdp-header-values {
   color: var(--dt-header) !important;
   font-weight: 700 !important;
   font-size: 14px !important;
 }
-
 .rmdp-header-values span {
   padding: 4px 10px !important;
   border-radius: 8px !important;
   transition: background 0.2s !important;
 }
-
 .rmdp-header-values span:hover {
   background: var(--dt-hover-bg) !important;
 }
-
 .rmdp-arrow-container {
   display: flex !important;
   align-items: center !important;
@@ -119,12 +219,10 @@ const datePickerStyles = `
   border: 1px solid var(--dt-soft-border) !important;
   transition: all 0.2s !important;
 }
-
 .rmdp-arrow-container:hover {
   background: var(--dt-hover-bg) !important;
   border-color: var(--dt-hover-border) !important;
 }
-
 .rmdp-arrow-container .rmdp-arrow {
   border-color: var(--dt-muted) !important;
   width: 8px !important;
@@ -132,22 +230,18 @@ const datePickerStyles = `
   margin: 0 !important;
   padding: 0 !important;
 }
-
 .rmdp-arrow-container:hover .rmdp-arrow {
   border-color: var(--dt-header) !important;
 }
-
 .rmdp-week-day {
   color: var(--dt-muted) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
 }
-
 .rmdp-day {
   width: 38px !important;
   height: 38px !important;
 }
-
 .rmdp-day span {
   font-size: 13px !important;
   font-weight: 500 !important;
@@ -161,92 +255,57 @@ const datePickerStyles = `
   justify-content: center !important;
   inset: 2px !important;
 }
-
 .rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
   background: var(--dt-hover-bg) !important;
   color: var(--dt-header) !important;
   border: 1px solid var(--dt-hover-border) !important;
 }
-
 .rmdp-today span {
   background: var(--dt-today-bg) !important;
   color: var(--dt-header) !important;
   border: 1px solid var(--dt-hover-border) !important;
   font-weight: 700 !important;
 }
-
 .rmdp-selected span,
 .rmdp-day.rmdp-selected span {
   background: var(--dt-selected-bg) !important;
   color: var(--dt-selected-text) !important;
   font-weight: 700 !important;
-  box-shadow: 0 4px 16px -4px rgba(212,175,55,0.5) !important;
+  box-shadow: 0 2px 8px -2px var(--dt-selected-shadow) !important;
   border: none !important;
 }
-
 .rmdp-range {
   background: var(--dt-range-bg) !important;
   box-shadow: none !important;
 }
-
-.rmdp-range span {
-  color: var(--dt-header) !important;
-}
-
+.rmdp-range span { color: var(--dt-header) !important; }
 .rmdp-range.start span,
 .rmdp-range.end span {
   background: var(--dt-range-edge-bg) !important;
   color: var(--dt-selected-text) !important;
   font-weight: 700 !important;
 }
-
 .rmdp-disabled span,
-.rmdp-day.rmdp-disabled span {
-  color: var(--dt-disabled) !important;
-}
-
-.rmdp-deactive span {
-  color: var(--dt-disabled) !important;
-}
-
+.rmdp-day.rmdp-disabled span { color: var(--dt-disabled) !important; }
+.rmdp-deactive span { color: var(--dt-disabled) !important; }
 .rmdp-month-picker,
-.rmdp-year-picker {
-  background: var(--dt-bg) !important;
-  border-radius: 12px !important;
-}
-
+.rmdp-year-picker { background: var(--dt-bg) !important; border-radius: 12px !important; }
 .rmdp-month-picker .rmdp-day span,
-.rmdp-year-picker .rmdp-day span {
-  font-size: 12px !important;
-  border-radius: 8px !important;
-}
-
+.rmdp-year-picker .rmdp-day span { font-size: 12px !important; border-radius: 8px !important; }
 .rmdp-month-picker .rmdp-day.rmdp-selected span,
 .rmdp-year-picker .rmdp-day.rmdp-selected span {
   background: var(--dt-range-edge-bg) !important;
   color: var(--dt-selected-text) !important;
 }
-
-.rmdp-range-label {
-  display: none !important;
-}
-
+.rmdp-range-label { display: none !important; }
 .rmdp-action-button {
   border-radius: 10px !important;
   font-size: 12px !important;
   font-weight: 600 !important;
   padding: 6px 16px !important;
 }
-
-.rmdp-ep-arrow,
-.rmdp-ep-arrow::after {
-  display: none !important;
-}
-
-.rmdp-border-top {
-  border-top: 1px solid var(--dt-divider) !important;
-}
-
+.rmdp-ep-arrow, .rmdp-ep-arrow::after { display: none !important; }
+.rmdp-border-top { border-top: 1px solid var(--dt-divider) !important; }
 .rmdp-panel-body li {
   background: var(--dt-range-bg) !important;
   border: 1px solid var(--dt-hover-border) !important;
@@ -254,7 +313,6 @@ const datePickerStyles = `
   color: var(--dt-header) !important;
   font-size: 12px !important;
 }
-
 .rmdp-input {
   background: transparent !important;
   border: none !important;
@@ -268,93 +326,82 @@ const datePickerStyles = `
 
 function getDatePickerVariables(isDark: boolean): CSSProperties {
   return {
-    ["--dt-bg" as string]: isDark
-      ? "rgba(11, 9, 5, 0.97)"
-      : "rgba(255, 255, 255, 0.98)",
-
+    ["--dt-bg" as string]: isDark ? "#1e1e26" : "#ffffff",
     ["--dt-border" as string]: isDark
-      ? "rgba(255, 255, 255, 0.10)"
-      : "rgba(0, 0, 0, 0.08)",
-
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(0,0,0,0.08)",
     ["--dt-divider" as string]: isDark
-      ? "rgba(255, 255, 255, 0.06)"
-      : "rgba(0, 0, 0, 0.06)",
-
-    ["--dt-header" as string]: isDark ? "#F5D76E" : "#8A6A12",
-
+      ? "rgba(255,255,255,0.05)"
+      : "rgba(0,0,0,0.06)",
+    ["--dt-header" as string]: isDark ? "#d4b863" : "#7a6428",
     ["--dt-muted" as string]: isDark
-      ? "rgba(148,163,184,0.6)"
-      : "rgba(107,93,62,0.7)",
-
-    ["--dt-text" as string]: isDark ? "#CBD5E1" : "#3D3520",
-
+      ? "rgba(158,154,147,0.6)"
+      : "rgba(107,102,92,0.6)",
+    ["--dt-text" as string]: isDark ? "#e8e6e3" : "#2c2a25",
     ["--dt-soft-bg" as string]: isDark
       ? "rgba(255,255,255,0.04)"
       : "rgba(0,0,0,0.03)",
-
     ["--dt-soft-border" as string]: isDark
-      ? "rgba(255,255,255,0.08)"
-      : "rgba(0,0,0,0.08)",
-
-    ["--dt-hover-bg" as string]: "rgba(212,175,55,0.12)",
-    ["--dt-hover-border" as string]: "rgba(212,175,55,0.22)",
-
+      ? "rgba(255,255,255,0.06)"
+      : "rgba(0,0,0,0.06)",
+    ["--dt-hover-bg" as string]: isDark
+      ? "rgba(201,168,76,0.08)"
+      : "rgba(138,112,50,0.06)",
+    ["--dt-hover-border" as string]: isDark
+      ? "rgba(201,168,76,0.16)"
+      : "rgba(138,112,50,0.16)",
     ["--dt-today-bg" as string]: isDark
-      ? "rgba(212,175,55,0.08)"
-      : "rgba(212,175,55,0.12)",
-
-    ["--dt-selected-bg" as string]:
-      "linear-gradient(135deg, #B8860B, #D4AF37, #F5D76E)",
-
-    ["--dt-selected-text" as string]: "#050505",
-
+      ? "rgba(201,168,76,0.06)"
+      : "rgba(138,112,50,0.06)",
+    ["--dt-selected-bg" as string]: isDark ? "#c9a84c" : "#8a7032",
+    ["--dt-selected-text" as string]: isDark ? "#1a1a1f" : "#ffffff",
+    ["--dt-selected-shadow" as string]: isDark
+      ? "rgba(201,168,76,0.3)"
+      : "rgba(138,112,50,0.2)",
     ["--dt-range-bg" as string]: isDark
-      ? "rgba(212,175,55,0.08)"
-      : "rgba(212,175,55,0.10)",
-
-    ["--dt-range-edge-bg" as string]:
-      "linear-gradient(135deg, #B8860B, #D4AF37)",
-
+      ? "rgba(201,168,76,0.06)"
+      : "rgba(138,112,50,0.06)",
+    ["--dt-range-edge-bg" as string]: isDark ? "#c9a84c" : "#8a7032",
     ["--dt-disabled" as string]: isDark
-      ? "rgba(148,163,184,0.2)"
-      : "rgba(160,144,112,0.35)",
-
+      ? "rgba(158,154,147,0.2)"
+      : "rgba(160,154,140,0.3)",
     ["--dt-shadow" as string]: isDark
-      ? "0 20px 50px -28px rgba(0,0,0,0.95), 0 0 40px -10px rgba(212,175,55,0.12)"
-      : "0 12px 40px -10px rgba(0,0,0,0.12)",
+      ? "0 12px 40px -12px rgba(0,0,0,0.5)"
+      : "0 8px 30px -8px rgba(0,0,0,0.1)",
   } as CSSProperties;
 }
 
+/* ══════════════════════════════════════════════
+   TABLE THEME HOOK
+   ══════════════════════════════════════════════ */
+
 function useTableTheme() {
-  const t = useThemeTokens();
   const { isDark } = useTheme();
+  const t = isDark ? themeTokens.dark : themeTokens.light;
 
   return {
     t,
     isDark,
 
     tableCard: cn(
-      "overflow-hidden",
-      layout.radius.lg,
-      "border",
+      "overflow-hidden rounded-2xl border",
       t.borderSubtle,
       t.cardBg,
       t.cardShadow,
     ),
 
     fieldBase: cn(
-      "w-full rounded-xl border outline-none backdrop-blur-sm",
+      "w-full rounded-xl border outline-none",
       "transition-all duration-200",
-      "border",
       t.borderInput,
       t.inputBg,
       t.textPrimary,
-      isDark ? "placeholder:text-slate-500" : "placeholder:text-[#A09070]",
-      isDark ? "hover:border-[#D4AF37]/18" : "hover:border-[#D4AF37]/30",
+      isDark ? "placeholder:text-[#5a574f]" : "placeholder:text-[#b0aa9e]",
+      t.borderHover,
       focus.ring,
     ),
 
-    fieldError: "border-red-500/40",
+    fieldError: isDark ? "border-[#c44040]/40" : "border-[#c44040]/30",
 
     fieldLabel: cn(
       "text-xs font-semibold uppercase tracking-wider",
@@ -365,29 +412,25 @@ function useTableTheme() {
     fieldErrorText: cn("text-[11px]", t.textError),
 
     checkboxBase: cn(
-      "h-4 w-4 rounded",
-      "transition-all duration-200",
-      isDark ? "border-white/20 bg-white/4" : "border-black/20 bg-black/4",
-      "text-[#D4AF37]",
+      "h-4 w-4 rounded transition-all duration-200",
+      isDark
+        ? "border-[#3a3a44] bg-[#1e1e26]"
+        : "border-[#ddd9d0] bg-[#f5f3ee]",
       focus.ring,
     ),
 
     checkboxLabel: t.textSecondary,
-
     modalCard: cn("border", t.borderSubtle, t.modalBg, t.cardShadow),
-
     panel: cn("border", t.borderSubtle, t.dropdownBg, t.dropdownShadow),
-
     input: cn("border", t.borderInput, t.inputBg),
 
     ghostButton: cn(
       "inline-flex items-center justify-center gap-2 rounded-xl border px-4 h-9 text-xs font-medium transition-all duration-200",
-      "border",
       t.borderSubtle,
       t.inputBg,
       t.textSecondary,
       t.hoverBg,
-      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+      isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
       focus.ring,
     ),
 
@@ -395,38 +438,37 @@ function useTableTheme() {
       "inline-flex items-center justify-center gap-2 rounded-xl px-4 h-9 text-xs font-semibold transition-all duration-200",
       focus.ring,
       isDark
-        ? "bg-gradient-to-r from-[#B8860B] via-[#D4AF37] to-[#F5D76E] text-[#050505] hover:brightness-105"
-        : "bg-[#D4AF37] text-[#1A1304] hover:bg-[#C99E17]",
+        ? "bg-[#c9a84c] text-[#1a1a1f] hover:bg-[#d4b863]"
+        : "bg-[#8a7032] text-white hover:bg-[#7a6428]",
     ),
 
     iconButton: cn(
       "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
-      "border",
       t.borderSubtle,
       t.inputBg,
       t.textMuted,
       t.hoverBg,
-      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+      isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
       focus.ring,
     ),
 
     stickyHead: cn(
-      isDark ? "bg-[#0B0905]/95" : "bg-white/95",
+      isDark ? "bg-[#1c1c22]/97" : "bg-white/97",
       "backdrop-blur-xl",
     ),
 
-    rowHover: isDark ? "hover:bg-white/[0.025]" : "hover:bg-black/[0.025]",
+    rowHover: isDark ? "hover:bg-[#ffffff04]" : "hover:bg-[#00000003]",
     rowSelected: t.selectedBg,
 
     cardSection: cn(
       "rounded-2xl border",
       t.cardBg,
-      "border",
       t.borderSubtle,
       t.cardShadow,
     ),
   };
 }
+
 /* ══════════════════════════════════════════════
    ICONS
    ══════════════════════════════════════════════ */
@@ -437,12 +479,10 @@ const Icon = {
   Trash: () => <HiMiniTrash className="h-4 w-4" />,
   Plus: () => <HiMiniPlus className="h-4 w-4" />,
   Search: () => <HiMiniMagnifyingGlass className="h-4 w-4" />,
-
   ChevronUp: () => <HiMiniChevronUp className="h-3.5 w-3.5" />,
   ChevronDown: () => <HiMiniChevronDown className="h-3.5 w-3.5" />,
   ChevronLeft: () => <HiMiniChevronLeft className="h-4 w-4" />,
   ChevronRight: () => <HiMiniChevronRight className="h-4 w-4" />,
-
   X: () => <HiMiniXMark className="h-5 w-5" />,
   AlertTriangle: () => <HiMiniExclamationTriangle className="h-6 w-6" />,
   Empty: () => <LuPackage className="h-12 w-12" />,
@@ -467,9 +507,7 @@ function cn(...classes: (string | false | null | undefined)[]): string {
 
 function getNestedValue(obj: object, key: string): unknown {
   return key.split(".").reduce((o, k) => {
-    if (o && typeof o === "object") {
-      return (o as Record<string, unknown>)[k];
-    }
+    if (o && typeof o === "object") return (o as Record<string, unknown>)[k];
     return undefined;
   }, obj as unknown);
 }
@@ -494,13 +532,34 @@ function toPersianDigits(n: number | string): string {
 
 function parsePersianDate(val: unknown): DateObject | null {
   if (!val) return null;
+  if (val instanceof Date)
+    return new DateObject({ date: val, calendar: persian, locale: persian_fa });
+  if (val instanceof DateObject)
+    return new DateObject(val).convert(persian, persian_fa);
   const str = String(val);
+  const nativeDate = new Date(str);
+  if (
+    !Number.isNaN(nativeDate.getTime()) &&
+    (str.includes("T") || /^\d{4}-\d{2}-\d{2}/.test(str))
+  )
+    return new DateObject({
+      date: nativeDate,
+      calendar: persian,
+      locale: persian_fa,
+    });
   const latin = str.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
   const match = latin.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (!match) return null;
   try {
+    const year = parseInt(match[1]);
+    if (year > 1700)
+      return new DateObject({
+        date: new Date(year, parseInt(match[2]) - 1, parseInt(match[3])),
+        calendar: persian,
+        locale: persian_fa,
+      });
     return new DateObject({
-      year: parseInt(match[1]),
+      year,
       month: parseInt(match[2]),
       day: parseInt(match[3]),
       calendar: persian,
@@ -509,6 +568,17 @@ function parsePersianDate(val: unknown): DateObject | null {
   } catch {
     return null;
   }
+}
+
+function formatDateForPicker(value: unknown) {
+  return parsePersianDate(value)?.format("YYYY/MM/DD") ?? "";
+}
+
+function dateObjectToIsoString(date: DateObject) {
+  const nativeDate = date.toDate();
+  return Number.isNaN(nativeDate.getTime())
+    ? date.format("YYYY/MM/DD")
+    : nativeDate.toISOString();
 }
 
 /* ── Export Utilities ── */
@@ -523,15 +593,18 @@ function exportToCSV<T extends Record<string, unknown>>(
   const csvRows = rows.map((row) =>
     columns
       .map((col) => {
-        const val = getNestedValue(row, col.key);
-        const str = formatCellValue(val).replace(/"/g, '""');
+        const str = formatCellValue(getNestedValue(row, col.key)).replace(
+          /"/g,
+          '""',
+        );
         return `"${str}"`;
       })
       .join(","),
   );
-  const csv = BOM + [headers, ...csvRows].join("\n");
   downloadBlob(
-    new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+    new Blob([BOM + [headers, ...csvRows].join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    }),
     `${fileName}.csv`,
   );
 }
@@ -541,7 +614,7 @@ function exportToExcel<T extends Record<string, unknown>>(
   columns: ColumnDef<T>[],
   fileName: string,
 ) {
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>td,th{font-family:Tahoma;font-size:11pt;text-align:right;direction:rtl;padding:6px 10px;border:1px solid #ddd}th{background:#1a1a1a;color:#F5D76E;font-weight:bold}tr:nth-child(even){background:#f9f9f9}</style></head><body dir="rtl"><table><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr>${rows.map((row) => `<tr>${columns.map((col) => `<td>${formatCellValue(getNestedValue(row, col.key))}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>td,th{font-family:Tahoma;font-size:11pt;text-align:right;direction:rtl;padding:6px 10px;border:1px solid #ddd}th{background:#2c2a25;color:#d4b863;font-weight:bold}tr:nth-child(even){background:#f9f9f9}</style></head><body dir="rtl"><table><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr>${rows.map((row) => `<tr>${columns.map((col) => `<td>${formatCellValue(getNestedValue(row, col.key))}</td>`).join("")}</tr>`).join("")}</table></body></html>`;
   downloadBlob(
     new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" }),
     `${fileName}.xls`,
@@ -566,10 +639,10 @@ async function exportToPNG<T extends Record<string, unknown>>(
     return Math.max(hl, ml) * 9 + cp * 2 + 20;
   });
   const tw = Math.max(
-      cw.reduce((a, b) => a + b, 0),
-      600,
-    ),
-    th = hh + rows.length * rh + 20;
+    cw.reduce((a, b) => a + b, 0),
+    600,
+  );
+  const th = hh + rows.length * rh + 20;
   const canvas = document.createElement("canvas");
   const s = 2;
   canvas.width = tw * s;
@@ -577,11 +650,12 @@ async function exportToPNG<T extends Record<string, unknown>>(
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   ctx.scale(s, s);
-  ctx.fillStyle = "#0B0905";
+  // Softer dark background
+  ctx.fillStyle = "#1c1c22";
   ctx.fillRect(0, 0, tw, th);
-  ctx.fillStyle = "#1A1304";
+  ctx.fillStyle = "#22222a";
   ctx.fillRect(0, 0, tw, hh);
-  ctx.strokeStyle = "rgba(212,175,55,0.25)";
+  ctx.strokeStyle = "rgba(201,168,76,0.15)";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, hh);
@@ -589,7 +663,7 @@ async function exportToPNG<T extends Record<string, unknown>>(
   ctx.stroke();
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#F5D76E";
+  ctx.fillStyle = "#d4b863";
   ctx.font = `bold ${fs}px Tahoma,sans-serif`;
   let xo = tw - 10;
   columns.forEach((col, ci) => {
@@ -599,15 +673,15 @@ async function exportToPNG<T extends Record<string, unknown>>(
   rows.forEach((row, ri) => {
     const y = hh + ri * rh;
     if (ri % 2 === 1) {
-      ctx.fillStyle = "rgba(255,255,255,0.02)";
+      ctx.fillStyle = "rgba(255,255,255,0.015)";
       ctx.fillRect(0, y, tw, rh);
     }
-    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
     ctx.beginPath();
     ctx.moveTo(0, y + rh);
     ctx.lineTo(tw, y + rh);
     ctx.stroke();
-    ctx.fillStyle = "#CBD5E1";
+    ctx.fillStyle = "#9e9a93";
     ctx.font = `${fs}px Tahoma,sans-serif`;
     let cx = tw - 10;
     columns.forEach((col, ci) => {
@@ -620,7 +694,7 @@ async function exportToPNG<T extends Record<string, unknown>>(
       cx -= cw[ci];
     });
   });
-  ctx.strokeStyle = "rgba(212,175,55,0.15)";
+  ctx.strokeStyle = "rgba(201,168,76,0.1)";
   ctx.lineWidth = 2;
   ctx.strokeRect(0, 0, tw, th);
   canvas.toBlob((blob) => {
@@ -643,7 +717,6 @@ function downloadBlob(blob: Blob, fileName: string) {
    SUB-COMPONENTS
    ══════════════════════════════════════════════ */
 
-/* ── Overlay ── */
 function Overlay({
   open,
   onClose,
@@ -656,7 +729,7 @@ function Overlay({
   wide?: boolean;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const { modalCard } = useTableTheme();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (!open) return;
@@ -678,7 +751,9 @@ function Overlay({
       ref={overlayRef}
       className={cn(
         "fixed inset-0 z-100 flex items-center justify-center p-3 sm:p-6",
-        backgrounds.surface.overlay,
+        isDark
+          ? "bg-[#0a0a0e]/70 backdrop-blur-sm"
+          : "bg-[#2c2a25]/30 backdrop-blur-sm",
       )}
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
@@ -691,10 +766,15 @@ function Overlay({
       <div
         role="document"
         className={cn(
-          "modal-content relative w-full overflow-hidden",
+          "relative w-full",
           wide ? "max-w-2xl" : "max-w-lg",
-          layout.radius.lg,
-          modalCard,
+          "rounded-2xl border",
+          isDark
+            ? "border-[#2a2a32] bg-[#1a1a20]"
+            : "border-[#e8e4dc] bg-white",
+          isDark
+            ? "shadow-[0_16px_50px_-12px_rgba(0,0,0,0.6)]"
+            : "shadow-[0_16px_50px_-12px_rgba(0,0,0,0.12)]",
           "transform transition-all duration-300",
           "animate-[fade-up_.35s_cubic-bezier(.22,1,.36,1)_both]",
         )}
@@ -705,7 +785,6 @@ function Overlay({
   );
 }
 
-/* ── Action Btn ── */
 function ActionBtn({
   onClick,
   title,
@@ -718,7 +797,6 @@ function ActionBtn({
   children: ReactNode;
 }) {
   const { t, isDark } = useTableTheme();
-
   return (
     <button
       type="button"
@@ -727,16 +805,17 @@ function ActionBtn({
       aria-label={title}
       className={cn(
         "inline-flex h-8 w-8 items-center justify-center rounded-lg",
-        animation.base,
-        interactive.touch,
+        "transition-all duration-200 touch-manipulation",
         focus.ring,
-        animation.activePress,
+        "active:scale-[0.95]",
         variant === "danger"
-          ? "text-red-400/70 hover:bg-red-500/10 hover:text-red-400"
+          ? isDark
+            ? "text-[#e87c7c]/60 hover:bg-[#c44040]/10 hover:text-[#e87c7c]"
+            : "text-[#c44040]/50 hover:bg-[#c44040]/6 hover:text-[#c44040]"
           : cn(
               t.textMuted,
               t.hoverBg,
-              isDark ? "hover:text-[#F5D76E]" : "hover:text-[#B8860B]",
+              isDark ? "hover:text-[#d4b863]" : "hover:text-[#7a6428]",
             ),
       )}
     >
@@ -745,7 +824,6 @@ function ActionBtn({
   );
 }
 
-/* ── Pagination Btn ── */
 function PaginationBtn({
   onClick,
   disabled,
@@ -760,7 +838,6 @@ function PaginationBtn({
   ariaLabel?: string;
 }) {
   const { t, isDark } = useTableTheme();
-
   return (
     <button
       type="button"
@@ -770,8 +847,7 @@ function PaginationBtn({
       aria-current={active ? "page" : undefined}
       className={cn(
         "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium",
-        animation.base,
-        interactive.touch,
+        "transition-all duration-200 touch-manipulation",
         focus.ring,
         disabled && "pointer-events-none opacity-30",
         active
@@ -780,7 +856,7 @@ function PaginationBtn({
               "border border-transparent",
               t.textMuted,
               t.hoverBg,
-              isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+              isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
             ),
       )}
     >
@@ -789,7 +865,6 @@ function PaginationBtn({
   );
 }
 
-/* ── Filter Dropdown ── */
 function FilterDropdown({
   label,
   options,
@@ -807,9 +882,8 @@ function FilterDropdown({
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && !ref.current.contains(e.target as Node))
         setOpen(false);
-      }
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -824,14 +898,14 @@ function FilterDropdown({
         aria-haspopup="listbox"
         aria-label={`فیلتر ${label}`}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium backdrop-blur-sm",
+          "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
+          "transition-all duration-200",
           value
-            ? cn("border", t.borderAccent, t.textAccent, t.inputBg)
-            : cn("border", t.borderInput, t.inputBg, t.textMuted),
-          animation.base,
+            ? cn(t.borderAccent, t.textAccent, t.inputBg)
+            : cn(t.borderInput, t.inputBg, t.textMuted),
           focus.ring,
           t.hoverBg,
-          isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+          isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
         )}
       >
         <Icon.Filter />
@@ -869,21 +943,19 @@ function FilterDropdown({
               setOpen(false);
             }}
             className={cn(
-              "flex w-full items-center gap-2 px-3 py-2 text-xs text-right",
-              animation.colors,
+              "flex w-full items-center gap-2 px-3 py-2 text-xs text-right transition-colors duration-200",
               !value
                 ? cn(t.activeBg, t.textAccent)
                 : cn(
                     t.textMuted,
                     t.hoverBg,
-                    isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                    isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
                   ),
             )}
           >
             <span className="flex-1">همه</span>
             {!value && <Icon.Check />}
           </button>
-
           {options.map((opt) => (
             <button
               key={opt}
@@ -895,14 +967,13 @@ function FilterDropdown({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-2 px-3 py-2 text-xs text-right",
-                animation.colors,
+                "flex w-full items-center gap-2 px-3 py-2 text-xs text-right transition-colors duration-200",
                 value === opt
                   ? cn(t.activeBg, t.textAccent)
                   : cn(
                       t.textMuted,
                       t.hoverBg,
-                      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                      isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
                     ),
               )}
             >
@@ -916,7 +987,6 @@ function FilterDropdown({
   );
 }
 
-/* ── Date Range Filter ── */
 function DateRangeFilter({
   label,
   value,
@@ -926,6 +996,7 @@ function DateRangeFilter({
   value: DateRange;
   onChange: (range: DateRange) => void;
 }) {
+  const { isDark } = useTheme();
   const hasRange = value.from || value.to;
   const formatRange = () => {
     if (!value.from && !value.to) return "";
@@ -943,14 +1014,12 @@ function DateRangeFilter({
               : undefined
         }
         onChange={(dates) => {
-          if (Array.isArray(dates)) {
+          if (Array.isArray(dates))
             onChange({
               from: dates[0] ? new DateObject(dates[0]) : null,
               to: dates[1] ? new DateObject(dates[1]) : null,
             });
-          } else {
-            onChange({ from: null, to: null });
-          }
+          else onChange({ from: null, to: null });
         }}
         range
         rangeHover
@@ -967,20 +1036,33 @@ function DateRangeFilter({
             aria-label={`فیلتر تاریخ ${label}`}
             className={cn(
               "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
-              "bg-white/[0.035] backdrop-blur-sm",
+              "transition-all duration-200",
+              isDark ? "bg-[#1e1e26]" : "bg-[#f5f3ee]",
               hasRange
-                ? "border-[#D4AF37]/25 text-[#F5D76E]"
-                : borders.subtle + " text-slate-400",
-              animation.base,
+                ? isDark
+                  ? "border-[#c9a84c]/20 text-[#d4b863]"
+                  : "border-[#8a7032]/20 text-[#7a6428]"
+                : isDark
+                  ? "border-[#2e2e38] text-[#706c65]"
+                  : "border-[#ddd9d0] text-[#9e9788]",
               focus.ring,
-              "hover:border-[#D4AF37]/18 hover:text-gray-500",
+              isDark
+                ? "hover:border-[#3a3a44] hover:text-[#9e9a93]"
+                : "hover:border-[#ccc7bc] hover:text-[#6b665c]",
               "max-w-70",
             )}
           >
             <Icon.Calendar />
             <span className="whitespace-nowrap">{label}</span>
             {hasRange && (
-              <span className="mr-1 rounded-full bg-[#D4AF37]/15 px-1.5 py-0.5 text-[10px] text-[#F5D76E] whitespace-nowrap truncate max-w-35">
+              <span
+                className={cn(
+                  "mr-1 max-w-35 truncate whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px]",
+                  isDark
+                    ? "bg-[#c9a84c]/8 text-[#d4b863]"
+                    : "bg-[#8a7032]/6 text-[#7a6428]",
+                )}
+              >
                 {formatRange()}
               </span>
             )}
@@ -996,7 +1078,12 @@ function DateRangeFilter({
             onChange({ from: null, to: null });
           }}
           aria-label="پاک کردن فیلتر تاریخ"
-          className="absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all duration-150"
+          className={cn(
+            "absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full transition-all duration-150",
+            isDark
+              ? "bg-[#c44040]/15 text-[#e87c7c] hover:bg-[#c44040]/25"
+              : "bg-[#c44040]/8 text-[#c44040] hover:bg-[#c44040]/15",
+          )}
         >
           <svg viewBox="0 0 12 12" fill="currentColor" className="h-2.5 w-2.5">
             <path d="M3.404 3.404a.55.55 0 01.778 0L6 5.222l1.818-1.818a.55.55 0 01.778.778L6.778 6l1.818 1.818a.55.55 0 11-.778.778L6 6.778 4.182 8.596a.55.55 0 11-.778-.778L5.222 6 3.404 4.182a.55.55 0 010-.778z" />
@@ -1007,7 +1094,6 @@ function DateRangeFilter({
   );
 }
 
-/* ── Export Menu ── */
 function ExportMenu({
   onExportExcel,
   onExportPNG,
@@ -1021,6 +1107,8 @@ function ExportMenu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { t, isDark, panel } = useTableTheme();
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node))
@@ -1101,7 +1189,15 @@ function ExportMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="منوی خروجی"
-        className={cn(components.ghostButton, "h-9 text-xs px-3 gap-1.5")}
+        className={cn(
+          "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-all duration-200",
+          t.borderSubtle,
+          t.inputBg,
+          t.textSecondary,
+          t.hoverBg,
+          isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
+          focus.ring,
+        )}
       >
         <Icon.Download />
         <span>خروجی</span>
@@ -1111,11 +1207,8 @@ function ExportMenu({
           role="menu"
           aria-label="فرمت‌های خروجی"
           className={cn(
-            "absolute top-full left-0 z-50 mt-1 min-w-55 overflow-hidden",
-            layout.radius.md,
-            borders.light,
-            "bg-[#0B0905]/98 backdrop-blur-2xl",
-            shadows.card,
+            "absolute top-full left-0 z-50 mt-1 min-w-55 overflow-hidden rounded-xl",
+            panel,
             "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
         >
@@ -1126,9 +1219,10 @@ function ExportMenu({
               role="menuitem"
               onClick={item.action}
               className={cn(
-                "flex w-full items-center gap-2 px-3 py-2.5 text-xs text-right",
-                animation.colors,
-                "text-slate-400 hover:bg-white/4 hover:text-white",
+                "flex w-full items-center gap-2 px-3 py-2.5 text-xs text-right transition-colors duration-200",
+                t.textMuted,
+                t.hoverBg,
+                isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
               )}
             >
               {item.icon}
@@ -1141,7 +1235,6 @@ function ExportMenu({
   );
 }
 
-/* ── Page Size Selector ── */
 function PageSizeSelector({
   value,
   options,
@@ -1157,9 +1250,8 @@ function PageSizeSelector({
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && !ref.current.contains(e.target as Node))
         setOpen(false);
-      }
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
@@ -1175,20 +1267,18 @@ function PageSizeSelector({
         aria-label={`تعداد ردیف در هر صفحه: ${toPersianDigits(value)}`}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium",
-          "border",
+          "transition-all duration-200",
           t.borderInput,
           t.inputBg,
           t.textMuted,
           t.hoverBg,
-          isDark ? "hover:text-white" : "hover:text-[#1A1304]",
-          animation.base,
+          isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
           focus.ring,
         )}
       >
         <span>{toPersianDigits(value)} ردیف</span>
         <Icon.ChevronDown />
       </button>
-
       {open && (
         <div
           role="listbox"
@@ -1210,14 +1300,13 @@ function PageSizeSelector({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center justify-between px-3 py-2 text-xs",
-                animation.colors,
+                "flex w-full items-center justify-between px-3 py-2 text-xs transition-colors duration-200",
                 value === size
                   ? cn(t.activeBg, t.textAccent)
                   : cn(
                       t.textMuted,
                       t.hoverBg,
-                      isDark ? "hover:text-white" : "hover:text-[#1A1304]",
+                      isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
                     ),
               )}
             >
@@ -1231,7 +1320,6 @@ function PageSizeSelector({
   );
 }
 
-/* ── Error Banner ── */
 function ErrorBanner({
   error,
   onRetry,
@@ -1239,20 +1327,35 @@ function ErrorBanner({
   error: Error;
   onRetry: () => void;
 }) {
+  const { isDark } = useTheme();
   return (
     <div
       role="alert"
       className={cn(
         "flex items-center gap-3 rounded-xl border px-4 py-3 mb-3",
-        "border-red-500/20 bg-red-500/6",
+        isDark
+          ? "border-[#c44040]/15 bg-[#c44040]/6"
+          : "border-[#c44040]/12 bg-[#fce8e8]",
       )}
     >
-      <div className="text-red-400">
+      <div className={isDark ? "text-[#e87c7c]" : "text-[#c44040]"}>
         <Icon.AlertCircle />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-red-300">خطا در دریافت داده</p>
-        <p className="text-xs text-red-400/70 truncate mt-0.5">
+        <p
+          className={cn(
+            "text-sm font-medium",
+            isDark ? "text-[#e87c7c]" : "text-[#c44040]",
+          )}
+        >
+          خطا در دریافت داده
+        </p>
+        <p
+          className={cn(
+            "text-xs truncate mt-0.5",
+            isDark ? "text-[#e87c7c]/60" : "text-[#c44040]/60",
+          )}
+        >
           {error.message}
         </p>
       </div>
@@ -1261,9 +1364,10 @@ function ErrorBanner({
         onClick={onRetry}
         aria-label="تلاش مجدد برای دریافت داده"
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium",
-          "border-red-500/25 text-red-400 hover:bg-red-500/10 hover:text-red-300",
-          animation.base,
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all duration-200",
+          isDark
+            ? "border-[#c44040]/20 text-[#e87c7c] hover:bg-[#c44040]/10"
+            : "border-[#c44040]/15 text-[#c44040] hover:bg-[#c44040]/6",
           focus.ring,
         )}
       >
@@ -1274,30 +1378,37 @@ function ErrorBanner({
   );
 }
 
-/* ── Copy Toast ── */
 function CopyToast({ visible }: { visible: boolean }) {
+  const { isDark } = useTheme();
   if (!visible) return null;
   return (
     <div
       role="status"
       aria-live="polite"
       className={cn(
-        "fixed bottom-6 left-1/2 -translate-x-1/2 z-200 inline-flex items-center gap-2 rounded-xl px-4 py-2.5",
-        "bg-[#0B0905]/95 backdrop-blur-xl border",
-        borders.light,
-        shadows.card,
+        "fixed bottom-6 left-1/2 -translate-x-1/2 z-200 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 border",
+        isDark
+          ? "bg-[#1c1c22]/97 border-[#2a2a32] shadow-[0_8px_30px_-8px_rgba(0,0,0,0.5)]"
+          : "bg-white/97 border-[#e8e4dc] shadow-[0_8px_30px_-8px_rgba(0,0,0,0.1)]",
+        "backdrop-blur-xl",
         "animate-[fade-up_.3s_cubic-bezier(.22,1,.36,1)_both]",
       )}
     >
-      <div className="text-green-400">
+      <div className={isDark ? "text-[#6ec99a]" : "text-[#2d7a50]"}>
         <Icon.CopyDone />
       </div>
-      <span className="text-xs font-medium text-white">کپی شد!</span>
+      <span
+        className={cn(
+          "text-xs font-medium",
+          isDark ? "text-[#e8e6e3]" : "text-[#2c2a25]",
+        )}
+      >
+        کپی شد!
+      </span>
     </div>
   );
 }
 
-/* ── Pull to Refresh Indicator ── */
 function PullIndicator({
   distance,
   isRefreshing,
@@ -1307,10 +1418,10 @@ function PullIndicator({
   isRefreshing: boolean;
   threshold: number;
 }) {
+  const { isDark } = useTheme();
   if (distance <= 0 && !isRefreshing) return null;
   const progress = Math.min(distance / threshold, 1);
   const rotation = progress * 360;
-
   return (
     <div
       role="status"
@@ -1324,7 +1435,9 @@ function PullIndicator({
       <div
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-full",
-          "bg-[#D4AF37]/10 border border-[#D4AF37]/20",
+          isDark
+            ? "bg-[#c9a84c]/8 border border-[#c9a84c]/15 text-[#d4b863]"
+            : "bg-[#8a7032]/6 border border-[#8a7032]/12 text-[#7a6428]",
           isRefreshing && "animate-spin",
         )}
         style={{ transform: `rotate(${rotation}deg)` }}
@@ -1347,9 +1460,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   onCreate,
   onUpdate,
   onDelete,
-  canCreate = true,
-  canUpdate = true,
-  canDelete = true,
+  canCreate: requestedCanCreate = true,
+  canUpdate: requestedCanUpdate = true,
+  canDelete: requestedCanDelete = true,
   primaryKey = "id" as keyof T & string,
   pageSize: initialPageSize = 10,
   pageSizes = [10, 25, 50, 100],
@@ -1375,7 +1488,23 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   onError,
   data: staticData,
 }: DynamicTableProps<T>) {
-  /* ── Local state ── */
+  const { can, isLoading: accessLoading, isError: accessError } = useAccess();
+
+  const canUseEndpointAction = useCallback(
+    (method: string) => {
+      const target = getAccessTargetForRequest(endpoint, method);
+      if (!target) return true;
+      if (accessLoading || accessError) return false;
+      return can(target.component, target.action);
+    },
+    [accessError, accessLoading, can, endpoint],
+  );
+
+  const canCreate = requestedCanCreate && canUseEndpointAction("POST");
+  const canUpdate =
+    requestedCanUpdate && canUseEndpointAction(updateMethod || "PATCH");
+  const canDelete = requestedCanDelete && canUseEndpointAction("DELETE");
+
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
@@ -1389,11 +1518,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, DateRange>>({});
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
-  // Debounced search
   const debouncedSearch = useDebounce(search, searchDebounceMs);
-
-  // Copy to clipboard
   const { copied, copiedCell, copy } = useCopyToClipboard();
 
   const {
@@ -1412,13 +1539,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     stickyHead,
     rowHover,
     rowSelected,
+    ghostButton,
   } = useTableTheme();
+
   const datePickerVars = useMemo(
     () => getDatePickerVariables(isDark),
     [isDark],
   );
 
-  /* ── Server-side pagination params ── */
   const serverPaginationParams = useMemo<
     ServerPaginationParams | undefined
   >(() => {
@@ -1441,7 +1569,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     filters,
   ]);
 
-  /* ── SWR Data Hook ── */
   const {
     data: fetchedData,
     isLoading,
@@ -1469,7 +1596,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const data = staticData ?? fetchedData;
   const loading = !staticData && isLoading;
 
-  /* ── Pull to Refresh ── */
   const {
     containerRef: pullRef,
     pullDistance,
@@ -1483,12 +1609,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     threshold: 80,
   });
 
-  // Report errors
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
   useEffect(() => {
     if (fetchError && onError) onError(fetchError);
   }, [fetchError, onError]);
 
-  /* ── Derived columns ── */
   const visibleCols = useMemo(
     () => columns.filter((c) => c.visible !== false),
     [columns],
@@ -1523,19 +1650,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     return opts;
   }, [data, filterableCols]);
 
-  const activeFiltersCount = useMemo(() => {
-    return (
+  const activeFiltersCount = useMemo(
+    () =>
       Object.values(filters).filter(Boolean).length +
-      Object.values(dateRanges).filter((r) => r.from || r.to).length
-    );
-  }, [filters, dateRanges]);
+      Object.values(dateRanges).filter((r) => r.from || r.to).length,
+    [filters, dateRanges],
+  );
 
-  /* ── Client-side filter + sort + paginate ── */
   const filtered = useMemo(() => {
-    if (serverSide) return data; // Server already filtered
+    if (serverSide) return data;
     let items = [...data];
-
-    // Text filters
     Object.entries(filters).forEach(([key, val]) => {
       if (val)
         items = items.filter((row) => {
@@ -1543,8 +1667,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           return cv != null && String(cv) === val;
         });
     });
-
-    // Date range filters
     Object.entries(dateRanges).forEach(([key, range]) => {
       if (!range.from && !range.to) return;
       items = items.filter((row) => {
@@ -1558,8 +1680,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         return true;
       });
     });
-
-    // Search (debounced)
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase();
       items = items.filter((row) =>
@@ -1569,8 +1689,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         }),
       );
     }
-
-    // Sort
     if (sortKey && sortDir) {
       items.sort((a, b) => {
         const as = getNestedValue(a, sortKey),
@@ -1583,7 +1701,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         return sortDir === "asc" ? cmp : -cmp;
       });
     }
-
     return items;
   }, [
     data,
@@ -1603,23 +1720,20 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const currentPage = Math.min(page, totalPages);
 
   const paginatedRows = useMemo(() => {
-    if (serverSide) return data; // Already paginated by server
+    if (serverSide) return data;
     const start = (currentPage - 1) * currentPageSize;
     return filtered.slice(start, start + currentPageSize);
   }, [filtered, currentPage, currentPageSize, serverSide, data]);
 
-  // Reset page on search/filter change
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, filters, dateRanges]);
 
-  // Reset page on page size change
   const handlePageSizeChange = useCallback((newSize: number) => {
     setCurrentPageSize(newSize);
     setPage(1);
   }, []);
 
-  /* ── Selection ── */
   const toggleRowSelection = useCallback(
     (row: T) => {
       const key = String(row[primaryKey]);
@@ -1647,7 +1761,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     return filtered.filter((row) => selectedRows.has(String(row[primaryKey])));
   }, [filtered, selectedRows, primaryKey]);
 
-  /* ── Sort ── */
   const handleSort = useCallback(
     (key: string) => {
       if (sortKey === key) {
@@ -1661,7 +1774,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     [sortKey, sortDir],
   );
 
-  /* ── Cell Copy ── */
   const handleCellCopy = useCallback(
     (value: unknown, rowKey: string, colKey: string) => {
       const text = formatCellValue(value);
@@ -1670,12 +1782,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     [copy],
   );
 
-  /* ── Modal handlers ── */
   const openView = useCallback((row: T) => {
     setSelectedRow(row);
     setModalMode("view");
   }, []);
-
   const openEdit = useCallback(
     (row: T) => {
       setSelectedRow(row);
@@ -1689,7 +1799,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     },
     [editableCols],
   );
-
   const openCreate = useCallback(() => {
     setSelectedRow(null);
     const fd: Record<string, unknown> = {};
@@ -1700,12 +1809,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     setFormErrors({});
     setModalMode("create");
   }, [editableCols]);
-
   const openDelete = useCallback((row: T) => {
     setSelectedRow(row);
     setModalMode("delete");
   }, []);
-
   const closeModal = useCallback(() => {
     setModalMode(null);
     setSelectedRow(null);
@@ -1787,7 +1894,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     });
   }, []);
 
-  /* ── Double click to edit ── */
   const handleRowDoubleClick = useCallback(
     (row: T) => {
       if (doubleClickToEdit && canUpdate) openEdit(row);
@@ -1795,7 +1901,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     [doubleClickToEdit, canUpdate, openEdit],
   );
 
-  /* ── Export handlers ── */
   const handleExportExcel = useCallback(
     (s: boolean) =>
       exportToExcel(
@@ -1830,7 +1935,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     setSearch("");
   }, []);
 
-  /* ── Pagination ── */
   const pageNumbers = useMemo(() => {
     const pages: number[] = [];
     const max = 5;
@@ -1843,17 +1947,42 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
   const hasActions = !!(canUpdate || canDelete || rowActions);
   const hasFilters = filterableCols.length > 0 || dateFilterCols.length > 0;
-
-  // Total column count for colSpan
   const totalColCount =
-    (showRowNumbers ? 1 : 0) +
-    1 /* checkbox */ +
-    visibleCols.length +
-    (hasActions ? 1 : 0);
+    (showRowNumbers ? 1 : 0) + 1 + visibleCols.length + (hasActions ? 1 : 0);
+
+  /* ── Checkbox helper ── */
+  const CheckboxIcon = ({
+    checked,
+    indeterminate,
+  }: {
+    checked: boolean;
+    indeterminate?: boolean;
+  }) => (
+    <svg viewBox="0 0 12 12" fill="currentColor" className="h-3 w-3">
+      {checked ? (
+        <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
+      ) : indeterminate ? (
+        <rect x="2" y="5" width="8" height="2" rx="1" />
+      ) : null}
+    </svg>
+  );
+
+  const checkboxClasses = (active: boolean) =>
+    cn(
+      "flex h-5 w-5 items-center justify-center rounded border transition-all duration-200",
+      active
+        ? isDark
+          ? "bg-[#c9a84c]/15 border-[#c9a84c]/30 text-[#d4b863]"
+          : "bg-[#8a7032]/10 border-[#8a7032]/25 text-[#7a6428]"
+        : isDark
+          ? "border-[#3a3a44] text-transparent hover:border-[#4a4a54]"
+          : "border-[#ddd9d0] text-transparent hover:border-[#ccc7bc]",
+    );
 
   /* ══════════════════════════════════════════════
      RENDER
      ══════════════════════════════════════════════ */
+
   return (
     <>
       <style>{animation.keyframes}</style>
@@ -1872,15 +2001,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             {title && (
               <h2
                 className={cn(
-                  typography.h3,
-                  isDark ? gradients.textPrimary : "text-[#1A1304]",
-                  "mb-1",
+                  "text-lg font-bold sm:text-xl mb-1",
+                  isDark ? "text-[#e8e6e3]" : "text-[#2c2a25]",
                 )}
               >
                 {title}
               </h2>
             )}
-            {subtitle && <p className={typography.bodySmall}>{subtitle}</p>}
+            {subtitle && (
+              <p className={cn("text-xs leading-5", t.textMuted)}>{subtitle}</p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {!staticData && (
@@ -1897,7 +2027,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             )}
             {searchable && (
               <div className="relative">
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+                <span
+                  className={cn(
+                    "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
+                    t.textDisabled,
+                  )}
+                >
                   <Icon.Search />
                 </span>
                 <input
@@ -1909,19 +2044,27 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   role="searchbox"
                   className={cn(
                     "h-9 w-full rounded-xl border pr-9 pl-4 text-xs outline-none sm:w-48",
-                    "border",
+                    "transition-all duration-200",
                     t.borderInput,
                     t.inputBg,
                     t.textPrimary,
-                    "placeholder:text-slate-500",
-                    animation.base,
+                    isDark
+                      ? "placeholder:text-[#5a574f]"
+                      : "placeholder:text-[#b0aa9e]",
                     focus.ring,
-                    "hover:border-[#D4AF37]/18",
+                    t.borderHover,
                   )}
                 />
                 {search && debouncedSearch !== search && (
                   <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    <div className="h-3 w-3 rounded-full border-2 border-[#D4AF37]/40 border-t-[#F5D76E] animate-spin" />
+                    <div
+                      className={cn(
+                        "h-3 w-3 rounded-full border-2 animate-spin",
+                        isDark
+                          ? "border-[#c9a84c]/30 border-t-[#d4b863]"
+                          : "border-[#8a7032]/20 border-t-[#8a7032]",
+                      )}
+                    />
                   </div>
                 )}
               </div>
@@ -1964,8 +2107,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             role="status"
             aria-live="polite"
           >
-            <div className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
-            <span className="text-gray-500">در حال بروزرسانی…</span>
+            <div
+              className={cn(
+                "h-1.5 w-1.5 rounded-full animate-pulse",
+                isDark ? "bg-[#c9a84c]" : "bg-[#8a7032]",
+              )}
+            />
+            <span className={t.textMuted}>در حال بروزرسانی…</span>
           </div>
         )}
 
@@ -1976,7 +2124,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             role="toolbar"
             aria-label="فیلترها"
           >
-            <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+            <span
+              className={cn(
+                "text-xs font-medium flex items-center gap-1",
+                t.textMuted,
+              )}
+            >
               <Icon.Filter />
               فیلترها:
             </span>
@@ -2007,9 +2160,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 onClick={clearAllFilters}
                 aria-label="پاک کردن همه فیلترها"
                 className={cn(
-                  "inline-flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium",
-                  "text-red-400/80 hover:text-red-400 hover:bg-red-500/10",
-                  animation.base,
+                  "inline-flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium transition-all duration-200",
+                  isDark
+                    ? "text-[#e87c7c]/70 hover:text-[#e87c7c] hover:bg-[#c44040]/8"
+                    : "text-[#c44040]/70 hover:text-[#c44040] hover:bg-[#c44040]/5",
                   focus.ring,
                 )}
               >
@@ -2024,8 +2178,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         {selectedRows.size > 0 && (
           <div
             className={cn(
-              "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5",
-              "bg-[#D4AF37]/8 border border-[#D4AF37]/15",
+              "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5 border",
+              isDark
+                ? "bg-[#c9a84c]/6 border-[#c9a84c]/12"
+                : "bg-[#8a7032]/4 border-[#8a7032]/10",
             )}
             role="status"
             aria-live="polite"
@@ -2036,7 +2192,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <button
               type="button"
               onClick={() => setSelectedRows(new Set())}
-              className="text-xs text-slate-400 hover:text-white transition-colors"
+              className={cn(
+                "text-xs transition-colors",
+                t.textMuted,
+                isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
+              )}
             >
               لغو انتخاب
             </button>
@@ -2045,7 +2205,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
         {/* ── Table Card ── */}
         <div ref={pullRef as any} className={tableCard}>
-          {/* Pull to refresh indicator */}
           <div className="block md:hidden">
             <PullIndicator
               distance={pullDistance}
@@ -2055,8 +2214,20 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           </div>
 
           {(loading || isValidating) && (
-            <div className="relative h-0.5 w-full overflow-hidden bg-[#D4AF37]/10">
-              <div className="absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite] bg-linear-to-l from-transparent via-[#D4AF37]/40 to-transparent" />
+            <div
+              className={cn(
+                "relative h-0.5 w-full overflow-hidden",
+                isDark ? "bg-[#c9a84c]/8" : "bg-[#8a7032]/6",
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite]",
+                  isDark
+                    ? "bg-gradient-to-l from-transparent via-[#c9a84c]/25 to-transparent"
+                    : "bg-gradient-to-l from-transparent via-[#8a7032]/20 to-transparent",
+                )}
+              />
             </div>
           )}
 
@@ -2074,7 +2245,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 }
               >
                 <tr className={cn("border-b", t.divider)} role="row">
-                  {/* Checkbox column */}
                   <th
                     className="w-10 px-3 py-3"
                     role="columnheader"
@@ -2090,44 +2260,28 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           : "انتخاب همه ردیف‌ها"
                       }
                       aria-pressed={isAllSelected}
-                      className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded border",
-                        animation.base,
-                        isAllSelected
-                          ? "bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#F5D76E]"
-                          : isSomeSelected
-                            ? "bg-[#D4AF37]/10 border-[#D4AF37]/25 text-[#D4AF37]"
-                            : "border-white/15 text-transparent hover:border-[#D4AF37]/25",
+                      className={checkboxClasses(
+                        isAllSelected || isSomeSelected,
                       )}
                     >
-                      {(isAllSelected || isSomeSelected) && (
-                        <svg
-                          viewBox="0 0 12 12"
-                          fill="currentColor"
-                          className="h-3 w-3"
-                        >
-                          {isAllSelected ? (
-                            <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
-                          ) : (
-                            <rect x="2" y="5" width="8" height="2" rx="1" />
-                          )}
-                        </svg>
-                      )}
+                      <CheckboxIcon
+                        checked={isAllSelected}
+                        indeterminate={isSomeSelected}
+                      />
                     </button>
                   </th>
-
-                  {/* Row number column */}
                   {showRowNumbers && (
                     <th
-                      className="w-12 px-3 py-3 text-xs font-semibold text-slate-500"
+                      className={cn(
+                        "w-12 px-3 py-3 text-xs font-semibold",
+                        t.textMuted,
+                      )}
                       role="columnheader"
                       aria-label="شماره ردیف"
                     >
                       #
                     </th>
                   )}
-
-                  {/* Data columns */}
                   {visibleCols.map((col) => {
                     const isSorted = sortKey === col.key;
                     const canSort = col.sortable !== false;
@@ -2143,10 +2297,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             : "none"
                         }
                         className={cn(
-                          "px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500",
+                          "px-4 py-3 text-xs font-semibold uppercase tracking-wider",
+                          t.textMuted,
                           canSort && "cursor-pointer select-none",
-                          animation.colors,
-                          canSort && "hover:text-[#F5D76E]/80",
+                          "transition-colors duration-200",
+                          canSort &&
+                            (isDark
+                              ? "hover:text-[#d4b863]"
+                              : "hover:text-[#7a6428]"),
                         )}
                         onClick={() => canSort && handleSort(col.key)}
                       >
@@ -2162,7 +2320,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   })}
                   {hasActions && (
                     <th
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"
+                      className={cn(
+                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider",
+                        t.textMuted,
+                      )}
                       role="columnheader"
                     >
                       عملیات
@@ -2175,29 +2336,47 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr
                       key={`sk-${i}`}
-                      className="border-b border-white/4"
+                      className={cn("border-b", t.divider)}
                       role="row"
                       aria-busy="true"
                     >
                       <td className="px-3 py-3">
-                        <div className="h-5 w-5 rounded bg-white/4 animate-pulse" />
+                        <div
+                          className={cn(
+                            "h-5 w-5 rounded animate-pulse",
+                            isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                          )}
+                        />
                       </td>
                       {showRowNumbers && (
                         <td className="px-3 py-3">
-                          <div className="h-4 w-6 rounded bg-white/4 animate-pulse" />
+                          <div
+                            className={cn(
+                              "h-4 w-6 rounded animate-pulse",
+                              isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                            )}
+                          />
                         </td>
                       )}
                       {visibleCols.map((col) => (
                         <td key={col.key} className="px-4 py-3">
                           <div
-                            className="h-4 rounded bg-white/4 animate-pulse"
+                            className={cn(
+                              "h-4 rounded animate-pulse",
+                              isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                            )}
                             style={{ width: `${60 + Math.random() * 40}%` }}
                           />
                         </td>
                       ))}
                       {hasActions && (
                         <td className="px-4 py-3">
-                          <div className="h-4 w-20 rounded bg-white/4 animate-pulse" />
+                          <div
+                            className={cn(
+                              "h-4 w-20 rounded animate-pulse",
+                              isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                            )}
+                          />
                         </td>
                       )}
                     </tr>
@@ -2205,7 +2384,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 ) : paginatedRows.length === 0 ? (
                   <tr role="row">
                     <td colSpan={totalColCount} className="py-16 text-center">
-                      <div className="flex flex-col items-center gap-3 text-slate-500">
+                      <div
+                        className={cn(
+                          "flex flex-col items-center gap-3",
+                          t.textMuted,
+                        )}
+                      >
                         <Icon.Empty />
                         <p className="text-sm">{emptyMessage}</p>
                       </div>
@@ -2217,7 +2401,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     const isSelected = selectedRows.has(rowKey);
                     const globalRowIndex =
                       (currentPage - 1) * currentPageSize + ri + 1;
-
                     return (
                       <tr
                         key={rowKey}
@@ -2228,50 +2411,34 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         className={cn(
                           "group border-b last:border-b-0",
                           t.divider,
-                          animation.colors,
+                          "transition-colors duration-200",
                           isSelected ? rowSelected : rowHover,
                           doubleClickToEdit && canUpdate && "cursor-pointer",
                         )}
                       >
-                        {/* Checkbox */}
                         <td className="w-10 px-3 py-3" role="cell">
                           <button
                             type="button"
                             onClick={() => toggleRowSelection(row)}
                             aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف ${toPersianDigits(globalRowIndex)}`}
                             aria-pressed={isSelected}
-                            className={cn(
-                              "flex h-5 w-5 items-center justify-center rounded border",
-                              animation.base,
-                              isSelected
-                                ? "bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#F5D76E]"
-                                : "border-white/15 text-transparent hover:border-[#D4AF37]/25",
-                            )}
+                            className={checkboxClasses(isSelected)}
                           >
-                            {isSelected && (
-                              <svg
-                                viewBox="0 0 12 12"
-                                fill="currentColor"
-                                className="h-3 w-3"
-                              >
-                                <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
-                              </svg>
-                            )}
+                            {isSelected && <CheckboxIcon checked />}
                           </button>
                         </td>
-
-                        {/* Row number */}
                         {showRowNumbers && (
                           <td
-                            className="w-12 px-3 py-3 text-xs text-slate-500 font-mono"
+                            className={cn(
+                              "w-12 px-3 py-3 text-xs font-mono",
+                              t.textMuted,
+                            )}
                             role="cell"
                             aria-label={`ردیف ${toPersianDigits(globalRowIndex)}`}
                           >
                             {toPersianDigits(globalRowIndex)}
                           </td>
                         )}
-
-                        {/* Data cells */}
                         {visibleCols.map((col) => {
                           const raw = getNestedValue(row, col.key);
                           const display = col.render
@@ -2281,7 +2448,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           const isCopied = copiedCell === cellId;
                           const canCopy =
                             enableCellCopy && col.copyable !== false;
-
                           return (
                             <td
                               key={col.key}
@@ -2302,14 +2468,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                     ? truncate(display, 60)
                                     : display}
                                 </span>
-                                {/* Copy indicator */}
                                 {canCopy && (
                                   <span
                                     className={cn(
                                       "shrink-0 transition-all duration-200",
                                       isCopied
-                                        ? "text-green-400 opacity-100"
-                                        : "text-slate-600 opacity-0 group-hover/cell:opacity-50",
+                                        ? isDark
+                                          ? "text-[#6ec99a] opacity-100"
+                                          : "text-[#2d7a50] opacity-100"
+                                        : cn(
+                                            "opacity-0 group-hover/cell:opacity-40",
+                                            t.textMuted,
+                                          ),
                                     )}
                                   >
                                     {isCopied ? (
@@ -2323,8 +2493,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             </td>
                           );
                         })}
-
-                        {/* Actions */}
                         {hasActions && (
                           <td className="px-4 py-3" role="cell">
                             <div
@@ -2368,22 +2536,42 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           </div>
 
           {/* ── Mobile Card List ── */}
-          <div className="block md:hidden divide-y divide-white/4">
+          <div className={cn("block md:hidden divide-y", t.divider)}>
             {loading && data.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={`msk-${i}`} className="p-4">
                   <div className="flex items-start gap-3 mb-2">
-                    <div className="h-5 w-5 rounded bg-white/4 animate-pulse" />
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded animate-pulse",
+                        isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                      )}
+                    />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 w-16 rounded bg-white/4 animate-pulse" />
-                      <div className="h-4 w-32 rounded bg-white/4 animate-pulse" />
+                      <div
+                        className={cn(
+                          "h-3 w-16 rounded animate-pulse",
+                          isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                        )}
+                      />
+                      <div
+                        className={cn(
+                          "h-4 w-32 rounded animate-pulse",
+                          isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
+                        )}
+                      />
                     </div>
                   </div>
                 </div>
               ))
             ) : paginatedRows.length === 0 ? (
               <div className="py-16 text-center">
-                <div className="flex flex-col items-center gap-3 text-slate-500">
+                <div
+                  className={cn(
+                    "flex flex-col items-center gap-3",
+                    t.textMuted,
+                  )}
+                >
                   <Icon.Empty />
                   <p className="text-sm">{emptyMessage}</p>
                 </div>
@@ -2394,7 +2582,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 const rowKey = String(row[primaryKey] ?? ri);
                 const isSelected = selectedRows.has(rowKey);
                 const globalIdx = (currentPage - 1) * currentPageSize + ri + 1;
-
                 return (
                   <div
                     key={rowKey}
@@ -2402,15 +2589,25 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     aria-label={`ردیف ${toPersianDigits(globalIdx)}`}
                     onDoubleClick={() => handleRowDoubleClick(row)}
                     className={cn(
-                      "group p-4",
-                      animation.colors,
-                      isSelected ? "bg-[#D4AF37]/4" : "active:bg-white/3",
+                      "group p-4 transition-colors duration-200",
+                      isSelected
+                        ? isDark
+                          ? "bg-[#c9a84c]/[0.03]"
+                          : "bg-[#8a7032]/[0.02]"
+                        : isDark
+                          ? "active:bg-[#ffffff04]"
+                          : "active:bg-[#00000003]",
                     )}
                   >
                     <div className="flex items-start gap-3 mb-2">
                       <div className="flex items-center gap-2">
                         {showRowNumbers && (
-                          <span className="text-[10px] text-slate-500 font-mono w-5">
+                          <span
+                            className={cn(
+                              "text-[10px] font-mono w-5",
+                              t.textMuted,
+                            )}
+                          >
                             {toPersianDigits(globalIdx)}
                           </span>
                         )}
@@ -2420,22 +2617,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف`}
                           aria-pressed={isSelected}
                           className={cn(
-                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border",
-                            animation.base,
-                            isSelected
-                              ? "bg-[#D4AF37]/20 border-[#D4AF37]/40 text-[#F5D76E]"
-                              : "border-white/15 text-transparent",
+                            "mt-0.5 shrink-0",
+                            checkboxClasses(isSelected),
                           )}
                         >
-                          {isSelected && (
-                            <svg
-                              viewBox="0 0 12 12"
-                              fill="currentColor"
-                              className="h-3 w-3"
-                            >
-                              <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
-                            </svg>
-                          )}
+                          {isSelected && <CheckboxIcon checked />}
                         </button>
                       </div>
                       <div className="flex-1">
@@ -2457,10 +2643,20 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                   : ""
                               }
                             >
-                              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 mb-0.5">
+                              <p
+                                className={cn(
+                                  "text-[10px] font-medium uppercase tracking-wider mb-0.5",
+                                  t.textMuted,
+                                )}
+                              >
                                 {col.label}
                               </p>
-                              <p className="text-sm font-semibold text-white">
+                              <p
+                                className={cn(
+                                  "text-sm font-semibold",
+                                  t.textPrimary,
+                                )}
+                              >
                                 {typeof display === "string"
                                   ? truncate(display, 40)
                                   : display}
@@ -2489,10 +2685,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                 : ""
                             }
                           >
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 mb-0.5">
+                            <p
+                              className={cn(
+                                "text-[10px] font-medium uppercase tracking-wider mb-0.5",
+                                t.textMuted,
+                              )}
+                            >
                               {col.label}
                             </p>
-                            <p className="text-xs text-slate-300">
+                            <p className={cn("text-xs", t.textSecondary)}>
                               {typeof display === "string"
                                 ? truncate(display, 30)
                                 : display}
@@ -2503,7 +2704,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     </div>
                     {hasActions && (
                       <div
-                        className="mt-3 flex items-center gap-1 border-t border-white/4 pt-3 mr-8"
+                        className={cn(
+                          "mt-3 flex items-center gap-1 border-t pt-3 mr-8",
+                          t.divider,
+                        )}
                         role="toolbar"
                         aria-label="عملیات"
                       >
@@ -2543,22 +2747,25 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           {totalPages > 1 && (
             <nav
               aria-label="صفحه‌بندی"
-              className="flex flex-col items-center gap-3 border-t border-white/6 px-4 py-3 sm:flex-row sm:justify-between"
+              className={cn(
+                "flex flex-col items-center gap-3 border-t px-4 py-3 sm:flex-row sm:justify-between",
+                t.divider,
+              )}
             >
               <div className="flex items-center gap-3">
-                <p className="text-xs text-slate-500" aria-live="polite">
+                <p className={cn("text-xs", t.textMuted)} aria-live="polite">
                   نمایش{" "}
-                  <span className="font-medium text-slate-300">
+                  <span className={cn("font-medium", t.textSecondary)}>
                     {toPersianDigits((currentPage - 1) * currentPageSize + 1)}
                   </span>{" "}
                   تا{" "}
-                  <span className="font-medium text-slate-300">
+                  <span className={cn("font-medium", t.textSecondary)}>
                     {toPersianDigits(
                       Math.min(currentPage * currentPageSize, totalItems),
                     )}
                   </span>{" "}
                   از{" "}
-                  <span className="font-medium text-slate-300">
+                  <span className={cn("font-medium", t.textSecondary)}>
                     {toPersianDigits(totalItems)}
                   </span>{" "}
                   مورد
@@ -2570,7 +2777,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 />
               </div>
 
-              {/* Desktop pagination */}
               <div className="hidden sm:flex items-center gap-1" dir="ltr">
                 <PaginationBtn
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -2598,7 +2804,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 </PaginationBtn>
               </div>
 
-              {/* Mobile pagination — simple prev/next */}
               <div className="flex sm:hidden items-center gap-3 w-full justify-between">
                 <button
                   type="button"
@@ -2606,45 +2811,49 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   disabled={currentPage === 1}
                   aria-label="صفحه قبلی"
                   className={cn(
-                    "inline-flex h-9 items-center gap-1.5 rounded-xl border px-4 text-xs font-medium",
-                    borders.subtle,
-                    animation.base,
+                    "inline-flex h-9 items-center gap-1.5 rounded-xl border px-4 text-xs font-medium transition-all duration-200",
+                    t.borderSubtle,
                     focus.ring,
                     currentPage === 1
                       ? cn("opacity-30 pointer-events-none", t.textDisabled)
                       : cn(
                           t.textSecondary,
-                          isDark ? "hover:text-white" : "hover:text-[#1A1304]",
-                          "hover:border-[#D4AF37]/20",
+                          isDark
+                            ? "hover:text-[#e8e6e3]"
+                            : "hover:text-[#2c2a25]",
+                          t.borderHover,
                         ),
                   )}
                 >
                   <Icon.ChevronRight />
                   <span>قبلی</span>
                 </button>
-
                 <span
-                  className="text-xs font-medium text-slate-400"
+                  className={cn("text-xs font-medium", t.textMuted)}
                   aria-live="polite"
                   aria-atomic="true"
                 >
                   صفحه {toPersianDigits(currentPage)} از{" "}
                   {toPersianDigits(totalPages)}
                 </span>
-
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   aria-label="صفحه بعدی"
                   className={cn(
-                    "inline-flex h-9 items-center gap-1.5 rounded-xl border px-4 text-xs font-medium",
-                    borders.subtle,
-                    animation.base,
+                    "inline-flex h-9 items-center gap-1.5 rounded-xl border px-4 text-xs font-medium transition-all duration-200",
+                    t.borderSubtle,
                     focus.ring,
                     currentPage === totalPages
-                      ? "opacity-30 pointer-events-none text-slate-500"
-                      : "text-slate-300 hover:text-white hover:border-[#D4AF37]/20",
+                      ? cn("opacity-30 pointer-events-none", t.textDisabled)
+                      : cn(
+                          t.textSecondary,
+                          isDark
+                            ? "hover:text-[#e8e6e3]"
+                            : "hover:text-[#2c2a25]",
+                          t.borderHover,
+                        ),
                   )}
                 >
                   <span>بعدی</span>
@@ -2656,7 +2865,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         </div>
       </section>
 
-      {/* ── Copy Toast ── */}
       <CopyToast visible={copied} />
 
       {/* ══════════════════════════════════════════════
@@ -2665,19 +2873,29 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
       {/* ── View ── */}
       <Overlay open={modalMode === "view"} onClose={closeModal} wide>
-        <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
-          <h3 className={cn(typography.h4, gradients.textPrimary)}>جزئیات</h3>
+        <div
+          className={cn(
+            "flex items-center justify-between border-b px-5 py-4",
+            t.divider,
+          )}
+        >
+          <h3
+            className={cn(
+              "text-base font-bold",
+              isDark ? "text-[#e8e6e3]" : "text-[#2c2a25]",
+            )}
+          >
+            جزئیات
+          </h3>
           <button
             type="button"
             onClick={closeModal}
             aria-label="بستن پنجره جزئیات"
             className={cn(
-              "rounded-lg p-1 text-slate-500",
-              animation.colors,
-              cn(
-                t.hoverBg,
-                isDark ? "hover:text-white" : "hover:text-[#1A1304]",
-              ),
+              "rounded-lg p-1 transition-colors duration-200",
+              t.textMuted,
+              t.hoverBg,
+              isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
               focus.ring,
             )}
           >
@@ -2697,17 +2915,21 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               return (
                 <div
                   key={col.key}
-                  className={cn("rounded-xl p-3", t.inputBg, borders.subtle)}
+                  className={cn(
+                    "rounded-xl p-3 border",
+                    t.inputBg,
+                    t.borderSubtle,
+                  )}
                 >
-                  <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                    {col.label}
-                  </dt>
-                  <dd
+                  <dt
                     className={cn(
-                      isDark ? gradients.textPrimary : "text-[#1A1304]",
-                      "wrap-break-word text-sm",
+                      "text-[10px] font-semibold uppercase tracking-wider mb-1",
+                      t.textMuted,
                     )}
                   >
+                    {col.label}
+                  </dt>
+                  <dd className={cn("break-words text-sm", t.textPrimary)}>
                     {display}
                   </dd>
                 </div>
@@ -2715,7 +2937,12 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             })}
           </dl>
         </div>
-        <div className="border-t border-white/6 px-5 py-3 flex justify-start gap-2">
+        <div
+          className={cn(
+            "border-t px-5 py-3 flex justify-start gap-2",
+            t.divider,
+          )}
+        >
           {canUpdate && selectedRow && (
             <button
               type="button"
@@ -2723,17 +2950,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 closeModal();
                 setTimeout(() => openEdit(selectedRow), 150);
               }}
-              className={cn(components.ghostButton, "h-9 text-xs px-4")}
+              className={ghostButton}
             >
               <Icon.Edit />
               <span>ویرایش</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={closeModal}
-            className={cn(components.ctaSmall, "h-9 text-xs")}
-          >
+          <button type="button" onClick={closeModal} className={primaryButton}>
             بستن
           </button>
         </div>
@@ -2746,11 +2969,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         wide
       >
         <form onSubmit={handleSubmit} noValidate>
-          <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
+          <div
+            className={cn(
+              "flex items-center justify-between border-b px-5 py-4",
+              t.divider,
+            )}
+          >
             <h3
               className={cn(
-                typography.h4,
-                isDark ? gradients.textPrimary : "text-[#1A1304]",
+                "text-base font-bold",
+                isDark ? "text-[#e8e6e3]" : "text-[#2c2a25]",
               )}
             >
               {modalMode === "create" ? "ایجاد رکورد جدید" : "ویرایش رکورد"}
@@ -2760,12 +2988,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               onClick={closeModal}
               aria-label="بستن فرم"
               className={cn(
-                "rounded-lg p-1 text-slate-500",
-                animation.colors,
-                cn(
-                  t.hoverBg,
-                  isDark ? "hover:text-white" : "hover:text-[#1A1304]",
-                ),
+                "rounded-lg p-1 transition-colors duration-200",
+                t.textMuted,
+                t.hoverBg,
+                isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
                 focus.ring,
               )}
             >
@@ -2780,6 +3006,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 const inputType = col.inputType || "text";
                 const isFull = inputType === "textarea";
                 const isDate = col.dateFilter || inputType === "date";
+                const dateValue = isDate ? parsePersianDate(fv) : null;
+                const dateDisplay = isDate ? formatDateForPicker(fv) : "";
 
                 return (
                   <div key={col.key} className={isFull ? "sm:col-span-2" : ""}>
@@ -2789,16 +3017,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     >
                       {col.label}
                       {col.required && (
-                        <span className="mr-1 text-[#D4AF37]">*</span>
+                        <span className={cn("mr-1", t.textAccent)}>*</span>
                       )}
                     </label>
 
                     {isDate ? (
                       <DatePicker
-                        value={fv ? String(fv) : ""}
+                        value={dateValue ?? undefined}
                         onChange={(date) => {
                           if (date && !Array.isArray(date))
-                            updateField(col.key, date.format("YYYY/MM/DD"));
+                            updateField(col.key, dateObjectToIsoString(date));
                           else updateField(col.key, "");
                         }}
                         calendar={persian}
@@ -2806,24 +3034,25 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         calendarPosition="bottom-right"
                         fixMainPosition
                         arrow={false}
+                        portalTarget={portalTarget ?? undefined}
+                        zIndex={9999}
                         render={(value, openCalendar) => (
                           <button
                             type="button"
                             onClick={openCalendar}
                             aria-label={`انتخاب ${col.label}`}
                             className={cn(
-                              "flex h-10 w-full items-center gap-2 rounded-xl border px-3 text-sm text-right",
-                              "bg-white/[0.035] backdrop-blur-sm",
-                              error ? "border-red-500/40" : borders.subtle,
-                              animation.base,
+                              "flex h-10 w-full items-center gap-2 rounded-xl border px-3 text-sm text-right transition-all duration-200",
+                              t.inputBg,
+                              error ? fieldError : t.borderInput,
                               focus.ring,
-                              "hover:border-[#D4AF37]/18",
-                              value ? "text-white" : "text-slate-500",
+                              t.borderHover,
+                              dateDisplay ? t.textPrimary : t.textDisabled,
                             )}
                           >
                             <Icon.Calendar />
                             <span className="flex-1 text-right">
-                              {value ||
+                              {dateDisplay ||
                                 col.placeholder ||
                                 `${col.label} را انتخاب کنید`}
                             </span>
@@ -2936,14 +3165,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               })}
             </div>
           </div>
-          <div className="flex justify-start gap-2 border-t border-white/6 px-5 py-3">
+          <div
+            className={cn(
+              "flex justify-start gap-2 border-t px-5 py-3",
+              t.divider,
+            )}
+          >
             <button
               type="submit"
               disabled={submitting}
               aria-busy={submitting}
               className={cn(
-                components.ctaSmall,
-                "h-9 text-xs",
+                primaryButton,
                 submitting && "pointer-events-none opacity-60",
               )}
             >
@@ -2953,11 +3186,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   ? "ایجاد"
                   : "ذخیره تغییرات"}
             </button>
-            <button
-              type="button"
-              onClick={closeModal}
-              className={cn(components.ghostButton, "h-9 text-xs px-4")}
-            >
+            <button type="button" onClick={closeModal} className={ghostButton}>
               انصراف
             </button>
           </div>
@@ -2967,29 +3196,48 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       {/* ── Delete ── */}
       <Overlay open={modalMode === "delete"} onClose={closeModal}>
         <div className="px-5 py-6 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+          <div
+            className={cn(
+              "mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full",
+              isDark
+                ? "bg-[#c44040]/10 text-[#e87c7c]"
+                : "bg-[#fce8e8] text-[#c44040]",
+            )}
+          >
             <Icon.AlertTriangle />
           </div>
-          <h3 className={cn(typography.h4, "mb-2 text-gray-500")}>تأیید حذف</h3>
-          <p className="text-sm text-slate-400 mb-6">
+          <h3
+            className={cn(
+              "text-base font-bold mb-2",
+              isDark ? "text-[#e8e6e3]" : "text-[#2c2a25]",
+            )}
+          >
+            تأیید حذف
+          </h3>
+          <p className={cn("text-sm mb-6", t.textMuted)}>
             آیا از حذف این رکورد اطمینان دارید؟ این عملیات قابل بازگشت نیست.
           </p>
           {selectedRow && (
             <div
               className={cn(
-                "mx-auto mb-6 max-w-xs rounded-xl p-3 text-right",
+                "mx-auto mb-6 max-w-xs rounded-xl p-3 text-right border",
                 t.inputBg,
-                borders.subtle,
+                t.borderSubtle,
               )}
             >
               {visibleCols.slice(0, 3).map((col) => {
                 const raw = getNestedValue(selectedRow, col.key);
                 return (
                   <div key={col.key} className="mb-1 last:mb-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 ml-2">
+                    <span
+                      className={cn(
+                        "text-[10px] font-semibold uppercase tracking-wider ml-2",
+                        t.textMuted,
+                      )}
+                    >
                       {col.label}:
                     </span>
-                    <span className="text-xs text-slate-300">
+                    <span className={cn("text-xs", t.textSecondary)}>
                       {truncate(formatCellValue(raw), 40)}
                     </span>
                   </div>
@@ -3004,12 +3252,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               disabled={submitting}
               aria-busy={submitting}
               className={cn(
-                "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-red-500/25 bg-red-500/15 px-5 text-xs font-semibold text-red-400",
-                animation.base,
-                interactive.touch,
+                "inline-flex h-11 items-center justify-center gap-2 rounded-full border px-5 text-xs font-semibold transition-all duration-200 touch-manipulation active:scale-[0.95]",
                 focus.ring,
-                animation.activePress,
-                "hover:bg-red-500/25 hover:text-red-300",
+                isDark
+                  ? "border-[#c44040]/20 bg-[#c44040]/10 text-[#e87c7c] hover:bg-[#c44040]/18 hover:text-[#f09090]"
+                  : "border-[#c44040]/15 bg-[#fce8e8] text-[#c44040] hover:bg-[#f8d4d4]",
                 submitting && "pointer-events-none opacity-60",
               )}
             >
@@ -3019,7 +3266,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <button
               type="button"
               onClick={closeModal}
-              className={cn(  "h-9  mt-1 text-xs text-gray-400 px-5")}
+              className={cn(
+                "h-9 mt-1 text-xs px-5 transition-colors duration-200",
+                t.textMuted,
+                isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
+              )}
             >
               انصراف
             </button>

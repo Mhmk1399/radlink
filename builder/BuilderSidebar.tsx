@@ -48,6 +48,13 @@ import {
 /*  Sidebar Palette Draggable Item                                     */
 /* ================================================================== */
 
+type SidebarCatalogBlock = {
+  type: string;
+  label: string;
+  description?: string;
+  icon: React.ReactNode;
+};
+
 function SidebarPaletteDraggableItem({
   type,
   icon,
@@ -703,6 +710,7 @@ function SidebarLayersPanel({
 
 export function BlocksSidebar({
   blocks,
+  availableBlocks: allowedPaletteBlocks,
   selectedBlockId,
   onSelectBlock,
   onDeleteBlock,
@@ -715,6 +723,7 @@ export function BlocksSidebar({
   onToggleVisibility,
 }: {
   blocks: PageBlock[];
+  availableBlocks?: SidebarCatalogBlock[];
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
   onDeleteBlock: (id: string) => void;
@@ -739,7 +748,10 @@ export function BlocksSidebar({
     [sortedBlocks],
   );
 
-  const availableBlocks = useMemo(() => Object.values(blockRegistry), []);
+  const availableBlocks = useMemo(
+    () => allowedPaletteBlocks ?? Object.values(blockRegistry),
+    [allowedPaletteBlocks],
+  );
 
   const filteredPaletteBlocks = useMemo(() => {
     if (!searchQuery.trim()) return availableBlocks;

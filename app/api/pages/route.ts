@@ -17,18 +17,18 @@
 //     const { title, url, description, templateId, seo, settings } = await req.json();
 
 //     if (!title || !url) {
-//         return NextResponse.json({ message: "title and url are required" }, { status: 400 });
+//         return NextResponse.json({ message: "عنوان و آدرس صفحه الزامی هستند." }, { status: 400 });
 //     }
 
 //     const existing = await Page.findOne({ url });
-//     if (existing) return NextResponse.json({ message: "URL already taken" }, { status: 409 });
+//     if (existing) return NextResponse.json({ message: "این آدرس قبلا استفاده شده است." }, { status: 409 });
 
 //     let blocks: InstanceType<typeof Page>["blocks"] = [];
 //     let template = null;
 
 //     if (templateId) {
 //         template = await Template.findById(templateId).populate<{ blocks: IBlock[] }>("blocks");
-//         if (!template) return NextResponse.json({ message: "Template not found" }, { status: 404 });
+//         if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
 
 //         // Snapshot each block — page owns its own copy
 //         blocks = template.blocks.map((b: IBlock, index: number) => ({
@@ -87,11 +87,25 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
+import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
+import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { createQrForPage } from "@/lib/qrCode";
 import type { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
+import Template from "@/models/template";
+import User from "@/models/users";
+import "@/models/blocks";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getOptionalObjectId(value: unknown) {
+    if (value === undefined || value === null || value === "") return undefined;
+    if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
+        return value;
+    }
+    return null;
 }
 
 function normalizeBlocks(blocks: unknown) {
@@ -126,12 +140,43 @@ function normalizeBlocks(blocks: unknown) {
             styleOverride: isObject(b.styleOverride) ? b.styleOverride : {},
         };
 
-        if (typeof b.blockId === "string" && mongoose.Types.ObjectId.isValid(b.blockId)) {
-            result.blockId = new mongoose.Types.ObjectId(b.blockId);
+        const rawBlockId = b.blockId ?? b._id ?? b.id;
+        if (typeof rawBlockId === "string" && mongoose.Types.ObjectId.isValid(rawBlockId)) {
+            result.blockId = new mongoose.Types.ObjectId(rawBlockId);
         }
 
         return result;
     });
+}
+
+function getTemplateBlocks(template: Record<string, unknown> | null) {
+    if (!template) return [];
+
+    if (Array.isArray(template.builderBlocks) && template.builderBlocks.length > 0) {
+        return normalizeBlocks(template.builderBlocks);
+    }
+
+    if (Array.isArray(template.blocks) && template.blocks.length > 0) {
+        return normalizeBlocks(
+            template.blocks.map((block, index) => {
+                const b = isObject(block) ? block : {};
+                return {
+                    instanceId: `${String(b.type ?? "block")}-${index}`,
+                    blockId: b._id ?? b.id,
+                    type: b.type,
+                    version: b.version,
+                    order: index,
+                    isActive: b.isActive,
+                    data: b.data,
+                    settings: b.settings,
+                    elements: b.elements,
+                    styleOverride: {},
+                };
+            })
+        );
+    }
+
+    return [];
 }
 
 function slugifyUrl(value: string) {
@@ -174,12 +219,74 @@ export const POST = compose(
         );
     }
 
+    const templateId =
+        typeof body.templateId === "string" && mongoose.Types.ObjectId.isValid(body.templateId)
+            ? body.templateId
+            : typeof body.template === "string" && mongoose.Types.ObjectId.isValid(body.template)
+              ? body.template
+              : undefined;
+
+    const requestedOwnerId = getOptionalObjectId(body.ownerId);
+    if (requestedOwnerId === null) {
+        return NextResponse.json(
+            { message: "شناسه سازنده صفحه معتبر نیست." },
+            { status: 400 }
+        );
+    }
+
+    let ownerId: mongoose.Types.ObjectId | string = user._id;
+    if (requestedOwnerId && requestedOwnerId !== String(user._id)) {
+        if (!["admin", "superAdmin"].includes(user.role)) {
+            return NextResponse.json(
+                { message: "شما اجازه تغییر سازنده صفحه را ندارید." },
+                { status: 403 }
+            );
+        }
+
+        const ownerExists = await User.exists({
+            _id: requestedOwnerId,
+            isDeleted: { $ne: true },
+        });
+
+        if (!ownerExists) {
+            return NextResponse.json(
+                { message: "کاربر انتخاب‌شده برای سازنده صفحه پیدا نشد." },
+                { status: 404 }
+            );
+        }
+
+        ownerId = requestedOwnerId;
+    }
+
+    const blockAccessError = await assertBuilderBlockAccess(req, body.blocks);
+    if (blockAccessError) return blockAccessError;
+
+    let blocks = Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [];
+
+    if (templateId && blocks.length === 0) {
+        const template = await Template.findById(templateId)
+            .populate("blocks", "type version data settings elements isActive")
+            .lean();
+
+        if (!template) {
+            return NextResponse.json(
+                { message: "تمپلیت پیدا نشد." },
+                { status: 404 }
+            );
+        }
+
+        blocks = getTemplateBlocks(template as Record<string, unknown>);
+        const templateBlockAccessError = await assertBuilderBlockAccess(req, blocks);
+        if (templateBlockAccessError) return templateBlockAccessError;
+    }
+
     const page = await Page.create({
         title,
         description,
         url,
-        owner: user._id,
-        blocks: Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [],
+        owner: ownerId,
+        template: templateId,
+        blocks,
         seo:
             body.seo && typeof body.seo === "object"
                 ? body.seo
@@ -201,7 +308,30 @@ export const POST = compose(
         isPublished: false,
     });
 
-    return NextResponse.json({ page }, { status: 201 });
+    let qr: unknown = null;
+    try {
+        qr = await createQrForPage({
+            pageId: String(page._id),
+            creatorId: String(user._id),
+            pageUrl: page.url,
+            requestUrl: req.url,
+        });
+    } catch (error) {
+        console.error("Failed to create page QR code", error);
+        await Page.findByIdAndDelete(page._id).catch(() => null);
+
+        return NextResponse.json(
+            { message: "ساخت کد QR برای صفحه با خطا مواجه شد. لطفا دوباره تلاش کنید." },
+            { status: 500 }
+        );
+    }
+
+    const populatedPage = await Page.findById(page._id)
+        .populate("owner", "firstName lastName email phoneNumber")
+        .populate("template", "name thumbnail category")
+        .lean({ virtuals: true });
+
+    return NextResponse.json({ page: populatedPage ?? page, qr }, { status: 201 });
 });
 
 export const GET = compose(
@@ -216,7 +346,10 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isPublished = searchParams.get("isPublished");
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
+    const evaluated = await evaluateRequestAccess(req);
+    const isAdmin =
+        ["admin", "superAdmin"].includes(user.role) ||
+        (evaluated.matched && evaluated.granted);
 
     const query: Record<string, unknown> = isAdmin ? {} : { owner: user._id };
 
@@ -227,7 +360,8 @@ export const GET = compose(
     const [pages, total] = await Promise.all([
         Page.find(query)
             .sort({ updatedAt: -1 })
-            .populate("owner", "firstName lastName email")
+            .populate("owner", "firstName lastName email phoneNumber")
+            .populate("template", "name thumbnail category")
             .skip((page - 1) * limit)
             .limit(limit)
             .lean({ virtuals: true }),

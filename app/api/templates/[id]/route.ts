@@ -1,10 +1,53 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
+import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
 import Template from "@/models/template";
+import Category from "@/models/category";
+import "@/models/blocks";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+function normalizeObjectId(value: unknown) {
+    if (typeof value !== "string") return undefined;
+    return mongoose.Types.ObjectId.isValid(value) ? value : undefined;
+}
+
+function normalizeObjectIdArray(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) =>
+            typeof item === "object" && item !== null
+                ? String((item as Record<string, unknown>)._id ?? (item as Record<string, unknown>).id ?? "")
+                : String(item ?? "")
+        )
+        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+}
+
+function normalizeBuilderBlocks(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return value.filter((block) => typeof block === "object" && block !== null);
+}
+
+async function syncCategoryLink(
+    templateId: string,
+    previousCategory?: string,
+    nextCategory?: string
+) {
+    if (previousCategory && previousCategory !== nextCategory) {
+        await Category.findByIdAndUpdate(previousCategory, {
+            $pull: { templates: templateId },
+        });
+    }
+
+    if (nextCategory && previousCategory !== nextCategory) {
+        await Category.findByIdAndUpdate(nextCategory, {
+            $addToSet: { templates: templateId },
+        });
+    }
+}
 
 export const GET = compose(
     withDB(),
@@ -15,10 +58,10 @@ export const GET = compose(
 
     const template = await Template.findById(id)
         .populate("category", "name")
-        .populate("blocks", "name type icon data settings style")
+        .populate("blocks", "name type icon data settings elements")
         .lean();
 
-    if (!template) return NextResponse.json({ message: "Template not found" }, { status: 404 });
+    if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
     return NextResponse.json({ template });
 });
 
@@ -31,17 +74,40 @@ export const PATCH = compose(
     const { id } = await ctx.params;
     const body = await req.json();
 
-    const allowed = ["name", "description", "thumbnail", "style", "category", "blocks", "isActive"];
-    const updates: Record<string, unknown> = {};
-    for (const key of allowed) {
-        if (key in body) updates[key] = body[key];
+    const template = await Template.findById(id);
+    if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
+
+    const previousCategory = template.category ? String(template.category) : undefined;
+    if (body.blocks !== undefined || body.builderBlocks !== undefined) {
+        const blockAccessError = await assertBuilderBlockAccess(req, body.builderBlocks);
+        if (blockAccessError) return blockAccessError;
+        const templateBlockAccessError = await assertBuilderBlockAccess(req, body.blocks);
+        if (templateBlockAccessError) return templateBlockAccessError;
     }
 
-    const template = await Template.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-        .populate("blocks", "name type icon style");
+    if (typeof body.name === "string") template.name = body.name.trim();
+    if (typeof body.description === "string") template.description = body.description.trim();
+    if (typeof body.thumbnail === "string") template.thumbnail = body.thumbnail.trim();
+    if (body.style && typeof body.style === "object") template.style = body.style;
+    if (body.blocks !== undefined) template.set("blocks", normalizeObjectIdArray(body.blocks));
+    if (body.builderBlocks !== undefined) template.builderBlocks = normalizeBuilderBlocks(body.builderBlocks);
+    if (typeof body.isActive === "boolean") template.isActive = body.isActive;
 
-    if (!template) return NextResponse.json({ message: "Template not found" }, { status: 404 });
-    return NextResponse.json({ template });
+    if ("category" in body || "categoryId" in body) {
+        const nextCategory = normalizeObjectId(body.category ?? body.categoryId);
+        template.category = nextCategory ? new mongoose.Types.ObjectId(nextCategory) : undefined;
+    }
+
+    await template.save();
+
+    const nextCategory = template.category ? String(template.category) : undefined;
+    await syncCategoryLink(id, previousCategory, nextCategory);
+
+    const populated = await Template.findById(id)
+        .populate("category", "name")
+        .populate("blocks", "name type icon data settings elements");
+
+    return NextResponse.json({ template: populated });
 });
 
 export const DELETE = compose(
@@ -52,6 +118,11 @@ export const DELETE = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const template = await Template.findByIdAndUpdate(id, { isActive: false }, { new: true });
-    if (!template) return NextResponse.json({ message: "Template not found" }, { status: 404 });
-    return NextResponse.json({ message: "Template deactivated" });
+    if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
+    if (template.category) {
+        await Category.findByIdAndUpdate(template.category, {
+            $pull: { templates: template._id },
+        });
+    }
+    return NextResponse.json({ message: "تمپلیت غیرفعال شد." });
 });

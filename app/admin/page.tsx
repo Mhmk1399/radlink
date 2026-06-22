@@ -17,7 +17,21 @@ const DashboardSection = lazy(
   () => import("@/components/admin/DashboardSection"),
 );
 const UsersSection = lazy(() => import("@/components/admin/UsersSection"));
+const AgentsSection = lazy(() => import("@/components/admin/AgentsSection"));
+const PermissionsSection = lazy(
+  () => import("@/components/admin/PermissionsSection"),
+);
+const AccessesSection = lazy(() => import("@/components/admin/AccessesSection"));
 const PagesSection = lazy(() => import("@/components/admin/PagesSection"));
+const CategoriesSection = lazy(
+  () => import("@/components/admin/CategoriesSection"),
+);
+const TemplatesSection = lazy(
+  () => import("@/components/admin/TemplatesSection"),
+);
+const BlocksSection = lazy(() => import("@/components/admin/BlocksSection"));
+const QRCodesSection = lazy(() => import("@/components/admin/QRCodesSection"));
+const TicketsSection = lazy(() => import("@/components/admin/TicketsSection"));
 
 function SectionSkeleton() {
   const t = useThemeTokens();
@@ -91,8 +105,24 @@ function SectionRouter({
       return <DashboardSection navigate={navigate} />;
     case "users":
       return <UsersSection navigate={navigate} />;
+    case "agents":
+      return <AgentsSection navigate={navigate} />;
+    case "permissions":
+      return <PermissionsSection navigate={navigate} />;
+    case "accesses":
+      return <AccessesSection navigate={navigate} />;
     case "pages":
       return <PagesSection navigate={navigate} />;
+    case "categories":
+      return <CategoriesSection navigate={navigate} />;
+    case "templates":
+      return <TemplatesSection navigate={navigate} />;
+    case "blocks":
+      return <BlocksSection navigate={navigate} />;
+    case "qrcodes":
+      return <QRCodesSection navigate={navigate} />;
+    case "tickets":
+      return <TicketsSection navigate={navigate} />;
     default:
       return <ComingSoon section={section} navigate={navigate} />;
   }
@@ -100,7 +130,7 @@ function SectionRouter({
 
 export default function AdminPage() {
   return (
-    <AdminShell userRole="superAdmin">
+    <AdminShell>
       {({ section, navigate }) => (
         <Suspense fallback={<SectionSkeleton />}>
           <SectionRouter section={section} navigate={navigate} />

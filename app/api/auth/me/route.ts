@@ -32,7 +32,19 @@ export const GET = compose(
         ),
     };
 
-    return NextResponse.json({ user, access: serialized });
+    const userObject =
+        typeof user.toObject === "function"
+            ? user.toObject()
+            : user;
+
+    return NextResponse.json({
+        user: {
+            ...userObject,
+            id: String(user._id),
+            permissions: user.permissions?.map(String) ?? [],
+        },
+        access: serialized,
+    });
 });
 
 export const PATCH = compose(
@@ -41,27 +53,33 @@ export const PATCH = compose(
     withStatus("active")
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
-    const { firstName, lastName } = await req.json();
+    const { firstName, lastName, email, nationalCode, fatherName } = await req.json();
 
     if (!firstName || typeof firstName !== "string" || firstName.trim().length < 2) {
         return NextResponse.json(
-            { message: "firstName is required and must be at least 2 characters" },
+            { message: "نام الزامی است و باید حداقل ۲ کاراکتر باشد." },
             { status: 400 }
         );
     }
 
+    const updateData: Record<string, unknown> = {
+        firstName: firstName.trim(),
+        lastName: lastName?.trim() || "",
+        updatedBy: user._id,
+    };
+
+    if (email !== undefined) updateData.email = email.trim() || null;
+    if (nationalCode !== undefined) updateData.nationalCode = nationalCode.trim() || null;
+    if (fatherName !== undefined) updateData.fatherName = fatherName.trim() || null;
+
     const updatedUser = await User.findByIdAndUpdate(
         user._id,
-        {
-            firstName: firstName.trim(),
-            lastName: lastName?.trim() || "",
-            updatedBy: user._id,
-        },
+        updateData,
         { new: true }
     );
 
     if (!updatedUser) {
-        return NextResponse.json({ message: "User not found" }, { status: 404 });
+        return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
     }
 
     return NextResponse.json({ user: updatedUser });

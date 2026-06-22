@@ -3,6 +3,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
+import User from "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,13 +20,13 @@ export const GET = compose(
         .populate("user", "firstName lastName phoneNumber email role status")
         .lean();
 
-    if (!agent) return NextResponse.json({ message: "Agent not found" }, { status: 404 });
+    if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
 
     // Only admin/superAdmin or the agent's own user can view
     const isSelf = String(agent.user._id ?? agent.user) === String(user._id);
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
     if (!isSelf && !isAdmin) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
     return NextResponse.json({ agent });
@@ -44,13 +45,13 @@ export const PATCH = compose(
     const body = await req.json();
 
     const agent = await Agent.findById(id);
-    if (!agent) return NextResponse.json({ message: "Agent not found" }, { status: 404 });
+    if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
 
     const isSelf = String(agent.user) === String(user._id);
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
 
     if (!isSelf && !isAdmin) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
     // Fields the agent can update themselves
@@ -75,4 +76,28 @@ export const PATCH = compose(
         .populate("user", "firstName lastName phoneNumber email role status");
 
     return NextResponse.json({ agent: updated });
+});
+
+export const DELETE = compose(
+    withDB(),
+    withAuth(),
+    withStatus("active")
+)(async (_req: AuthRequest, ctx: RouteContext) => {
+    const { id } = await ctx.params;
+
+    const agent = await Agent.findByIdAndDelete(id);
+    if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
+
+    await Promise.all([
+        User.updateOne(
+            { _id: agent.user, agentid: agent._id },
+            { $unset: { agentid: "" } }
+        ),
+        User.updateOne(
+            { _id: agent.user, role: "agent" },
+            { $set: { role: "user" } }
+        ),
+    ]);
+
+    return NextResponse.json({ message: "نماینده حذف شد." });
 });

@@ -14,7 +14,7 @@ export const POST = compose(
     const { filename, path } = await req.json();
 
     if (!filename || !path) {
-        return NextResponse.json({ message: "filename and path are required" }, { status: 400 });
+        return NextResponse.json({ message: "نام فایل و مسیر فایل الزامی هستند." }, { status: 400 });
     }
 
     const file = await File.create({ filename, path, owner: user._id });

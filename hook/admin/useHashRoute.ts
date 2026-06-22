@@ -10,6 +10,7 @@ export type AdminSection =
     | "users"
     | "agents"
     | "permissions"
+    | "accesses"
     | "pages"
     | "templates"
     | "blocks"
@@ -58,7 +59,7 @@ export function useHashRoute(defaultSection: AdminSection = "dashboard") {
 
 function isValidSection(s: string): s is AdminSection {
     const valid: AdminSection[] = [
-        "dashboard", "users", "agents", "permissions",
+        "dashboard", "users", "agents", "permissions", "accesses",
         "pages", "templates", "blocks", "categories",
         "files", "qrcodes", "products",
         "tickets", "notifications",
@@ -87,6 +88,7 @@ export const SECTION_META: SectionMeta[] = [
     { key: "users", label: "کاربران", icon: "FaUsers", group: "مدیریت کاربران", minRole: "admin" },
     { key: "agents", label: "نمایندگان", icon: "FaUserTie", group: "مدیریت کاربران", minRole: "admin" },
     { key: "permissions", label: "دسترسی‌ها", icon: "FaShieldHalved", group: "مدیریت کاربران", minRole: "superAdmin" },
+    { key: "accesses", label: "Accessها", icon: "FaKey", group: "مدیریت کاربران", minRole: "superAdmin" },
 
     // Content
     { key: "pages", label: "صفحات", icon: "FaFile", group: "مدیریت محتوا", minRole: "agent" },

@@ -14,13 +14,15 @@ export const GET = compose(
     const { id } = await ctx.params;
     const user = req.ctx.user!;
 
-    const notification = await Notification.findById(id).lean();
-    if (!notification) return NextResponse.json({ message: "Notification not found" }, { status: 404 });
+    const notification = await Notification.findById(id).lean() as
+        | { User?: unknown; isGlobal?: boolean }
+        | null;
+    if (!notification) return NextResponse.json({ message: "اعلان پیدا نشد." }, { status: 404 });
 
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
     const isOwn   = String(notification.User) === String(user._id);
     if (!isAdmin && !isOwn && !notification.isGlobal) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
     return NextResponse.json({ notification });
@@ -35,6 +37,6 @@ export const DELETE = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const notification = await Notification.findByIdAndDelete(id);
-    if (!notification) return NextResponse.json({ message: "Notification not found" }, { status: 404 });
-    return NextResponse.json({ message: "Notification deleted" });
+    if (!notification) return NextResponse.json({ message: "اعلان پیدا نشد." }, { status: 404 });
+    return NextResponse.json({ message: "اعلان حذف شد." });
 });

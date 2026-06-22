@@ -17,15 +17,18 @@ type MeResponse = {
         firstName?: string;
         lastName?: string;
         phoneNumber: string;
+        permissions?: unknown[];
     };
     access: AccessMap;
 };
 
 const fetcher = (url: string) =>
     fetch(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token") ?? localStorage.getItem("token") ?? ""}`,
+        },
     }).then((r) => {
-        if (!r.ok) throw new Error("Unauthorized");
+        if (!r.ok) throw new Error("برای دریافت دسترسی‌ها ابتدا وارد حساب کاربری شوید.");
         return r.json();
     });
 
@@ -58,6 +61,7 @@ export function useAccess() {
     return {
         user: data?.user ?? null,
         access: data?.access ?? null,
+        isSuperAdmin,
         can,
         canOnResource,
         isLoading,

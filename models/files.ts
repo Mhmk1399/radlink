@@ -1,6 +1,12 @@
-import mongoose from "mongoose";
+import mongoose, { Model, Types } from "mongoose";
 
-const fileSchema = new mongoose.Schema({
+export interface IFile {
+    filename: string;
+    path: string;
+    owner: Types.ObjectId;
+}
+
+const fileSchema = new mongoose.Schema<IFile>({
     filename: {
         type: String,
         required: true,
@@ -16,6 +22,7 @@ const fileSchema = new mongoose.Schema({
     },
 });
 
-const File = mongoose.model("File", fileSchema);
+const File: Model<IFile> =
+    mongoose.models.File || mongoose.model<IFile>("File", fileSchema);
 
 export default File;

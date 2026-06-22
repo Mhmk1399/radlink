@@ -83,6 +83,7 @@
 
 // export default Block;
 import mongoose, { Schema, Document, Model } from "mongoose";
+import type { ContentField, PageBlock } from "@/types/blocks/builder.types";
 
 export type ResponsiveValue<T> = {
     mobile?: T;
@@ -164,6 +165,8 @@ export interface IBlock extends Document {
 
     // New builder style system
     elements: Record<string, BlockElement>;
+    contentFields: ContentField[];
+    defaultBlock: PageBlock;
 
     isActive: boolean;
 
@@ -195,6 +198,10 @@ const BlockSchema = new Schema<IBlock>(
 
         elements: { type: Schema.Types.Mixed, required: true, default: {} },
 
+        contentFields: { type: Schema.Types.Mixed, default: [] },
+
+        defaultBlock: { type: Schema.Types.Mixed, default: {} },
+
         isActive: { type: Boolean, default: true, index: true },
 
         stats: {
@@ -203,6 +210,16 @@ const BlockSchema = new Schema<IBlock>(
     },
     { timestamps: true }
 );
+
+BlockSchema.set("toJSON", {
+    transform: (_doc, ret) => {
+        const obj = ret as unknown as Record<string, unknown>;
+        obj.id = obj._id;
+        delete obj._id;
+        delete obj.__v;
+        return obj;
+    },
+});
 
 
 

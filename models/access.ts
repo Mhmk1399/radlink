@@ -3,6 +3,8 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export type AccessAction = "view" | "create" | "update" | "delete" | "publish";
 
 export interface IAccess extends Document {
+    isActive: boolean;
+
     // For static components (frontend hardcoded)
     staticComponents: {
         componentName: string; // e.g., "dashboard.reports", "landing.builder"
@@ -53,6 +55,11 @@ const AccessSchema = new Schema<IAccess>(
                     actions: [{ type: String, enum: ["view", "create", "update", "delete", "publish"], required: true }],
                 },
             ],
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
+            index: true,
         },
     },
     { timestamps: true }

@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
-import { StyleMap } from "./blocks";
+
+type StyleMap = Record<string, unknown>;
 
 // Full design token set — the visual skin of the template.
 // Consumed by styled-components on the frontend.
@@ -51,10 +52,14 @@ export interface ITemplate extends Document {
     // The full style skin — consumed by styled-components
     style: TemplateStyle;
 
-    category: Types.ObjectId;
+    category?: Types.ObjectId;
 
     // Ordered default blocks used when a page is created from this template
     blocks: Types.ObjectId[];
+
+    // Full builder snapshots for templates created from the visual builder.
+    // Kept alongside legacy Block refs so older templates continue to work.
+    builderBlocks: Record<string, unknown>[];
 
     isActive: boolean;
 
@@ -104,6 +109,8 @@ const TemplateSchema = new Schema<ITemplate>(
 
         blocks: [{ type: Schema.Types.ObjectId, ref: "Block" }],
 
+        builderBlocks: { type: Schema.Types.Mixed, default: [] },
+
         isActive: { type: Boolean, default: true, index: true },
     },
     { timestamps: true }
@@ -111,9 +118,10 @@ const TemplateSchema = new Schema<ITemplate>(
 
 TemplateSchema.set("toJSON", {
     transform: (_doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret.__v;
+        const obj = ret as unknown as Record<string, unknown>;
+        obj.id = obj._id;
+        delete obj._id;
+        delete obj.__v;
         return ret;
     },
 });

@@ -12,7 +12,7 @@ export const POST = compose(
 )(async (req: AuthRequest) => {
     const { name, description, price, images } = await req.json();
     if (!name || price === undefined) {
-        return NextResponse.json({ message: "name and price are required" }, { status: 400 });
+        return NextResponse.json({ message: "نام و قیمت الزامی هستند." }, { status: 400 });
     }
 
     const product = await Product.create({ name, description, price, images: images ?? [] });
