@@ -269,11 +269,53 @@ function getRoleBadge(
 }
 
 interface AuthUser {
+  id?: string;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
   email?: string;
   role?: string;
+}
+
+const PROFILE_OVERRIDE_KEY = "admin-profile-user-override";
+
+function readProfileOverride(userId?: string): Partial<AuthUser> | null {
+  if (!userId || typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem(PROFILE_OVERRIDE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    if (String(record.id ?? "") !== userId) return null;
+
+    return {
+      id: userId,
+      firstName: typeof record.firstName === "string" ? record.firstName : "",
+      lastName: typeof record.lastName === "string" ? record.lastName : "",
+      phoneNumber:
+        typeof record.phoneNumber === "string" ? record.phoneNumber : "",
+      email: typeof record.email === "string" ? record.email : "",
+      role: typeof record.role === "string" ? record.role : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function authUserFromUnknown(value: unknown): Partial<AuthUser> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+
+  return {
+    id: String(record.id ?? record._id ?? ""),
+    firstName: typeof record.firstName === "string" ? record.firstName : "",
+    lastName: typeof record.lastName === "string" ? record.lastName : "",
+    phoneNumber:
+      typeof record.phoneNumber === "string" ? record.phoneNumber : "",
+    email: typeof record.email === "string" ? record.email : "",
+    role: typeof record.role === "string" ? record.role : undefined,
+  };
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -321,13 +363,16 @@ function getAuthUser(): AuthUser | null {
   if (!token) return null;
   const payload = decodeJwtPayload(token);
   if (!payload) return null;
-  return {
+  const id = String(payload.userId ?? payload.id ?? payload._id ?? "");
+  const tokenUser = {
+    id,
     firstName: (payload.firstName as string) ?? "",
     lastName: (payload.lastName as string) ?? "",
     phoneNumber: (payload.phoneNumber as string) ?? "",
     email: (payload.email as string) ?? "",
     role: (payload.role as string) ?? "user",
   };
+  return { ...tokenUser, ...(readProfileOverride(id) ?? {}) };
 }
 
 function getDisplayName(user: AuthUser | null): string {
@@ -1027,9 +1072,25 @@ export default function DashboardSection({
   const recentTickets = data?.recentTickets ?? [];
   const loading = isLoading && !data;
 
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => getAuthUser());
+
   useEffect(() => {
-    setAuthUser(getAuthUser());
+    function onProfileUpdated(event: Event) {
+      const nextUser = authUserFromUnknown(
+        event instanceof CustomEvent ? event.detail : null,
+      );
+      if (!nextUser) return;
+
+      setAuthUser((current) => ({
+        ...(current ?? {}),
+        ...nextUser,
+        role: nextUser.role ?? current?.role ?? "user",
+      }));
+    }
+
+    window.addEventListener("admin-profile-updated", onProfileUpdated);
+    return () =>
+      window.removeEventListener("admin-profile-updated", onProfileUpdated);
   }, []);
 
   const displayName = useMemo(() => getDisplayName(authUser), [authUser]);

@@ -759,7 +759,7 @@ export function QrCodeSection() {
               <div
                 className={cn(animation.classes.fadeUp, animDelay(4), "mt-9")}
               >
-                <Link href="/create" className={components.ctaPrimary}>
+                <Link href="/builder" className={components.ctaPrimary}>
                   <span
                     className={cn(
                       "pointer-events-none absolute inset-0",

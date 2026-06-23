@@ -145,6 +145,10 @@ export default function TemplatesSection({
         label: "وضعیت",
         editable: false,
         filterable: true,
+        options: [
+          { label: "فعال", value: "true" },
+          { label: "غیرفعال", value: "false" },
+        ],
         render: (value) => {
           const active = !!value;
           return (

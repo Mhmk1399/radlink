@@ -868,17 +868,20 @@ function PaginationBtn({
 function FilterDropdown({
   label,
   options,
+  optionLabels,
   value,
   onChange,
 }: {
   label: string;
   options: string[];
+  optionLabels?: Record<string, string>;
   value: string;
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { t, panel, isDark } = useTableTheme();
+  const getOptionLabel = (option: string) => optionLabels?.[option] ?? option;
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -918,7 +921,7 @@ function FilterDropdown({
               t.textAccent,
             )}
           >
-            {value}
+            {getOptionLabel(value)}
           </span>
         )}
         <Icon.ChevronDown />
@@ -977,7 +980,7 @@ function FilterDropdown({
                     ),
               )}
             >
-              <span className="flex-1">{opt}</span>
+              <span className="flex-1">{getOptionLabel(opt)}</span>
               {value === opt && <Icon.Check />}
             </button>
           ))}
@@ -1640,6 +1643,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const filterOptions = useMemo(() => {
     const opts: Record<string, string[]> = {};
     filterableCols.forEach((col) => {
+      if (col.options?.length) {
+        opts[col.key] = col.options.map((option) => option.value);
+        return;
+      }
       const s = new Set<string>();
       data.forEach((row) => {
         const v = getNestedValue(row, col.key);
@@ -1649,6 +1656,17 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     });
     return opts;
   }, [data, filterableCols]);
+
+  const filterOptionLabels = useMemo(() => {
+    const labels: Record<string, Record<string, string>> = {};
+    filterableCols.forEach((col) => {
+      if (!col.options?.length) return;
+      labels[col.key] = Object.fromEntries(
+        col.options.map((option) => [option.value, option.label]),
+      );
+    });
+    return labels;
+  }, [filterableCols]);
 
   const activeFiltersCount = useMemo(
     () =>
@@ -2138,6 +2156,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 key={col.key}
                 label={col.label}
                 options={filterOptions[col.key] || []}
+                optionLabels={filterOptionLabels[col.key]}
                 value={filters[col.key] || ""}
                 onChange={(v) =>
                   setFilters((prev) => ({ ...prev, [col.key]: v }))
@@ -3059,7 +3078,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           </button>
                         )}
                       />
-                    ) : col.options ? (
+                    ) : col.options && inputType !== "checkbox" ? (
                       <div className="relative z-20">
                         <CustomSelect
                           id={`field-${col.key}`}

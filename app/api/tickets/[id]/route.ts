@@ -113,7 +113,15 @@ export const PATCH = compose(
     const replyAttachments = Array.isArray(body.replyAttachments)
         ? body.replyAttachments.filter(isObjectId)
         : [];
-    if (replyMessage || replyAttachments.length > 0) {
+    const hasReplyPayload = Boolean(replyMessage) || replyAttachments.length > 0;
+    if (hasReplyPayload && String(ticket.status) === "closed") {
+        return NextResponse.json(
+            { message: "این تیکت بسته شده است و امکان ارسال پاسخ یا فایل جدید وجود ندارد." },
+            { status: 400 }
+        );
+    }
+
+    if (hasReplyPayload) {
         update.$push = {
             replies: {
                 author: user._id,

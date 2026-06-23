@@ -528,6 +528,11 @@ export default function AgentsSection({
         key: "isActive",
         label: "وضعیت",
         editable: false,
+        filterable: true,
+        options: [
+          { label: "فعال", value: "true" },
+          { label: "غیرفعال", value: "false" },
+        ],
         render: (value) => <StatusBadge active={Boolean(value)} />,
       },
       {

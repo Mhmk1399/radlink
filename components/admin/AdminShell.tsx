@@ -8,8 +8,10 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
   type ReactNode,
 } from "react";
+import useSWR from "swr";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccess } from "@/hook/auth/useAccess";
 import { animation, focus } from "@/lib/design/tokens";
@@ -203,11 +205,51 @@ function getIcon(name: string) {
 /* ── Auth ── */
 
 interface AuthUser {
+  id?: string;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
   email?: string;
   role?: string;
+}
+
+const PROFILE_OVERRIDE_KEY = "admin-profile-user-override";
+
+function readProfileOverride(userId?: string): Partial<AuthUser> | null {
+  if (!userId || typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem(PROFILE_OVERRIDE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    if (String(record.id ?? "") !== userId) return null;
+
+    return {
+      id: userId,
+      firstName: typeof record.firstName === "string" ? record.firstName : "",
+      lastName: typeof record.lastName === "string" ? record.lastName : "",
+      phoneNumber:
+        typeof record.phoneNumber === "string" ? record.phoneNumber : "",
+      email: typeof record.email === "string" ? record.email : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function authUserFromUnknown(value: unknown): Partial<AuthUser> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    id: String(record.id ?? record._id ?? ""),
+    firstName: typeof record.firstName === "string" ? record.firstName : "",
+    lastName: typeof record.lastName === "string" ? record.lastName : "",
+    phoneNumber:
+      typeof record.phoneNumber === "string" ? record.phoneNumber : "",
+    email: typeof record.email === "string" ? record.email : "",
+    role: typeof record.role === "string" ? record.role : undefined,
+  };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -263,13 +305,16 @@ function getAuthUser(): AuthUser | null {
   if (!token) return null;
   const payload = decodeJwtPayload(token);
   if (!payload) return null;
-  return {
+  const id = String(payload.userId ?? payload.id ?? payload._id ?? "");
+  const tokenUser = {
+    id,
     firstName: (payload.firstName as string) ?? "",
     lastName: (payload.lastName as string) ?? "",
     phoneNumber: (payload.phoneNumber as string) ?? "",
     email: (payload.email as string) ?? "",
     role: (payload.role as string) ?? "user",
   };
+  return { ...tokenUser, ...(readProfileOverride(id) ?? {}) };
 }
 
 function getDisplayName(user: AuthUser | null): string {
@@ -331,6 +376,7 @@ interface NotifItem {
   time: string;
   read: boolean;
   type: "info" | "success" | "warning" | "error";
+  closeable?: boolean;
 }
 
 const FAKE_NOTIFS: NotifItem[] = [
@@ -367,6 +413,93 @@ const FAKE_NOTIFS: NotifItem[] = [
     type: "error",
   },
 ];
+void FAKE_NOTIFS;
+
+type NotificationRecord = {
+  _id?: string;
+  id?: string;
+  User?: unknown;
+  message?: string;
+  closeable?: boolean;
+  isGlobal?: boolean;
+  createdAt?: string;
+};
+
+type NotificationsResponse = {
+  notifications?: NotificationRecord[];
+  total?: number;
+};
+
+const NOTIFICATION_READ_KEY = "admin-notification-read-ids";
+const NOTIFICATION_DISMISSED_KEY = "admin-notification-dismissed-ids";
+
+function readStoredIdSet(key: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeStoredIdSet(key: string, ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(key, JSON.stringify(Array.from(ids)));
+}
+
+function getNotificationType(message: string): NotifItem["type"] {
+  if (/خطا|ناموفق|لغو|رد شد/i.test(message)) return "error";
+  if (/موفق|تایید|پرداخت شد|انجام شد/i.test(message)) return "success";
+  if (/هشدار|تیکت|نیاز|بررسی|مهم/i.test(message)) return "warning";
+  return "info";
+}
+
+function getNotificationTitle(notification: NotificationRecord, message: string) {
+  if (notification.isGlobal) return "اعلان عمومی";
+  if (/تیکت/i.test(message)) return "اعلان تیکت";
+  return "اعلان اختصاصی";
+}
+
+function formatRelativeFaDate(value?: string) {
+  if (!value) return "تازه";
+
+  const date = new Date(value);
+  const diffMs = date.getTime() - Date.now();
+  if (Number.isNaN(diffMs)) return "تازه";
+
+  const abs = Math.abs(diffMs);
+  const rtf = new Intl.RelativeTimeFormat("fa-IR", { numeric: "auto" });
+
+  if (abs < 60_000) return "همین حالا";
+  if (abs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), "minute");
+  if (abs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), "hour");
+  if (abs < 2_592_000_000) return rtf.format(Math.round(diffMs / 86_400_000), "day");
+
+  return new Intl.DateTimeFormat("fa-IR", {
+    dateStyle: "medium",
+    timeZone: "Asia/Tehran",
+  }).format(date);
+}
+
+async function fetchNotifications(): Promise<NotificationsResponse> {
+  const token =
+    typeof window !== "undefined"
+      ? (window.localStorage.getItem("auth_token") ?? "")
+      : "";
+
+  const response = await fetch("/api/notifications?limit=10", {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(json?.message ?? "دریافت اعلان‌ها با خطا مواجه شد.");
+  }
+
+  return json ?? {};
+}
 
 function NotificationDropdown({
   navigate,
@@ -375,8 +508,68 @@ function NotificationDropdown({
 }) {
   const { open, setOpen, ref } = useDropdown();
   const { s, isDark } = useShell();
-  const [notifs, setNotifs] = useState(FAKE_NOTIFS);
+  const [readIds, setReadIds] = useState<Set<string>>(() =>
+    readStoredIdSet(NOTIFICATION_READ_KEY),
+  );
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() =>
+    readStoredIdSet(NOTIFICATION_DISMISSED_KEY),
+  );
+  const { data } = useSWR<NotificationsResponse>(
+    "/api/notifications?limit=10",
+    fetchNotifications,
+    {
+      dedupingInterval: 30_000,
+      refreshInterval: 60_000,
+      revalidateOnFocus: true,
+    },
+  );
+  const notifs = useMemo<NotifItem[]>(() => {
+    return (data?.notifications ?? [])
+      .map((notification): NotifItem | null => {
+        const id = String(notification._id ?? notification.id ?? "");
+        const message = String(notification.message ?? "").trim();
+        if (!id || !message || dismissedIds.has(id)) return null;
+
+        return {
+          id,
+          title: getNotificationTitle(notification, message),
+          message,
+          time: formatRelativeFaDate(notification.createdAt),
+          read: readIds.has(id),
+          type: getNotificationType(message),
+          closeable: Boolean(notification.closeable),
+        } satisfies NotifItem;
+      })
+      .filter((item): item is NotifItem => item !== null);
+  }, [data?.notifications, dismissedIds, readIds]);
   const unread = notifs.filter((n) => !n.read).length;
+
+  const markAsRead = useCallback((id: string) => {
+    setReadIds((current) => {
+      const next = new Set(current);
+      next.add(id);
+      writeStoredIdSet(NOTIFICATION_READ_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const markAllAsRead = useCallback(() => {
+    setReadIds((current) => {
+      const next = new Set(current);
+      notifs.forEach((n) => next.add(n.id));
+      writeStoredIdSet(NOTIFICATION_READ_KEY, next);
+      return next;
+    });
+  }, [notifs]);
+
+  const dismissNotification = useCallback((id: string) => {
+    setDismissedIds((current) => {
+      const next = new Set(current);
+      next.add(id);
+      writeStoredIdSet(NOTIFICATION_DISMISSED_KEY, next);
+      return next;
+    });
+  }, []);
 
   const typeIcon: Record<string, ReactNode> = {
     info: <FaBell className={cn("h-3.5 w-3.5", s.info)} />,
@@ -434,9 +627,7 @@ function NotificationDropdown({
             <h3 className={cn("text-sm font-bold", s.textPrimary)}>اعلانات</h3>
             {unread > 0 && (
               <button
-                onClick={() =>
-                  setNotifs((p) => p.map((n) => ({ ...n, read: true })))
-                }
+                onClick={markAllAsRead}
                 className={cn(
                   "text-[11px] font-medium transition-colors hover:underline",
                   s.textAccentSub,
@@ -460,11 +651,7 @@ function NotificationDropdown({
               notifs.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() =>
-                    setNotifs((p) =>
-                      p.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
-                    )
-                  }
+                  onClick={() => markAsRead(n.id)}
                   className={cn(
                     "group flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-0",
                     s.divider,
@@ -516,19 +703,23 @@ function NotificationDropdown({
                   </div>
 
                   {/* Dismiss */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setNotifs((p) => p.filter((x) => x.id !== n.id));
-                    }}
-                    className={cn(
-                      "shrink-0 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity",
-                      s.textDisabled,
-                      "hover:text-red-400",
-                    )}
-                  >
-                    <FaXmark className="h-3 w-3" />
-                  </button>
+                  {n.closeable && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismissNotification(n.id);
+                      }}
+                      aria-label="بستن اعلان"
+                      className={cn(
+                        "shrink-0 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                        s.textDisabled,
+                        "hover:text-red-400",
+                      )}
+                    >
+                      <FaXmark className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
               ))
             )}
@@ -672,11 +863,7 @@ function UserDropdown({
                 icon: FaUser,
                 section: "profile" as AdminSection,
               },
-              {
-                label: "تنظیمات",
-                icon: FaGear,
-                section: "settings" as AdminSection,
-              },
+             
             ].map((item) => (
               <button
                 key={item.section}
@@ -1619,6 +1806,25 @@ export default function AdminShell({
 
   useEffect(() => {
     setAuthUser(getAuthUser());
+  }, []);
+
+  useEffect(() => {
+    function onProfileUpdated(event: Event) {
+      const nextUser = authUserFromUnknown(
+        event instanceof CustomEvent ? event.detail : null,
+      );
+      if (!nextUser) return;
+
+      setAuthUser((current) => ({
+        ...(current ?? {}),
+        ...nextUser,
+        role: nextUser.role ?? current?.role ?? "user",
+      }));
+    }
+
+    window.addEventListener("admin-profile-updated", onProfileUpdated);
+    return () =>
+      window.removeEventListener("admin-profile-updated", onProfileUpdated);
   }, []);
 
   useEffect(() => {

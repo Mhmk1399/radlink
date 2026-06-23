@@ -106,8 +106,7 @@ export const SECTION_META: SectionMeta[] = [
     { key: "notifications", label: "اعلانات", icon: "FaBell", group: "پشتیبانی", minRole: "user" },
 
     // System
-    { key: "settings", label: "تنظیمات", icon: "FaGear", group: "سیستم", minRole: "admin" },
-    { key: "profile", label: "پروفایل", icon: "FaUser", group: "سیستم", minRole: "user" },
+     { key: "profile", label: "پروفایل", icon: "FaUser", group: "سیستم", minRole: "user" },
 ];
 
 // Role hierarchy

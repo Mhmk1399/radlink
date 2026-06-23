@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FaArrowRight,
-  FaEye,
-  FaFile,
+   FaFile,
   FaPaperPlane,
   FaPaperclip,
   FaPlus,
@@ -338,6 +337,9 @@ export default function TicketsSection({
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token],
   );
+  const isTicketClosed = selectedTicket?.status === "closed";
+  const closedTicketMessage =
+    "این تیکت بسته شده است و امکان ارسال پیام یا فایل جدید وجود ندارد.";
 
   const transformResponse = useMemo(
     () =>
@@ -425,12 +427,14 @@ export default function TicketsSection({
         key: "status",
         label: "وضعیت",
         filterable: true,
+        options: statusOptions,
         render: (v) => <StatusBadge status={v as TicketStatus} />,
       },
       {
         key: "priority",
         label: "اولویت",
         filterable: true,
+        options: priorityOptions,
         render: (v) => <PriorityBadge priority={v as TicketPriority} />,
       },
       {
@@ -450,6 +454,7 @@ export default function TicketsSection({
         render: (v) => (
           <span className={cn("text-sm", t.textMuted)}>{String(v || "-")}</span>
         ),
+        
       },
       {
         key: "replyCount",
@@ -544,6 +549,10 @@ export default function TicketsSection({
 
   async function uploadTicketAttachment(file: File | null | undefined) {
     if (!file) return;
+    if (isTicketClosed) {
+      toast.error(closedTicketMessage);
+      return;
+    }
     try {
       setUploadingAttachment(true);
       const fd = new FormData();
@@ -592,9 +601,14 @@ export default function TicketsSection({
 
   async function saveTicket() {
     if (!selectedTicket || !form) return;
+    const hasConversationPayload =
+      Boolean(form.replyMessage.trim()) || uploadedAttachments.length > 0;
+    if (selectedTicket.status === "closed" && hasConversationPayload) {
+      toast.error(closedTicketMessage);
+      return;
+    }
     if (
-      !form.replyMessage.trim() &&
-      uploadedAttachments.length === 0 &&
+      !hasConversationPayload &&
       !isSuperAdmin
     ) {
       toast.error("متن پیام یا فایل پیوست را وارد کنید.");
@@ -820,7 +834,7 @@ export default function TicketsSection({
             {isSuperAdmin ? (
               <FaReply className="h-3.5 w-3.5" />
             ) : (
-              <FaEye className="h-3.5 w-3.5" />
+              <FaReply className="h-3.5 w-3.5" />
             )}
             <span className="sr-only">
               {isSuperAdmin ? "مشاهده و پاسخ" : "مشاهده"}
@@ -1278,6 +1292,19 @@ export default function TicketsSection({
                     t.modalBg,
                   )}
                 >
+                  {isTicketClosed && (
+                    <div
+                      className={cn(
+                        "mb-2.5 rounded-xl border px-3 py-2 text-xs font-semibold",
+                        isDark
+                          ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                          : "border-amber-500/20 bg-amber-50 text-amber-700",
+                      )}
+                    >
+                      {closedTicketMessage}
+                    </div>
+                  )}
+
                   {/* Uploaded files row */}
                   {uploadedAttachments.length > 0 && (
                     <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -1331,15 +1358,20 @@ export default function TicketsSection({
                     <textarea
                       ref={textareaRef}
                       value={form.replyMessage}
+                      disabled={isTicketClosed || saving}
                       onChange={(e) =>
                         setForm((p) =>
                           p ? { ...p, replyMessage: e.target.value } : p,
                         )
                       }
                       rows={3}
-                      placeholder="پاسخ خود را بنویسید..."
+                      placeholder={
+                        isTicketClosed
+                          ? "این تیکت بسته شده است."
+                          : "پاسخ خود را بنویسید..."
+                      }
                       className={cn(
-                        "block w-full resize-none border-0 bg-transparent px-3.5 pt-3 pb-12 text-sm outline-none",
+                        "block w-full resize-none border-0 bg-transparent px-3.5 pt-3 pb-12 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60",
                         t.textPrimary,
                         isDark
                           ? "placeholder:text-[#47443e]"
@@ -1348,6 +1380,7 @@ export default function TicketsSection({
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                           e.preventDefault();
+                          if (isTicketClosed) return;
                           void saveTicket();
                         }
                       }}
@@ -1365,14 +1398,22 @@ export default function TicketsSection({
                               ? "hover:bg-[#1e1d1b] hover:text-blue-400"
                               : "hover:bg-[#f0ece4] hover:text-blue-600",
                             uploadingAttachment && "animate-pulse",
+                            isTicketClosed &&
+                              "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-current",
                           )}
-                          title="پیوست فایل"
+                          title={
+                            isTicketClosed
+                              ? "این تیکت بسته شده است."
+                              : "پیوست فایل"
+                          }
                         >
                           <FaPaperclip className="h-3.5 w-3.5" />
                           <input
                             type="file"
                             className="hidden"
-                            disabled={uploadingAttachment || saving}
+                            disabled={
+                              isTicketClosed || uploadingAttachment || saving
+                            }
                             onChange={(e) => {
                               const f = e.target.files?.[0];
                               void uploadTicketAttachment(f);
@@ -1391,7 +1432,7 @@ export default function TicketsSection({
                             t.textDisabled,
                           )}
                         >
-                          Ctrl+Enter ارسال
+                          {isTicketClosed ? "تیکت بسته است" : "Ctrl+Enter ارسال"}
                         </span>
                       </div>
 
@@ -1399,7 +1440,7 @@ export default function TicketsSection({
                       <button
                         type="button"
                         onClick={saveTicket}
-                        disabled={saving}
+                        disabled={saving || isTicketClosed}
                         className={cn(
                           "flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-bold transition-all duration-200",
                           "disabled:cursor-not-allowed disabled:opacity-50",

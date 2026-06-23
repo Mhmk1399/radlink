@@ -5,6 +5,7 @@
 
 import { Suspense, lazy } from "react";
 import AdminShell from "@/components/admin/AdminShell";
+import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { SECTION_META, type AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 
@@ -32,6 +33,10 @@ const TemplatesSection = lazy(
 const BlocksSection = lazy(() => import("@/components/admin/BlocksSection"));
 const QRCodesSection = lazy(() => import("@/components/admin/QRCodesSection"));
 const TicketsSection = lazy(() => import("@/components/admin/TicketsSection"));
+const NotificationsSection = lazy(
+  () => import("@/components/admin/NotificationsSection"),
+);
+const ProfileSection = lazy(() => import("@/components/admin/ProfileSection"));
 
 function SectionSkeleton() {
   const t = useThemeTokens();
@@ -123,6 +128,10 @@ function SectionRouter({
       return <QRCodesSection navigate={navigate} />;
     case "tickets":
       return <TicketsSection navigate={navigate} />;
+    case "notifications":
+      return <NotificationsSection navigate={navigate} />;
+    case "profile":
+      return <ProfileSection navigate={navigate} />;
     default:
       return <ComingSoon section={section} navigate={navigate} />;
   }
@@ -130,12 +139,14 @@ function SectionRouter({
 
 export default function AdminPage() {
   return (
-    <AdminShell>
-      {({ section, navigate }) => (
-        <Suspense fallback={<SectionSkeleton />}>
-          <SectionRouter section={section} navigate={navigate} />
-        </Suspense>
-      )}
-    </AdminShell>
+    <AdminAuthProvider>
+      <AdminShell>
+        {({ section, navigate }) => (
+          <Suspense fallback={<SectionSkeleton />}>
+            <SectionRouter section={section} navigate={navigate} />
+          </Suspense>
+        )}
+      </AdminShell>
+    </AdminAuthProvider>
   );
 }

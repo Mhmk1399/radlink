@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaGlobe, FaFileAlt } from "react-icons/fa";
+import { FaPowerOff } from "react-icons/fa6";
 import { HiOutlinePencil } from "react-icons/hi2";
 import type { ColumnDef } from "@/types/table";
 import type { Page } from "@/types/index";
@@ -134,8 +135,14 @@ function buildColumns(
     {
       key: "isPublished",
       label: "وضعیت",
-      editable: false,
+      editable: true,
+      inputType: "checkbox",
+      placeholder: "صفحه منتشر شود",
       filterable: true,
+      options: [
+        { label: "منتشر شده", value: "true" },
+        { label: "پیش‌نویس", value: "false" },
+      ],
       render: (value) => {
         const published = !!value;
         return (
@@ -192,6 +199,8 @@ export default function PagesSection({
   const canUpdatePages = can("admin.pages", "update");
   const canDeletePages = can("admin.pages", "delete");
   const [ownerOptions, setOwnerOptions] = useState<SelectOption[]>([]);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const [togglingPageId, setTogglingPageId] = useState<string | null>(null);
 
   const transformResponse = useMemo(
     () => (json: unknown) => {
@@ -300,6 +309,47 @@ export default function PagesSection({
     [ownerOptions, t, isDark],
   );
 
+  async function togglePageStatus(row: AdminPageRow) {
+    const pageId = String(row._id || row.id || "");
+    if (!pageId || togglingPageId) return;
+
+    const nextPublished = !Boolean(row.isPublished);
+
+    try {
+      setTogglingPageId(pageId);
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({ isPublished: nextPublished }),
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof json?.message === "string"
+            ? json.message
+            : "تغییر وضعیت صفحه با خطا مواجه شد.",
+        );
+      }
+
+      toast.success(
+        nextPublished ? "صفحه منتشر شد." : "صفحه به پیش‌نویس تغییر کرد.",
+      );
+      setRefreshToken((value) => value + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "تغییر وضعیت صفحه با خطا مواجه شد.",
+      );
+    } finally {
+      setTogglingPageId(null);
+    }
+  }
+
   return (
     <div className="space-y-5 sm:space-y-6" dir="rtl">
       {/* ── Page header card ── */}
@@ -356,12 +406,9 @@ export default function PagesSection({
 
       {/* ── Table ── */}
       <DynamicTable<AdminPageRow>
-        endpoint="/api/pages"
+        endpoint={`/api/pages?refresh=${refreshToken}`}
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
-          console.log("UPDATE ITEM:", item);
-          console.log("ITEM ID:", item.id);
-          console.log("ITEM _ID:", item._id);
           await builtInUpdate(item);
           toast.success("تغییر اعمال شد");
         }}
@@ -400,6 +447,43 @@ export default function PagesSection({
 
           return (
             <div className="flex items-center justify-end gap-1">
+              {canUpdateThisPage && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void togglePageStatus(row);
+                  }}
+                  disabled={togglingPageId === pageId}
+                  title={
+                    row.isPublished
+                      ? "تبدیل به پیش‌نویس"
+                      : "انتشار صفحه"
+                  }
+                  className={cn(
+                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+                    row.isPublished
+                      ? isDark
+                        ? "text-amber-300/80 hover:bg-amber-400/10 hover:text-amber-300"
+                        : "text-amber-700/80 hover:bg-amber-500/10 hover:text-amber-700"
+                      : isDark
+                        ? "text-emerald-400/75 hover:bg-emerald-500/10 hover:text-emerald-400"
+                        : "text-emerald-600/75 hover:bg-emerald-500/10 hover:text-emerald-600",
+                  )}
+                >
+                  {togglingPageId === pageId ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <FaPowerOff className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {row.isPublished
+                      ? "تبدیل به پیش‌نویس"
+                      : "انتشار صفحه"}
+                  </span>
+                </button>
+              )}
+
               {canUpdateThisPage && (
                 <button
                   type="button"

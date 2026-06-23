@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────────────────────────
-// components/ds/CustomSelect.tsx
-// ─────────────────────────────────────────────────────────────────
 "use client";
 
 import React, {
@@ -13,14 +10,6 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import {
-  borders,
-  shadows,
-  layout,
-  animation,
-  focus,
-  interactive,
-} from "@/lib/design/tokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 
@@ -210,28 +199,28 @@ const Icons = {
 
 const sizeConfig = {
   sm: {
-    trigger: "h-9 px-3 text-xs",
+    trigger: "min-h-[36px] px-3 py-1.5 text-xs",
     tag: "h-5 px-1.5 text-[10px]",
     option: "px-3 py-2 text-xs",
     search: "h-9 px-3 text-xs",
     icon: "h-3.5 w-3.5",
-    gap: "gap-1.5",
+    gap: "gap-1",
   },
   md: {
-    trigger: "h-10 px-3.5 text-sm",
+    trigger: "min-h-[44px] px-3.5 py-2 text-sm",
     tag: "h-6 px-2 text-[11px]",
-    option: "px-3.5 py-2.5 text-sm",
+    option: "px-3 py-2.5 text-sm",
     search: "h-10 px-3.5 text-sm",
     icon: "h-4 w-4",
-    gap: "gap-2",
+    gap: "gap-1.5",
   },
   lg: {
-    trigger: "h-12 px-4 text-sm",
+    trigger: "min-h-[52px] px-4 py-2.5 text-sm",
     tag: "h-7 px-2.5 text-xs",
     option: "px-4 py-3 text-sm",
     search: "h-11 px-4 text-sm",
     icon: "h-5 w-5",
-    gap: "gap-2.5",
+    gap: "gap-2",
   },
 };
 
@@ -249,7 +238,7 @@ const selectKeyframes = `
 `;
 
 /* ══════════════════════════════════════════════
-   THEME HOOK FOR SELECT
+   THEME HOOK
    ══════════════════════════════════════════════ */
 
 function useSelectTheme() {
@@ -260,89 +249,88 @@ function useSelectTheme() {
     t,
     isDark,
 
-    // Trigger
     triggerBg: t.inputBg,
     triggerBorder: t.borderInput,
-    triggerBorderOpen: cn("border", t.borderAccent, "ring-2 ring-[#D4AF37]/15"),
-    triggerBorderError: "border-red-500/40",
-    triggerHover: t.borderAccentHover,
+    triggerBorderOpen: isDark
+      ? "border-[#c8a84b]/40 ring-1 ring-[#c8a84b]/20"
+      : "border-[#8a7030]/40 ring-1 ring-[#8a7030]/20",
+    triggerBorderError: "border-red-500/40 ring-1 ring-red-500/15",
+    triggerHover: isDark
+      ? "hover:border-[#c8a84b]/20"
+      : "hover:border-[#8a7030]/20",
     triggerText: t.textPrimary,
     placeholderText: t.textDisabled,
 
-    // Dropdown
     dropdownBg: t.dropdownBg,
     dropdownBorder: t.borderSubtle,
     dropdownShadow: t.dropdownShadow,
     dropdownDivider: t.divider,
 
-    // Options
     optionText: t.textSecondary,
-    optionTextSelected: t.textAccent,
-    optionBgHover: t.hoverBg,
-    optionBgSelected: t.activeBg,
+    optionTextSelected: isDark ? "text-[#c8a84b]" : "text-[#8a7030]",
+    optionBgHover: isDark ? "bg-white/[0.04]" : "bg-black/[0.03]",
+    optionBgSelected: isDark ? "bg-[#c8a84b]/[0.06]" : "bg-[#8a7030]/[0.04]",
     optionTextHover: isDark ? "text-white" : "text-[#1A1304]",
     optionDescText: t.textDisabled,
-    optionDescSelected: isDark ? "text-[#D4AF37]/60" : "text-[#8A6A12]/60",
+    optionDescSelected: isDark ? "text-[#c8a84b]/60" : "text-[#8a7030]/60",
 
-    // Tags
-    tagBg: isDark ? "bg-[#D4AF37]/8" : "bg-[#D4AF37]/10",
-    tagBorder: isDark ? "border-[#D4AF37]/20" : "border-[#D4AF37]/25",
-    tagText: t.textAccent,
-    tagRemoveHover: isDark ? "hover:bg-white/10" : "hover:bg-black/10",
+    tagBg: isDark ? "bg-[#c8a84b]/[0.08]" : "bg-[#8a7030]/[0.06]",
+    tagBorder: isDark ? "border-[#c8a84b]/20" : "border-[#8a7030]/15",
+    tagText: isDark ? "text-[#c8a84b]" : "text-[#8a7030]",
+    tagRemoveHover: isDark
+      ? "hover:bg-white/10 hover:text-red-400"
+      : "hover:bg-black/8 hover:text-red-500",
 
-    // Count badge
-    countBg: isDark ? "bg-white/4" : "bg-black/4",
-    countBorder: isDark ? "border-white/10" : "border-black/10",
+    countBg: isDark ? "bg-white/[0.04]" : "bg-black/[0.03]",
+    countBorder: isDark ? "border-white/10" : "border-black/8",
     countText: t.textMuted,
 
-    // Search
-    searchBg: isDark ? "bg-white/3" : "bg-black/3",
-    searchFocusBg: isDark ? "focus:bg-white/5" : "focus:bg-black/5",
+    searchBg: "bg-transparent",
+    searchFocusBg: isDark ? "focus:bg-white/[0.03]" : "focus:bg-black/[0.02]",
     searchText: t.textPrimary,
     searchPlaceholder: t.textDisabled,
+    searchBorder: t.borderSubtle,
 
-    // Check mark
-    checkColor: t.textAccent,
+    checkColor: isDark ? "text-[#c8a84b]" : "text-[#8a7030]",
 
-    // Checkbox border
-    checkboxBorder: isDark ? "border-white/15" : "border-black/15",
+    checkboxBorder: isDark ? "border-white/15" : "border-black/12",
     checkboxBorderHighlight: isDark
-      ? "border-[#D4AF37]/30"
-      : "border-[#D4AF37]/40",
+      ? "border-[#c8a84b]/30"
+      : "border-[#8a7030]/25",
+    checkboxChecked: isDark
+      ? "border-[#c8a84b]/40 bg-[#c8a84b] text-[#111116]"
+      : "border-[#8a7030]/40 bg-[#8a7030] text-white",
 
-    // Spinner
-    spinnerColor: t.textAccent,
+    spinnerColor: isDark ? "text-[#c8a84b]" : "text-[#8a7030]",
 
-    // Empty
     emptyText: t.textMuted,
 
-    // Group header
-    groupBg: isDark ? "bg-[#0B0905]/95" : "bg-white/95",
-    groupBorder: isDark ? "border-white/4" : "border-black/4",
+    groupBg: isDark
+      ? "bg-[#0B0905]/95 backdrop-blur-sm"
+      : "bg-white/95 backdrop-blur-sm",
+    groupBorder: t.divider,
     groupText: t.textDisabled,
 
-    // Clear button
-    clearText: isDark ? "text-slate-500" : "text-[#A09070]",
+    clearText: t.textDisabled,
     clearHover: "hover:text-red-400 hover:bg-red-500/10",
 
-    // Footer
     footerText: t.textDisabled,
     footerClearText: "text-red-400/70 hover:text-red-400",
 
-    // Warning
     warningText: isDark ? "text-amber-400/80" : "text-amber-600/80",
 
-    // Create
-    createText: t.textAccent,
-    createHover: isDark ? "hover:bg-[#D4AF37]/6" : "hover:bg-[#D4AF37]/8",
+    createText: isDark ? "text-[#c8a84b]" : "text-[#8a7030]",
+    createHover: isDark
+      ? "hover:bg-[#c8a84b]/[0.06]"
+      : "hover:bg-[#8a7030]/[0.04]",
 
-    // Label
-    labelText: t.textMuted,
-    requiredStar: t.textAccent,
+    labelText: t.textDisabled,
+    requiredStar: isDark ? "text-[#c8a84b]" : "text-[#8a7030]",
 
-    // Helper
     helperText: t.textDisabled,
     errorText: t.textError,
+
+    scrollbar: t.scrollbar,
   };
 }
 
@@ -384,7 +372,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       onOpen,
       onClose: onCloseProp,
       grouped = false,
-      maxDropdownHeight = 280,
+      maxDropdownHeight = 260,
       showSelectedCount = true,
       creatable = false,
       createLabel = (q) => `ایجاد «${q}»`,
@@ -395,7 +383,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     const theme = useSelectTheme();
     const { t, isDark } = theme;
 
-    /* ── State ── */
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -422,7 +409,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
           : []
       : internalValue;
 
-    /* ── Refs ── */
     const wrapperRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
@@ -433,7 +419,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     const sz = sizeConfig[size];
     const shouldCloseOnSelect = closeOnSelect ?? !multiple;
 
-    /* ── Options ── */
     const baseOptions = asyncOptions ?? propOptions;
 
     const filteredOptions = useMemo(() => {
@@ -475,7 +460,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       [selectedValues, propOptions],
     );
 
-    /* ── Async search ── */
     useEffect(() => {
       if (!onSearch || !isOpen) return;
       setAsyncLoading(true);
@@ -495,7 +479,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       };
     }, [search, onSearch, isOpen]);
 
-    /* ── Position ── */
     useEffect(() => {
       if (!isOpen || position !== "auto") {
         setDropDirection(position === "top" ? "top" : "bottom");
@@ -511,7 +494,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       );
     }, [isOpen, position, maxDropdownHeight]);
 
-    /* ── Click outside ── */
     useEffect(() => {
       if (!isOpen) return;
       const handler = (e: MouseEvent) => {
@@ -525,7 +507,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       return () => document.removeEventListener("mousedown", handler);
     }, [isOpen]);
 
-    /* ── Focus search ── */
     useEffect(() => {
       if (isOpen && searchable)
         setTimeout(() => searchRef.current?.focus(), 50);
@@ -542,7 +523,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         });
     }, [highlightIndex]);
 
-    /* ── Actions ── */
     const openDropdown = useCallback(() => {
       if (disabled) return;
       setIsOpen(true);
@@ -576,7 +556,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       focus: () => triggerRef.current?.focus(),
     }));
 
-    /* ── Select handler ── */
     const handleSelect = useCallback(
       (opt: SelectOption) => {
         if (opt.disabled) return;
@@ -631,7 +610,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       if (shouldCloseOnSelect) closeDropdown();
     }, [search, onCreateOption, shouldCloseOnSelect, closeDropdown]);
 
-    /* ── Keyboard ── */
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
         if (disabled) return;
@@ -699,7 +677,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       ],
     );
 
-    /* ── Helpers ── */
     const isSelected = (val: string) => selectedValues.includes(val);
     const canShowClear = clearable && selectedValues.length > 0 && !disabled;
     const isLoading = loading || asyncLoading;
@@ -720,7 +697,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
       if (multiple) {
         if (showSelectedCount && selectedOptions.length > 2) {
           return (
-            <div className={cn("flex items-center flex-wrap", sz.gap)}>
+            <div className={cn("flex flex-wrap items-center", sz.gap)}>
               {selectedOptions.slice(0, 2).map((opt) => (
                 <span
                   key={opt.value}
@@ -733,12 +710,12 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   )}
                 >
                   {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                  <span className="truncate max-w-[80px]">{opt.label}</span>
+                  <span className="max-w-[80px] truncate">{opt.label}</span>
                   <button
                     type="button"
                     onClick={(e) => removeTag(opt.value, e)}
                     className={cn(
-                      "shrink-0 rounded p-0.5 transition-colors",
+                      "shrink-0 rounded p-0.5 transition-colors duration-150",
                       theme.tagRemoveHover,
                     )}
                     aria-label={`حذف ${opt.label}`}
@@ -763,7 +740,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         }
 
         return (
-          <div className={cn("flex items-center flex-wrap", sz.gap)}>
+          <div className={cn("flex flex-wrap items-center", sz.gap)}>
             {selectedOptions.map((opt) => (
               <span
                 key={opt.value}
@@ -776,12 +753,12 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 )}
               >
                 {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                <span className="truncate max-w-25">{opt.label}</span>
+                <span className="max-w-[100px] truncate">{opt.label}</span>
                 <button
                   type="button"
                   onClick={(e) => removeTag(opt.value, e)}
                   className={cn(
-                    "shrink-0 rounded p-0.5 transition-colors",
+                    "shrink-0 rounded p-0.5 transition-colors duration-150",
                     theme.tagRemoveHover,
                   )}
                   aria-label={`حذف ${opt.label}`}
@@ -794,7 +771,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         );
       }
 
-      // Single
       const opt = selectedOptions[0];
       return (
         <span
@@ -825,11 +801,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             onClick={() => handleSelect(opt)}
             onMouseEnter={() => setHighlightIndex(idx)}
             className={cn(
-              "w-full text-right",
+              "w-full text-right transition-colors duration-150",
               sz.option,
-              animation.colors,
               opt.disabled && "pointer-events-none opacity-40",
-              highlighted && (isDark ? "bg-white/4" : "bg-black/4"),
+              highlighted && theme.optionBgHover,
             )}
           >
             {renderOption(opt, selected)}
@@ -850,15 +825,29 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
           onClick={() => handleSelect(opt)}
           onMouseEnter={() => setHighlightIndex(idx)}
           className={cn(
-            "flex w-full items-center text-right rounded-xl",
+            "flex w-full items-center rounded-lg text-right transition-colors duration-150 touch-manipulation",
             sz.option,
-            animation.colors,
-            interactive.touch,
             opt.disabled && "pointer-events-none opacity-40",
-            highlighted && !selected && (isDark ? "bg-white/4" : "bg-black/4"),
+            highlighted && !selected && theme.optionBgHover,
             selected && theme.optionBgSelected,
           )}
         >
+          {/* Checkbox or check icon */}
+          {multiple ? (
+            <span
+              className={cn(
+                "ml-2.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border transition-all duration-150",
+                selected
+                  ? theme.checkboxChecked
+                  : highlighted
+                    ? theme.checkboxBorderHighlight
+                    : theme.checkboxBorder,
+              )}
+            >
+              {selected && <Icons.Check />}
+            </span>
+          ) : null}
+
           {opt.icon && (
             <span
               className={cn(
@@ -869,7 +858,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               {opt.icon}
             </span>
           )}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <span
               className={cn(
                 "block truncate font-medium",
@@ -881,7 +870,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             {opt.description && (
               <span
                 className={cn(
-                  "block truncate mt-0.5 text-[10px] leading-tight",
+                  "mt-0.5 block truncate text-[11px] leading-tight",
                   selected ? theme.optionDescSelected : theme.optionDescText,
                 )}
               >
@@ -889,20 +878,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               </span>
             )}
           </div>
-          {selected && (
-            <span className={cn("shrink-0 mr-2", theme.checkColor)}>
+          {!multiple && selected && (
+            <span className={cn("mr-2 shrink-0", theme.checkColor)}>
               <Icons.Check />
             </span>
-          )}
-          {multiple && !selected && (
-            <span
-              className={cn(
-                "shrink-0 mr-2 flex h-4 w-4 items-center justify-center rounded border",
-                highlighted
-                  ? theme.checkboxBorderHighlight
-                  : theme.checkboxBorder,
-              )}
-            />
           )}
         </button>
       );
@@ -912,7 +891,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
     const renderDropdownContent = () => {
       if (isLoading) {
         return (
-          <div className="flex flex-col items-center justify-center py-8 gap-2">
+          <div className="flex flex-col items-center justify-center gap-2 py-8">
             <span className={theme.spinnerColor}>
               <Icons.Spinner />
             </span>
@@ -927,7 +906,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
         return (
           <div
             className={cn(
-              "flex flex-col items-center justify-center py-8 gap-2",
+              "flex flex-col items-center justify-center gap-2 py-8",
               theme.emptyText,
             )}
           >
@@ -951,7 +930,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               <div key={groupName}>
                 <div
                   className={cn(
-                    "sticky top-0 z-10 px-3.5 py-2 backdrop-blur-sm border-b",
+                    "sticky top-0 z-10 border-b px-3 py-2",
                     theme.groupBg,
                     theme.groupBorder,
                   )}
@@ -973,11 +952,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 type="button"
                 onClick={handleCreate}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-xl text-right",
+                  "flex w-full items-center gap-2 rounded-lg text-right transition-colors duration-150",
                   sz.option,
                   theme.createText,
                   theme.createHover,
-                  animation.colors,
                 )}
               >
                 <Icons.Plus />
@@ -998,11 +976,10 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 type="button"
                 onClick={handleCreate}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-xl text-right",
+                  "flex w-full items-center gap-2 rounded-lg text-right transition-colors duration-150",
                   sz.option,
                   theme.createText,
                   theme.createHover,
-                  animation.colors,
                 )}
               >
                 <Icons.Plus />
@@ -1025,7 +1002,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
           dir="rtl"
           className={cn(
             "relative",
-            fullWidth ? "w-full" : "w-auto inline-block",
+            fullWidth ? "w-full" : "inline-block w-auto",
             className,
           )}
           onKeyDown={handleKeyDown}
@@ -1077,25 +1054,26 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                   }
             }
             className={cn(
-              "group flex w-full cursor-pointer items-center justify-between rounded-xl border text-right outline-none select-none",
+              "group flex w-full cursor-pointer select-none items-center justify-between rounded-xl border text-right outline-none transition-all duration-200",
               theme.triggerBg,
-              "backdrop-blur-sm",
               sz.trigger,
               error
                 ? theme.triggerBorderError
                 : isOpen
                   ? theme.triggerBorderOpen
-                  : cn("border", theme.triggerBorder),
-              !disabled && !error && theme.triggerHover,
-              disabled && "pointer-events-none opacity-50 cursor-not-allowed",
-              animation.base,
-              focus.ring,
+                  : theme.triggerBorder,
+              !disabled && !error && !isOpen && theme.triggerHover,
+              disabled && "pointer-events-none cursor-not-allowed opacity-50",
+              "focus-visible:outline-none focus-visible:ring-1",
+              isDark
+                ? "focus-visible:ring-[#c8a84b]/30"
+                : "focus-visible:ring-[#8a7030]/30",
             )}
           >
-            <div className="flex-1 min-w-0 truncate">
+            <div className="min-w-0 flex-1 truncate">
               {renderTriggerContent()}
             </div>
-            <div className="flex items-center gap-1 shrink-0 mr-2">
+            <div className="mr-2 flex shrink-0 items-center gap-1">
               {isLoading && (
                 <span className={theme.spinnerColor}>
                   <Icons.Spinner />
@@ -1117,7 +1095,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                     }
                   }}
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-md transition-colors duration-150 cursor-pointer",
+                    "flex h-6 w-6 items-center justify-center rounded-md transition-colors duration-150",
                     theme.clearText,
                     theme.clearHover,
                   )}
@@ -1136,14 +1114,24 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
             </div>
           </div>
 
-          {/* Error */}
+          {/* Error / Helper */}
           {error && (
-            <p className={cn("mt-1 text-[11px]", theme.errorText)}>{error}</p>
+            <p
+              className={cn(
+                "mt-1.5 text-[11px] leading-tight",
+                theme.errorText,
+              )}
+            >
+              {error}
+            </p>
           )}
-
-          {/* Helper */}
           {helperText && !error && (
-            <p className={cn("mt-1 text-[11px]", theme.helperText)}>
+            <p
+              className={cn(
+                "mt-1.5 text-[11px] leading-tight",
+                theme.helperText,
+              )}
+            >
               {helperText}
             </p>
           )}
@@ -1156,7 +1144,6 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               className={cn(
                 "absolute z-[60] w-full overflow-hidden rounded-xl border",
                 theme.dropdownBg,
-                "border",
                 theme.dropdownBorder,
                 theme.dropdownShadow,
                 dropDirection === "bottom"
@@ -1168,8 +1155,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               {searchable && (
                 <div
                   className={cn(
-                    "relative border-b p-1.5",
-                    "border",
+                    "relative border-b px-1.5 py-1.5",
                     theme.dropdownDivider,
                   )}
                 >
@@ -1188,14 +1174,15 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={searchPlaceholder}
                     className={cn(
-                      "w-full rounded-lg border-0 pr-9 pl-3 outline-none",
+                      "w-full rounded-lg border-0 pr-9 pl-3 outline-none transition-all duration-200",
                       theme.searchBg,
                       theme.searchText,
-                      sz.search,
-                      animation.base,
                       theme.searchFocusBg,
+                      sz.search,
+                      isDark
+                        ? "placeholder:text-[#47443e]"
+                        : "placeholder:text-[#b0aa9e]",
                     )}
-                    style={{ ["--tw-placeholder-opacity" as string]: 1 }}
                     autoComplete="off"
                     aria-label="جستجو در گزینه‌ها"
                   />
@@ -1207,11 +1194,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                 maxSelections &&
                 selectedValues.length >= maxSelections && (
                   <div
-                    className={cn(
-                      "px-3.5 py-2 border-b",
-                      "border",
-                      theme.dropdownDivider,
-                    )}
+                    className={cn("border-b px-3 py-2", theme.dropdownDivider)}
                   >
                     <span className={cn("text-[11px]", theme.warningText)}>
                       حداکثر {toPersianDigits(maxSelections)} گزینه قابل انتخاب
@@ -1223,7 +1206,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               {/* Options */}
               <div
                 ref={listRef}
-                className="overflow-y-auto p-1.5"
+                className={cn("overflow-y-auto p-1.5", theme.scrollbar)}
                 style={{ maxHeight: maxDropdownHeight }}
               >
                 {renderDropdownContent()}
@@ -1233,8 +1216,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
               {multiple && selectedValues.length > 0 && (
                 <div
                   className={cn(
-                    "flex items-center justify-between border-t px-3.5 py-2",
-                    "border",
+                    "flex items-center justify-between border-t px-3 py-2",
                     theme.dropdownDivider,
                   )}
                 >
@@ -1249,7 +1231,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
                       type="button"
                       onClick={clearValue}
                       className={cn(
-                        "text-[11px] transition-colors",
+                        "text-[11px] transition-colors duration-150",
                         theme.footerClearText,
                       )}
                     >

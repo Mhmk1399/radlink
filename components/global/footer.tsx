@@ -265,7 +265,7 @@ export function SmartLandingFooter() {
               </p>
 
               <Link
-                href="/create"
+                href="/builder"
                 className={cn(
                   components.ctaSmall,
                   "w-full justify-center px-6",

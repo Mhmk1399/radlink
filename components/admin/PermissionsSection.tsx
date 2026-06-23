@@ -509,6 +509,11 @@ export default function PermissionsSection({
         key: "isActive",
         label: "وضعیت",
         editable: false,
+        filterable: true,
+        options: [
+          { label: "فعال", value: "true" },
+          { label: "غیرفعال", value: "false" },
+        ],
         render: (value) => {
           const active = !!value;
           return (

@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { toast } from "@/components/ui/CustomToast";
+import {
+  authorizeBuilderAccess,
+  getBuilderAuthToken,
+  type BuilderAccessTarget,
+} from "@/hook/auth/builderAuthorization";
 import type { PageBlock } from "@/types/blocks/builder.types";
 
 type BuilderMode = "page" | "template";
@@ -86,7 +92,7 @@ function getCategoryId(category: unknown) {
 }
 
 async function fetchTemplate(templateId: string) {
-  const token = localStorage.getItem("auth_token");
+  const token = getBuilderAuthToken();
   const res = await fetch(`/api/templates/${templateId}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -112,6 +118,30 @@ export default function BuilderPage() {
         const mode: BuilderMode =
           params.get("mode") === "template" ? "template" : "page";
         const templateId = params.get("templateId") || params.get("id") || "";
+        const accessTarget: BuilderAccessTarget =
+          mode === "template"
+            ? templateId
+              ? { kind: "template-edit", templateId }
+              : { kind: "template-create" }
+            : { kind: "page-create" };
+        const authorization = await authorizeBuilderAccess(accessTarget);
+
+        if (cancelled) return;
+
+        if (!authorization.ok) {
+          const notify =
+            authorization.reason === "forbidden" ? toast.error : toast.warning;
+          notify(authorization.message, {
+            title:
+              authorization.reason === "forbidden"
+                ? "دسترسی غیرمجاز"
+                : "نیاز به ورود",
+          });
+          router.replace(
+            authorization.reason === "forbidden" ? "/admin" : "/auth",
+          );
+          return;
+        }
 
         if (!templateId) {
           setState({
@@ -166,7 +196,7 @@ export default function BuilderPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   if (state.loading) return <MinimalLoadingScreen />;
 

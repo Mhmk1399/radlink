@@ -528,7 +528,7 @@ export function HeroSection() {
             >
               {/* Primary CTA */}
               <Link
-                href="/create"
+                href="/builder"
                 className={cn(components.ctaPrimary, "px-7")}
               >
                 <span

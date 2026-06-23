@@ -3,6 +3,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
+import "@/models/users";
 
 // POST /api/notifications — admin sends targeted or global notification
 export const POST = compose(
@@ -18,12 +19,15 @@ export const POST = compose(
         return NextResponse.json({ message: "برای اعلان‌های غیرعمومی شناسه کاربر الزامی است." }, { status: 400 });
     }
 
-    const notification = await Notification.create({
+    const created = await Notification.create({
         User:      isGlobal ? undefined : userId,
         message,
         closeable: closeable ?? false,
         isGlobal:  isGlobal  ?? false,
     });
+    const notification = await Notification.findById(created._id)
+        .populate("User", "firstName lastName phoneNumber email role status")
+        .lean();
 
     return NextResponse.json({ notification }, { status: 201 });
 });
@@ -46,6 +50,7 @@ export const GET = compose(
 
     const [notifications, total] = await Promise.all([
         Notification.find(query)
+            .populate("User", "firstName lastName phoneNumber email role status")
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)

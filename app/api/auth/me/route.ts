@@ -53,7 +53,7 @@ export const PATCH = compose(
     withStatus("active")
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
-    const { firstName, lastName, email, nationalCode, fatherName } = await req.json();
+    const { firstName, lastName, email, avatarUrl, nationalCode, fatherName } = await req.json();
 
     if (!firstName || typeof firstName !== "string" || firstName.trim().length < 2) {
         return NextResponse.json(
@@ -69,6 +69,7 @@ export const PATCH = compose(
     };
 
     if (email !== undefined) updateData.email = email.trim() || null;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl.trim() || null;
     if (nationalCode !== undefined) updateData.nationalCode = nationalCode.trim() || null;
     if (fatherName !== undefined) updateData.fatherName = fatherName.trim() || null;
 

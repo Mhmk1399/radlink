@@ -735,7 +735,7 @@ export function SolutionSection() {
                 )}
               >
                 <Link
-                  href="/create"
+                  href="/builder"
                   className={cn(components.ctaPrimary, "px-7")}
                 >
                   <span

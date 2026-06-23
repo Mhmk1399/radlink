@@ -255,7 +255,7 @@ export function MvpSection() {
               "mt-10 flex flex-col items-center gap-5 sm:flex-row sm:justify-center",
             )}
           >
-            <Link href="/create" className={cn(components.ctaPrimary, "px-8")}>
+            <Link href="/builder" className={cn(components.ctaPrimary, "px-8")}>
               <span
                 className={cn(
                   "pointer-events-none absolute inset-0 bg-linear-to-r from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100",
@@ -440,7 +440,7 @@ export function CtaSection() {
               )}
             >
               <Link
-                href="/create"
+                href="/builder"
                 className={cn(
                   components.ctaPrimary,
                   "px-8 py-3.5 sm:px-10 sm:py-4 text-base",

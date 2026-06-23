@@ -195,6 +195,10 @@ export default function QRCodesSection({
         label: "وضعیت",
         inputType: "checkbox",
         filterable: true,
+        options: [
+          { label: "فعال", value: "true" },
+          { label: "غیرفعال", value: "false" },
+        ],
         render: (value) => {
           const active = !!value;
           return (

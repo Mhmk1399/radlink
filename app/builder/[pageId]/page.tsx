@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { toast } from "@/components/ui/CustomToast";
+import {
+  authorizeBuilderAccess,
+  getBuilderAuthToken,
+} from "@/hook/auth/builderAuthorization";
 import type { PageBlock } from "@/types/blocks/builder.types";
 
 type PageMetadata = {
@@ -68,7 +73,27 @@ export default function EditPageBuilder() {
       }
 
       try {
-        const token = localStorage.getItem("auth_token");
+        const authorization = await authorizeBuilderAccess({
+          kind: "page-edit",
+          pageId,
+        });
+
+        if (!authorization.ok) {
+          const notify =
+            authorization.reason === "forbidden" ? toast.error : toast.warning;
+          notify(authorization.message, {
+            title:
+              authorization.reason === "forbidden"
+                ? "دسترسی غیرمجاز"
+                : "نیاز به ورود",
+          });
+          router.replace(
+            authorization.reason === "forbidden" ? "/admin" : "/auth",
+          );
+          return;
+        }
+
+        const token = getBuilderAuthToken();
         const res = await fetch(`/api/pages/${pageId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
@@ -118,7 +143,7 @@ export default function EditPageBuilder() {
     }
 
     fetchPage();
-  }, [pageId]);
+  }, [pageId, router]);
 
   if (loading) return <LoadingScreen />;
 

@@ -28,6 +28,10 @@ export const GET = compose(
         query.status = "active";
         query.agentid = { $exists: false };
     }
+    if (mode === "notification-options") {
+        query.isDeleted = false;
+        query.status = "active";
+    }
     if (search) {
         query.$or = [
             { phoneNumber: { $regex: search, $options: "i" } },
@@ -37,6 +41,16 @@ export const GET = compose(
     }
 
     if (mode === "agent-options") {
+        const users = await User.find(query)
+            .select("firstName lastName phoneNumber email role status")
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .lean();
+
+        return NextResponse.json({ users, total: users.length, page: 1, limit });
+    }
+
+    if (mode === "notification-options") {
         const users = await User.find(query)
             .select("firstName lastName phoneNumber email role status")
             .sort({ createdAt: -1 })
