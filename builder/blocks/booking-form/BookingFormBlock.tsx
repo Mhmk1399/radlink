@@ -427,12 +427,7 @@ export default function BookingFormBlock({
     }
   }, [availableTimes, formValues.selectedTime]);
 
-  const calendarValue = useMemo(() => {
-    return combineDateWithSelectedTime(
-      formValues.selectedDate,
-      formValues.selectedTime,
-    );
-  }, [formValues.selectedDate, formValues.selectedTime]);
+ 
 
   const getDateAvailabilityError = (selectedIso: string): string | null => {
     if (!selectedIso) return "لطفاً تاریخ رزرو را انتخاب کنید.";
@@ -515,34 +510,7 @@ export default function BookingFormBlock({
 
     return nextErrors;
   };
-
-  const handleCalendarChange = (nextValue: string) => {
-    const availabilityError = getDateAvailabilityError(nextValue);
-
-    if (availabilityError) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        selectedDate: availabilityError,
-      }));
-      setFeedback({
-        type: "error",
-        text: availabilityError,
-      });
-      return;
-    }
-
-    setFormValues((prev) => ({
-      ...prev,
-      selectedDate: nextValue,
-    }));
-
-    setFieldErrors((prev) => ({
-      ...prev,
-      selectedDate: undefined,
-    }));
-
-    setFeedback(null);
-  };
+ 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

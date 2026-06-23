@@ -20,6 +20,8 @@ export interface ColumnDef<T> {
     dateFilter?: boolean;
     /** Allow copying this cell's value */
     copyable?: boolean;
+    /** Default value pre-filled when opening the create form */
+    defaultValue?: unknown;
 }
 
 export interface DynamicTableProps<T extends object> {

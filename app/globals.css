@@ -54,3 +54,41 @@ body {
 .sidebar-collapsed {
   width: 72px;
 }
+.builder-modal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+  scrollbar-gutter: stable;
+}
+
+.builder-modal-scrollbar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.builder-modal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.builder-modal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(212 212 216);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.builder-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(163 163 163);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.builder-modal-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.builder-modal-scrollbar {
+  direction: ltr;
+}
+
+.builder-modal-scrollbar > * {
+  direction: rtl;
+}

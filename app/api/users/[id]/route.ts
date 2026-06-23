@@ -53,68 +53,217 @@ export const PATCH = compose(
     withStatus("active")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+
+    if (!isValidObjectId(id)) {
+        return NextResponse.json(
+            { message: "شناسه کاربر معتبر نیست." },
+            { status: 400 }
+        );
+    }
+
     const body = await req.json();
     const requester = req.ctx.user!;
 
     if (!(await canAccessUserRequest(req, id))) {
-        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
+        return NextResponse.json(
+            { message: "شما اجازه انجام این عملیات را ندارید." },
+            { status: 403 }
+        );
     }
 
     const target = await User.findById(id).select("role");
-    if (!target) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
 
-    // Fields anyone can update on themselves
-    const selfAllowed = ["firstName", "lastName", "email", "avatarUrl", "nationalCode", "fatherName"];
-    // Admin-only fields
-    const adminOnly = ["limits", "createdBy", "status"];
-
-    const isAdmin = ["admin", "superAdmin"].includes(requester.role);
-    const allowed = isAdmin ? [...selfAllowed, ...adminOnly] : selfAllowed;
-    if (requester.role === "superAdmin") allowed.push("role");
-
-    const updates: Record<string, unknown> = { updatedBy: requester._id };
-    for (const key of allowed) {
-        if (key in body) {
-            const value = body[key];
-            if (key === "role") {
-                if (!VALID_ROLES.includes(String(value))) {
-                    return NextResponse.json(
-                        { message: "نقش کاربر معتبر نیست." },
-                        { status: 400 }
-                    );
-                }
-            }
-            if (key === "status") {
-                if (!VALID_STATUSES.includes(String(value))) {
-                    return NextResponse.json(
-                        { message: "وضعیت کاربر معتبر نیست." },
-                        { status: 400 }
-                    );
-                }
-            }
-            if (requester.role !== "superAdmin" && target.role === "superAdmin") {
-                return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
-            }
-            // Handle ObjectId fields - only accept valid IDs, skip empty/null
-            if (key === "createdBy" || key === "updatedBy") {
-                if (!value || value === "") continue;
-                if (!isValidObjectId(value)) {
-                    return NextResponse.json(
-                        { message: "فرمت شناسه معتبر نیست." },
-                        { status: 400 }
-                    );
-                }
-            }
-            updates[key] = value;
-        }
+    if (!target) {
+        return NextResponse.json(
+            { message: "کاربر پیدا نشد." },
+            { status: 404 }
+        );
     }
 
-    const user = await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-        .populate("permissions", "name isActive")
-        .populate("createdBy", "firstName lastName phoneNumber role")
-        .populate("updatedBy", "firstName lastName phoneNumber role");
+    const isAdmin = ["admin", "superAdmin"].includes(requester.role);
+    const isSuperAdmin = requester.role === "superAdmin";
+    const isSelf = String(requester._id) === id;
 
-    if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
+    if (!isSuperAdmin && target.role === "superAdmin") {
+        return NextResponse.json(
+            { message: "شما اجازه ویرایش سوپر ادمین را ندارید." },
+            { status: 403 }
+        );
+    }
+
+    const selfAllowed = [
+        "firstName",
+        "lastName",
+        "email",
+        "avatarUrl",
+        "nationalCode",
+        "fatherName",
+    ];
+
+    const adminOnly = [
+        "limits",
+        "status",
+        "agentid",
+        "permissions",
+        "isPhoneVerified",
+    ];
+
+    const allowedFields = isAdmin
+        ? [...selfAllowed, ...adminOnly]
+        : selfAllowed;
+
+    if (isSuperAdmin) {
+        allowedFields.push("role");
+    }
+
+    const updates: Record<string, unknown> = {
+        updatedBy: requester._id,
+    };
+    const unsets: Record<string, ""> = {};
+
+    for (const key of allowedFields) {
+        if (!(key in body)) continue;
+
+        let value = body[key];
+
+        if (key === "role") {
+            if (!VALID_ROLES.includes(String(value))) {
+                return NextResponse.json(
+                    { message: "نقش کاربر معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (key === "status") {
+            if (!VALID_STATUSES.includes(String(value))) {
+                return NextResponse.json(
+                    { message: "وضعیت کاربر معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (key === "agentid") {
+            if (value === "" || value === null) {
+                unsets.agentid = "";
+                continue;
+            } else if (
+                typeof value !== "string" ||
+                !isValidObjectId(value)
+            ) {
+                return NextResponse.json(
+                    { message: "شناسه نماینده معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (key === "permissions") {
+            if (!Array.isArray(value)) {
+                return NextResponse.json(
+                    { message: "فرمت دسترسی‌ها معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+
+            const permissionIds = value.map((permission) => {
+                if (
+                    typeof permission === "object" &&
+                    permission !== null &&
+                    "_id" in permission
+                ) {
+                    return String(permission._id);
+                }
+
+                return String(permission);
+            });
+
+            if (!permissionIds.every(isValidObjectId)) {
+                return NextResponse.json(
+                    { message: "یکی از شناسه‌های دسترسی معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+
+            value = permissionIds;
+        }
+
+        if (key === "limits") {
+            if (
+                typeof value !== "object" ||
+                value === null ||
+                Array.isArray(value)
+            ) {
+                return NextResponse.json(
+                    { message: "فرمت محدودیت‌ها معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+
+            const limits = value as Record<string, unknown>;
+
+            value = {
+                files: Math.max(0, Number(limits.files) || 0),
+                blocks: Math.max(0, Number(limits.blocks) || 0),
+                pages: Math.max(0, Number(limits.pages) || 0),
+                landingPages: Math.max(
+                    0,
+                    Number(limits.landingPages) || 0
+                ),
+            };
+        }
+
+        if (
+            ["firstName", "lastName", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
+                key
+            )
+        ) {
+            value =
+                typeof value === "string"
+                    ? value.trim()
+                    : value;
+        }
+
+        updates[key] = value;
+    }
+
+    // A normal user may only update themselves.
+    if (!isAdmin && !isSelf) {
+        return NextResponse.json(
+            { message: "شما فقط می‌توانید حساب خودتان را ویرایش کنید." },
+            { status: 403 }
+        );
+    }
+
+    const user = await User.findByIdAndUpdate(
+        id,
+        {
+            $set: updates,
+            ...(Object.keys(unsets).length ? { $unset: unsets } : {}),
+        },
+        {
+            new: true,
+            runValidators: true,
+        }
+    )
+        .populate("permissions", "name isActive")
+        .populate(
+            "createdBy",
+            "firstName lastName phoneNumber role"
+        )
+        .populate(
+            "updatedBy",
+            "firstName lastName phoneNumber role"
+        );
+
+    if (!user) {
+        return NextResponse.json(
+            { message: "کاربر پیدا نشد." },
+            { status: 404 }
+        );
+    }
+
     return NextResponse.json({ user });
 });
 

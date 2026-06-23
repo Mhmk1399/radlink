@@ -2,21 +2,16 @@
 // components/sections/UsersSection.tsx
 // ─────────────────────────────────────────────────────────────────
 "use client";
-
-import  { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { gradients } from "@/lib/design/tokens";
 import { useTheme } from "@/contexts/ThemeContext";
-import {
-  FaUsers,
-  FaArrowRight,
-  FaPowerOff,
-} from "react-icons/fa6";
+import { FaUsers, FaArrowRight } from "react-icons/fa6";
 import type { ColumnDef } from "@/types/table";
 import DynamicTable from "../global/DynamicTable";
-import type {   UserRole, UserStatus } from "@/types/index";
+import type { UserRole, UserStatus } from "@/types/index";
 import { toast } from "@/components/ui/CustomToast";
 
 /* ══════════════════════════════════════════════
@@ -87,6 +82,15 @@ type UserRow = {
   updatedBy?: string;
   createdAt: string;
   updatedAt: string;
+  "limits.files"?: number;
+  "limits.blocks"?: number;
+  "limits.pages"?: number;
+  "limits.landingPages"?: number;
+};
+
+type SelectOption = {
+  value: string;
+  label: string;
 };
 
 /* ══════════════════════════════════════════════
@@ -184,6 +188,72 @@ function VerifyBadge({ verified }: { verified: boolean }) {
   );
 }
 
+function getObjectId(value: unknown) {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return "";
+  const record = value as Record<string, unknown>;
+  const id = record._id ?? record.id;
+  return typeof id === "string" ? id : "";
+}
+
+function getPersonLabel(value: unknown, fallback = "") {
+  if (!value || typeof value !== "object") return fallback;
+  const record = value as Record<string, unknown>;
+  const fullName = [record.firstName, record.lastName]
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    fullName ||
+    (typeof record.phoneNumber === "string" ? record.phoneNumber : "") ||
+    (typeof record.email === "string" ? record.email : "") ||
+    getObjectId(record) ||
+    fallback
+  );
+}
+
+function getAgentOptionLabel(agent: Record<string, unknown>, fallback: string) {
+  const userLabel = getPersonLabel(agent.user, fallback);
+  const type = agent.type === "company" ? "حقوقی" : "حقیقی";
+  const companyName =
+    typeof agent.companyName === "string" && agent.companyName.trim()
+      ? ` - ${agent.companyName.trim()}`
+      : "";
+
+  return `${userLabel} (${type})${companyName}`;
+}
+
+function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
+  const payload: Partial<UserRow> & Record<string, unknown> = {
+    ...item,
+    firstName:
+      typeof item.firstName === "string" ? item.firstName.trim() : undefined,
+    lastName:
+      typeof item.lastName === "string" ? item.lastName.trim() : undefined,
+    limits: {
+      files: Math.max(0, Number(item["limits.files"]) || 0),
+      blocks: Math.max(0, Number(item["limits.blocks"]) || 0),
+      pages: Math.max(0, Number(item["limits.pages"]) || 0),
+      landingPages: Math.max(0, Number(item["limits.landingPages"]) || 0),
+    },
+  };
+
+  delete payload.fullName;
+  delete payload["limits.files"];
+  delete payload["limits.blocks"];
+  delete payload["limits.pages"];
+  delete payload["limits.landingPages"];
+  delete payload.permissions;
+
+  payload.agentid =
+    typeof item.agentid === "string" && item.agentid.trim()
+      ? item.agentid.trim()
+      : "";
+
+  return payload;
+}
+
 /* ══════════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
@@ -205,6 +275,61 @@ export default function UsersSection({
       : "";
 
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const [agentOptions, setAgentOptions] = useState<SelectOption[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let ignore = false;
+
+    async function loadAgentOptions() {
+      try {
+        const response = await fetch("/api/agents?limit=100", { headers });
+        const json = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            typeof json?.message === "string"
+              ? json.message
+              : "دریافت لیست نمایندگان با خطا مواجه شد.",
+          );
+        }
+
+        const agents = Array.isArray(json?.agents) ? json.agents : [];
+        const options = agents
+          .map((agent: unknown) => {
+            if (!agent || typeof agent !== "object") return null;
+            const record = agent as Record<string, unknown>;
+            const value = getObjectId(record);
+            if (!value) return null;
+            return {
+              value,
+              label: getAgentOptionLabel(record, value.slice(-8)),
+            };
+          })
+          .filter((option: SelectOption | null): option is SelectOption =>
+            Boolean(option?.value),
+          );
+
+        if (!ignore) setAgentOptions(options);
+      } catch (error) {
+        if (!ignore) {
+          setAgentOptions([]);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "دریافت لیست نمایندگان با خطا مواجه شد.",
+          );
+        }
+      }
+    }
+
+    void loadAgentOptions();
+
+    return () => {
+      ignore = true;
+    };
+  }, [token]);
 
   /* ── Transform API response → UserRow[] ── */
   const transformResponse = useMemo(
@@ -254,6 +379,10 @@ export default function UsersSection({
               pages: u.limits?.pages ?? 0,
               landingPages: u.limits?.landingPages ?? 0,
             },
+            "limits.files": u.limits?.files ?? 0,
+            "limits.blocks": u.limits?.blocks ?? 0,
+            "limits.pages": u.limits?.pages ?? 0,
+            "limits.landingPages": u.limits?.landingPages ?? 0,
             // Normalise createdBy / updatedBy
             createdBy: formatUserRef(u.createdBy),
             updatedBy: formatUserRef(u.updatedBy),
@@ -267,19 +396,25 @@ export default function UsersSection({
   const columns: ColumnDef<UserRow>[] = useMemo(
     () => [
       {
-        key: "fullName",
-        label: "نام و نام خانوادگی",
+        key: "firstName",
+        label: "نام",
         sortable: true,
-        placeholder: "نام کامل",
+        required: true,
+        placeholder: "نام",
         copyable: true,
-        render: (value, row) => (
-          <span className="font-semibold">
-            {String(
-              value ||
-                `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim() ||
-                "—",
-            )}
-          </span>
+        render: (value) => (
+          <span className="font-semibold">{String(value ?? "—")}</span>
+        ),
+      },
+      {
+        key: "lastName",
+        label: "نام خانوادگی",
+        sortable: true,
+        required: true,
+        placeholder: "نام خانوادگی",
+        copyable: true,
+        render: (value) => (
+          <span className="font-semibold">{String(value ?? "—")}</span>
         ),
       },
       {
@@ -305,9 +440,7 @@ export default function UsersSection({
         copyable: true,
         hideOnMobile: true,
         render: (value) => (
-          <span className="text-sm text-slate-400">
-            {String(value ?? "—")}
-          </span>
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
       },
       {
@@ -360,12 +493,14 @@ export default function UsersSection({
         key: "agentid",
         label: "نماینده",
         sortable: true,
-        placeholder: "شناسه نماینده",
+        options: agentOptions,
+        placeholder: "بدون نماینده",
         copyable: true,
         hideOnMobile: true,
         render: (value) => (
           <span className="text-sm text-slate-400">
-            {String(value ?? "—")}
+            {agentOptions.find((option) => option.value === value)?.label ??
+              String(value || "—")}
           </span>
         ),
       },
@@ -386,10 +521,39 @@ export default function UsersSection({
         },
         hideOnMobile: true,
         copyable: false,
+       },
+      {
+        key: "limits.files",
+        label: "محدودیت فایل",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
+      },
+      {
+        key: "limits.blocks",
+        label: "محدودیت بلاک",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
+      },
+      {
+        key: "limits.pages",
+        label: "محدودیت صفحه",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
+      },
+      {
+        key: "limits.landingPages",
+        label: "محدودیت لندینگ",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
       },
       {
         key: "limits",
         label: "محدودیت‌ها",
+        editable: false,
         render: (value) => {
           const l = value as UserRow["limits"];
           if (!l) return "—";
@@ -406,6 +570,7 @@ export default function UsersSection({
       {
         key: "isPhoneVerified",
         label: "تأیید موبایل",
+        editable: false,
         inputType: "checkbox",
         render: (value) => <VerifyBadge verified={Boolean(value)} />,
         copyable: false,
@@ -416,6 +581,7 @@ export default function UsersSection({
         label: "آخرین ورود",
         sortable: true,
         dateFilter: true,
+        editable: false,
         hideOnMobile: true,
         copyable: true,
         render: (value) => <span>{formatFaDate(value as string)}</span>,
@@ -425,6 +591,7 @@ export default function UsersSection({
         label: "آخرین درخواست OTP",
         sortable: true,
         dateFilter: true,
+        editable: false,
         hideOnMobile: true,
         copyable: true,
         render: (value) => <span>{formatFaDate(value as string)}</span>,
@@ -434,6 +601,7 @@ export default function UsersSection({
         label: "تاریخ تأیید موبایل",
         sortable: true,
         dateFilter: true,
+        editable: false,
         hideOnMobile: true,
         copyable: true,
         render: (value) => <span>{formatFaDate(value as string)}</span>,
@@ -441,6 +609,7 @@ export default function UsersSection({
       {
         key: "isDeleted",
         label: "حذف شده",
+        editable: false,
         render: (value) => (
           <span
             className={cn(
@@ -457,22 +626,20 @@ export default function UsersSection({
         key: "createdBy",
         label: "ایجاد شده توسط",
         hideOnMobile: true,
+        editable: false,
         copyable: true,
         render: (value) => (
-          <span className="text-sm text-slate-400">
-            {String(value ?? "—")}
-          </span>
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
       },
       {
         key: "updatedBy",
+        editable: false,
         label: "به‌روزرسانی توسط",
         hideOnMobile: true,
         copyable: true,
         render: (value) => (
-          <span className="text-sm text-slate-400">
-            {String(value ?? "—")}
-          </span>
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
       },
       {
@@ -552,7 +719,7 @@ export default function UsersSection({
         endpoint="/api/users"
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
-          await builtInUpdate(item);
+          await builtInUpdate(buildUserPayload(item) as UserRow);
           toast.success("اطلاعات کاربر ویرایش شد");
         }}
         onDelete={async (item, builtInDelete) => {
@@ -560,7 +727,10 @@ export default function UsersSection({
           toast.success("کاربر حذف شد");
         }}
         onCreate={async (item, builtInCreate) => {
-          await builtInCreate(item);
+          await builtInCreate(
+            buildUserPayload(item as Partial<UserRow> & Record<string, unknown>),
+          );
+
           toast.success("کاربر جدید ایجاد شد");
         }}
         columns={columns}
@@ -578,34 +748,6 @@ export default function UsersSection({
         showRowNumbers
         enableCellCopy
         transformResponse={transformResponse}
-        rowActions={(row) => {
-          const isActive = row.status === "active";
-          if (!canUpdateUsers) return null;
-
-          return (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Wire to: PATCH /api/users/:id  { status: "active" | "inactive" }
-                  toast.success(
-                    isActive ? "کاربر غیرفعال شد" : "کاربر فعال شد",
-                  );
-                }}
-                title={isActive ? "غیرفعال کردن" : "فعال کردن"}
-                className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-lg transition",
-                  isActive
-                    ? "text-emerald-500 hover:bg-emerald-500/10"
-                    : "text-slate-400 hover:bg-slate-500/10",
-                )}
-              >
-                <FaPowerOff className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          );
-        }}
         emptyMessage="کاربری یافت نشد"
       />
     </div>

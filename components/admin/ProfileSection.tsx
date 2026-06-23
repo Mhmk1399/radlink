@@ -731,7 +731,7 @@ function ProfileEditor({
             ) : (
               <FaCircleCheck className="h-3.5 w-3.5" />
             )}
-            {saving ? "ذخیره..." : "ذخیره تغییرات"}
+            {saving ? "ذخیره..." : "ذخیره  "}
           </button>
         </div>
 
@@ -813,7 +813,7 @@ function ProfileEditor({
             ) : (
               <FaCircleCheck className="h-4 w-4" />
             )}
-            {saving ? "در حال ذخیره..." : "ذخیره تغییرات"}
+            {saving ? "در حال ذخیره..." : "ذخیره  "}
           </button>
         </div>
       </form>

@@ -26,6 +26,7 @@ import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { ColumnDef } from "@/types/table";
+import CustomSelect from "../ui/customSelect";
 
 type AgentType = "personal" | "company";
 
@@ -956,35 +957,33 @@ export default function AgentsSection({
                 {/* User select (create only) */}
                 {!form.id && (
                   <Field label="کاربر" icon={<FaUserTie />}>
-                    <div className="relative">
-                      <select
-                        value={form.userId}
-                        onChange={(event) =>
-                          updateField("userId", event.target.value)
-                        }
-                        disabled={loadingUsers}
-                        className={themedSelect}
-                      >
-                        <option value="">
-                          {loadingUsers ? "در حال دریافت..." : "انتخاب کاربر"}
-                        </option>
-                        {userOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      {loadingUsers && (
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                          <div
-                            className={cn(
-                              "h-4 w-4 animate-spin rounded-full border-2 border-t-transparent",
-                              isDark ? "border-[#c8a84b]" : "border-[#8a7030]",
-                            )}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    <CustomSelect
+                      id="userId"
+                      name="userId"
+                      value={form.userId}
+                      options={userOptions}
+                      onChange={(value) => {
+                        updateField(
+                          "userId",
+                          typeof value === "string" ? value : "",
+                        );
+                      }}
+                      placeholder={
+                        loadingUsers
+                          ? "در حال دریافت کاربران..."
+                          : "انتخاب کاربر"
+                      }
+                      searchPlaceholder="جستجوی نام، شماره موبایل یا ایمیل..."
+                      loading={loadingUsers}
+                      disabled={loadingUsers}
+                      searchable
+                      clearable
+                      fullWidth
+                      size="md"
+                      position="auto"
+                      emptyMessage="کاربری برای انتخاب وجود ندارد"
+                      noResultsMessage="کاربری با این مشخصات پیدا نشد"
+                    />
                   </Field>
                 )}
 

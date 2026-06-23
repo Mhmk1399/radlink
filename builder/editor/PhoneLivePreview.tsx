@@ -320,7 +320,7 @@ export default function PhonePreviewModal({
               style={{ background: "#050505" }}
             >
               {/* Screen surface */}
-              <div className="absolute inset-1 overflow-hidden rounded-[46px] bg-white">
+              <div className="absolute inset-1 overflow-hidden rounded-[46px] bg-white px-1">
                 {/* Status bar — always LTR like a real phone */}
                 <div
                   dir="ltr"

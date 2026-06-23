@@ -302,11 +302,7 @@ export function BannerBlock({
 
   const isEditor = mode === "editor";
 
-  const handleButtonClick = isEditor
-    ? (event: React.MouseEvent<HTMLAnchorElement>) => {
-        event.preventDefault();
-      }
-    : undefined;
+   
 
   return (
     <EditablePart

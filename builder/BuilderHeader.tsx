@@ -9,6 +9,7 @@ import {
   HiOutlineArrowUturnRight,
   HiOutlineArrowUturnLeft,
   HiOutlineQuestionMarkCircle,
+  HiOutlineArrowRight,
 } from "react-icons/hi2";
 import { HiOutlineEye } from "react-icons/hi2";
 import { SaveIndicator, BlockCountBadge } from "./BuilderOverlays";
@@ -20,6 +21,8 @@ interface BuilderHeaderProps {
   isServerSaving: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  hasUnsavedChanges: boolean;
+  onBack: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onPreview: () => void;
@@ -36,6 +39,8 @@ export function BuilderHeader({
   isServerSaving,
   canUndo,
   canRedo,
+  hasUnsavedChanges,
+  onBack,
   onUndo,
   onRedo,
   onPreview,
@@ -96,6 +101,32 @@ export function BuilderHeader({
               </button>
             </div>
 
+            {/* Back to admin */}
+            <button
+              type="button"
+              onClick={onBack}
+              disabled={isServerSaving}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 hover:shadow-sm active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"
+              title={
+                hasUnsavedChanges
+                  ? "بازگشت به پنل، تغییرات ذخیره نشده است"
+                  : "بازگشت به پنل مدیریت"
+              }
+            >
+              <HiOutlineArrowRight size={16} />
+
+              <span className="hidden text-[12px] font-semibold sm:inline">
+                بازگشت به ادمین
+              </span>
+
+              {hasUnsavedChanges && (
+                <span
+                  className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500"
+                  title="تغییرات ذخیره‌نشده"
+                />
+              )}
+            </button>
+
             {/* Preview */}
             <button
               type="button"
@@ -108,7 +139,6 @@ export function BuilderHeader({
                 پیش‌نمایش
               </span>
             </button>
-            
 
             {/* Save / Create */}
             <button

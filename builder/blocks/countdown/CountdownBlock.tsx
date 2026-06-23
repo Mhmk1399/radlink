@@ -192,7 +192,6 @@ export function CountdownBlock({
   onSelectElement,
   onUpdateContent,
 }: CountdownBlockProps) {
-  const data = block.data as CountdownData;
   const isEditor = mode === "editor";
   const mobileOnly = isEditor;
 
@@ -347,28 +346,32 @@ export function CountdownBlock({
               selectedElementId={selectedElementId}
               onSelectElement={onSelectElement}
             >
-              <div className="flex items-center justify-center gap-3 sm:gap-4">
+              <div className="mx-auto flex w-full max-w-[340px]   items-center justify-center gap-3 sm:w-auto sm:max-w-none sm:flex-nowrap sm:gap-4">
                 {segments.map((seg) => (
-                  <StyledTimerBox
+                  <div
                     key={seg.key}
-                    $styleCss={timerBoxCss}
-                    className="flex min-w-[64px] flex-col items-center gap-1.5 px-4 py-4 sm:min-w-[80px] sm:px-5 sm:py-5"
+                    className="w-[calc(50%-0.375rem)] sm:w-auto"
                   >
-                    <StyledTimerNumber
-                      $styleCss={timerNumCss}
-                      className="font-extrabold tabular-nums leading-none"
+                    <StyledTimerBox
+                      $styleCss={timerBoxCss}
+                      className="flex min-w-0 w-full flex-col items-center gap-1.5 px-3 py-3 sm:min-w-[80px] sm:w-auto sm:px-5 sm:py-5"
                     >
-                      --
-                    </StyledTimerNumber>
-                    {showLabels && (
-                      <StyledTimerLabel
-                        $styleCss={timerLabCss}
-                        className="font-medium leading-none"
+                      <StyledTimerNumber
+                        $styleCss={timerNumCss}
+                        className="font-extrabold tabular-nums leading-none whitespace-nowrap"
                       >
-                        {seg.label}
-                      </StyledTimerLabel>
-                    )}
-                  </StyledTimerBox>
+                        --
+                      </StyledTimerNumber>
+                      {showLabels && (
+                        <StyledTimerLabel
+                          $styleCss={timerLabCss}
+                          className="font-medium leading-none text-center"
+                        >
+                          {seg.label}
+                        </StyledTimerLabel>
+                      )}
+                    </StyledTimerBox>
+                  </div>
                 ))}
               </div>
             </EditablePart>
@@ -405,19 +408,19 @@ export function CountdownBlock({
               selectedElementId={selectedElementId}
               onSelectElement={onSelectElement}
             >
-              <div className="flex items-center justify-center gap-3 sm:gap-4">
+              <div className="mx-auto flex w-full max-w-[340px]   items-center justify-center gap-3 sm:w-auto sm:max-w-none sm:flex-nowrap sm:gap-4">
                 {segments.map((seg, idx) => (
                   <div
                     key={seg.key}
-                    className="flex items-center gap-3 sm:gap-4"
+                    className="flex w-[calc(50%-0.375rem)] items-center justify-center sm:w-auto sm:gap-4"
                   >
                     <StyledTimerBox
                       $styleCss={timerBoxCss}
-                      className="flex min-w-[64px] flex-col items-center gap-1.5 px-4 py-4 sm:min-w-[80px] sm:px-5 sm:py-5"
+                      className="flex min-w-0 w-full flex-col items-center gap-1.5 px-3 py-3 sm:min-w-[80px] sm:w-auto sm:px-5 sm:py-5"
                     >
                       <StyledTimerNumber
                         $styleCss={timerNumCss}
-                        className="font-extrabold tabular-nums leading-none"
+                        className="font-extrabold tabular-nums leading-none whitespace-nowrap"
                       >
                         {seg.key === "days"
                           ? displayTime[seg.key]
@@ -426,17 +429,16 @@ export function CountdownBlock({
                       {showLabels && (
                         <StyledTimerLabel
                           $styleCss={timerLabCss}
-                          className="font-medium leading-none"
+                          className="font-medium leading-none text-center"
                         >
                           {seg.label}
                         </StyledTimerLabel>
                       )}
                     </StyledTimerBox>
 
-                    {/* Separator */}
                     {idx < segments.length - 1 && (
                       <span
-                        className="select-none text-lg font-bold opacity-30 sm:text-xl"
+                        className="hidden select-none text-lg font-bold opacity-30 sm:inline-block sm:text-xl"
                         aria-hidden="true"
                       >
                         :

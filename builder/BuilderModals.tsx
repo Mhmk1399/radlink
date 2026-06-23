@@ -1,7 +1,14 @@
 // builder/components/BuilderModals.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   HiOutlineCloudArrowUp,
@@ -291,7 +298,9 @@ export function PageMetaModal({
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const [isThumbnailDragging, setIsThumbnailDragging] = useState(false);
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
-  const [thumbnailUploadError, setThumbnailUploadError] = useState<string | null>(null);
+  const [thumbnailUploadError, setThumbnailUploadError] = useState<
+    string | null
+  >(null);
 
   const handleThumbnailFile = useCallback(
     async (file: File | null | undefined) => {
@@ -342,7 +351,9 @@ export function PageMetaModal({
         onThumbnailChange?.(uploadedUrl);
       } catch (error) {
         setThumbnailUploadError(
-          error instanceof Error ? error.message : "آپلود تصویر با خطا مواجه شد.",
+          error instanceof Error
+            ? error.message
+            : "آپلود تصویر با خطا مواجه شد.",
         );
       } finally {
         setIsThumbnailUploading(false);
@@ -353,36 +364,86 @@ export function PageMetaModal({
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSaving) {
+        onClose();
+      }
     };
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handler);
+
+    // Prevent page movement when the browser scrollbar disappears
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
     return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handler);
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, onClose, isSaving]);
 
   if (!open) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0  z-[400] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[400] flex items-end justify-center overflow-hidden bg-black/50 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-5"
       dir="rtl"
       role="dialog"
       aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      aria-labelledby="page-meta-modal-title"
+      onMouseDown={(event) => {
+        if (
+          event.target === event.currentTarget &&
+          !isSaving &&
+          !isThumbnailUploading
+        ) {
+          onClose();
+        }
       }}
     >
-      <div className="w-full animate-in slide-in-from-bottom-6 max-h-150 overflow-scroll duration-300 rounded-t-[28px] border border-white/60 bg-white shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] sm:max-w-lg sm:rounded-[28px] sm:zoom-in-95">
+      <div
+        className="
+        flex
+        max-h-[92dvh]
+        w-full
+        min-w-0
+        flex-col
+        overflow-hidden
+        rounded-t-[28px]
+        border
+        border-white/70
+        bg-white
+        shadow-[0_30px_90px_-20px_rgba(0,0,0,0.35)]
+        animate-in
+        slide-in-from-bottom-6
+        duration-300
+
+        sm:max-h-[min(88dvh,760px)]
+        sm:max-w-xl
+        sm:rounded-[28px]
+        sm:zoom-in-95
+      "
+      >
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-neutral-300" />
         </div>
-        <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
-          <div>
-            <h2 className="text-[16px] font-black text-neutral-900">
+        <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-neutral-100 bg-white/95 px-5 py-4 backdrop-blur-xl sm:px-6">
+          <div className="min-w-0 flex-1 pl-4">
+            <h2
+              id="page-meta-modal-title"
+              className="truncate text-[16px] font-black text-neutral-900 sm:text-[17px]"
+            >
               {mode === "template"
                 ? pageId
                   ? "ویرایش تمپلیت"
@@ -391,21 +452,30 @@ export function PageMetaModal({
                   ? "ویرایش صفحه"
                   : "ساخت صفحه جدید"}
             </h2>
-            <p className="mt-0.5 text-[12px] text-neutral-400">
+
+            <p className="mt-1 truncate text-[12px] text-neutral-400">
               {mode === "template"
-                ? "اطلاعات تمپلیت رو وارد کن"
-                : "اطلاعات صفحه رو وارد کن"}
+                ? "اطلاعات و تنظیمات تمپلیت را تکمیل کنید"
+                : "اطلاعات و آدرس صفحه را تکمیل کنید"}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 transition hover:bg-neutral-200 hover:text-neutral-600"
-          >
-            <HiOutlineXMark size={16} />
-          </button>
         </div>
-        <div className="space-y-5 p-5">
+        <div
+          className="
+    builder-modal-scrollbar
+    min-h-0
+    min-w-0
+    flex-1
+    space-y-5
+    overflow-y-auto
+    overflow-x-hidden
+    overscroll-contain
+    px-5
+    py-5
+    sm:px-6
+    sm:py-6
+  "
+        >
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               {mode === "template" ? "نام تمپلیت" : "عنوان صفحه"}{" "}
@@ -430,91 +500,102 @@ export function PageMetaModal({
                 </span>
                 {false ? (
                   <>
-                <div
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    if (!isThumbnailUploading) setIsThumbnailDragging(true);
-                  }}
-                  onDragLeave={() => setIsThumbnailDragging(false)}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    setIsThumbnailDragging(false);
-                    if (!isThumbnailUploading) {
-                      void handleThumbnailFile(event.dataTransfer.files?.[0]);
-                    }
-                  }}
-                  onClick={() => {
-                    if (!isThumbnailUploading) thumbnailInputRef.current?.click();
-                  }}
-                  className={[
-                    "relative flex min-h-36 cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition",
-                    isThumbnailDragging
-                      ? "border-emerald-400 bg-emerald-50"
-                      : "border-neutral-200 bg-neutral-50/80 hover:border-neutral-300 hover:bg-white",
-                    isThumbnailUploading ? "pointer-events-none" : "",
-                  ].join(" ")}
-                >
-                  {thumbnail ? (
-                    <img
-                      src={thumbnail}
-                      alt="Template thumbnail preview"
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  ) : null}
-                  <div
-                    className={[
-                      "relative z-10 flex w-full flex-col items-center justify-center px-4 py-6 text-center",
-                      thumbnail ? "bg-black/45 text-white" : "text-neutral-500",
-                    ].join(" ")}
-                  >
-                    {isThumbnailUploading ? (
-                      <>
-                        <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/50 border-t-white" />
-                        <p className="text-[13px] font-bold">در حال آپلود تصویر...</p>
-                      </>
-                    ) : (
-                      <>
-                        {thumbnail ? (
-                          <HiOutlinePhoto className="mb-2 h-8 w-8" />
+                    <div
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (!isThumbnailUploading) setIsThumbnailDragging(true);
+                      }}
+                      onDragLeave={() => setIsThumbnailDragging(false)}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setIsThumbnailDragging(false);
+                        if (!isThumbnailUploading) {
+                          void handleThumbnailFile(
+                            event.dataTransfer.files?.[0],
+                          );
+                        }
+                      }}
+                      onClick={() => {
+                        if (!isThumbnailUploading)
+                          thumbnailInputRef.current?.click();
+                      }}
+                      className={[
+                        "relative flex min-h-36 w-full min-w-0 max-w-full cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition-all",
+                        isThumbnailDragging
+                          ? "scale-[0.995] border-emerald-400 bg-emerald-50 ring-4 ring-emerald-500/10"
+                          : "border-neutral-200 bg-neutral-50/80 hover:border-emerald-300 hover:bg-emerald-50/30",
+                        isThumbnailUploading
+                          ? "pointer-events-none cursor-wait opacity-80"
+                          : "",
+                      ].join(" ")}
+                    >
+                      {thumbnail ? (
+                        <img
+                          src={thumbnail}
+                          alt="Template thumbnail preview"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      ) : null}
+                      <div
+                        className={[
+                          "relative z-10 flex w-full flex-col items-center justify-center px-4 py-6 text-center",
+                          thumbnail
+                            ? "bg-black/45 text-white"
+                            : "text-neutral-500",
+                        ].join(" ")}
+                      >
+                        {isThumbnailUploading ? (
+                          <>
+                            <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+                            <p className="text-[13px] font-bold">
+                              در حال آپلود تصویر...
+                            </p>
+                          </>
                         ) : (
-                          <HiOutlineCloudArrowUp className="mb-2 h-8 w-8 text-neutral-300" />
+                          <>
+                            {thumbnail ? (
+                              <HiOutlinePhoto className="mb-2 h-8 w-8" />
+                            ) : (
+                              <HiOutlineCloudArrowUp className="mb-2 h-8 w-8 text-neutral-300" />
+                            )}
+                            <p className="text-[13px] font-bold">
+                              {thumbnail
+                                ? "برای تغییر تصویر کلیک کنید"
+                                : "تصویر را اینجا بکشید یا کلیک کنید"}
+                            </p>
+                            <p className="mt-1 text-[11px] opacity-75">
+                              JPG, PNG, WebP یا GIF - حداکثر ۵MB
+                            </p>
+                          </>
                         )}
-                        <p className="text-[13px] font-bold">
-                          {thumbnail ? "برای تغییر تصویر کلیک کنید" : "تصویر را اینجا بکشید یا کلیک کنید"}
-                        </p>
-                        <p className="mt-1 text-[11px] opacity-75">
-                          JPG, PNG, WebP یا GIF - حداکثر ۵MB
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  <input
-                    ref={thumbnailInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
-                    onChange={(event) => {
-                      void handleThumbnailFile(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
-                  />
-                </div>
-                {thumbnail ? (
-                  <button
-                    type="button"
-                    onClick={() => onThumbnailChange?.("")}
-                    disabled={isThumbnailUploading}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[12px] font-bold text-red-500 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <HiOutlineTrash className="h-4 w-4" />
-                    حذف تصویر
-                  </button>
-                ) : null}
-                {thumbnailUploadError ? (
-                  <p className="mt-2 text-[12px] font-medium text-red-500">
-                    {thumbnailUploadError}
-                  </p>
-                ) : null}
+                      </div>
+                      <input
+                        ref={thumbnailInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={(event) => {
+                          void handleThumbnailFile(event.target.files?.[0]);
+                          event.target.value = "";
+                        }}
+                      />
+                    </div>
+                    {thumbnail ? (
+                      <button
+                        type="button"
+                        onClick={() => onThumbnailChange?.("")}
+                        disabled={isThumbnailUploading}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-[12px] font-bold text-red-500 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <HiOutlineTrash className="h-4 w-4" />
+                        حذف تصویر
+                      </button>
+                    ) : null}
+                    {thumbnailUploadError ? (
+                      <p className="mt-2 text-[12px] font-medium text-red-500">
+                        {thumbnailUploadError}
+                      </p>
+                    ) : null}
                   </>
                 ) : null}
                 <input
@@ -522,7 +603,7 @@ export function PageMetaModal({
                   value={url}
                   onChange={(e) => onUrlChange(slugify(e.target.value))}
                   placeholder="my-page"
-                  className="min-w-0 flex-1 bg-transparent px-3 py-3.5 font-mono text-[15px] text-neutral-900 outline-none placeholder:text-neutral-300"
+                  className="block min-w-0 max-w-full flex-1 bg-transparent px-3 py-3.5 font-mono text-[14px] text-neutral-900 outline-none placeholder:text-neutral-300 sm:text-[15px]"
                   dir="ltr"
                 />
               </div>
@@ -564,7 +645,8 @@ export function PageMetaModal({
                     }
                   }}
                   onClick={() => {
-                    if (!isThumbnailUploading) thumbnailInputRef.current?.click();
+                    if (!isThumbnailUploading)
+                      thumbnailInputRef.current?.click();
                   }}
                   className={[
                     "relative flex min-h-36 cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition",
@@ -590,7 +672,9 @@ export function PageMetaModal({
                     {isThumbnailUploading ? (
                       <>
                         <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-white/50 border-t-white" />
-                        <p className="text-[13px] font-bold">در حال آپلود تصویر...</p>
+                        <p className="text-[13px] font-bold">
+                          در حال آپلود تصویر...
+                        </p>
                       </>
                     ) : (
                       <>
@@ -600,7 +684,9 @@ export function PageMetaModal({
                           <HiOutlineCloudArrowUp className="mb-2 h-8 w-8 text-neutral-300" />
                         )}
                         <p className="text-[13px] font-bold">
-                          {thumbnail ? "برای تغییر تصویر کلیک کنید" : "تصویر را اینجا بکشید یا کلیک کنید"}
+                          {thumbnail
+                            ? "برای تغییر تصویر کلیک کنید"
+                            : "تصویر را اینجا بکشید یا کلیک کنید"}
                         </p>
                         <p className="mt-1 text-[11px] opacity-75">
                           JPG, PNG, WebP یا GIF - حداکثر ۵MB
@@ -643,7 +729,31 @@ export function PageMetaModal({
                     onThumbnailChange?.(e.target.value);
                   }}
                   placeholder="https://example.com/template.jpg"
-                  className="mt-3 w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-left font-mono text-[13px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+                  className="
+    mt-3
+    block
+    w-full
+    min-w-0
+    max-w-full
+    rounded-2xl
+    border
+    border-neutral-200
+    bg-neutral-50/80
+    px-4
+    py-3.5
+    text-left
+    font-mono
+    text-[13px]
+    text-neutral-900
+    outline-none
+    transition-all
+    placeholder:text-neutral-300
+    hover:border-neutral-300
+    focus:border-emerald-400
+    focus:bg-white
+    focus:ring-4
+    focus:ring-emerald-500/10
+  "
                   dir="ltr"
                 />
               </div>
@@ -662,8 +772,13 @@ export function PageMetaModal({
             />
           </div>
           {saveError && (
-            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] text-red-600">
-              {saveError}
+            <div
+              role="alert"
+              className="flex min-w-0 items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-[13px] leading-6 text-red-700"
+            >
+              <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+
+              <span className="min-w-0 flex-1 break-words">{saveError}</span>
             </div>
           )}
         </div>

@@ -53,19 +53,15 @@ import {
   FaAngleLeft,
   FaAngleRight,
   FaEllipsis,
+  FaTriangleExclamation,
 } from "react-icons/fa6";
 
 /* ══════════════════════════════════════════════
    SOFT PALETTE — eye-friendly, warm-tinted
-   ══════════════════════════════════════════════
-
-   Dark  → warm charcoal (#18181d base), muted gold
-   Light → warm ivory (#f7f5f0 base), rich bronze
    ══════════════════════════════════════════════ */
 
 const shell = {
   dark: {
-    // ── Page & layout surfaces ─────────────────
     page: "bg-[#111116]",
     sidebar: "bg-[#16161b]",
     header: "bg-[#16161b]/95",
@@ -75,41 +71,27 @@ const shell = {
     hover: "hover:bg-[#ffffff07]",
     active: "bg-[#c8a84b]/[0.08]",
     tooltip: "bg-[#2a2a34]",
-
-    // ── Text hierarchy ─────────────────────────
     textPrimary: "text-[#e6e3de]",
     textSecondary: "text-[#9c9890]",
-    textMuted: "text-[#6e6a62]",
+    textMuted: "text-[#9c9890]",
     textDisabled: "text-[#47443e]",
-    textAccent: "text-[#d2b660]", // muted gold — not glaring
+    textAccent: "text-[#d2b660]",
     textAccentSub: "text-[#c8a84b]/70",
-
-    // ── Structural lines ───────────────────────
     border: "border-[#26262f]",
     borderAccent: "border-[#c8a84b]/18",
     divider: "border-[#22222a]/70",
-
-    // ── Shadows ───────────────────────────────
     cardShadow: "shadow-[0_2px_10px_-3px_rgba(0,0,0,0.35)]",
     dropShadow:
       "shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),0_2px_8px_-2px_rgba(0,0,0,0.3)]",
-
-    // ── Accent fills ──────────────────────────
     accentBadge: "bg-[#c8a84b]/[0.07] ring-1 ring-[#c8a84b]/15 text-[#d2b660]",
     accentDot: "bg-[#d2b660]",
     avatarBg:
       "bg-gradient-to-br from-[#c8a84b]/18 to-[#a07830]/12 text-[#d2b660]",
     logoBg: "bg-[#c8a84b]/[0.07] border-[#c8a84b]/15",
-    activePill: "bg-[#d2b660]", // the top active indicator dot
-
-    // ── Scrollbar ─────────────────────────────
+    activePill: "bg-[#d2b660]",
     scrollbar:
       "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.08)_transparent]",
-
-    // ── Notification dot ──────────────────────
     unreadDot: "bg-[#c8a84b]",
-
-    // ── Status colours (muted, not neon) ──────
     info: "text-[#7aabce]",
     success: "text-[#6ec99a]",
     warning: "text-[#d2b660]",
@@ -117,7 +99,6 @@ const shell = {
   },
 
   light: {
-    // ── Page & layout surfaces ─────────────────
     page: "bg-[#f4f1eb]",
     sidebar: "bg-[#faf8f3]",
     header: "bg-[#faf8f3]/95",
@@ -127,41 +108,27 @@ const shell = {
     hover: "hover:bg-[#00000005]",
     active: "bg-[#8a7030]/[0.05]",
     tooltip: "bg-[#2c2a25]",
-
-    // ── Text hierarchy ─────────────────────────
     textPrimary: "text-[#2a2720]",
     textSecondary: "text-[#6a655c]",
-    textMuted: "text-[#9a948a]",
+    textMuted: "text-[#6a655c]",
     textDisabled: "text-[#c2bcb4]",
-    textAccent: "text-[#7a6428]", // rich bronze
+    textAccent: "text-[#7a6428]",
     textAccentSub: "text-[#8a7030]/60",
-
-    // ── Structural lines ───────────────────────
     border: "border-[#e6e2da]",
     borderAccent: "border-[#8a7030]/15",
     divider: "border-[#ece8e0]/80",
-
-    // ── Shadows ───────────────────────────────
     cardShadow: "shadow-[0_1px_6px_-1px_rgba(0,0,0,0.06)]",
     dropShadow:
       "shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1),0_2px_6px_-2px_rgba(0,0,0,0.06)]",
-
-    // ── Accent fills ──────────────────────────
     accentBadge: "bg-[#8a7030]/[0.06] ring-1 ring-[#8a7030]/12 text-[#7a6428]",
     accentDot: "bg-[#8a7030]",
     avatarBg:
       "bg-gradient-to-br from-[#c8a84b]/12 to-[#a07830]/8 text-[#7a6428]",
     logoBg: "bg-[#c8a84b]/[0.06] border-[#c8a84b]/12",
     activePill: "bg-[#8a7030]",
-
-    // ── Scrollbar ─────────────────────────────
     scrollbar:
       "[scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.08)_transparent]",
-
-    // ── Notification dot ──────────────────────
     unreadDot: "bg-[#8a7030]",
-
-    // ── Status colours ────────────────────────
     info: "text-[#3a7a9c]",
     success: "text-[#2d7a50]",
     warning: "text-[#7a6428]",
@@ -217,14 +184,13 @@ const PROFILE_OVERRIDE_KEY = "admin-profile-user-override";
 
 function readProfileOverride(userId?: string): Partial<AuthUser> | null {
   if (!userId || typeof window === "undefined") return null;
-
   try {
     const raw = localStorage.getItem(PROFILE_OVERRIDE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
     const record = parsed as Record<string, unknown>;
     if (String(record.id ?? "") !== userId) return null;
-
     return {
       id: userId,
       firstName: typeof record.firstName === "string" ? record.firstName : "",
@@ -334,6 +300,40 @@ function getInitials(name: string): string {
   );
 }
 
+/* ── Logout handler ── */
+
+function performLogout() {
+  if (typeof window === "undefined") return;
+
+  // Remove all known token keys from localStorage
+  const tokenKeys = ["auth_token", "token", "accessToken", "jwt"];
+  tokenKeys.forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  });
+
+  // Remove from sessionStorage
+  tokenKeys.forEach((key) => {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {}
+  });
+
+  // Remove from cookies — set past expiry
+  tokenKeys.forEach((key) => {
+    document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+
+  // Clear profile override
+  try {
+    localStorage.removeItem(PROFILE_OVERRIDE_KEY);
+  } catch {}
+
+  // Redirect to auth
+  window.location.href = "/auth";
+}
+
 /* ── Dropdown hook ── */
 
 function useDropdown() {
@@ -363,6 +363,273 @@ function useDropdown() {
 function useShell() {
   const { isDark } = useTheme();
   return { s: isDark ? shell.dark : shell.light, isDark };
+}
+
+/* ══════════════════════════════════════════════
+   LOGOUT CONFIRMATION MODAL
+   ══════════════════════════════════════════════ */
+
+function LogoutModal({
+  open,
+  onConfirm,
+  onCancel,
+  isLoggingOut,
+}: {
+  open: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoggingOut: boolean;
+}) {
+  const { s, isDark } = useShell();
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isLoggingOut) onCancel();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onCancel, isLoggingOut]);
+
+  if (!open) return null;
+
+  return (
+    /* Backdrop */
+    <div
+      className={cn(
+        "fixed inset-0 z-[200] flex items-center justify-center p-4",
+        "animate-[fade-in_.15s_ease_both]",
+      )}
+      aria-modal="true"
+      role="dialog"
+      aria-labelledby="logout-modal-title"
+    >
+      {/* Scrim */}
+      <div
+        className={cn(
+          "absolute inset-0 backdrop-blur-sm",
+          isDark ? "bg-[#0a0a0e]/70" : "bg-[#2a2720]/30",
+        )}
+        onClick={() => !isLoggingOut && onCancel()}
+      />
+
+      {/* Card */}
+      <div
+        className={cn(
+          "relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border",
+          s.card,
+          s.border,
+          s.dropShadow,
+          "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+        )}
+      >
+        {/* ── Header ── */}
+        <div className={cn("flex items-start justify-between px-5 pt-5 pb-4")}>
+          <div className="flex items-center gap-3">
+            {/* Warning icon container */}
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                isDark
+                  ? "bg-red-500/10 ring-1 ring-red-500/20"
+                  : "bg-red-50 ring-1 ring-red-200/60",
+              )}
+            >
+              <FaArrowRightFromBracket
+                className={cn(
+                  "h-4 w-4",
+                  isDark ? "text-[#e08080]" : "text-[#b84040]",
+                )}
+              />
+            </div>
+            <div>
+              <h2
+                id="logout-modal-title"
+                className={cn("text-sm font-bold leading-tight", s.textPrimary)}
+              >
+                خروج از حساب
+              </h2>
+              <p className={cn("text-[11px] mt-0.5", s.textDisabled)}>
+                تأیید خروج از پنل مدیریت
+              </p>
+            </div>
+          </div>
+
+          {/* Close × */}
+          <button
+            onClick={() => !isLoggingOut && onCancel()}
+            disabled={isLoggingOut}
+            aria-label="بستن"
+            className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors",
+              s.hover,
+              s.textDisabled,
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+            )}
+          >
+            <FaXmark className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* ── Divider ── */}
+        <div
+          className={cn("h-px mx-5", isDark ? "bg-[#26262f]" : "bg-[#e6e2da]")}
+        />
+
+        {/* ── Body ── */}
+        <div className="px-5 py-4">
+          {/* Warning banner */}
+          <div
+            className={cn(
+              "flex items-start gap-2.5 rounded-xl px-3.5 py-3 mb-4",
+              isDark
+                ? "bg-red-500/[0.06] ring-1 ring-red-500/12"
+                : "bg-red-50/80 ring-1 ring-red-200/50",
+            )}
+          >
+            <FaTriangleExclamation
+              className={cn(
+                "h-3.5 w-3.5 mt-0.5 shrink-0",
+                isDark ? "text-[#e08080]/70" : "text-[#b84040]/70",
+              )}
+            />
+            <p
+              className={cn(
+                "text-[12px] leading-relaxed",
+                isDark ? "text-[#e08080]/80" : "text-[#b84040]/80",
+              )}
+            >
+              با خروج، توکن احراز هویت شما حذف شده و برای ادامه باید دوباره وارد
+              شوید.
+            </p>
+          </div>
+
+          <p className={cn("text-sm leading-relaxed text-center", s.textMuted)}>
+            آیا مطمئن هستید که می‌خواهید از پنل مدیریت خارج شوید؟
+          </p>
+        </div>
+
+        {/* ── Footer / Actions ── */}
+        <div
+          className={cn(
+            "flex items-center gap-2.5 px-5 pb-5",
+            "flex-row-reverse", // Confirm on the left (RTL: primary action)
+          )}
+        >
+          {/* Confirm — destructive */}
+          <button
+            onClick={onConfirm}
+            disabled={isLoggingOut}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5",
+              "text-sm font-semibold transition-all duration-200",
+              "disabled:opacity-60 disabled:cursor-not-allowed",
+              isDark
+                ? "bg-red-500/15 hover:bg-red-500/25 text-[#e08080] ring-1 ring-red-500/20 hover:ring-red-500/30"
+                : "bg-red-500/8 hover:bg-red-500/15 text-[#b84040] ring-1 ring-red-300/40 hover:ring-red-400/50",
+              isLoggingOut && "animate-pulse",
+            )}
+          >
+            {isLoggingOut ? (
+              <>
+                {/* Spinner */}
+                <svg
+                  className="h-3.5 w-3.5 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+                در حال خروج…
+              </>
+            ) : (
+              <>
+                <FaArrowRightFromBracket className="h-3.5 w-3.5" />
+                بله، خارج شو
+              </>
+            )}
+          </button>
+
+          {/* Cancel */}
+          <button
+            onClick={onCancel}
+            disabled={isLoggingOut}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5",
+              "text-sm font-semibold transition-all duration-200",
+              "disabled:opacity-60 disabled:cursor-not-allowed",
+              s.border,
+              "border",
+              s.textMuted,
+              s.hover,
+              isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
+            )}
+          >
+            <FaXmark className="h-3.5 w-3.5" />
+            انصراف
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   useLogout hook
+   ══════════════════════════════════════════════ */
+
+function useLogout() {
+  const [showModal, setShowModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const requestLogout = useCallback(() => {
+    setShowModal(true);
+  }, []);
+
+  const confirmLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    // Small delay so the user sees the loading state
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    performLogout();
+  }, []);
+
+  const cancelLogout = useCallback(() => {
+    if (isLoggingOut) return;
+    setShowModal(false);
+  }, [isLoggingOut]);
+
+  return {
+    showModal,
+    isLoggingOut,
+    requestLogout,
+    confirmLogout,
+    cancelLogout,
+  };
 }
 
 /* ══════════════════════════════════════════════
@@ -456,7 +723,10 @@ function getNotificationType(message: string): NotifItem["type"] {
   return "info";
 }
 
-function getNotificationTitle(notification: NotificationRecord, message: string) {
+function getNotificationTitle(
+  notification: NotificationRecord,
+  message: string,
+) {
   if (notification.isGlobal) return "اعلان عمومی";
   if (/تیکت/i.test(message)) return "اعلان تیکت";
   return "اعلان اختصاصی";
@@ -464,19 +734,17 @@ function getNotificationTitle(notification: NotificationRecord, message: string)
 
 function formatRelativeFaDate(value?: string) {
   if (!value) return "تازه";
-
   const date = new Date(value);
   const diffMs = date.getTime() - Date.now();
   if (Number.isNaN(diffMs)) return "تازه";
-
   const abs = Math.abs(diffMs);
   const rtf = new Intl.RelativeTimeFormat("fa-IR", { numeric: "auto" });
-
   if (abs < 60_000) return "همین حالا";
   if (abs < 3_600_000) return rtf.format(Math.round(diffMs / 60_000), "minute");
-  if (abs < 86_400_000) return rtf.format(Math.round(diffMs / 3_600_000), "hour");
-  if (abs < 2_592_000_000) return rtf.format(Math.round(diffMs / 86_400_000), "day");
-
+  if (abs < 86_400_000)
+    return rtf.format(Math.round(diffMs / 3_600_000), "hour");
+  if (abs < 2_592_000_000)
+    return rtf.format(Math.round(diffMs / 86_400_000), "day");
   return new Intl.DateTimeFormat("fa-IR", {
     dateStyle: "medium",
     timeZone: "Asia/Tehran",
@@ -488,16 +756,13 @@ async function fetchNotifications(): Promise<NotificationsResponse> {
     typeof window !== "undefined"
       ? (window.localStorage.getItem("auth_token") ?? "")
       : "";
-
   const response = await fetch("/api/notifications?limit=10", {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
-
   const json = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(json?.message ?? "دریافت اعلان‌ها با خطا مواجه شد.");
   }
-
   return json ?? {};
 }
 
@@ -523,13 +788,13 @@ function NotificationDropdown({
       revalidateOnFocus: true,
     },
   );
+
   const notifs = useMemo<NotifItem[]>(() => {
     return (data?.notifications ?? [])
       .map((notification): NotifItem | null => {
         const id = String(notification._id ?? notification.id ?? "");
         const message = String(notification.message ?? "").trim();
         if (!id || !message || dismissedIds.has(id)) return null;
-
         return {
           id,
           title: getNotificationTitle(notification, message),
@@ -542,6 +807,7 @@ function NotificationDropdown({
       })
       .filter((item): item is NotifItem => item !== null);
   }, [data?.notifications, dismissedIds, readIds]);
+
   const unread = notifs.filter((n) => !n.read).length;
 
   const markAsRead = useCallback((id: string) => {
@@ -580,7 +846,6 @@ function NotificationDropdown({
 
   return (
     <div ref={ref} className="relative">
-      {/* ── Trigger ── */}
       <button
         onClick={() => setOpen(!open)}
         aria-label="اعلانات"
@@ -606,7 +871,6 @@ function NotificationDropdown({
         )}
       </button>
 
-      {/* ── Panel ── */}
       {open && (
         <div
           className={cn(
@@ -617,7 +881,6 @@ function NotificationDropdown({
             "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
         >
-          {/* Header */}
           <div
             className={cn(
               "flex items-center justify-between px-4 py-3 border-b",
@@ -638,7 +901,6 @@ function NotificationDropdown({
             )}
           </div>
 
-          {/* List */}
           <div className={cn("max-h-[300px] overflow-y-auto", s.scrollbar)}>
             {notifs.length === 0 ? (
               <div className="py-10 text-center">
@@ -659,7 +921,6 @@ function NotificationDropdown({
                     !n.read && (isDark ? "bg-[#ffffff02]" : "bg-[#00000015]"),
                   )}
                 >
-                  {/* Icon box */}
                   <div
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg mt-0.5",
@@ -668,8 +929,6 @@ function NotificationDropdown({
                   >
                     {typeIcon[n.type]}
                   </div>
-
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p
@@ -701,8 +960,6 @@ function NotificationDropdown({
                       {n.time}
                     </p>
                   </div>
-
-                  {/* Dismiss */}
                   {n.closeable && (
                     <button
                       type="button"
@@ -725,7 +982,6 @@ function NotificationDropdown({
             )}
           </div>
 
-          {/* Footer */}
           <div className={cn("px-4 py-2.5 border-t", s.divider)}>
             <button
               onClick={() => {
@@ -753,9 +1009,11 @@ function NotificationDropdown({
 function UserDropdown({
   navigate,
   authUser,
+  onLogoutRequest,
 }: {
   navigate: (s: AdminSection) => void;
   authUser: AuthUser | null;
+  onLogoutRequest: () => void;
 }) {
   const { open, setOpen, ref } = useDropdown();
   const { s, isDark } = useShell();
@@ -863,7 +1121,6 @@ function UserDropdown({
                 icon: FaUser,
                 section: "profile" as AdminSection,
               },
-             
             ].map((item) => (
               <button
                 key={item.section}
@@ -887,6 +1144,10 @@ function UserDropdown({
           {/* Logout */}
           <div className={cn("border-t py-1.5", s.divider)}>
             <button
+              onClick={() => {
+                setOpen(false);
+                onLogoutRequest();
+              }}
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors",
                 isDark
@@ -900,162 +1161,6 @@ function UserDropdown({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   GLOBAL SEARCH
-   ══════════════════════════════════════════════ */
-
-function GlobalSearch({ navigate }: { navigate: (s: AdminSection) => void }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { s, isDark } = useShell();
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "z")) {
-        e.preventDefault();
-        setOpen(true);
-      }
-    };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-      setQuery("");
-    }
-  }, [open]);
-
-  const results = query.trim()
-    ? SECTION_META.filter((s) => s.label.includes(query))
-    : [];
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className={cn(
-          "hidden sm:flex h-9 items-center gap-2 rounded-xl border px-3 transition-all duration-200",
-          s.border,
-          s.hover,
-          focus.ring,
-        )}
-      >
-        <FaMagnifyingGlass className={cn("h-3.5 w-3.5", s.textDisabled)} />
-        <span className={cn("text-xs", s.textDisabled)}>جستجو...</span>
-        <kbd
-          className={cn(
-            "hidden lg:inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-mono",
-            s.border,
-            s.textDisabled,
-          )}
-        >
-          ⌘K
-        </kbd>
-      </button>
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] p-4">
-      {/* Scrim */}
-      <div
-        className={cn(
-          "absolute inset-0 backdrop-blur-sm",
-          isDark ? "bg-[#0a0a0e]/65" : "bg-[#2a2720]/25",
-        )}
-        onClick={() => setOpen(false)}
-      />
-
-      {/* Dialog */}
-      <div
-        className={cn(
-          "relative w-full max-w-lg overflow-hidden rounded-2xl border",
-          s.border,
-          s.dropdown,
-          s.dropShadow,
-          "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
-        )}
-        dir="rtl"
-      >
-        <div className={cn("flex items-center gap-3 px-4 border-b", s.divider)}>
-          <FaMagnifyingGlass
-            className={cn("h-4 w-4 shrink-0", s.textDisabled)}
-          />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="جستجو در بخش‌ها..."
-            className={cn(
-              "flex-1 h-12 bg-transparent text-sm outline-none",
-              s.textPrimary,
-            )}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setOpen(false);
-              if (e.key === "Enter" && results.length > 0) {
-                navigate(results[0].key);
-                setOpen(false);
-              }
-            }}
-          />
-          <kbd
-            className={cn(
-              "rounded-md border px-1.5 py-0.5 text-[10px] font-mono",
-              s.border,
-              s.textDisabled,
-            )}
-          >
-            ESC
-          </kbd>
-        </div>
-        <div className={cn("max-h-[300px] overflow-y-auto py-2", s.scrollbar)}>
-          {query.trim() === "" ? (
-            <p className={cn("px-4 py-6 text-center text-sm", s.textMuted)}>
-              عبارتی تایپ کنید...
-            </p>
-          ) : results.length === 0 ? (
-            <p className={cn("px-4 py-6 text-center text-sm", s.textMuted)}>
-              نتیجه‌ای نیست
-            </p>
-          ) : (
-            results.map((item) => {
-              const IconComp = getIcon(item.icon);
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => {
-                    navigate(item.key);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors",
-                    s.textMuted,
-                    s.hover,
-                    isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
-                  )}
-                >
-                  <IconComp className="h-4 w-4" />
-                  <span className="flex-1 text-right">{item.label}</span>
-                  <span className={cn("text-[10px]", s.textDisabled)}>
-                    {item.group}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -1167,7 +1272,6 @@ function DynamicIsland({
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 lg:hidden pb-safe">
-      {/* More sheet */}
       {moreOpen && (
         <>
           <div
@@ -1229,7 +1333,6 @@ function DynamicIsland({
         </>
       )}
 
-      {/* Bar */}
       <div
         className={cn(
           "mx-3 mb-3 flex items-center justify-around rounded-2xl border px-2 py-1.5",
@@ -1277,7 +1380,6 @@ function DynamicIsland({
           );
         })}
 
-        {/* More button */}
         <button
           onClick={() => setMoreOpen(!moreOpen)}
           className={cn(
@@ -1314,6 +1416,7 @@ function Sidebar({
   navigate,
   userRole,
   authUser,
+  onLogoutRequest,
 }: {
   open: boolean;
   onClose: () => void;
@@ -1323,6 +1426,7 @@ function Sidebar({
   navigate: (s: AdminSection) => void;
   userRole: UserRole;
   authUser: AuthUser | null;
+  onLogoutRequest: () => void;
 }) {
   const { s, isDark } = useShell();
   const {
@@ -1355,7 +1459,6 @@ function Sidebar({
 
   return (
     <>
-      {/* Mobile scrim */}
       {open && (
         <div
           className={cn(
@@ -1498,7 +1601,6 @@ function Sidebar({
                               ),
                         )}
                       >
-                        {/* Active side pill (collapsed) */}
                         {active && collapsed && (
                           <div
                             className={cn(
@@ -1522,7 +1624,6 @@ function Sidebar({
                         )}
                       </button>
 
-                      {/* Tooltip (collapsed) */}
                       {collapsed && (
                         <div
                           className={cn(
@@ -1615,7 +1716,9 @@ function Sidebar({
                 </p>
               </div>
             </div>
+            {/* Logout button — triggers modal */}
             <button
+              onClick={onLogoutRequest}
               className={cn(
                 "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
                 s.textMuted,
@@ -1640,6 +1743,7 @@ function Sidebar({
             <div className="relative group/logout">
               <button
                 title="خروج"
+                onClick={onLogoutRequest}
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
                   s.textDisabled,
@@ -1677,11 +1781,13 @@ function Header({
   currentSection,
   navigate,
   authUser,
+  onLogoutRequest,
 }: {
   onMenuClick: () => void;
   currentSection: AdminSection;
   navigate: (s: AdminSection) => void;
   authUser: AuthUser | null;
+  onLogoutRequest: () => void;
 }) {
   const { s, isDark } = useShell();
   const { toggleTheme } = useTheme();
@@ -1698,7 +1804,6 @@ function Header({
         "backdrop-blur-xl",
       )}
     >
-      {/* Left: menu + breadcrumb */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuClick}
@@ -1735,11 +1840,7 @@ function Header({
         </div>
       </div>
 
-      {/* Right: actions */}
       <div className="flex items-center gap-2">
-        <GlobalSearch navigate={navigate} />
-
-        {/* Mobile search trigger */}
         <button
           onClick={() =>
             document.dispatchEvent(
@@ -1757,7 +1858,6 @@ function Header({
           <FaMagnifyingGlass className={cn("h-3.5 w-3.5", s.textMuted)} />
         </button>
 
-        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className={cn(
@@ -1776,7 +1876,11 @@ function Header({
         </button>
 
         <NotificationDropdown navigate={navigate} />
-        <UserDropdown navigate={navigate} authUser={authUser} />
+        <UserDropdown
+          navigate={navigate}
+          authUser={authUser}
+          onLogoutRequest={onLogoutRequest}
+        />
       </div>
     </header>
   );
@@ -1804,6 +1908,15 @@ export default function AdminShell({
   const { s } = useShell();
   const { section, navigate } = useHashRoute();
 
+  /* ── Logout modal state ── */
+  const {
+    showModal,
+    isLoggingOut,
+    requestLogout,
+    confirmLogout,
+    cancelLogout,
+  } = useLogout();
+
   useEffect(() => {
     setAuthUser(getAuthUser());
   }, []);
@@ -1814,14 +1927,12 @@ export default function AdminShell({
         event instanceof CustomEvent ? event.detail : null,
       );
       if (!nextUser) return;
-
       setAuthUser((current) => ({
         ...(current ?? {}),
         ...nextUser,
         role: nextUser.role ?? current?.role ?? "user",
       }));
     }
-
     window.addEventListener("admin-profile-updated", onProfileUpdated);
     return () =>
       window.removeEventListener("admin-profile-updated", onProfileUpdated);
@@ -1847,6 +1958,14 @@ export default function AdminShell({
     <div className={cn("flex min-h-screen", s.page)} dir="rtl">
       <style>{animation.keyframes}</style>
 
+      {/* ── Global logout confirmation modal ── */}
+      <LogoutModal
+        open={showModal}
+        onConfirm={confirmLogout}
+        onCancel={cancelLogout}
+        isLoggingOut={isLoggingOut}
+      />
+
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -1856,6 +1975,7 @@ export default function AdminShell({
         navigate={navigate}
         userRole={userRole}
         authUser={authUser}
+        onLogoutRequest={requestLogout}
       />
 
       <div className="flex flex-1 flex-col min-w-0">
@@ -1864,6 +1984,7 @@ export default function AdminShell({
           currentSection={section}
           navigate={navigate}
           authUser={authUser}
+          onLogoutRequest={requestLogout}
         />
         <main
           className={cn("flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8", s.scrollbar)}

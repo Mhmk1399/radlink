@@ -1,14 +1,8 @@
 // SimplePageBuilder.tsx
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -40,7 +34,7 @@ import type {
 
 /* ── Local modules ── */
 
-import { HiOutlinePlus } from "react-icons/hi2";
+import { HiOutlineArrowPath, HiOutlinePlus } from "react-icons/hi2";
 import {
   Breakpoint,
   cloneBlock,
@@ -184,9 +178,139 @@ function buildClientPageTargetUrl(pageUrl: unknown) {
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
+const ADMIN_PATH = "/admin";
 
+type BuilderSaveSnapshotInput = {
+  saveMode: "page" | "template";
+  title: string;
+  description: string;
+  url: string;
+  categoryId: string;
+  thumbnail: string;
+  blocks: PageBlock[];
+};
+
+function serializeBuilderSaveState({
+  saveMode,
+  title,
+  description,
+  url,
+  categoryId,
+  thumbnail,
+  blocks,
+}: BuilderSaveSnapshotInput) {
+  return JSON.stringify({
+    saveMode,
+    title,
+    description,
+    url: saveMode === "page" ? url : "",
+    categoryId: saveMode === "template" ? categoryId : "",
+    thumbnail: saveMode === "template" ? thumbnail : "",
+    blocks,
+  });
+}
+
+type LeaveBuilderConfirmModalProps = {
+  open: boolean;
+  isSaving: boolean;
+  saveError: string | null;
+  onCancel: () => void;
+  onSaveAndLeave: () => void;
+  onLeaveWithoutSaving: () => void;
+};
+
+function LeaveBuilderConfirmModal({
+  open,
+  isSaving,
+  saveError,
+  onCancel,
+  onSaveAndLeave,
+  onLeaveWithoutSaving,
+}: LeaveBuilderConfirmModalProps) {
+  if (!open) return null;
+
+  return (
+    <div
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="leave-builder-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isSaving) {
+          onCancel();
+        }
+      }}
+    >
+      <div className="w-full max-w-md rounded-3xl border border-neutral-200 bg-white p-6 shadow-2xl">
+        <div className="mb-5">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-xl text-amber-700">
+            !
+          </div>
+
+          <h2
+            id="leave-builder-title"
+            className="text-lg font-black text-neutral-900"
+          >
+            تغییرات ذخیره نشده‌اند
+          </h2>
+
+          <p className="mt-2 text-sm leading-7 text-neutral-500">
+            بخشی از تغییرات فقط در مرورگر نگهداری شده و هنوز روی سرور ذخیره نشده
+            است. قبل از بازگشت به پنل، روش خروج را انتخاب کنید.
+          </p>
+        </div>
+
+        {saveError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-6 text-red-700"
+          >
+            {saveError}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={onSaveAndLeave}
+            disabled={isSaving}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-xs font-bold text-white transition-all hover:bg-emerald-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving && (
+              <HiOutlineArrowPath size={15} className="animate-spin" />
+            )}
+
+            {isSaving ? "در حال ذخیره..." : "ذخیره و بازگشت"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onLeaveWithoutSaving}
+            disabled={isSaving}
+            className="h-11 flex-1 rounded-xl border border-red-200 bg-red-50 px-4 text-xs font-bold text-red-600 transition-all hover:bg-red-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            خروج بدون ذخیره
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="mt-3 h-10 w-full rounded-xl text-xs font-semibold text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          انصراف و ادامه ویرایش
+        </button>
+      </div>
+    </div>
+  );
+}
 function createInstanceId(type: string) {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
 
@@ -216,12 +340,14 @@ function createBlockFromMaster(
       (isRecord(snapshot.data) ? snapshot.data : masterBlock.data) ?? {},
     ),
     settings: cloneJson(
-      (isRecord(snapshot.settings) ? snapshot.settings : masterBlock.settings) ??
-        { direction: "rtl" },
+      (isRecord(snapshot.settings)
+        ? snapshot.settings
+        : masterBlock.settings) ?? { direction: "rtl" },
     ),
     elements: cloneJson(
-      (isRecord(snapshot.elements) ? snapshot.elements : masterBlock.elements) ??
-        {},
+      (isRecord(snapshot.elements)
+        ? snapshot.elements
+        : masterBlock.elements) ?? {},
     ),
   };
 }
@@ -264,7 +390,7 @@ export default function SimplePageBuilder({
       ? "container"
       : initialState.selectedElementId,
   );
-
+  const router = useRouter();
   /* ── Page state ── */
   const [pageId, setPageId] = useState<string | null>(initialPageId || null);
   const [templateId, setTemplateId] = useState<string | null>(
@@ -280,6 +406,20 @@ export default function SimplePageBuilder({
   );
   const [templateThumbnail, setTemplateThumbnail] = useState(
     initialThumbnail || "",
+  );
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [leaveAfterMetaSave, setLeaveAfterMetaSave] = useState(false);
+
+  const [lastServerSavedSnapshot, setLastServerSavedSnapshot] = useState(() =>
+    serializeBuilderSaveState({
+      saveMode,
+      title: pageTitle,
+      description: pageDescription,
+      url: pageUrl,
+      categoryId: templateCategoryId,
+      thumbnail: templateThumbnail,
+      blocks,
+    }),
   );
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const [masterBlocks, setMasterBlocks] = useState<
@@ -365,7 +505,30 @@ export default function SimplePageBuilder({
     },
     [masterBlocks],
   );
+  const currentServerSnapshot = useMemo(
+    () =>
+      serializeBuilderSaveState({
+        saveMode,
+        title: pageTitle,
+        description: pageDescription,
+        url: pageUrl,
+        categoryId: templateCategoryId,
+        thumbnail: templateThumbnail,
+        blocks,
+      }),
+    [
+      saveMode,
+      pageTitle,
+      pageDescription,
+      pageUrl,
+      templateCategoryId,
+      templateThumbnail,
+      blocks,
+    ],
+  );
 
+  const hasUnsavedServerChanges =
+    currentServerSnapshot !== lastServerSavedSnapshot;
   const selectedConfig = selectedBlock
     ? (blockRegistry[selectedBlock.type as keyof typeof blockRegistry] ?? null)
     : null;
@@ -403,7 +566,14 @@ export default function SimplePageBuilder({
     );
 
     return { title, description };
-  }, [pageDescription, pageId, pageTitle, saveMode, sourceTemplateId, templateId]);
+  }, [
+    pageDescription,
+    pageId,
+    pageTitle,
+    saveMode,
+    sourceTemplateId,
+    templateId,
+  ]);
 
   useEffect(() => {
     document.title = builderMetadata.title;
@@ -518,17 +688,16 @@ export default function SimplePageBuilder({
             : [];
 
         if (!cancelled) {
-          const options =
-            raw
-              .filter(
-                (category): category is Record<string, unknown> =>
-                  typeof category === "object" && category !== null,
-              )
-              .map((category) => ({
-                value: String(category._id ?? category.id ?? ""),
-                label: String(category.name ?? "بدون نام"),
-              }))
-              .filter((option) => option.value);
+          const options = raw
+            .filter(
+              (category): category is Record<string, unknown> =>
+                typeof category === "object" && category !== null,
+            )
+            .map((category) => ({
+              value: String(category._id ?? category.id ?? ""),
+              label: String(category.name ?? "بدون نام"),
+            }))
+            .filter((option) => option.value);
 
           categoryOptionsCache = options;
           categoryOptionsRequestFailed = false;
@@ -605,7 +774,20 @@ export default function SimplePageBuilder({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [history, selectedBlockId, toast]);
+  useEffect(() => {
+    if (!hasUnsavedServerChanges) return;
 
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedServerChanges]);
   /* ── Storage sync ── */
   useEffect(() => {
     if (!storageHydrated) return;
@@ -755,7 +937,8 @@ export default function SimplePageBuilder({
       const idx = sortedBlocks.findIndex((b) => b.instanceId === id);
       if (idx === -1) return;
       const sourceBlock = sortedBlocks[idx];
-      const config = blockRegistry[sourceBlock.type as keyof typeof blockRegistry];
+      const config =
+        blockRegistry[sourceBlock.type as keyof typeof blockRegistry];
       if (!allowedBlockTypes.has(sourceBlock.type)) {
         toast.show(
           `شما دسترسی استفاده از بلاک "${config?.label ?? sourceBlock.type}" را ندارید`,
@@ -1110,8 +1293,7 @@ export default function SimplePageBuilder({
       toast.show("تمپلیت با موفقیت ساخته شد", "success");
       return json.template;
     } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : "خطا در ساخت تمپلیت";
+      const msg = error instanceof Error ? error.message : "خطا در ساخت تمپلیت";
       setServerSaveError(msg);
       toast.show(msg, "error");
       return null;
@@ -1171,17 +1353,119 @@ export default function SimplePageBuilder({
     blocks,
     toast,
   ]);
+  const validateBeforeServerSave = useCallback((): string | null => {
+    if (!pageTitle.trim()) {
+      return "لطفاً عنوان صفحه را وارد کنید.";
+    }
 
-  const handleMetaSave = useCallback(async () => {
+    if (blocks.length === 0) {
+      return "برای ذخیره، حداقل یک بلاک به صفحه اضافه کنید.";
+    }
+
+    if (saveMode === "page") {
+      const normalizedUrl = pageUrl.trim().replace(/^\/+/, "");
+
+      if (!normalizedUrl) {
+        return "لطفاً آدرس صفحه را وارد کنید.";
+      }
+
+      if (/\s/.test(normalizedUrl)) {
+        return "آدرس صفحه نباید دارای فاصله باشد. به‌جای فاصله از خط تیره استفاده کنید.";
+      }
+
+      if (/[?#]/.test(normalizedUrl)) {
+        return "آدرس صفحه نباید شامل علامت سؤال یا # باشد.";
+      }
+    }
+
+    return null;
+  }, [blocks.length, pageTitle, pageUrl, saveMode]);
+  const saveCurrentDocument = useCallback(async (): Promise<boolean> => {
+    setServerSaveError(null);
+
+    const validationError = validateBeforeServerSave();
+
+    if (validationError) {
+      setServerSaveError(validationError);
+      toast.show(validationError, "error");
+      return false;
+    }
+
+    // Capture exactly what is being sent to the server.
+    // If the user changes something while the request is running,
+    // the builder will remain dirty after the save finishes.
+    const snapshotBeingSaved = currentServerSnapshot;
+
     const saved = await (saveMode === "template"
       ? updateTemplateOnServer()
       : updatePageOnServer());
-    if (saved) {
-      setJustSaved(true);
-      setPageMetaOpen(false);
-    }
-  }, [saveMode, updatePageOnServer, updateTemplateOnServer]);
 
+    if (!saved) {
+      return false;
+    }
+
+    setLastServerSavedSnapshot(snapshotBeingSaved);
+    setJustSaved(true);
+
+    return true;
+  }, [
+    currentServerSnapshot,
+    saveMode,
+    toast,
+    updatePageOnServer,
+    updateTemplateOnServer,
+    validateBeforeServerSave,
+  ]);
+  const handleMetaSave = useCallback(async () => {
+    const saved = await saveCurrentDocument();
+
+    if (!saved) return;
+
+    setPageMetaOpen(false);
+
+    if (leaveAfterMetaSave) {
+      setLeaveAfterMetaSave(false);
+      router.push(ADMIN_PATH);
+    }
+  }, [leaveAfterMetaSave, router, saveCurrentDocument]);
+  const handleBackToAdmin = useCallback(() => {
+    if (isServerSaving) return;
+
+    if (!hasUnsavedServerChanges) {
+      router.push(ADMIN_PATH);
+      return;
+    }
+
+    setServerSaveError(null);
+    setLeaveConfirmOpen(true);
+  }, [hasUnsavedServerChanges, isServerSaving, router]);
+
+  const handleSaveAndLeave = useCallback(async () => {
+    const validationError = validateBeforeServerSave();
+
+    if (validationError) {
+      setServerSaveError(validationError);
+      setLeaveAfterMetaSave(true);
+      setLeaveConfirmOpen(false);
+      setPageMetaOpen(true);
+      toast.show(validationError, "error");
+      return;
+    }
+
+    const saved = await saveCurrentDocument();
+
+    if (!saved) return;
+
+    setLeaveConfirmOpen(false);
+    setLeaveAfterMetaSave(false);
+    router.push(ADMIN_PATH);
+  }, [router, saveCurrentDocument, toast, validateBeforeServerSave]);
+
+  const handleLeaveWithoutSaving = useCallback(() => {
+    setLeaveConfirmOpen(false);
+    setLeaveAfterMetaSave(false);
+    router.push(ADMIN_PATH);
+  }, [router]);
   /* ════════════════════════════════════════════ */
   /*  DnD Handlers                                */
   /* ════════════════════════════════════════════ */
@@ -1205,7 +1489,9 @@ export default function SimplePageBuilder({
   const applyTemplate = useCallback(
     (blockTypes: string[]) => {
       const newBlocks: PageBlock[] = [];
-      const allowedTypes = blockTypes.filter((type) => allowedBlockTypes.has(type));
+      const allowedTypes = blockTypes.filter((type) =>
+        allowedBlockTypes.has(type),
+      );
 
       if (allowedTypes.length === 0) {
         toast.show("برای استفاده از بلاک‌های این قالب دسترسی ندارید", "error");
@@ -1383,6 +1669,8 @@ export default function SimplePageBuilder({
           isServerSaving={isServerSaving}
           canUndo={history.canUndo}
           canRedo={history.canRedo}
+          hasUnsavedChanges={hasUnsavedServerChanges}
+          onBack={handleBackToAdmin}
           onUndo={() => {
             history.undo();
             toast.show("برگشت", "info");
@@ -1392,7 +1680,11 @@ export default function SimplePageBuilder({
             toast.show("بعدی", "info");
           }}
           onPreview={() => setIsPhonePreviewOpen(true)}
-          onOpenMeta={() => setPageMetaOpen(true)}
+          onOpenMeta={() => {
+            setLeaveAfterMetaSave(false);
+            setServerSaveError(null);
+            setPageMetaOpen(true);
+          }}
           onOpenCatalog={() => setCatalogOpen(true)}
           onClearAll={requestClearAllBlocks}
           onStartTour={() => setForceTourRun(true)}
@@ -1521,7 +1813,11 @@ export default function SimplePageBuilder({
         onUrlChange={setPageUrl}
         onCategoryIdChange={setTemplateCategoryId}
         onThumbnailChange={setTemplateThumbnail}
-        onClose={() => setPageMetaOpen(false)}
+        onClose={() => {
+          setPageMetaOpen(false);
+          setLeaveAfterMetaSave(false);
+          setServerSaveError(null);
+        }}
         onSave={handleMetaSave}
         isSaving={isServerSaving}
         saveError={serverSaveError}
@@ -1532,7 +1828,20 @@ export default function SimplePageBuilder({
         blocks={blocks}
         onClose={() => setIsPhonePreviewOpen(false)}
       />
+      <LeaveBuilderConfirmModal
+        open={leaveConfirmOpen}
+        isSaving={isServerSaving}
+        saveError={serverSaveError}
+        onCancel={() => {
+          if (isServerSaving) return;
 
+          setLeaveConfirmOpen(false);
+          setLeaveAfterMetaSave(false);
+          setServerSaveError(null);
+        }}
+        onSaveAndLeave={handleSaveAndLeave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+      />
       <DynamicIslandPanel
         block={selectedBlock}
         schema={selectedSchema}

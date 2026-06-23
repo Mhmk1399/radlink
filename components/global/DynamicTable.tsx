@@ -1821,7 +1821,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     setSelectedRow(null);
     const fd: Record<string, unknown> = {};
     editableCols.forEach((c) => {
-      fd[c.key] = "";
+      fd[c.key] = c.defaultValue !== undefined ? c.defaultValue : "";
     });
     setFormData(fd);
     setFormErrors({});
