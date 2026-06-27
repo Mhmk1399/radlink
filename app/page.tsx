@@ -1,3 +1,5 @@
+import SmartLandingFooter from "@/components/global/footer";
+import Navbar from "@/components/global/navbar";
 import {
   HowItWorksSection,
   TargetAudienceSection,
@@ -21,6 +23,7 @@ import {
   FeaturesSection,
   SolutionSection,
 } from "@/components/static/Landing/Solution";
+import DynamicIsland from "@/components/ui/DynamicIsland";
 import { Metadata } from "next/types";
 
 export const metadata: Metadata = {
@@ -30,6 +33,7 @@ export const metadata: Metadata = {
 const page = () => {
   return (
     <main className="min-h-screen bg-linear-to-b from-[#060e1b] via-[#081223] to-[#091828] font-sans text-white antialiased selection:bg-sky-500/30 selection:text-white">
+      <Navbar />
       <SmartLandingPage />
       <SolutionSection />
       <FeaturesSection />
@@ -43,6 +47,8 @@ const page = () => {
       <MvpSection />
       <CtaSection />
       <FaqSection />
+      <DynamicIsland />
+      <SmartLandingFooter />
     </main>
   );
 };

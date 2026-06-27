@@ -9,6 +9,7 @@ import {
   getBuilderAuthToken,
   type BuilderAccessTarget,
 } from "@/hook/auth/builderAuthorization";
+import { SmartSuggestions } from "@/builder/SmartSuggestions";
 import type { PageBlock } from "@/types/blocks/builder.types";
 
 type BuilderMode = "page" | "template";
@@ -25,6 +26,8 @@ type BuilderState = {
   initialUrl?: string;
   initialCategoryId?: string;
   initialThumbnail?: string;
+  requiresStartChoice?: boolean;
+  suppressSmartSuggestions?: boolean;
 };
 
 function MinimalLoadingScreen() {
@@ -110,6 +113,26 @@ export default function BuilderPage() {
   });
 
   useEffect(() => {
+    if (!state.requiresStartChoice) return;
+
+    const title = "ساخت صفحه جدید | صفحه‌ساز رادلینک";
+    const description =
+      "برای ساخت صفحه جدید، یک تمپلیت انتخاب کنید یا از صفحه خالی شروع کنید.";
+
+    document.title = title;
+
+    let meta = document.head.querySelector<HTMLMetaElement>(
+      'meta[name="description"]',
+    );
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+    meta.content = description;
+  }, [state.requiresStartChoice]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function boot() {
@@ -148,6 +171,7 @@ export default function BuilderPage() {
             loading: false,
             error: null,
             mode,
+            requiresStartChoice: mode === "page",
             initialTitle: mode === "template" ? "تمپلیت جدید" : undefined,
             initialUrl: mode === "template" ? "new-template" : undefined,
           });
@@ -216,6 +240,48 @@ export default function BuilderPage() {
     );
   }
 
+  if (state.requiresStartChoice) {
+    return (
+      <SmartSuggestions
+        open
+        onBack={() => router.replace("/admin#pages")}
+        onStartBlank={() =>
+          setState((current) => ({
+            ...current,
+            requiresStartChoice: false,
+            suppressSmartSuggestions: true,
+            initialBlocks: [],
+            initialTitle: "صفحه جدید",
+            initialDescription: "",
+            initialUrl: "new-page",
+          }))
+        }
+        onSelectTemplate={(template, summary) => {
+          const initialBlocks = normalizeTemplateBlocks(template);
+          const categoryId = getCategoryId(template.category);
+
+          setState((current) => ({
+            ...current,
+            requiresStartChoice: false,
+            suppressSmartSuggestions: true,
+            sourceTemplateId: summary.id,
+            initialBlocks,
+            initialTitle: `صفحه جدید از ${String(
+              template.name ?? summary.name ?? "تمپلیت",
+            )}`,
+            initialDescription: String(template.description ?? ""),
+            initialUrl: "new-page",
+            initialCategoryId: categoryId,
+            initialThumbnail:
+              typeof template.thumbnail === "string"
+                ? template.thumbnail
+                : "",
+          }));
+        }}
+      />
+    );
+  }
+
   return (
     <SimplePageBuilder
       saveMode={state.mode}
@@ -227,6 +293,7 @@ export default function BuilderPage() {
       initialUrl={state.initialUrl}
       initialCategoryId={state.initialCategoryId}
       initialThumbnail={state.initialThumbnail}
+      suppressSmartSuggestions={state.suppressSmartSuggestions}
     />
   );
 }

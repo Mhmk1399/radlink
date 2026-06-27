@@ -3,6 +3,8 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import File from "@/models/files";
+import "@/models/pages";
+import "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -18,9 +20,16 @@ export const GET = compose(
     withStatus("active")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
-    const file = await File.findById(id).lean();
+    const file = await File.findById(id)
+        .populate("owner", "firstName lastName phoneNumber email")
+        .populate("page", "title url")
+        .lean();
     if (!file) return NextResponse.json({ message: "فایل پیدا نشد." }, { status: 404 });
-    if (!canAccess(req.ctx.user, String(file.owner))) {
+    const ownerId =
+        file.owner && typeof file.owner === "object" && "_id" in file.owner
+            ? String(file.owner._id)
+            : String(file.owner);
+    if (!canAccess(req.ctx.user, ownerId)) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     return NextResponse.json({ file });

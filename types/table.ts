@@ -22,6 +22,8 @@ export interface ColumnDef<T> {
     copyable?: boolean;
     /** Default value pre-filled when opening the create form */
     defaultValue?: unknown;
+    /** Hide this field in create/edit forms based on the current form values. */
+    hiddenInForm?: (formData: Partial<T>) => boolean;
 }
 
 export interface DynamicTableProps<T extends object> {

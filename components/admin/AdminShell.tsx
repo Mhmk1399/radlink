@@ -9,12 +9,14 @@ import React, {
   useEffect,
   useRef,
   useMemo,
+  useId,
   type ReactNode,
 } from "react";
 import useSWR from "swr";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccess } from "@/hook/auth/useAccess";
 import { animation, focus } from "@/lib/design/tokens";
+import { normalizeLiaraUrl } from "@/lib/fileUtils";
 import {
   useHashRoute,
   filterSectionsByRole,
@@ -74,7 +76,7 @@ const shell = {
     textPrimary: "text-[#e6e3de]",
     textSecondary: "text-[#9c9890]",
     textMuted: "text-[#9c9890]",
-    textDisabled: "text-[#47443e]",
+    textDisabled: "text-[#7a766e]",
     textAccent: "text-[#d2b660]",
     textAccentSub: "text-[#c8a84b]/70",
     border: "border-[#26262f]",
@@ -111,7 +113,7 @@ const shell = {
     textPrimary: "text-[#2a2720]",
     textSecondary: "text-[#6a655c]",
     textMuted: "text-[#6a655c]",
-    textDisabled: "text-[#c2bcb4]",
+    textDisabled: "text-[#9a948b]",
     textAccent: "text-[#7a6428]",
     textAccentSub: "text-[#8a7030]/60",
     border: "border-[#e6e2da]",
@@ -177,6 +179,7 @@ interface AuthUser {
   lastName?: string;
   phoneNumber?: string;
   email?: string;
+  avatarUrl?: string;
   role?: string;
 }
 
@@ -198,6 +201,9 @@ function readProfileOverride(userId?: string): Partial<AuthUser> | null {
       phoneNumber:
         typeof record.phoneNumber === "string" ? record.phoneNumber : "",
       email: typeof record.email === "string" ? record.email : "",
+      avatarUrl: normalizeLiaraUrl(
+        typeof record.avatarUrl === "string" ? record.avatarUrl : "",
+      ),
     };
   } catch {
     return null;
@@ -214,6 +220,9 @@ function authUserFromUnknown(value: unknown): Partial<AuthUser> | null {
     phoneNumber:
       typeof record.phoneNumber === "string" ? record.phoneNumber : "",
     email: typeof record.email === "string" ? record.email : "",
+    avatarUrl: normalizeLiaraUrl(
+      typeof record.avatarUrl === "string" ? record.avatarUrl : "",
+    ),
     role: typeof record.role === "string" ? record.role : undefined,
   };
 }
@@ -278,6 +287,7 @@ function getAuthUser(): AuthUser | null {
     lastName: (payload.lastName as string) ?? "",
     phoneNumber: (payload.phoneNumber as string) ?? "",
     email: (payload.email as string) ?? "",
+    avatarUrl: normalizeLiaraUrl((payload.avatarUrl as string) ?? ""),
     role: (payload.role as string) ?? "user",
   };
   return { ...tokenUser, ...(readProfileOverride(id) ?? {}) };
@@ -301,6 +311,33 @@ function getInitials(name: string): string {
 }
 
 /* ── Logout handler ── */
+
+function UserAvatar({
+  user,
+  initials,
+  className,
+}: {
+  user: AuthUser | null;
+  initials: string;
+  className: string;
+}) {
+  const avatarUrl = normalizeLiaraUrl(user?.avatarUrl ?? "");
+
+  return (
+    <div
+      className={cn("relative overflow-hidden", className)}
+      aria-hidden="true"
+    >
+      <span className="relative z-0">{initials}</span>
+      {avatarUrl && (
+        <span
+          className="absolute inset-0 z-10 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url("${avatarUrl}")` }}
+        />
+      )}
+    </div>
+  );
+}
 
 function performLogout() {
   if (typeof window === "undefined") return;
@@ -381,6 +418,7 @@ function LogoutModal({
   isLoggingOut: boolean;
 }) {
   const { s, isDark } = useShell();
+  const confirmRef = useRef<HTMLButtonElement>(null);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -404,6 +442,14 @@ function LogoutModal({
     return () => document.removeEventListener("keydown", handler);
   }, [open, onCancel, isLoggingOut]);
 
+  // Move focus to the primary action when the dialog opens
+  useEffect(() => {
+    if (open) {
+      const t = window.setTimeout(() => confirmRef.current?.focus(), 60);
+      return () => window.clearTimeout(t);
+    }
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -411,11 +457,12 @@ function LogoutModal({
     <div
       className={cn(
         "fixed inset-0 z-[200] flex items-center justify-center p-4",
-        "animate-[fade-in_.15s_ease_both]",
+        "motion-safe:animate-[fade-in_.15s_ease_both]",
       )}
       aria-modal="true"
       role="dialog"
       aria-labelledby="logout-modal-title"
+      aria-describedby="logout-modal-desc"
     >
       {/* Scrim */}
       <div
@@ -424,6 +471,7 @@ function LogoutModal({
           isDark ? "bg-[#0a0a0e]/70" : "bg-[#2a2720]/30",
         )}
         onClick={() => !isLoggingOut && onCancel()}
+        aria-hidden="true"
       />
 
       {/* Card */}
@@ -433,7 +481,7 @@ function LogoutModal({
           s.card,
           s.border,
           s.dropShadow,
-          "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+          "motion-safe:animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
         )}
       >
         {/* ── Header ── */}
@@ -447,6 +495,7 @@ function LogoutModal({
                   ? "bg-red-500/10 ring-1 ring-red-500/20"
                   : "bg-red-50 ring-1 ring-red-200/60",
               )}
+              aria-hidden="true"
             >
               <FaArrowRightFromBracket
                 className={cn(
@@ -462,7 +511,7 @@ function LogoutModal({
               >
                 خروج از حساب
               </h2>
-              <p className={cn("text-[11px] mt-0.5", s.textDisabled)}>
+              <p className={cn("text-[11px] mt-0.5", s.textMuted)}>
                 تأیید خروج از پنل مدیریت
               </p>
             </div>
@@ -470,13 +519,15 @@ function LogoutModal({
 
           {/* Close × */}
           <button
+            ref={undefined}
             onClick={() => !isLoggingOut && onCancel()}
             disabled={isLoggingOut}
             aria-label="بستن"
             className={cn(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
               s.hover,
-              s.textDisabled,
+              s.textMuted,
+              focus.ring,
               "disabled:opacity-40 disabled:cursor-not-allowed",
             )}
           >
@@ -503,13 +554,14 @@ function LogoutModal({
             <FaTriangleExclamation
               className={cn(
                 "h-3.5 w-3.5 mt-0.5 shrink-0",
-                isDark ? "text-[#e08080]/70" : "text-[#b84040]/70",
+                isDark ? "text-[#e08080]/80" : "text-[#b84040]/80",
               )}
+              aria-hidden="true"
             />
             <p
               className={cn(
                 "text-[12px] leading-relaxed",
-                isDark ? "text-[#e08080]/80" : "text-[#b84040]/80",
+                isDark ? "text-[#e08080]/90" : "text-[#b84040]/90",
               )}
             >
               با خروج، توکن احراز هویت شما حذف شده و برای ادامه باید دوباره وارد
@@ -517,7 +569,13 @@ function LogoutModal({
             </p>
           </div>
 
-          <p className={cn("text-sm leading-relaxed text-center", s.textMuted)}>
+          <p
+            id="logout-modal-desc"
+            className={cn(
+              "text-sm leading-relaxed text-center",
+              s.textSecondary,
+            )}
+          >
             آیا مطمئن هستید که می‌خواهید از پنل مدیریت خارج شوید؟
           </p>
         </div>
@@ -531,16 +589,18 @@ function LogoutModal({
         >
           {/* Confirm — destructive */}
           <button
+            ref={confirmRef}
             onClick={onConfirm}
             disabled={isLoggingOut}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5",
+              "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3",
               "text-sm font-semibold transition-all duration-200",
+              focus.ring,
               "disabled:opacity-60 disabled:cursor-not-allowed",
               isDark
                 ? "bg-red-500/15 hover:bg-red-500/25 text-[#e08080] ring-1 ring-red-500/20 hover:ring-red-500/30"
                 : "bg-red-500/8 hover:bg-red-500/15 text-[#b84040] ring-1 ring-red-300/40 hover:ring-red-400/50",
-              isLoggingOut && "animate-pulse",
+              isLoggingOut && "motion-safe:animate-pulse",
             )}
           >
             {isLoggingOut ? (
@@ -550,6 +610,7 @@ function LogoutModal({
                   className="h-3.5 w-3.5 animate-spin"
                   viewBox="0 0 24 24"
                   fill="none"
+                  aria-hidden="true"
                 >
                   <circle
                     className="opacity-25"
@@ -569,7 +630,10 @@ function LogoutModal({
               </>
             ) : (
               <>
-                <FaArrowRightFromBracket className="h-3.5 w-3.5" />
+                <FaArrowRightFromBracket
+                  className="h-3.5 w-3.5"
+                  aria-hidden="true"
+                />
                 بله، خارج شو
               </>
             )}
@@ -580,17 +644,18 @@ function LogoutModal({
             onClick={onCancel}
             disabled={isLoggingOut}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5",
+              "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3",
               "text-sm font-semibold transition-all duration-200",
+              focus.ring,
               "disabled:opacity-60 disabled:cursor-not-allowed",
               s.border,
               "border",
-              s.textMuted,
+              s.textSecondary,
               s.hover,
               isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
             )}
           >
-            <FaXmark className="h-3.5 w-3.5" />
+            <FaXmark className="h-3.5 w-3.5" aria-hidden="true" />
             انصراف
           </button>
         </div>
@@ -685,7 +750,11 @@ void FAKE_NOTIFS;
 type NotificationRecord = {
   _id?: string;
   id?: string;
+  page?: unknown;
   User?: unknown;
+  title?: string;
+  subtitle?: string;
+  description?: string;
   message?: string;
   closeable?: boolean;
   isGlobal?: boolean;
@@ -773,6 +842,7 @@ function NotificationDropdown({
 }) {
   const { open, setOpen, ref } = useDropdown();
   const { s, isDark } = useShell();
+  const panelId = useId();
   const [readIds, setReadIds] = useState<Set<string>>(() =>
     readStoredIdSet(NOTIFICATION_READ_KEY),
   );
@@ -793,11 +863,15 @@ function NotificationDropdown({
     return (data?.notifications ?? [])
       .map((notification): NotifItem | null => {
         const id = String(notification._id ?? notification.id ?? "");
-        const message = String(notification.message ?? "").trim();
+        const message = String(
+          notification.description ?? notification.message ?? "",
+        ).trim();
         if (!id || !message || dismissedIds.has(id)) return null;
         return {
           id,
-          title: getNotificationTitle(notification, message),
+          title:
+            String(notification.title ?? "").trim() ||
+            getNotificationTitle(notification, message),
           message,
           time: formatRelativeFaDate(notification.createdAt),
           read: readIds.has(id),
@@ -838,33 +912,47 @@ function NotificationDropdown({
   }, []);
 
   const typeIcon: Record<string, ReactNode> = {
-    info: <FaBell className={cn("h-3.5 w-3.5", s.info)} />,
-    success: <FaCircleCheck className={cn("h-3.5 w-3.5", s.success)} />,
-    warning: <FaClock className={cn("h-3.5 w-3.5", s.warning)} />,
-    error: <FaXmark className={cn("h-3.5 w-3.5", s.error)} />,
+    info: <FaBell className={cn("h-3.5 w-3.5", s.info)} aria-hidden="true" />,
+    success: (
+      <FaCircleCheck
+        className={cn("h-3.5 w-3.5", s.success)}
+        aria-hidden="true"
+      />
+    ),
+    warning: (
+      <FaClock className={cn("h-3.5 w-3.5", s.warning)} aria-hidden="true" />
+    ),
+    error: (
+      <FaXmark className={cn("h-3.5 w-3.5", s.error)} aria-hidden="true" />
+    ),
   };
 
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        aria-label="اعلانات"
+        aria-label={unread > 0 ? `اعلانات، ${unread} خوانده‌نشده` : "اعلانات"}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
         className={cn(
-          "relative flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
+          "relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
           s.border,
           s.hover,
           focus.ring,
+          open && s.active,
         )}
       >
-        <FaBell className={cn("h-4 w-4", s.textMuted)} />
+        <FaBell className={cn("h-4 w-4", s.textMuted)} aria-hidden="true" />
         {unread > 0 && (
           <span
             className={cn(
               "absolute -top-1 -left-1 flex h-4 min-w-4 items-center justify-center rounded-full",
-              "bg-red-500/80 px-1 text-[9px] font-bold text-white",
+              "bg-red-500 px-1 text-[9px] font-bold text-white tabular-nums",
               "ring-2",
               isDark ? "ring-[#16161b]" : "ring-[#faf8f3]",
             )}
+            aria-hidden="true"
           >
             {unread > 9 ? "۹+" : unread}
           </span>
@@ -873,12 +961,15 @@ function NotificationDropdown({
 
       {open && (
         <div
+          id={panelId}
+          role="dialog"
+          aria-label="اعلانات"
           className={cn(
-            "absolute left-0 top-full z-50 mt-2 w-[320px] sm:w-[380px] overflow-hidden rounded-2xl border",
+            "absolute left-0 top-full z-50 mt-2 w-[calc(100vw-2rem)] max-w-[380px] sm:w-[380px] overflow-hidden rounded-2xl border",
             s.border,
             s.dropdown,
             s.dropShadow,
-            "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+            "motion-safe:animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
         >
           <div
@@ -892,7 +983,8 @@ function NotificationDropdown({
               <button
                 onClick={markAllAsRead}
                 className={cn(
-                  "text-[11px] font-medium transition-colors hover:underline",
+                  "rounded-md px-2 py-1 text-[11px] font-medium transition-colors hover:underline",
+                  focus.ring,
                   s.textAccentSub,
                 )}
               >
@@ -901,30 +993,57 @@ function NotificationDropdown({
             )}
           </div>
 
-          <div className={cn("max-h-[300px] overflow-y-auto", s.scrollbar)}>
+          <div
+            className={cn(
+              "max-h-[min(60vh,360px)] overflow-y-auto",
+              s.scrollbar,
+            )}
+            role="list"
+          >
             {notifs.length === 0 ? (
-              <div className="py-10 text-center">
-                <FaBell
-                  className={cn("mx-auto h-6 w-6 mb-2", s.textDisabled)}
-                />
-                <p className={cn("text-xs", s.textMuted)}>اعلانی نیست</p>
+              <div className="py-12 px-6 text-center">
+                <div
+                  className={cn(
+                    "mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl",
+                    isDark ? "bg-[#ffffff05]" : "bg-[#00000004]",
+                  )}
+                  aria-hidden="true"
+                >
+                  <FaBell className={cn("h-5 w-5", s.textDisabled)} />
+                </div>
+                <p className={cn("text-sm font-medium", s.textSecondary)}>
+                  اعلانی نیست
+                </p>
+                <p className={cn("text-xs mt-1", s.textDisabled)}>
+                  هر اعلان جدید اینجا نمایش داده می‌شود.
+                </p>
               </div>
             ) : (
               notifs.map((n) => (
                 <div
                   key={n.id}
+                  role="listitem"
+                  tabIndex={0}
                   onClick={() => markAsRead(n.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      markAsRead(n.id);
+                    }
+                  }}
                   className={cn(
                     "group flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-0",
+                    focus.ring,
                     s.divider,
                     s.hover,
-                    !n.read && (isDark ? "bg-[#ffffff02]" : "bg-[#00000015]"),
+                    !n.read &&
+                      (isDark ? "bg-[#ffffff03]" : "bg-[#8a7030]/[0.03]"),
                   )}
                 >
                   <div
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg mt-0.5",
-                      isDark ? "bg-[#ffffff04]" : "bg-[#00000004]",
+                      isDark ? "bg-[#ffffff05]" : "bg-[#00000004]",
                     )}
                   >
                     {typeIcon[n.type]}
@@ -934,7 +1053,7 @@ function NotificationDropdown({
                       <p
                         className={cn(
                           "text-sm font-medium truncate",
-                          !n.read ? s.textPrimary : s.textMuted,
+                          !n.read ? s.textPrimary : s.textSecondary,
                         )}
                       >
                         {n.title}
@@ -945,14 +1064,12 @@ function NotificationDropdown({
                             "h-1.5 w-1.5 shrink-0 rounded-full",
                             s.unreadDot,
                           )}
+                          aria-hidden="true"
                         />
                       )}
                     </div>
                     <p
-                      className={cn(
-                        "text-[11px] truncate mt-0.5",
-                        s.textDisabled,
-                      )}
+                      className={cn("text-[12px] truncate mt-0.5", s.textMuted)}
                     >
                       {n.message}
                     </p>
@@ -969,12 +1086,13 @@ function NotificationDropdown({
                       }}
                       aria-label="بستن اعلان"
                       className={cn(
-                        "shrink-0 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                        "shrink-0 rounded-lg p-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity",
+                        focus.ring,
                         s.textDisabled,
                         "hover:text-red-400",
                       )}
                     >
-                      <FaXmark className="h-3 w-3" />
+                      <FaXmark className="h-3 w-3" aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -989,7 +1107,8 @@ function NotificationDropdown({
                 setOpen(false);
               }}
               className={cn(
-                "block w-full text-center text-[11px] font-medium transition-colors hover:underline",
+                "block w-full rounded-lg py-1.5 text-center text-[11px] font-medium transition-colors hover:underline",
+                focus.ring,
                 s.textAccentSub,
               )}
             >
@@ -1017,6 +1136,7 @@ function UserDropdown({
 }) {
   const { open, setOpen, ref } = useDropdown();
   const { s, isDark } = useShell();
+  const panelId = useId();
 
   const displayName = getDisplayName(authUser);
   const initials = getInitials(displayName);
@@ -1027,65 +1147,74 @@ function UserDropdown({
       {/* ── Trigger ── */}
       <button
         onClick={() => setOpen(!open)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        aria-label={`حساب کاربری ${displayName}`}
         className={cn(
-          "flex items-center gap-2 rounded-xl border px-2 py-1.5 transition-all duration-200",
+          "flex items-center gap-2 rounded-xl border px-2 py-1.5 h-10 transition-all duration-200",
           s.border,
           s.hover,
           focus.ring,
+          open && s.active,
         )}
       >
-        <div
+        <UserAvatar
+          user={authUser}
+          initials={initials}
           className={cn(
             "flex h-7 w-7 items-center justify-center rounded-lg font-bold text-xs",
             s.avatarBg,
           )}
-        >
-          {initials}
-        </div>
+        />
         <div className="hidden sm:block text-right min-w-0">
           <p
             className={cn(
-              "text-xs font-medium leading-none truncate max-w-[100px]",
+              "text-xs font-medium leading-none truncate max-w-[120px]",
               s.textPrimary,
             )}
           >
             {displayName}
           </p>
-          <p className={cn("text-[10px] leading-none mt-0.5", s.textDisabled)}>
+          <p className={cn("text-[10px] leading-none mt-0.5", s.textMuted)}>
             {rolePersian}
           </p>
         </div>
         <FaAngleLeft
           className={cn(
             "h-3 w-3 hidden sm:block transition-transform duration-200",
-            s.textDisabled,
+            s.textMuted,
             open && "-rotate-90",
           )}
+          aria-hidden="true"
         />
       </button>
 
       {/* ── Panel ── */}
       {open && (
         <div
+          id={panelId}
+          role="menu"
+          aria-label={`منوی حساب ${displayName}`}
           className={cn(
             "absolute left-0 top-full z-50 mt-2 w-[240px] overflow-hidden rounded-2xl border",
             s.border,
             s.dropdown,
             s.dropShadow,
-            "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+            "motion-safe:animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
         >
           {/* User header */}
           <div className={cn("px-4 py-3.5 border-b", s.divider)}>
             <div className="flex items-center gap-3">
-              <div
+              <UserAvatar
+                user={authUser}
+                initials={initials}
                 className={cn(
                   "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold text-sm",
                   s.avatarBg,
                 )}
-              >
-                {initials}
-              </div>
+              />
               <div className="min-w-0 flex-1">
                 <p className={cn("text-sm font-bold truncate", s.textPrimary)}>
                   {displayName}
@@ -1096,15 +1225,13 @@ function UserDropdown({
                     s.accentBadge,
                   )}
                 >
-                  <FaShieldHalved className="h-2 w-2" />
+                  <FaShieldHalved className="h-2 w-2" aria-hidden="true" />
                   {rolePersian}
                 </span>
                 {authUser?.phoneNumber && (
                   <p
-                    className={cn(
-                      "text-[10px] mt-1 tabular-nums",
-                      s.textDisabled,
-                    )}
+                    className={cn("text-[10px] mt-1 tabular-nums", s.textMuted)}
+                    dir="ltr"
                   >
                     {authUser.phoneNumber}
                   </p>
@@ -1124,18 +1251,20 @@ function UserDropdown({
             ].map((item) => (
               <button
                 key={item.section}
+                role="menuitem"
                 onClick={() => {
                   navigate(item.section);
                   setOpen(false);
                 }}
                 className={cn(
                   "flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors",
-                  s.textMuted,
+                  focus.ring,
+                  s.textSecondary,
                   s.hover,
                   isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
                 )}
               >
-                <item.icon className="h-3.5 w-3.5" />
+                <item.icon className="h-3.5 w-3.5" aria-hidden="true" />
                 {item.label}
               </button>
             ))}
@@ -1144,18 +1273,23 @@ function UserDropdown({
           {/* Logout */}
           <div className={cn("border-t py-1.5", s.divider)}>
             <button
+              role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onLogoutRequest();
               }}
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors",
+                focus.ring,
                 isDark
-                  ? "text-[#e08080]/70 hover:text-[#e08080] hover:bg-red-500/8"
-                  : "text-[#b84040]/70 hover:text-[#b84040] hover:bg-red-500/5",
+                  ? "text-[#e08080]/80 hover:text-[#e08080] hover:bg-red-500/8"
+                  : "text-[#b84040]/80 hover:text-[#b84040] hover:bg-red-500/5",
               )}
             >
-              <FaArrowRightFromBracket className="h-3.5 w-3.5" />
+              <FaArrowRightFromBracket
+                className="h-3.5 w-3.5"
+                aria-hidden="true"
+              />
               خروج
             </button>
           </div>
@@ -1266,12 +1400,25 @@ function DynamicIsland({
     return () => document.removeEventListener("mousedown", h);
   }, [moreOpen]);
 
+  // Close the "more" sheet on Escape
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
+
   useEffect(() => {
     setMoreOpen(false);
   }, [currentSection]);
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 lg:hidden pb-safe">
+    <nav
+      aria-label="ناوبری اصلی"
+      className="fixed bottom-0 inset-x-0 z-50 lg:hidden pb-safe"
+    >
       {moreOpen && (
         <>
           <div
@@ -1280,15 +1427,18 @@ function DynamicIsland({
               isDark ? "bg-[#0a0a0e]/50" : "bg-[#2a2720]/20",
             )}
             onClick={() => setMoreOpen(false)}
+            aria-hidden="true"
           />
           <div
             ref={moreRef}
+            role="menu"
+            aria-label="بخش‌های بیشتر"
             className={cn(
               "absolute bottom-full left-3 right-3 mb-2 z-50 overflow-hidden rounded-2xl border",
               s.border,
               s.dropdown,
               s.dropShadow,
-              "animate-[fade-up_.25s_cubic-bezier(.22,1,.36,1)_both]",
+              "motion-safe:animate-[fade-up_.25s_cubic-bezier(.22,1,.36,1)_both]",
             )}
           >
             <div className={cn("px-4 py-2.5 border-b", s.divider)}>
@@ -1310,18 +1460,21 @@ function DynamicIsland({
                 return (
                   <button
                     key={key}
+                    role="menuitem"
+                    aria-current={active ? "page" : undefined}
                     onClick={() => {
                       navigate(key);
                       setMoreOpen(false);
                     }}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-xl py-3 px-1 transition-all",
+                      "flex flex-col items-center gap-1.5 rounded-xl py-3 px-1 transition-all min-h-[64px] justify-center",
+                      focus.ring,
                       active
                         ? cn(s.active, s.textAccent)
-                        : cn(s.textMuted, s.hover),
+                        : cn(s.textSecondary, s.hover),
                     )}
                   >
-                    <IconComp className="h-4 w-4" />
+                    <IconComp className="h-5 w-5" aria-hidden="true" />
                     <span className="text-[10px] font-medium leading-tight text-center">
                       {meta.label}
                     </span>
@@ -1351,10 +1504,13 @@ function DynamicIsland({
           return (
             <button
               key={key}
+              aria-current={active ? "page" : undefined}
+              aria-label={meta.label}
               onClick={() => navigate(key)}
               className={cn(
-                "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-all duration-200",
-                active ? s.textAccent : cn(s.textDisabled, "active:scale-95"),
+                "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 min-h-[52px] justify-center transition-all duration-200",
+                focus.ring,
+                active ? s.textAccent : cn(s.textSecondary, "active:scale-95"),
               )}
             >
               {active && (
@@ -1363,6 +1519,7 @@ function DynamicIsland({
                     "absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full",
                     s.activePill,
                   )}
+                  aria-hidden="true"
                 />
               )}
               <IconComp
@@ -1370,6 +1527,7 @@ function DynamicIsland({
                   "h-5 w-5 transition-transform duration-200",
                   active && "scale-110",
                 )}
+                aria-hidden="true"
               />
               <span
                 className={cn("text-[9px] font-medium", active && "font-bold")}
@@ -1382,9 +1540,13 @@ function DynamicIsland({
 
         <button
           onClick={() => setMoreOpen(!moreOpen)}
+          aria-label="بخش‌های بیشتر"
+          aria-haspopup="menu"
+          aria-expanded={moreOpen}
           className={cn(
-            "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-all duration-200 active:scale-95",
-            moreOpen ? s.textAccent : s.textDisabled,
+            "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 min-h-[52px] justify-center transition-all duration-200 active:scale-95",
+            focus.ring,
+            moreOpen ? s.textAccent : s.textSecondary,
           )}
         >
           {moreOpen && (
@@ -1393,13 +1555,14 @@ function DynamicIsland({
                 "absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full",
                 s.activePill,
               )}
+              aria-hidden="true"
             />
           )}
-          <FaEllipsis className="h-5 w-5" />
+          <FaEllipsis className="h-5 w-5" aria-hidden="true" />
           <span className="text-[9px] font-medium">بیشتر</span>
         </button>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -1441,6 +1604,16 @@ function Sidebar({
     setMounted(true);
   }, []);
 
+  // Close the mobile drawer on Escape
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   const effectiveRole = (user?.role as UserRole | undefined) ?? userRole;
   const roleSections = filterSectionsByRole(effectiveRole as any);
   const sections = SECTION_META.filter((item) => {
@@ -1457,6 +1630,8 @@ function Sidebar({
   const initials = getInitials(displayName);
   const rolePersian = ROLE_LABELS[authUser?.role ?? "user"] ?? "کاربر";
 
+  const isCollapsed = mounted && collapsed;
+
   return (
     <>
       {open && (
@@ -1466,17 +1641,19 @@ function Sidebar({
             isDark ? "bg-[#0a0a0e]/60" : "bg-[#2a2720]/25",
           )}
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
       <aside
         dir="rtl"
+        aria-label="ناوبری پنل"
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex flex-col w-[260px]",
           "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
           open ? "translate-x-0" : "translate-x-full",
           "lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen",
-          mounted && collapsed ? "lg:w-[72px]" : "lg:w-[260px]",
+          isCollapsed ? "lg:w-[76px]" : "lg:w-[260px]",
           s.sidebar,
           "border-l",
           s.border,
@@ -1491,68 +1668,86 @@ function Sidebar({
           )}
         >
           {!collapsed ? (
-            <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => {
+                navigate("dashboard");
+                if (typeof window !== "undefined" && window.innerWidth < 1024)
+                  onClose();
+              }}
+              className={cn(
+                "flex items-center gap-2.5 rounded-lg -mx-1 px-1 py-1 transition-colors",
+                focus.ring,
+                s.hover,
+              )}
+              aria-label="رادلینک — رفتن به داشبورد"
+            >
               <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-lg border",
                   s.logoBg,
                 )}
+                aria-hidden="true"
               >
                 <span className={cn("text-xs font-black", s.textAccent)}>
-                  L
+                  لوگو
                 </span>
               </div>
-              <div>
+              <div className="text-right">
                 <p
                   className={cn(
                     "text-sm font-bold leading-none",
                     s.textPrimary,
                   )}
                 >
-                  لندیکس
+                  رادلینک
                 </p>
-                <p className={cn("text-[9px] mt-0.5", s.textDisabled)}>
+                <p className={cn("text-[9px] mt-0.5", s.textMuted)}>
                   پنل مدیریت
                 </p>
               </div>
-            </div>
+            </button>
           ) : (
-            <div
+            <button
+              onClick={() => navigate("dashboard")}
+              aria-label="رادلینک — رفتن به داشبورد"
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg border",
+                "flex h-8 w-8 items-center justify-center rounded-lg border transition-colors",
+                focus.ring,
                 s.logoBg,
               )}
             >
-              <span className={cn("text-xs font-black", s.textAccent)}>L</span>
-            </div>
+              <span className={cn("text-xs font-black", s.textAccent)}>R</span>
+            </button>
           )}
           <button
             onClick={onClose}
             className={cn(
-              "lg:hidden rounded-lg p-1.5 transition-colors",
+              "lg:hidden rounded-lg p-2 transition-colors",
+              focus.ring,
               s.hover,
               s.textMuted,
             )}
-            aria-label="بستن"
+            aria-label="بستن منو"
           >
-            <FaXmark className="h-4 w-4" />
+            <FaXmark className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
         {/* ── Nav ── */}
         <nav
+          aria-label="بخش‌ها"
           className={cn(
-            "flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-4",
+            "flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-5",
             collapsed ? "px-2" : "px-3",
             s.scrollbar,
           )}
         >
           {groups.map((group) => (
-            <div key={group.title}>
+            <div key={group.title} role="group" aria-label={group.title}>
               {!collapsed ? (
                 <p
                   className={cn(
-                    "mb-1.5 px-3 text-[9px] font-bold uppercase tracking-widest",
+                    "mb-1.5 px-3 text-[10px] font-bold uppercase tracking-widest",
                     s.textDisabled,
                   )}
                 >
@@ -1561,13 +1756,14 @@ function Sidebar({
               ) : (
                 <div
                   className={cn(
-                    "mx-auto mb-1.5 h-px w-6",
-                    isDark ? "bg-[#ffffff06]" : "bg-[#00000006]",
+                    "mx-auto mb-2 h-px w-6",
+                    isDark ? "bg-[#ffffff0a]" : "bg-[#0000000a]",
                   )}
+                  aria-hidden="true"
                 />
               )}
 
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const active = currentSection === item.key;
                   const IconComp = getIcon(item.icon);
@@ -1578,12 +1774,14 @@ function Sidebar({
                           navigate(item.key);
                           if (window.innerWidth < 1024) onClose();
                         }}
+                        aria-current={active ? "page" : undefined}
+                        aria-label={collapsed ? item.label : undefined}
                         className={cn(
                           "relative flex items-center rounded-xl text-sm font-medium w-full transition-all duration-200",
                           focus.ring,
                           collapsed
-                            ? "justify-center h-10 w-10 mx-auto"
-                            : "gap-3 px-3 py-2",
+                            ? "justify-center h-11 w-11 mx-auto"
+                            : "gap-3 px-3 py-2.5",
                           active
                             ? cn(
                                 s.active,
@@ -1593,7 +1791,7 @@ function Sidebar({
                               )
                             : cn(
                                 "border border-transparent",
-                                s.textMuted,
+                                s.textSecondary,
                                 s.hover,
                                 isDark
                                   ? "hover:text-[#e6e3de]"
@@ -1607,15 +1805,17 @@ function Sidebar({
                               "absolute -right-2 top-1/2 -translate-y-1/2 h-5 w-1 rounded-l-full",
                               s.activePill,
                             )}
+                            aria-hidden="true"
                           />
                         )}
                         <IconComp
                           className={cn(
                             "shrink-0 transition-colors",
                             collapsed ? "h-[18px] w-[18px]" : "h-4 w-4",
-                            active ? s.textAccent : s.textDisabled,
+                            active ? s.textAccent : s.textMuted,
                             "group-hover/nav:text-current",
                           )}
+                          aria-hidden="true"
                         />
                         {!collapsed && (
                           <span className="flex-1 text-right truncate">
@@ -1626,10 +1826,11 @@ function Sidebar({
 
                       {collapsed && (
                         <div
+                          role="tooltip"
                           className={cn(
                             "pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-3 z-[60]",
                             "rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-lg",
-                            "opacity-0 scale-95 group-hover/nav:opacity-100 group-hover/nav:scale-100",
+                            "opacity-0 scale-95 group-hover/nav:opacity-100 group-hover/nav:scale-100 group-focus-within/nav:opacity-100 group-focus-within/nav:scale-100",
                             "transition-all duration-150",
                             s.tooltip,
                           )}
@@ -1651,31 +1852,28 @@ function Sidebar({
             <button
               onClick={onToggleCollapse}
               title={collapsed ? "باز کردن منو" : "جمع کردن منو"}
+              aria-label={collapsed ? "باز کردن منو" : "جمع کردن منو"}
+              aria-pressed={collapsed}
               className={cn(
-                "group/collapse flex items-center rounded-xl text-xs font-medium w-full transition-all duration-200",
-                s.textDisabled,
+                "hidden lg:flex absolute top-1/2 -translate-y-1/2 z-[60]",
+                "h-7 w-7 items-center justify-center rounded-full border transition-all duration-200",
+                focus.ring,
+                s.sidebar,
+                s.border,
+                s.textMuted,
                 s.hover,
-                isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
-                collapsed
-                  ? "justify-center h-10 w-10 mx-auto"
-                  : "gap-2.5 px-3 py-2",
+                isDark
+                  ? "hover:text-[#d2b660] hover:border-[#c8a84b]/30 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"
+                  : "hover:text-[#7a6428] hover:border-[#8a7030]/30 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]",
+                // positioned on the left edge (in RTL that's the border side)
+                "left-0 -translate-x-1/2",
               )}
             >
-              <div
-                className={cn(
-                  "flex h-5 w-5 items-center justify-center rounded-md transition-all duration-200",
-                  isDark
-                    ? "bg-[#ffffff04] group-hover/collapse:bg-[#c8a84b]/8 group-hover/collapse:text-[#d2b660]"
-                    : "bg-[#00000003] group-hover/collapse:bg-[#8a7030]/6 group-hover/collapse:text-[#7a6428]",
-                )}
-              >
-                {collapsed ? (
-                  <FaAngleLeft className="h-3 w-3" />
-                ) : (
-                  <FaAngleRight className="h-3 w-3" />
-                )}
-              </div>
-              {!collapsed && <span>جمع کردن منو</span>}
+              {collapsed ? (
+                <FaAngleLeft className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <FaAngleRight className="h-3 w-3" aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
@@ -1683,21 +1881,25 @@ function Sidebar({
         {/* ── User (expanded) ── */}
         {!collapsed && (
           <div className={cn("shrink-0 border-t px-3 py-3", s.divider)}>
-            <div
+            <button
+              onClick={onLogoutRequest}
+              aria-label={`خروج از حساب ${displayName}`}
               className={cn(
-                "flex items-center gap-2.5 rounded-xl px-2.5 py-2 mb-2",
-                isDark ? "bg-[#ffffff02]" : "bg-[#00000003]",
+                "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 transition-all duration-200",
+                focus.ring,
+                s.hover,
+                isDark ? "hover:text-[#e08080]" : "hover:text-[#b84040]",
               )}
             >
-              <div
+              <UserAvatar
+                user={authUser}
+                initials={initials}
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-bold text-[11px]",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold text-[11px]",
                   s.avatarBg,
                 )}
-              >
-                {initials}
-              </div>
-              <div className="flex-1 min-w-0">
+              />
+              <div className="flex-1 min-w-0 text-right">
                 <p
                   className={cn(
                     "text-xs font-semibold truncate leading-none",
@@ -1706,33 +1908,19 @@ function Sidebar({
                 >
                   {displayName}
                 </p>
-                <p
-                  className={cn(
-                    "text-[10px] mt-0.5 leading-none",
-                    s.textDisabled,
-                  )}
-                >
+                <p className={cn("text-[10px] mt-1 leading-none", s.textMuted)}>
                   {rolePersian}
                 </p>
               </div>
-            </div>
-            {/* Logout button — triggers modal */}
-            <button
-              onClick={onLogoutRequest}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
-                s.textMuted,
-                s.hover,
-                isDark ? "hover:text-[#e08080]" : "hover:text-[#b84040]",
-              )}
-            >
-              <FaArrowRightFromBracket className="h-3.5 w-3.5" />
-              <span>خروج</span>
+              <FaArrowRightFromBracket
+                className={cn("h-3.5 w-3.5 shrink-0", s.textMuted)}
+                aria-hidden="true"
+              />
             </button>
           </div>
         )}
 
-        {/* ── Logout (collapsed) ── */}
+        {/* ── User + Logout (collapsed) ── */}
         {collapsed && (
           <div
             className={cn(
@@ -1743,26 +1931,36 @@ function Sidebar({
             <div className="relative group/logout">
               <button
                 title="خروج"
+                aria-label={`خروج از حساب ${displayName}`}
                 onClick={onLogoutRequest}
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
-                  s.textDisabled,
+                  "flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200",
+                  focus.ring,
+                  s.textMuted,
                   s.hover,
                   isDark ? "hover:text-[#e08080]" : "hover:text-[#b84040]",
                 )}
               >
-                <FaArrowRightFromBracket className="h-4 w-4" />
+                <UserAvatar
+                  user={authUser}
+                  initials={initials}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg font-bold text-[11px]",
+                    s.avatarBg,
+                  )}
+                />
               </button>
               <div
+                role="tooltip"
                 className={cn(
                   "pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-3 z-[60]",
                   "rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-white shadow-lg",
-                  "opacity-0 scale-95 group-hover/logout:opacity-100 group-hover/logout:scale-100",
+                  "opacity-0 scale-95 group-hover/logout:opacity-100 group-hover/logout:scale-100 group-focus-within/logout:opacity-100 group-focus-within/logout:scale-100",
                   "transition-all duration-150",
                   s.tooltip,
                 )}
               >
-                خروج
+                {displayName} — خروج
               </div>
             </div>
           </div>
@@ -1808,36 +2006,42 @@ function Header({
         <button
           onClick={onMenuClick}
           className={cn(
-            "lg:hidden rounded-lg p-2 transition-colors",
+            "lg:hidden flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+            focus.ring,
             s.hover,
             s.textMuted,
           )}
-          aria-label="منو"
+          aria-label="باز کردن منو"
         >
-          <FaBars className="h-4 w-4" />
+          <FaBars className="h-4 w-4" aria-hidden="true" />
         </button>
-        <div className="flex items-center gap-2 min-w-0">
+        <nav aria-label="مسیر" className="flex items-center gap-2 min-w-0">
           {currentSection !== "dashboard" && (
             <>
               <button
                 onClick={() => navigate("dashboard")}
                 className={cn(
-                  "text-xs shrink-0 transition-colors hover:underline",
-                  s.textDisabled,
-                  isDark ? "hover:text-[#9c9890]" : "hover:text-[#6a655c]",
+                  "rounded-md px-1 py-0.5 text-xs shrink-0 transition-colors hover:underline",
+                  focus.ring,
+                  s.textMuted,
+                  isDark ? "hover:text-[#c8c4bc]" : "hover:text-[#4a463e]",
                 )}
               >
                 داشبورد
               </button>
               <FaChevronLeft
                 className={cn("h-2.5 w-2.5 shrink-0", s.textDisabled)}
+                aria-hidden="true"
               />
             </>
           )}
-          <span className={cn("text-sm font-semibold truncate", s.textPrimary)}>
+          <h1
+            aria-current="page"
+            className={cn("text-sm font-semibold truncate", s.textPrimary)}
+          >
             {meta?.label ?? "داشبورد"}
-          </span>
-        </div>
+          </h1>
+        </nav>
       </div>
 
       <div className="flex items-center gap-2">
@@ -1848,30 +2052,36 @@ function Header({
             )
           }
           className={cn(
-            "sm:hidden flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
+            "sm:hidden flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
             s.border,
             s.hover,
             focus.ring,
           )}
           aria-label="جستجو"
         >
-          <FaMagnifyingGlass className={cn("h-3.5 w-3.5", s.textMuted)} />
+          <FaMagnifyingGlass
+            className={cn("h-3.5 w-3.5", s.textMuted)}
+            aria-hidden="true"
+          />
         </button>
 
         <button
           onClick={toggleTheme}
           className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
+            "flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
             s.border,
             s.hover,
             focus.ring,
           )}
-          aria-label="تغییر تم"
+          aria-label={isDark ? "تغییر به حالت روشن" : "تغییر به حالت تیره"}
         >
           {isDark ? (
-            <FaSun className={cn("h-4 w-4", s.warning)} />
+            <FaSun className={cn("h-4 w-4", s.warning)} aria-hidden="true" />
           ) : (
-            <FaMoon className={cn("h-4 w-4", s.textAccent)} />
+            <FaMoon
+              className={cn("h-4 w-4", s.textAccent)}
+              aria-hidden="true"
+            />
           )}
         </button>
 
@@ -1919,6 +2129,47 @@ export default function AdminShell({
 
   useEffect(() => {
     setAuthUser(getAuthUser());
+
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
+
+    let ignore = false;
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await response.json().catch(() => null);
+        if (!response.ok || ignore) return;
+
+        const nextUser = authUserFromUnknown(
+          json && typeof json === "object" && "user" in json ? json.user : null,
+        );
+        if (!nextUser) return;
+
+        setAuthUser((current) => ({
+          ...(current ?? {}),
+          ...nextUser,
+          role: nextUser.role ?? current?.role ?? "user",
+        }));
+
+        try {
+          localStorage.setItem(PROFILE_OVERRIDE_KEY, JSON.stringify(nextUser));
+        } catch {}
+
+        window.dispatchEvent(
+          new CustomEvent("admin-profile-updated", { detail: nextUser }),
+        );
+      } catch {
+        // Keep the JWT/local fallback when profile hydration fails.
+      }
+    }
+
+    void loadCurrentUser();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1958,6 +2209,22 @@ export default function AdminShell({
     <div className={cn("flex min-h-screen", s.page)} dir="rtl">
       <style>{animation.keyframes}</style>
 
+      {/* ── Skip to content (keyboard a11y) ── */}
+      <a
+        href="#admin-main-content"
+        className={cn(
+          "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:right-3 focus:z-[300]",
+          "focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-semibold",
+          s.card,
+          s.border,
+          "focus:border",
+          s.textPrimary,
+          s.dropShadow,
+        )}
+      >
+        رفتن به محتوای اصلی
+      </a>
+
       {/* ── Global logout confirmation modal ── */}
       <LogoutModal
         open={showModal}
@@ -1987,7 +2254,12 @@ export default function AdminShell({
           onLogoutRequest={requestLogout}
         />
         <main
-          className={cn("flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8", s.scrollbar)}
+          id="admin-main-content"
+          tabIndex={-1}
+          className={cn(
+            "flex-1 p-4 sm:p-6 lg:p-8 pb-28 lg:pb-8 focus:outline-none",
+            s.scrollbar,
+          )}
         >
           {children({ section, navigate })}
         </main>

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FaArrowRight, FaBell, FaGlobe, FaUser } from "react-icons/fa6";
+import { FaArrowRight, FaBell, FaFileLines } from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useAccess } from "@/hook/auth/useAccess";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
-import { useTheme } from "@/contexts/ThemeContext";
 import type { ColumnDef } from "@/types/table";
 
 function cn(...classes: (string | false | null | undefined)[]) {
@@ -29,18 +29,11 @@ function getId(value: unknown) {
   return typeof id === "string" ? id : "";
 }
 
-function getUserLabel(value: unknown) {
+function getPageLabel(value: unknown) {
   if (!isRecord(value)) return "";
-  const fullName = [value.firstName, value.lastName]
-    .filter((item) => typeof item === "string" && item.trim())
-    .join(" ")
-    .trim();
-  return (
-    fullName ||
-    toText(value.phoneNumber) ||
-    toText(value.email) ||
-    getId(value)
-  );
+  const title = toText(value.title);
+  const url = toText(value.url);
+  return title && url ? `${title} (/${url})` : title || url || getId(value);
 }
 
 function formatFaDate(value?: string) {
@@ -61,9 +54,11 @@ type SelectOption = { label: string; value: string };
 type NotificationRow = {
   _id: string;
   id: string;
-  message: string;
-  userId: string;
-  userLabel: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  pageId: string;
+  pageLabel: string;
   isGlobal: boolean;
   closeable: boolean;
   createdAt?: string;
@@ -81,7 +76,7 @@ export default function NotificationsSection({
   const canCreate = can("admin.notifications", "create");
   const canUpdate = can("admin.notifications", "update");
   const canDelete = can("admin.notifications", "delete");
-  const [userOptions, setUserOptions] = useState<SelectOption[]>([]);
+  const [pageOptions, setPageOptions] = useState<SelectOption[]>([]);
 
   const token =
     typeof window !== "undefined"
@@ -97,42 +92,44 @@ export default function NotificationsSection({
     if (!token || (!canCreate && !canUpdate)) return;
 
     let ignore = false;
-    async function loadUsers() {
+
+    async function loadPages() {
       try {
         const response = await fetch(
-          "/api/users?mode=notification-options&limit=100",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+          "/api/pages?mode=notification-options&limit=100",
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const json = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error(json?.message ?? "دریافت کاربران با خطا مواجه شد.");
+          throw new Error(
+            json?.message ?? "دریافت صفحات با خطا مواجه شد.",
+          );
         }
 
-        const users = isRecord(json) && Array.isArray(json.users) ? json.users : [];
-        const options = users.filter(isRecord).map((user) => {
-          const id = getId(user);
-          return {
-            value: id,
-            label: getUserLabel(user) || id,
-          };
-        }).filter((option) => option.value);
+        const pages =
+          isRecord(json) && Array.isArray(json.pages) ? json.pages : [];
+        const options = pages
+          .filter(isRecord)
+          .map((page) => ({
+            value: getId(page),
+            label: getPageLabel(page),
+          }))
+          .filter((option) => option.value);
 
-        if (!ignore) setUserOptions(options);
+        if (!ignore) setPageOptions(options);
       } catch (error) {
         if (!ignore) {
-          setUserOptions([]);
+          setPageOptions([]);
           toast.error(
             error instanceof Error
               ? error.message
-              : "دریافت کاربران با خطا مواجه شد.",
+              : "دریافت صفحات با خطا مواجه شد.",
           );
         }
       }
     }
 
-    void loadUsers();
+    void loadPages();
     return () => {
       ignore = true;
     };
@@ -141,87 +138,85 @@ export default function NotificationsSection({
   const columns: ColumnDef<NotificationRow>[] = useMemo(
     () => [
       {
-        key: "message",
-        label: "متن اعلان",
-        inputType: "textarea",
+        key: "title",
+        label: "عنوان",
         required: true,
         sortable: true,
-        placeholder: "متن اعلان را وارد کنید",
-        render: (value, row) => (
-          <span className="block">
-            <span className={cn("block text-sm font-semibold", t.textPrimary)}>
-              {String(value || "-")}
-            </span>
-            <span className={cn("mt-1 flex items-center gap-1.5 text-xs", t.textDisabled)}>
-              {row.isGlobal ? (
-                <>
-                  <FaGlobe className="h-3 w-3" />
-                  عمومی
-                </>
-              ) : (
-                <>
-                  <FaUser className="h-3 w-3" />
-                  اختصاصی
-                </>
-              )}
-            </span>
+        placeholder: "برای مثال: پایان اشتراک صفحه",
+        render: (value) => (
+          <span className={cn("text-sm font-bold", t.textPrimary)}>
+            {String(value || "-")}
           </span>
         ),
       },
       {
-        key: "userLabel",
-        label: "کاربر مقصد",
+        key: "subtitle",
+        label: "زیرعنوان",
+        placeholder: "یک توضیح کوتاه بالای متن اصلی",
+        render: (value) => (
+          <span className={cn("text-sm", t.textSecondary)}>
+            {String(value || "-")}
+          </span>
+        ),
+      },
+      {
+        key: "description",
+        label: "توضیحات",
+        inputType: "textarea",
+        required: true,
+        placeholder: "متن کامل اعلان را وارد کنید",
+        render: (value) => (
+          <span className={cn("block max-w-md text-sm", t.textMuted)}>
+            {String(value || "-")}
+          </span>
+        ),
+      },
+      {
+        key: "isGlobal",
+        label: "اعلان عمومی",
+        inputType: "checkbox",
+        defaultValue: false,
+        filterable: true,
+        options: [
+          { label: "عمومی", value: "true" },
+          { label: "مخصوص یک صفحه", value: "false" },
+        ],
+        placeholder: "نمایش این اعلان در تمام صفحات",
+        render: (value) => (
+          <span className={cn("text-sm font-semibold", value ? t.textAccent : t.textMuted)}>
+            {value ? "تمام صفحات" : "یک صفحه"}
+          </span>
+        ),
+      },
+      {
+        key: "pageLabel",
+        label: "صفحه مقصد",
         editable: false,
         sortable: true,
         render: (value, row) => (
           <span
             className={cn(
               "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-              row.isGlobal
-                ? isDark
-                  ? "bg-sky-500/[0.08] text-sky-400 ring-sky-500/15"
-                  : "bg-sky-500/[0.06] text-sky-600 ring-sky-500/12"
-                : isDark
-                  ? "bg-[#c8a84b]/[0.08] text-[#d2b660] ring-[#c8a84b]/15"
-                  : "bg-[#8a7030]/[0.06] text-[#7a6428] ring-[#8a7030]/12",
+              isDark
+                ? "bg-sky-500/[0.08] text-sky-400 ring-sky-500/15"
+                : "bg-sky-500/[0.06] text-sky-700 ring-sky-500/15",
             )}
           >
-            {row.isGlobal ? <FaGlobe className="h-3 w-3" /> : <FaUser className="h-3 w-3" />}
-            {row.isGlobal ? "همه کاربران" : String(value || "-")}
+            <FaFileLines className="h-3 w-3" />
+            {row.isGlobal
+              ? "تمام صفحات"
+              : String(value || "رکورد قدیمی بدون صفحه")}
           </span>
         ),
       },
       {
-        key: "userId",
-        label: "انتخاب کاربر",
+        key: "pageId",
+        label: "انتخاب صفحه",
         visible: false,
-        options: userOptions,
-        placeholder: "برای اعلان اختصاصی کاربر را انتخاب کنید",
-      },
-      {
-        key: "isGlobal",
-        label: "اعلان عمومی",
-        inputType: "checkbox",
-        filterable: true,
-        options: [
-          { label: "عمومی", value: "true" },
-          { label: "اختصاصی", value: "false" },
-        ],
-        placeholder: "ارسال برای همه کاربران",
-        render: (value) => (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-              value
-                ? "bg-emerald-500/[0.08] text-emerald-400 ring-emerald-500/15"
-                : isDark
-                  ? "bg-white/[0.04] text-[#9c9890] ring-white/10"
-                  : "bg-black/[0.04] text-[#6a655c] ring-black/[0.06]",
-            )}
-          >
-            {value ? "عمومی" : "اختصاصی"}
-          </span>
-        ),
+        required: true,
+        options: pageOptions,
+        placeholder: "صفحه‌ای که اعلان باید روی آن نمایش داده شود",
+        hiddenInForm: (formData) => Boolean(formData.isGlobal),
       },
       {
         key: "closeable",
@@ -252,7 +247,7 @@ export default function NotificationsSection({
         ),
       },
     ],
-    [isDark, t, userOptions],
+    [isDark, pageOptions, t],
   );
 
   const transformResponse = useMemo(
@@ -267,17 +262,20 @@ export default function NotificationsSection({
 
         return raw.filter(isRecord).map((notification) => {
           const id = getId(notification);
-          const user = notification.User;
-          const isGlobal = Boolean(notification.isGlobal);
+          const page = notification.page;
 
           return {
             ...notification,
             _id: id,
             id,
-            message: toText(notification.message),
-            userId: getId(user) || getId(notification.User),
-            userLabel: getUserLabel(user) || getId(notification.User) || "-",
-            isGlobal,
+            title: toText(notification.title) || "اعلان",
+            subtitle: toText(notification.subtitle),
+            description:
+              toText(notification.description) ||
+              toText(notification.message),
+            pageId: getId(page) || getId(notification.page),
+            pageLabel: getPageLabel(page),
+            isGlobal: Boolean(notification.isGlobal),
             closeable: Boolean(notification.closeable),
             createdAt: toText(notification.createdAt),
           };
@@ -309,10 +307,10 @@ export default function NotificationsSection({
             </div>
             <div>
               <h1 className={cn("text-lg font-extrabold sm:text-xl", t.textPrimary)}>
-                مدیریت اعلانات
+                مدیریت اعلانات صفحات
               </h1>
               <p className={cn("mt-0.5 text-xs sm:text-sm", t.textMuted)}>
-                ساخت، مشاهده، ویرایش و حذف اعلان‌های عمومی یا اختصاصی کاربران
+                هر اعلان فقط روی صفحه انتخاب‌شده نمایش داده می‌شود.
               </p>
             </div>
           </div>
@@ -328,8 +326,7 @@ export default function NotificationsSection({
             )}
           >
             <FaArrowRight className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">بازگشت به داشبورد</span>
-            <span className="sm:hidden">بازگشت</span>
+            بازگشت به داشبورد
           </button>
         </div>
       </div>
@@ -338,8 +335,8 @@ export default function NotificationsSection({
         endpoint="/api/notifications?limit=100"
         updateMethod="PATCH"
         columns={columns}
-        title="لیست اعلانات"
-        subtitle="اعلان‌های عمومی و اختصاصی ثبت شده در سیستم"
+        title="لیست اعلانات صفحات"
+        subtitle="پیام‌ها و هشدارهای اختصاصی هر صفحه"
         primaryKey="_id"
         headers={headers}
         pageSize={10}

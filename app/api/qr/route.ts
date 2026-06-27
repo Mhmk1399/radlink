@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { generateQrImageDataUrl, generateUniqueQrShortcode } from "@/lib/qrCode";
+import { createQrForPage } from "@/lib/qrCode";
 import QR from "@/models/qr";
 import Page from "@/models/pages";
+import "@/models/files";
 
 // POST /api/qr — create QR for a page the user owns
 export const POST = compose(
@@ -13,7 +14,7 @@ export const POST = compose(
     withStatus("active")
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
-    const { pageId, targetUrl, imageurl } = await req.json();
+    const { pageId, targetUrl } = await req.json();
 
     if (!pageId || !targetUrl) {
         return NextResponse.json({ message: "شناسه صفحه و آدرس مقصد الزامی هستند." }, { status: 400 });
@@ -27,18 +28,11 @@ export const POST = compose(
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
-    const shortcode = await generateUniqueQrShortcode();
-    const qrImageUrl =
-        typeof imageurl === "string" && imageurl.trim()
-            ? imageurl.trim()
-            : await generateQrImageDataUrl(targetUrl);
-
-    const qr = await QR.create({
-        page: pageId,
-        owner: user._id,
-        targetUrl,
-        imageurl: qrImageUrl,
-        shortcode,
+    const qr = await createQrForPage({
+        pageId: String(page._id),
+        creatorId: String(user._id),
+        pageUrl: String(targetUrl),
+        requestUrl: req.url,
     });
     return NextResponse.json({ qr }, { status: 201 });
 });
@@ -63,6 +57,7 @@ export const GET = compose(
         QR.find(query)
             .populate("page", "title url")
             .populate("owner", "firstName lastName phoneNumber")
+            .populate("file", "filename path mimeType size kind")
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

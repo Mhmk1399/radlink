@@ -1,55 +1,120 @@
+import mongoose from "mongoose";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
-import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
-import { AuthRequest } from "@/lib/auth/types";
+import { withAuth, withDB, withRole, withStatus } from "@/lib/auth/middlewares";
+import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
+import Page from "@/models/pages";
 import "@/models/users";
 
-// POST /api/notifications — admin sends targeted or global notification
+const PAGE_POPULATE_FIELDS = "title url owner isPublished";
+
+function cleanText(value: unknown, maxLength: number) {
+    return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function getPageId(body: Record<string, unknown>) {
+    const value = body.pageId ?? body.page;
+    return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeNotificationContent(body: Record<string, unknown>) {
+    return {
+        title: cleanText(body.title, 120),
+        subtitle: cleanText(body.subtitle, 180),
+        description: cleanText(body.description ?? body.message, 2000),
+    };
+}
+
+// Admin creates a notification for one specific page.
 export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
+    withRole("admin", "superAdmin"),
 )(async (req: AuthRequest) => {
-    const { userId, message, closeable, isGlobal } = await req.json();
+    const body = (await req.json()) as Record<string, unknown>;
+    const isGlobal = Boolean(body.isGlobal);
+    const pageId = getPageId(body);
+    const content = normalizeNotificationContent(body);
 
-    if (!message) return NextResponse.json({ message: "متن پیام الزامی است." }, { status: 400 });
-    if (!isGlobal && !userId) {
-        return NextResponse.json({ message: "برای اعلان‌های غیرعمومی شناسه کاربر الزامی است." }, { status: 400 });
+    if (!isGlobal && !mongoose.Types.ObjectId.isValid(pageId)) {
+        return NextResponse.json(
+            { message: "انتخاب صفحه برای اعلان الزامی است." },
+            { status: 400 },
+        );
+    }
+    if (!content.title) {
+        return NextResponse.json(
+            { message: "عنوان اعلان الزامی است." },
+            { status: 400 },
+        );
+    }
+    if (!content.description) {
+        return NextResponse.json(
+            { message: "توضیحات اعلان الزامی است." },
+            { status: 400 },
+        );
+    }
+
+    if (!isGlobal) {
+        const pageExists = await Page.exists({ _id: pageId });
+        if (!pageExists) {
+            return NextResponse.json(
+                { message: "صفحه انتخاب‌شده پیدا نشد." },
+                { status: 404 },
+            );
+        }
     }
 
     const created = await Notification.create({
-        User:      isGlobal ? undefined : userId,
-        message,
-        closeable: closeable ?? false,
-        isGlobal:  isGlobal  ?? false,
+        page: isGlobal ? undefined : pageId,
+        ...content,
+        closeable: body.closeable === undefined ? true : Boolean(body.closeable),
+        isGlobal,
     });
+
     const notification = await Notification.findById(created._id)
-        .populate("User", "firstName lastName phoneNumber email role status")
+        .populate("page", PAGE_POPULATE_FIELDS)
         .lean();
+
+    revalidatePath("/[url]", "page");
 
     return NextResponse.json({ notification }, { status: 201 });
 });
 
-// GET /api/notifications — user gets own + global, admin gets all
+// Admin sees every notification. Other users see notifications for pages they own.
 export const GET = compose(
     withDB(),
     withAuth(),
-    withStatus("active")
+    withStatus("active"),
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
     const { searchParams } = new URL(req.url);
-    const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
-    const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
+    const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+    const limit = Math.min(
+        100,
+        Math.max(1, Number(searchParams.get("limit") ?? 20)),
+    );
 
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
-    const query = isAdmin
-        ? {}
-        : { $or: [{ User: user._id }, { isGlobal: true }] };
+    let query: Record<string, unknown> = {};
+
+    if (!isAdmin) {
+        const ownedPageIds = await Page.find({ owner: user._id }).distinct("_id");
+        query = {
+            $or: [
+                { page: { $in: ownedPageIds } },
+                { isGlobal: true },
+                { User: user._id }, // Legacy user-targeted records.
+            ],
+        };
+    }
 
     const [notifications, total] = await Promise.all([
         Notification.find(query)
+            .populate("page", PAGE_POPULATE_FIELDS)
             .populate("User", "firstName lastName phoneNumber email role status")
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)

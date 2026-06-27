@@ -19,7 +19,7 @@ import {
   DropGap,
 } from "@/builder/editor/DraggableBlockItem";
 import type { PageBlock } from "@/types/blocks/builder.types";
-import { SmartSuggestions } from "./SmartSuggestions";
+import { LegacySmartSuggestions } from "./SmartSuggestions";
 
 /* ================================================================== */
 /*  Block Quick Actions (hover overlay)                                */
@@ -214,6 +214,7 @@ export function CanvasContent({
   onDeleteBlock,
   onOpenCatalog,
   onApplyTemplate,
+  showSmartSuggestions = true,
 }: {
   sortedBlocks: PageBlock[];
   availableBlockTypes?: string[];
@@ -229,6 +230,7 @@ export function CanvasContent({
   onDeleteBlock: (id: string) => void;
   onOpenCatalog: () => void;
   onApplyTemplate: (blockTypes: string[]) => void;
+  showSmartSuggestions?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: "canvas-drop-zone" });
   const isPaletteDragging = activePaletteType !== null;
@@ -255,13 +257,31 @@ export function CanvasContent({
             <p className="text-[15px] font-bold text-blue-700">اینجا رها کن!</p>
             <p className="mt-2 text-[13px] text-blue-500">بلاک اضافه می‌شه</p>
           </div>
-        ) : (
-          /* Smart Suggestions */
-          <SmartSuggestions
+        ) : showSmartSuggestions ? (
+          <LegacySmartSuggestions
             onApplyTemplate={onApplyTemplate}
             onOpenCatalog={onOpenCatalog}
             availableBlockTypes={availableBlockTypes}
           />
+        ) : (
+          <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-2xl">
+              +
+            </span>
+            <h2 className="mt-4 text-base font-black text-neutral-800">
+              صفحه خالی آماده است
+            </h2>
+            <p className="mt-2 max-w-sm text-xs leading-6 text-neutral-500">
+              اولین بلاک را از فهرست کامپوننت‌های در دسترس اضافه کنید.
+            </p>
+            <button
+              type="button"
+              onClick={onOpenCatalog}
+              className="mt-5 rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-neutral-800"
+            >
+              افزودن اولین بلاک
+            </button>
+          </div>
         )}
       </div>
     );

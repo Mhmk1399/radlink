@@ -31,7 +31,11 @@ const TemplatesSection = lazy(
   () => import("@/components/admin/TemplatesSection"),
 );
 const BlocksSection = lazy(() => import("@/components/admin/BlocksSection"));
+const FilesSection = lazy(() => import("@/components/admin/FilesSection"));
 const QRCodesSection = lazy(() => import("@/components/admin/QRCodesSection"));
+const ProductsSection = lazy(
+  () => import("@/components/admin/ProductsSection"),
+);
 const TicketsSection = lazy(() => import("@/components/admin/TicketsSection"));
 const NotificationsSection = lazy(
   () => import("@/components/admin/NotificationsSection"),
@@ -124,8 +128,12 @@ function SectionRouter({
       return <TemplatesSection navigate={navigate} />;
     case "blocks":
       return <BlocksSection navigate={navigate} />;
+    case "files":
+      return <FilesSection navigate={navigate} />;
     case "qrcodes":
       return <QRCodesSection navigate={navigate} />;
+    case "products":
+      return <ProductsSection navigate={navigate} />;
     case "tickets":
       return <TicketsSection navigate={navigate} />;
     case "notifications":

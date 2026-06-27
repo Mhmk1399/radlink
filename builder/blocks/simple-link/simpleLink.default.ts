@@ -40,9 +40,9 @@ export function createDefaultSimpleLinkBlock(order = 0): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#ffffff" },
+                    backgroundColor: { mobile: "#EBF2FA" },
                     borderRadius: { mobile: 18 },
-                    borderColor: { mobile: "rgba(15, 23, 42, 0.12)" },
+                    borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -51,7 +51,7 @@ export function createDefaultSimpleLinkBlock(order = 0): PageBlock {
                 label: "عنوان لینک",
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
-                    color: { mobile: "#0f172a" },
+                    color: { mobile: "#064789" },
                     fontSize: { mobile: 16, tablet: 17, desktop: 18 },
                     animation: "none",
                 },
@@ -60,7 +60,7 @@ export function createDefaultSimpleLinkBlock(order = 0): PageBlock {
                 label: "توضیحات لینک",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "rgba(15, 23, 42, 0.65)" },
+                    color: { mobile: "#427AA1" },
                     fontSize: { mobile: 13, tablet: 14, desktop: 14 },
                 },
             },
@@ -69,7 +69,7 @@ export function createDefaultSimpleLinkBlock(order = 0): PageBlock {
                 allowedStyleKeys: ["color", "backgroundColor", "borderRadius"],
                 style: {
                     color: { mobile: "#ffffff" },
-                    backgroundColor: { mobile: "#2563eb" },
+                    backgroundColor: { mobile: "#064789" },
                     borderRadius: { mobile: 12 },
                 },
             },

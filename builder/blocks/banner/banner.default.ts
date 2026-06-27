@@ -44,7 +44,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#0f172a" },
+                    backgroundColor: { mobile: "#064789" },
                     borderRadius: { mobile: 24 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },
@@ -55,7 +55,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                 label: "پوشش تصویر",
                 allowedStyleKeys: ["backgroundColor"],
                 style: {
-                    backgroundColor: { mobile: "rgba(15, 23, 42, 0.45)" },
+                    backgroundColor: { mobile: "rgba(6, 71, 137, 0.45)" },
                 },
             },
             title: {
@@ -71,7 +71,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                 label: "توضیحات",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "rgba(255, 255, 255, 0.92)" },
+                    color: { mobile: "#EBF2FA" },
                     fontSize: { mobile: 15, tablet: 17, desktop: 18 },
                 },
             },
@@ -87,11 +87,11 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                     "animation",
                 ],
                 style: {
-                    color: { mobile: "#111827" },
-                    backgroundColor: { mobile: "#ffffff" },
+                    color: { mobile: "#064789" },
+                    backgroundColor: { mobile: "#EBF2FA" },
                     fontSize: { mobile: 15, tablet: 16, desktop: 16 },
                     borderRadius: { mobile: 12 },
-                    borderColor: { mobile: "#ffffff" },
+                    borderColor: { mobile: "#EBF2FA" },
                     borderWidth: { mobile: 1 },
                     animation: "pulse",
                 },

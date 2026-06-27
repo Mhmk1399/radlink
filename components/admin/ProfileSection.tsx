@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/CustomToast";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
+import { normalizeLiaraUrl } from "@/lib/fileUtils";
 import type { UserRole, UserStatus } from "@/types";
 
 type UserLimits = {
@@ -94,7 +95,7 @@ function normalizeProfileUser(value: unknown): ProfileUser {
     lastName: toText(record.lastName),
     phoneNumber: toText(record.phoneNumber),
     email: toText(record.email),
-    avatarUrl: toText(record.avatarUrl),
+    avatarUrl: normalizeLiaraUrl(toText(record.avatarUrl)),
     nationalCode: toText(record.nationalCode),
     fatherName: toText(record.fatherName),
     role,
@@ -118,7 +119,7 @@ function formFromUser(user: ProfileUser): ProfileFormState {
     firstName: user.firstName ?? "",
     lastName: user.lastName ?? "",
     email: user.email ?? "",
-    avatarUrl: user.avatarUrl ?? "",
+    avatarUrl: normalizeLiaraUrl(user.avatarUrl ?? ""),
     nationalCode: user.nationalCode ?? "",
     fatherName: user.fatherName ?? "",
   };
@@ -182,6 +183,7 @@ function publishProfileUpdate(user: ProfileUser) {
     lastName: user.lastName ?? "",
     phoneNumber: user.phoneNumber ?? "",
     email: user.email ?? "",
+    avatarUrl: normalizeLiaraUrl(user.avatarUrl ?? ""),
     role: user.role,
   };
 

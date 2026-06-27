@@ -12,6 +12,7 @@ import {
   type DashboardRecentUser,
   type DashboardStats,
 } from "@/hook/admin/useDashboardStats";
+import { normalizeLiaraUrl } from "@/lib/fileUtils";
 
 import {
   FaUsers,
@@ -52,8 +53,8 @@ const dash = {
     // ── Text ──────────────────────────────────
     textPrimary: "text-[#e6e3de]",
     textSecondary: "text-[#9c9890]",
-    textMuted: "text-[#6e6a62]",
-    textDisabled: "text-[#47443e]",
+    textMuted: "text-[#8a867e]",
+    textDisabled: "text-[#6e6a62]",
     textAccent: "text-[#d2b660]",
 
     // ── Borders ───────────────────────────────
@@ -82,7 +83,7 @@ const dash = {
     pendingBadge: "bg-amber-500/[0.08] text-amber-400 ring-1 ring-amber-500/18",
     pendingDot: "bg-amber-400",
     defaultBg: "bg-white/[0.025]",
-    defaultText: "text-[#6e6a62]",
+    defaultText: "text-[#8a867e]",
     defaultBadge: "bg-white/[0.05] text-[#9c9890] ring-1 ring-white/8",
     defaultDot: "bg-[#4a4740]",
     dotRing: "ring-[#1c1c23]",
@@ -118,16 +119,16 @@ const dash = {
 
     // ── Section link ──────────────────────────
     sectionLink:
-      "text-[#d2b660]/60 hover:text-[#d2b660] hover:bg-[#c8a84b]/[0.06]",
+      "text-[#d2b660]/70 hover:text-[#d2b660] hover:bg-[#c8a84b]/[0.06]",
     sectionIcon: "bg-[#c8a84b]/[0.06] text-[#d2b660]",
 
     // ── Mini stat icon ────────────────────────
     miniIcon:
-      "bg-white/[0.03] text-[#6e6a62] group-hover:bg-[#c8a84b]/[0.08] group-hover:text-[#d2b660]",
+      "bg-white/[0.03] text-[#8a867e] group-hover:bg-[#c8a84b]/[0.08] group-hover:text-[#d2b660]",
 
     // ── Empty state ───────────────────────────
     emptyBg: "bg-white/[0.025]",
-    emptyIcon: "text-[#3a3a3e]",
+    emptyIcon: "text-[#4a4a4e]",
   },
 
   light: {
@@ -142,8 +143,8 @@ const dash = {
     // ── Text ──────────────────────────────────
     textPrimary: "text-[#2a2720]",
     textSecondary: "text-[#6a655c]",
-    textMuted: "text-[#9a948a]",
-    textDisabled: "text-[#c2bcb4]",
+    textMuted: "text-[#857f75]",
+    textDisabled: "text-[#9a948a]",
     textAccent: "text-[#7a6428]",
 
     // ── Borders ───────────────────────────────
@@ -171,7 +172,7 @@ const dash = {
     pendingBadge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
     pendingDot: "bg-amber-500",
     defaultBg: "bg-[#00000004]",
-    defaultText: "text-[#9a948a]",
+    defaultText: "text-[#857f75]",
     defaultBadge: "bg-[#00000005] text-[#6a655c] ring-1 ring-[#00000008]",
     defaultDot: "bg-[#c2bcb4]",
     dotRing: "ring-white",
@@ -205,16 +206,16 @@ const dash = {
 
     // ── Section link ──────────────────────────
     sectionLink:
-      "text-[#8a7030]/60 hover:text-[#7a6428] hover:bg-[#c8a84b]/[0.05]",
+      "text-[#8a7030]/70 hover:text-[#7a6428] hover:bg-[#c8a84b]/[0.05]",
     sectionIcon: "bg-[#c8a84b]/[0.05] text-[#8a7030]",
 
     // ── Mini stat icon ────────────────────────
     miniIcon:
-      "bg-[#00000003] text-[#9a948a] group-hover:bg-[#c8a84b]/[0.06] group-hover:text-[#8a7030]",
+      "bg-[#00000003] text-[#857f75] group-hover:bg-[#c8a84b]/[0.06] group-hover:text-[#8a7030]",
 
     // ── Empty state ───────────────────────────
     emptyBg: "bg-[#00000003]",
-    emptyIcon: "text-[#d4cfca]",
+    emptyIcon: "text-[#c4bfb8]",
   },
 } as const;
 
@@ -274,6 +275,7 @@ interface AuthUser {
   lastName?: string;
   phoneNumber?: string;
   email?: string;
+  avatarUrl?: string;
   role?: string;
 }
 
@@ -285,7 +287,8 @@ function readProfileOverride(userId?: string): Partial<AuthUser> | null {
   try {
     const raw = localStorage.getItem(PROFILE_OVERRIDE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
     const record = parsed as Record<string, unknown>;
     if (String(record.id ?? "") !== userId) return null;
 
@@ -296,6 +299,9 @@ function readProfileOverride(userId?: string): Partial<AuthUser> | null {
       phoneNumber:
         typeof record.phoneNumber === "string" ? record.phoneNumber : "",
       email: typeof record.email === "string" ? record.email : "",
+      avatarUrl: normalizeLiaraUrl(
+        typeof record.avatarUrl === "string" ? record.avatarUrl : "",
+      ),
       role: typeof record.role === "string" ? record.role : undefined,
     };
   } catch {
@@ -314,6 +320,9 @@ function authUserFromUnknown(value: unknown): Partial<AuthUser> | null {
     phoneNumber:
       typeof record.phoneNumber === "string" ? record.phoneNumber : "",
     email: typeof record.email === "string" ? record.email : "",
+    avatarUrl: normalizeLiaraUrl(
+      typeof record.avatarUrl === "string" ? record.avatarUrl : "",
+    ),
     role: typeof record.role === "string" ? record.role : undefined,
   };
 }
@@ -370,6 +379,7 @@ function getAuthUser(): AuthUser | null {
     lastName: (payload.lastName as string) ?? "",
     phoneNumber: (payload.phoneNumber as string) ?? "",
     email: (payload.email as string) ?? "",
+    avatarUrl: normalizeLiaraUrl((payload.avatarUrl as string) ?? ""),
     role: (payload.role as string) ?? "user",
   };
   return { ...tokenUser, ...(readProfileOverride(id) ?? {}) };
@@ -514,50 +524,62 @@ function StatCard({
           d.card,
           d.border,
         )}
+        aria-hidden="true"
       >
         <div className="flex items-start justify-between mb-3 sm:mb-5">
           <div
             className={cn(
-              "h-10 w-10 sm:h-12 sm:w-12 rounded-xl animate-pulse",
+              "h-10 w-10 sm:h-12 sm:w-12 rounded-xl motion-safe:animate-pulse",
               d.input,
             )}
           />
           <div
             className={cn(
-              "h-5 w-14 sm:h-6 sm:w-16 rounded-full animate-pulse",
+              "h-5 w-14 sm:h-6 sm:w-16 rounded-full motion-safe:animate-pulse",
               d.input,
             )}
           />
         </div>
         <div
           className={cn(
-            "h-7 w-20 sm:h-8 sm:w-28 rounded-lg animate-pulse mb-1.5 sm:mb-2",
+            "h-7 w-20 sm:h-8 sm:w-28 rounded-lg motion-safe:animate-pulse mb-1.5 sm:mb-2",
             d.input,
           )}
         />
         <div
           className={cn(
-            "h-3 w-16 sm:h-4 sm:w-20 rounded animate-pulse",
+            "h-3 w-16 sm:h-4 sm:w-20 rounded motion-safe:animate-pulse",
             d.input,
           )}
         />
       </div>
     );
 
+  const changeText =
+    change !== undefined
+      ? `${pos ? "افزایش" : "کاهش"} ${toPersianDigits(Math.abs(change))} درصد`
+      : undefined;
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!onClick}
+      aria-label={
+        onClick
+          ? `${label}: ${formatNumber(value)}${changeText ? `، ${changeText}` : ""}. مشاهده جزئیات`
+          : `${label}: ${formatNumber(value)}${changeText ? `، ${changeText}` : ""}`
+      }
       className={cn(
         "group relative w-full overflow-hidden rounded-2xl border p-4 sm:p-5 text-right transition-all duration-300",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         d.card,
         d.border,
         d.shadow,
         onClick &&
           cn(
             d.cardHover,
-            "cursor-pointer hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.99]",
+            "cursor-pointer motion-safe:hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.99]",
           ),
         !onClick && "cursor-default",
       )}
@@ -569,6 +591,7 @@ function StatCard({
           onClick && "group-hover:opacity-100",
           d.accentGlow,
         )}
+        aria-hidden="true"
       />
 
       <div className="relative">
@@ -577,9 +600,10 @@ function StatCard({
           <div
             className={cn(
               "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl border transition-transform duration-300",
-              onClick && "group-hover:scale-110",
+              onClick && "motion-safe:group-hover:scale-110",
               d.accentIcon,
             )}
+            aria-hidden="true"
           >
             <span className="text-base sm:text-lg">{icon}</span>
           </div>
@@ -593,9 +617,15 @@ function StatCard({
               )}
             >
               {pos ? (
-                <FaArrowTrendUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <FaArrowTrendUp
+                  className="h-2.5 w-2.5 sm:h-3 sm:w-3"
+                  aria-hidden="true"
+                />
               ) : (
-                <FaArrowTrendDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <FaArrowTrendDown
+                  className="h-2.5 w-2.5 sm:h-3 sm:w-3"
+                  aria-hidden="true"
+                />
               )}
               {toPersianDigits(Math.abs(change))}٪
             </div>
@@ -616,7 +646,7 @@ function StatCard({
         <p
           className={cn(
             "text-[11px] sm:text-[13px] font-semibold",
-            d.textMuted,
+            d.textSecondary,
           )}
         >
           {label}
@@ -627,7 +657,7 @@ function StatCard({
           <p
             className={cn(
               "text-[10px] sm:text-[11px] mt-1 sm:mt-1.5 leading-relaxed hidden sm:block",
-              d.textDisabled,
+              d.textMuted,
             )}
           >
             {changeLabel}
@@ -640,9 +670,10 @@ function StatCard({
         <FaChevronLeft
           className={cn(
             "absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-3.5 sm:w-3.5",
-            "opacity-0 transition-all duration-300 group-hover:opacity-30 group-hover:-translate-x-1",
+            "opacity-0 transition-all duration-300 group-hover:opacity-40 motion-safe:group-hover:-translate-x-1",
             d.textMuted,
           )}
+          aria-hidden="true"
         />
       )}
     </button>
@@ -670,20 +701,23 @@ function MiniStat({
     <button
       type="button"
       onClick={onClick}
+      aria-label={`${label}: ${toPersianDigits(value.toLocaleString())}. مشاهده`}
       className={cn(
         "group flex items-center gap-2 sm:gap-3 rounded-xl border p-2.5 sm:p-3.5 transition-all duration-200 text-right w-full",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         d.card,
         d.border,
         d.shadow,
         d.cardHover,
-        "hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98]",
+        "motion-safe:hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98]",
       )}
     >
       <div
         className={cn(
-          "flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-110",
+          "flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 motion-safe:group-hover:scale-110",
           d.miniIcon,
         )}
+        aria-hidden="true"
       >
         {icon}
       </div>
@@ -691,9 +725,10 @@ function MiniStat({
         {loading ? (
           <div
             className={cn(
-              "h-4 sm:h-5 w-8 sm:w-10 rounded animate-pulse mb-0.5",
+              "h-4 sm:h-5 w-8 sm:w-10 rounded motion-safe:animate-pulse mb-1",
               d.input,
             )}
+            aria-hidden="true"
           />
         ) : (
           <p
@@ -708,7 +743,7 @@ function MiniStat({
         <p
           className={cn(
             "text-[10px] sm:text-[11px] font-medium truncate",
-            d.textDisabled,
+            d.textMuted,
           )}
         >
           {label}
@@ -717,9 +752,10 @@ function MiniStat({
       <FaChevronLeft
         className={cn(
           "h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-0 transition-all duration-200",
-          "group-hover:opacity-25 group-hover:-translate-x-0.5",
+          "group-hover:opacity-40 motion-safe:group-hover:-translate-x-0.5",
           d.textMuted,
         )}
+        aria-hidden="true"
       />
     </button>
   );
@@ -742,9 +778,11 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
+      aria-label={label}
       className={cn(
-        "group flex flex-col items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl border p-2.5 sm:p-4 text-center transition-all duration-200",
-        "hover:-translate-y-1 hover:shadow-md active:translate-y-0 active:scale-[0.97]",
+        "group flex flex-col items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl border p-2.5 sm:p-4 text-center transition-all duration-200 min-h-[76px] sm:min-h-[96px] justify-center",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+        "motion-safe:hover:-translate-y-1 hover:shadow-md active:translate-y-0 active:scale-[0.97]",
         d.card,
         d.cardHover,
         d.border,
@@ -752,9 +790,10 @@ function QuickAction({
     >
       <div
         className={cn(
-          "flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl transition-all duration-200 group-hover:scale-110",
+          "flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl transition-all duration-200 motion-safe:group-hover:scale-110",
           color,
         )}
+        aria-hidden="true"
       >
         {icon}
       </div>
@@ -812,6 +851,7 @@ function RecentItem({
 
   return (
     <div
+      role="listitem"
       className={cn(
         "flex items-center gap-2.5 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2.5 sm:py-3 transition-colors duration-150",
         d.hover,
@@ -824,6 +864,7 @@ function RecentItem({
           s.bg,
           s.text,
         )}
+        aria-hidden="true"
       >
         {icon}
         <FaCircle
@@ -860,7 +901,7 @@ function RecentItem({
         <p
           className={cn(
             "text-[10px] sm:text-[11px] truncate mt-0.5",
-            d.textDisabled,
+            d.textMuted,
           )}
         >
           {subtitle}
@@ -871,7 +912,7 @@ function RecentItem({
       <span
         className={cn(
           "text-[9px] sm:text-[10px] shrink-0 tabular-nums font-medium whitespace-nowrap",
-          d.textDisabled,
+          d.textMuted,
         )}
       >
         {time}
@@ -902,7 +943,7 @@ function SectionCard({
 }) {
   const { d } = useDash();
   return (
-    <div
+    <section
       className={cn(
         "rounded-2xl border overflow-hidden transition-shadow duration-300 hover:shadow-md",
         d.card,
@@ -924,6 +965,7 @@ function SectionCard({
                 "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md sm:rounded-lg",
                 d.sectionIcon,
               )}
+              aria-hidden="true"
             >
               {icon}
             </div>
@@ -936,13 +978,18 @@ function SectionCard({
           <button
             type="button"
             onClick={onLink}
+            aria-label={`${linkText} — ${title}`}
             className={cn(
-              "flex items-center gap-1 rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-[11px] font-semibold transition-all duration-200",
+              "flex items-center gap-1 rounded-lg px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-[11px] font-semibold transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50",
               d.sectionLink,
             )}
           >
             <span>{linkText}</span>
-            <FaArrowRight className="h-2 w-2 sm:h-2.5 sm:w-2.5 rotate-180" />
+            <FaArrowRight
+              className="h-2 w-2 sm:h-2.5 sm:w-2.5 rotate-180"
+              aria-hidden="true"
+            />
           </button>
         )}
       </div>
@@ -957,7 +1004,7 @@ function SectionCard({
           children
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -971,10 +1018,11 @@ function EmptyState({ message }: { message: string }) {
           "flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl",
           d.emptyBg,
         )}
+        aria-hidden="true"
       >
         <FaBoxOpen className={cn("h-5 w-5 sm:h-6 sm:w-6", d.emptyIcon)} />
       </div>
-      <p className={cn("text-xs sm:text-sm font-medium", d.textDisabled)}>
+      <p className={cn("text-xs sm:text-sm font-medium", d.textMuted)}>
         {message}
       </p>
     </div>
@@ -985,7 +1033,7 @@ function EmptyState({ message }: { message: string }) {
 function SkeletonList() {
   const { d } = useDash();
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" aria-hidden="true">
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
@@ -993,27 +1041,27 @@ function SkeletonList() {
         >
           <div
             className={cn(
-              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl animate-pulse",
+              "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl motion-safe:animate-pulse",
               d.input,
             )}
           />
           <div className="flex-1 space-y-1.5 sm:space-y-2">
             <div
               className={cn(
-                "h-3.5 sm:h-4 w-28 sm:w-36 rounded animate-pulse",
+                "h-3.5 sm:h-4 w-28 sm:w-36 rounded motion-safe:animate-pulse",
                 d.input,
               )}
             />
             <div
               className={cn(
-                "h-2.5 sm:h-3 w-20 sm:w-24 rounded animate-pulse",
+                "h-2.5 sm:h-3 w-20 sm:w-24 rounded motion-safe:animate-pulse",
                 d.input,
               )}
             />
           </div>
           <div
             className={cn(
-              "h-2.5 sm:h-3 w-12 sm:w-14 rounded animate-pulse",
+              "h-2.5 sm:h-3 w-12 sm:w-14 rounded motion-safe:animate-pulse",
               d.input,
             )}
           />
@@ -1026,12 +1074,15 @@ function SkeletonList() {
 /* ── User Avatar ── */
 function UserAvatar({
   name,
+  avatarUrl,
   size = "md",
 }: {
   name: string;
+  avatarUrl?: string;
   size?: "sm" | "md";
 }) {
   const { d } = useDash();
+  const normalizedAvatarUrl = normalizeLiaraUrl(avatarUrl ?? "");
   const initials = name
     .split(" ")
     .filter(Boolean)
@@ -1045,11 +1096,18 @@ function UserAvatar({
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-xl sm:rounded-2xl font-black shrink-0 bg-gradient-to-br ring-1",
+        "relative flex items-center justify-center overflow-hidden rounded-xl sm:rounded-2xl font-black shrink-0 bg-gradient-to-br ring-1",
         sizes[size],
         d.avatarBg,
       )}
+      aria-hidden="true"
     >
+      {normalizedAvatarUrl && (
+        <span
+          className="absolute inset-0 z-10 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url("${normalizedAvatarUrl}")` }}
+        />
+      )}
       {initials || "م"}
     </div>
   );
@@ -1072,7 +1130,9 @@ export default function DashboardSection({
   const recentTickets = data?.recentTickets ?? [];
   const loading = isLoading && !data;
 
-  const [authUser, setAuthUser] = useState<AuthUser | null>(() => getAuthUser());
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() =>
+    getAuthUser(),
+  );
 
   useEffect(() => {
     function onProfileUpdated(event: Event) {
@@ -1199,16 +1259,21 @@ export default function DashboardSection({
             "pointer-events-none absolute inset-0 bg-gradient-to-bl",
             d.headerGrad,
           )}
+          aria-hidden="true"
         />
 
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
+            <UserAvatar
+              name={displayName}
+              avatarUrl={authUser?.avatarUrl}
+            />
             <div className="min-w-0">
               {/* Date */}
               <p
                 className={cn(
                   "text-[11px] sm:text-xs font-medium mb-0.5",
-                  d.textDisabled,
+                  d.textMuted,
                 )}
               >
                 {currentDate}
@@ -1223,7 +1288,10 @@ export default function DashboardSection({
               >
                 {greeting}
                 {displayName !== "مدیر" ? `، ${displayName}` : ""}{" "}
-                <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] text-base sm:text-2xl">
+                <span
+                  className="inline-block motion-safe:animate-[wave_2.5s_ease-in-out_infinite] text-base sm:text-2xl"
+                  aria-hidden="true"
+                >
                   👋
                 </span>
               </h1>
@@ -1237,7 +1305,10 @@ export default function DashboardSection({
                       getRoleBadge(authUser.role, d),
                     )}
                   >
-                    <FaShieldHalved className="h-2.5 w-2.5" />
+                    <FaShieldHalved
+                      className="h-2.5 w-2.5"
+                      aria-hidden="true"
+                    />
                     {getRolePersian(authUser.role)}
                   </span>
                 )}
@@ -1245,8 +1316,9 @@ export default function DashboardSection({
                   <span
                     className={cn(
                       "text-[10px] sm:text-[11px] font-medium tabular-nums",
-                      d.textDisabled,
+                      d.textMuted,
                     )}
+                    dir="ltr"
                   >
                     {toPersianDigits(authUser.phoneNumber)}
                   </span>
@@ -1254,7 +1326,7 @@ export default function DashboardSection({
                 <p
                   className={cn(
                     "text-[11px] sm:text-xs hidden lg:block",
-                    d.textDisabled,
+                    d.textMuted,
                   )}
                 >
                   • خلاصه وضعیت سیستم
@@ -1270,11 +1342,15 @@ export default function DashboardSection({
                 "flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[10px] sm:text-[11px] font-semibold",
                 d.onlineBg,
               )}
+              role="status"
             >
-              <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
+              <span
+                className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2"
+                aria-hidden="true"
+              >
                 <span
                   className={cn(
-                    "absolute inline-flex h-full w-full animate-ping rounded-full opacity-70",
+                    "absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full opacity-70",
                     d.onlinePing,
                   )}
                 />
@@ -1297,8 +1373,12 @@ export default function DashboardSection({
               "mt-3 sm:mt-4 flex items-center gap-2 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3",
               d.errorBg,
             )}
+            role="alert"
           >
-            <FaClock className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <FaClock
+              className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0"
+              aria-hidden="true"
+            />
             <p className="text-[11px] sm:text-xs font-medium">
               {error instanceof Error
                 ? error.message
@@ -1309,7 +1389,10 @@ export default function DashboardSection({
       </div>
 
       {/* ═══ Main Stats ═══ */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+      <section
+        aria-label="آمار کلیدی"
+        className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4"
+      >
         <StatCard
           icon={<FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />}
           label="کل کاربران"
@@ -1352,10 +1435,13 @@ export default function DashboardSection({
           loading={loading}
           onClick={() => navigate("tickets")}
         />
-      </div>
+      </section>
 
       {/* ═══ Mini Stats ═══ */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <section
+        aria-label="آمار تکمیلی"
+        className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 xl:grid-cols-6"
+      >
         {miniStats.map((item) => (
           <MiniStat
             key={item.label}
@@ -1366,7 +1452,7 @@ export default function DashboardSection({
             loading={loading}
           />
         ))}
-      </div>
+      </section>
 
       {/* ═══ Bottom Grid ═══ */}
       <div className="grid gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-3">
@@ -1400,7 +1486,7 @@ export default function DashboardSection({
           isEmpty={recentUsers.length === 0}
           emptyMessage="کاربر جدیدی یافت نشد"
         >
-          <div className="space-y-0.5">
+          <div className="space-y-0.5" role="list">
             {recentUsers.map((user) => (
               <RecentItem
                 key={String(user._id ?? user.id ?? user.phoneNumber)}
@@ -1425,7 +1511,7 @@ export default function DashboardSection({
           isEmpty={recentTickets.length === 0}
           emptyMessage="تیکتی یافت نشد"
         >
-          <div className="space-y-0.5">
+          <div className="space-y-0.5" role="list">
             {recentTickets.map((ticket) => {
               const si = ticketStatusInfo(ticket.status);
               return (

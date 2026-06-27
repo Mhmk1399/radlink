@@ -56,9 +56,9 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#111827" },
+                    backgroundColor: { mobile: "#064789" },
                     borderRadius: { mobile: 28 },
-                    borderColor: { mobile: "#1f2937" },
+                    borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -67,7 +67,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                 label: "پوشش",
                 allowedStyleKeys: ["backgroundColor"],
                 style: {
-                    backgroundColor: { mobile: "rgba(0,0,0,0.45)" },
+                    backgroundColor: { mobile: "rgba(6,71,137,0.45)" },
                 },
             },
             title: {
@@ -83,7 +83,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                 label: "توضیحات",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "rgba(255,255,255,0.86)" },
+                    color: { mobile: "#EBF2FA" },
                     fontSize: { mobile: 15, tablet: 17, desktop: 18 },
                 },
             },
@@ -99,11 +99,11 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    color: { mobile: "#111827" },
-                    backgroundColor: { mobile: "#ffffff" },
+                    color: { mobile: "#064789" },
+                    backgroundColor: { mobile: "#EBF2FA" },
                     fontSize: { mobile: 15, tablet: 16, desktop: 16 },
                     borderRadius: { mobile: 14 },
-                    borderColor: { mobile: "#ffffff" },
+                    borderColor: { mobile: "#EBF2FA" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -119,9 +119,9 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                 ],
                 style: {
                     color: { mobile: "#ffffff" },
-                    backgroundColor: { mobile: "rgba(0,0,0,0.35)" },
+                    backgroundColor: { mobile: "rgba(6,71,137,0.35)" },
                     borderRadius: { mobile: 999 },
-                    borderColor: { mobile: "rgba(255,255,255,0.2)" },
+                    borderColor: { mobile: "rgba(235,242,250,0.2)" },
                     borderWidth: { mobile: 1 },
                 },
             },
@@ -134,7 +134,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     "borderWidth",
                 ],
                 style: {
-                    backgroundColor: { mobile: "rgba(255,255,255,0.55)" },
+                    backgroundColor: { mobile: "rgba(235,242,250,0.55)" },
                     borderRadius: { mobile: 999 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },

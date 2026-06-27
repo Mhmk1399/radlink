@@ -49,13 +49,13 @@ export function createDefaultSeparatorBlock(order: number): PageBlock {
                 ],
                 style: {
                     backgroundColor: {
-                        mobile: "#d1d5db",
+                        mobile: "#427AA1",
                     },
                     borderRadius: {
                         mobile: 999,
                     },
                     borderColor: {
-                        mobile: "#d1d5db",
+                        mobile: "#427AA1",
                     },
                     borderWidth: {
                         mobile: 1,
@@ -77,10 +77,10 @@ export function createDefaultSeparatorBlock(order: number): PageBlock {
                 ],
                 style: {
                     color: {
-                        mobile: "#9ca3af",
+                        mobile: "#427AA1",
                     },
                     backgroundColor: {
-                        mobile: "#ffffff",
+                        mobile: "#EBF2FA",
                     },
                     fontSize: {
                         mobile: 18,
@@ -91,7 +91,7 @@ export function createDefaultSeparatorBlock(order: number): PageBlock {
                         mobile: 999,
                     },
                     borderColor: {
-                        mobile: "#e5e7eb",
+                        mobile: "#427AA1",
                     },
                     borderWidth: {
                         mobile: 1,

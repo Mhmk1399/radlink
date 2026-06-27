@@ -1,6 +1,6 @@
 "use client";
 
- import styled from "styled-components";
+import styled from "styled-components";
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
 import { InlineEditableText } from "@/builder/blocks/shared/InlineEditableText";
 import {
@@ -8,7 +8,103 @@ import {
   sharedBlockKeyframes,
 } from "@/builder/blocks/shared/responsiveStyleToCss";
 import type { BlockComponentProps } from "@/types/blocks/builder.types";
+import { useRef } from "react";
 
+// ─── Add this hook above the component ──────────────────────────────────────────
+
+function useDragScroll() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const velX = useRef(0);
+  const lastX = useRef(0);
+  const animFrame = useRef<number>(0);
+  const isDragging = useRef(false);
+
+  const stopMomentum = () => {
+    cancelAnimationFrame(animFrame.current);
+  };
+
+  const startMomentum = () => {
+    stopMomentum();
+    const loop = () => {
+      if (!ref.current) return;
+      velX.current *= 0.92; // friction
+      if (Math.abs(velX.current) < 0.5) return;
+      ref.current.scrollLeft -= velX.current;
+      animFrame.current = requestAnimationFrame(loop);
+    };
+    animFrame.current = requestAnimationFrame(loop);
+  };
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    stopMomentum();
+    isDown.current = true;
+    isDragging.current = false;
+    startX.current = e.pageX - ref.current.offsetLeft;
+    scrollLeft.current = ref.current.scrollLeft;
+    lastX.current = e.pageX;
+    velX.current = 0;
+    ref.current.style.cursor = "grabbing";
+    ref.current.style.userSelect = "none";
+  };
+
+  const onMouseLeave = () => {
+    if (!ref.current || !isDown.current) return;
+    isDown.current = false;
+    isDragging.current = false;
+    ref.current.style.cursor = "grab";
+    ref.current.style.userSelect = "";
+    startMomentum();
+  };
+
+  const onMouseUp = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    isDown.current = false;
+    ref.current.style.cursor = "grab";
+    ref.current.style.userSelect = "";
+    if (isDragging.current) {
+      e.preventDefault();
+      startMomentum();
+    }
+    isDragging.current = false;
+  };
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDown.current || !ref.current) return;
+    e.preventDefault();
+    const x = e.pageX - ref.current.offsetLeft;
+    const walk = x - startX.current;
+
+    // only start dragging after 4px threshold
+    if (!isDragging.current && Math.abs(walk) < 4) return;
+    isDragging.current = true;
+
+    velX.current = e.pageX - lastX.current;
+    lastX.current = e.pageX;
+    ref.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  // prevent click firing after drag
+  const onClick = (e: React.MouseEvent) => {
+    if (isDragging.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  return {
+    ref,
+    onMouseDown,
+    onMouseLeave,
+    onMouseUp,
+    onMouseMove,
+    onClick,
+    isDragging,
+  };
+}
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface ProductItem {
@@ -57,13 +153,16 @@ const StyledScrollArea = styled.div<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
   display: flex;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease;
 
-  /* Hide scrollbar but keep functionality */
+  /* snap only when not dragging */
+  &:not([data-dragging="true"]) {
+    scroll-snap-type: x mandatory;
+  }
+
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 
@@ -345,231 +444,258 @@ export default function ProductCardsBlock({
             selectedElementId={selectedElementId}
             onSelectElement={onSelectElement}
           >
-            <StyledScrollArea
-              $styleCss={scrollAreaStyle}
-              className="gap-4 pb-2"
-            >
-              {products.map((product) => {
-                const hasUrl = product.productUrl.length > 0;
-
-                const buttonEl = showButtons && (
-                  <EditablePart
-                    instanceId={block.instanceId}
-                    elementId="button"
-                    mode={mode}
-                    selectedElementId={selectedElementId}
-                    onSelectElement={onSelectElement}
-                  >
-                    <StyledButton
-                      $styleCss={buttonStyle}
-                      className="w-full py-2.5 px-4 mt-auto"
+            {products.length > 0 && (
+              <EditablePart
+                instanceId={block.instanceId}
+                elementId="scrollArea"
+                mode={mode}
+                selectedElementId={selectedElementId}
+                onSelectElement={onSelectElement}
+              >
+                {(() => {
+                  const drag = useDragScroll(); // ← move outside render, see note below
+                  return (
+                    <StyledScrollArea
+                      $styleCss={scrollAreaStyle}
+                      className="gap-4 pb-2"
+                      ref={drag.ref}
+                      onMouseDown={drag.onMouseDown}
+                      onMouseLeave={drag.onMouseLeave}
+                      onMouseUp={drag.onMouseUp}
+                      onMouseMove={drag.onMouseMove}
+                      onClick={drag.onClick}
+                      data-dragging={drag.isDragging ? "true" : undefined}
+                      style={{ cursor: "grab" }}
                     >
-                      <InlineEditableText
-                        value={product.buttonText}
-                        dataKey={`products.${product.id}.buttonText`}
-                        instanceId={block.instanceId}
-                        mode={mode}
-                        onUpdateContent={onUpdateContent}
-                      >
-                        {(text) => <>{text}</>}
-                      </InlineEditableText>
-                    </StyledButton>
-                  </EditablePart>
-                );
+                      {products.map((product) => {
+                        const hasUrl = product.productUrl.length > 0;
 
-                return (
-                  <EditablePart
-                    key={product.id}
-                    instanceId={block.instanceId}
-                    elementId="card"
-                    mode={mode}
-                    selectedElementId={selectedElementId}
-                    onSelectElement={onSelectElement}
-                  >
-                    <StyledCard
-                      $styleCss={cardStyle}
-                      className="w-[260px] min-w-[260px] sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
-                    >
-                      {/* Image */}
-                      <EditablePart
-                        instanceId={block.instanceId}
-                        elementId="image"
-                        mode={mode}
-                        selectedElementId={selectedElementId}
-                        onSelectElement={onSelectElement}
-                      >
-                        <StyledImageWrap
-                          $styleCss={imageStyle}
-                          className="w-full aspect-[4/3]"
-                        >
-                          {product.imageUrl ? (
-                            <img
-                              src={product.imageUrl}
-                              alt={product.altText || product.name}
-                              className="w-full h-full object-cover rounded-[inherit]"
-                              draggable={false}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-[inherit]">
-                              <span className="text-xs text-gray-400 select-none px-3 text-center">
-                                تصویر محصول را وارد کنید
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Badge */}
-                          {product.showBadge && product.badgeText && (
-                            <div className="absolute top-3 right-3">
-                              <EditablePart
-                                instanceId={block.instanceId}
-                                elementId="badge"
-                                mode={mode}
-                                selectedElementId={selectedElementId}
-                                onSelectElement={onSelectElement}
-                              >
-                                <StyledBadge
-                                  $styleCss={badgeStyle}
-                                  className="px-2.5 py-1 leading-tight"
-                                >
-                                  <InlineEditableText
-                                    value={product.badgeText}
-                                    dataKey={`products.${product.id}.badgeText`}
-                                    instanceId={block.instanceId}
-                                    mode={mode}
-                                    onUpdateContent={onUpdateContent}
-                                  >
-                                    {(text) => <>{text}</>}
-                                  </InlineEditableText>
-                                </StyledBadge>
-                              </EditablePart>
-                            </div>
-                          )}
-                        </StyledImageWrap>
-                      </EditablePart>
-
-                      {/* Content */}
-                      <div className="flex flex-col gap-2 p-4 flex-1">
-                        {/* Product name */}
-                        <EditablePart
-                          instanceId={block.instanceId}
-                          elementId="productName"
-                          mode={mode}
-                          selectedElementId={selectedElementId}
-                          onSelectElement={onSelectElement}
-                        >
-                          <StyledProductName
-                            $styleCss={productNameStyle}
-                            className="font-bold leading-snug"
-                          >
-                            <InlineEditableText
-                              value={product.name}
-                              dataKey={`products.${product.id}.name`}
-                              instanceId={block.instanceId}
-                              mode={mode}
-                              onUpdateContent={onUpdateContent}
-                            >
-                              {(text) => <>{text}</>}
-                            </InlineEditableText>
-                          </StyledProductName>
-                        </EditablePart>
-
-                        {/* Product description */}
-                        <EditablePart
-                          instanceId={block.instanceId}
-                          elementId="productDescription"
-                          mode={mode}
-                          selectedElementId={selectedElementId}
-                          onSelectElement={onSelectElement}
-                        >
-                          <StyledProductDescription
-                            $styleCss={productDescriptionStyle}
-                            className="leading-relaxed line-clamp-2"
-                          >
-                            <InlineEditableText
-                              value={product.description}
-                              dataKey={`products.${product.id}.description`}
-                              instanceId={block.instanceId}
-                              mode={mode}
-                              multiline
-                              onUpdateContent={onUpdateContent}
-                            >
-                              {(text) => <>{text}</>}
-                            </InlineEditableText>
-                          </StyledProductDescription>
-                        </EditablePart>
-
-                        {/* Prices */}
-                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                        const buttonEl = showButtons && (
                           <EditablePart
                             instanceId={block.instanceId}
-                            elementId="price"
+                            elementId="button"
                             mode={mode}
                             selectedElementId={selectedElementId}
                             onSelectElement={onSelectElement}
                           >
-                            <StyledPrice $styleCss={priceStyle}>
+                            <StyledButton
+                              $styleCss={buttonStyle}
+                              className="w-full py-2.5 px-4 mt-auto"
+                            >
                               <InlineEditableText
-                                value={product.price}
-                                dataKey={`products.${product.id}.price`}
+                                value={product.buttonText}
+                                dataKey={`products.${product.id}.buttonText`}
                                 instanceId={block.instanceId}
                                 mode={mode}
                                 onUpdateContent={onUpdateContent}
                               >
                                 {(text) => <>{text}</>}
                               </InlineEditableText>
-                            </StyledPrice>
+                            </StyledButton>
                           </EditablePart>
+                        );
 
-                          {product.showOldPrice && product.oldPrice && (
-                            <EditablePart
-                              instanceId={block.instanceId}
-                              elementId="oldPrice"
-                              mode={mode}
-                              selectedElementId={selectedElementId}
-                              onSelectElement={onSelectElement}
+                        return (
+                          <EditablePart
+                            key={product.id}
+                            instanceId={block.instanceId}
+                            elementId="card"
+                            mode={mode}
+                            selectedElementId={selectedElementId}
+                            onSelectElement={onSelectElement}
+                          >
+                            <StyledCard
+                              $styleCss={cardStyle}
+                              className="w-[260px] min-w-[260px] sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
                             >
-                              <StyledOldPrice $styleCss={oldPriceStyle}>
-                                <InlineEditableText
-                                  value={product.oldPrice}
-                                  dataKey={`products.${product.id}.oldPrice`}
-                                  instanceId={block.instanceId}
-                                  mode={mode}
-                                  onUpdateContent={onUpdateContent}
-                                >
-                                  {(text) => <>{text}</>}
-                                </InlineEditableText>
-                              </StyledOldPrice>
-                            </EditablePart>
-                          )}
-                        </div>
-
-                        {/* Button */}
-                        {showButtons && (
-                          <>
-                            {isEditor || !hasUrl ? (
-                              <div className="mt-auto pt-2">{buttonEl}</div>
-                            ) : (
-                              <a
-                                href={product.productUrl}
-                                target={openInNewTab ? "_blank" : undefined}
-                                rel={
-                                  openInNewTab
-                                    ? "noopener noreferrer"
-                                    : undefined
-                                }
-                                className="no-underline mt-auto pt-2 block"
+                              {/* Image */}
+                              <EditablePart
+                                instanceId={block.instanceId}
+                                elementId="image"
+                                mode={mode}
+                                selectedElementId={selectedElementId}
+                                onSelectElement={onSelectElement}
                               >
-                                {buttonEl}
-                              </a>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </StyledCard>
-                  </EditablePart>
-                );
-              })}
-            </StyledScrollArea>
+                                <StyledImageWrap
+                                  $styleCss={imageStyle}
+                                  className="w-full aspect-4/3"
+                                >
+                                  {product.imageUrl ? (
+                                    <img
+                                      src={product.imageUrl}
+                                      alt={product.altText || product.name}
+                                      className="w-full h-full object-cover rounded-[inherit]"
+                                      draggable={false}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-[inherit]">
+                                      <span className="text-xs text-gray-400 select-none px-3 text-center">
+                                        تصویر محصول را وارد کنید
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Badge */}
+                                  {product.showBadge && product.badgeText && (
+                                    <div className="absolute top-3 right-3">
+                                      <EditablePart
+                                        instanceId={block.instanceId}
+                                        elementId="badge"
+                                        mode={mode}
+                                        selectedElementId={selectedElementId}
+                                        onSelectElement={onSelectElement}
+                                      >
+                                        <StyledBadge
+                                          $styleCss={badgeStyle}
+                                          className="px-2.5 py-1 leading-tight"
+                                        >
+                                          <InlineEditableText
+                                            value={product.badgeText}
+                                            dataKey={`products.${product.id}.badgeText`}
+                                            instanceId={block.instanceId}
+                                            mode={mode}
+                                            onUpdateContent={onUpdateContent}
+                                          >
+                                            {(text) => <>{text}</>}
+                                          </InlineEditableText>
+                                        </StyledBadge>
+                                      </EditablePart>
+                                    </div>
+                                  )}
+                                </StyledImageWrap>
+                              </EditablePart>
+
+                              {/* Content */}
+                              <div className="flex flex-col gap-2 p-4 flex-1">
+                                {/* Product name */}
+                                <EditablePart
+                                  instanceId={block.instanceId}
+                                  elementId="productName"
+                                  mode={mode}
+                                  selectedElementId={selectedElementId}
+                                  onSelectElement={onSelectElement}
+                                >
+                                  <StyledProductName
+                                    $styleCss={productNameStyle}
+                                    className="font-bold leading-snug"
+                                  >
+                                    <InlineEditableText
+                                      value={product.name}
+                                      dataKey={`products.${product.id}.name`}
+                                      instanceId={block.instanceId}
+                                      mode={mode}
+                                      onUpdateContent={onUpdateContent}
+                                    >
+                                      {(text) => <>{text}</>}
+                                    </InlineEditableText>
+                                  </StyledProductName>
+                                </EditablePart>
+
+                                {/* Product description */}
+                                <EditablePart
+                                  instanceId={block.instanceId}
+                                  elementId="productDescription"
+                                  mode={mode}
+                                  selectedElementId={selectedElementId}
+                                  onSelectElement={onSelectElement}
+                                >
+                                  <StyledProductDescription
+                                    $styleCss={productDescriptionStyle}
+                                    className="leading-relaxed line-clamp-2"
+                                  >
+                                    <InlineEditableText
+                                      value={product.description}
+                                      dataKey={`products.${product.id}.description`}
+                                      instanceId={block.instanceId}
+                                      mode={mode}
+                                      multiline
+                                      onUpdateContent={onUpdateContent}
+                                    >
+                                      {(text) => <>{text}</>}
+                                    </InlineEditableText>
+                                  </StyledProductDescription>
+                                </EditablePart>
+
+                                {/* Prices */}
+                                <div className="flex items-center gap-2 flex-wrap mt-1">
+                                  <EditablePart
+                                    instanceId={block.instanceId}
+                                    elementId="price"
+                                    mode={mode}
+                                    selectedElementId={selectedElementId}
+                                    onSelectElement={onSelectElement}
+                                  >
+                                    <StyledPrice $styleCss={priceStyle}>
+                                      <InlineEditableText
+                                        value={product.price}
+                                        dataKey={`products.${product.id}.price`}
+                                        instanceId={block.instanceId}
+                                        mode={mode}
+                                        onUpdateContent={onUpdateContent}
+                                      >
+                                        {(text) => <>{text}</>}
+                                      </InlineEditableText>
+                                    </StyledPrice>
+                                  </EditablePart>
+
+                                  {product.showOldPrice && product.oldPrice && (
+                                    <EditablePart
+                                      instanceId={block.instanceId}
+                                      elementId="oldPrice"
+                                      mode={mode}
+                                      selectedElementId={selectedElementId}
+                                      onSelectElement={onSelectElement}
+                                    >
+                                      <StyledOldPrice $styleCss={oldPriceStyle}>
+                                        <InlineEditableText
+                                          value={product.oldPrice}
+                                          dataKey={`products.${product.id}.oldPrice`}
+                                          instanceId={block.instanceId}
+                                          mode={mode}
+                                          onUpdateContent={onUpdateContent}
+                                        >
+                                          {(text) => <>{text}</>}
+                                        </InlineEditableText>
+                                      </StyledOldPrice>
+                                    </EditablePart>
+                                  )}
+                                </div>
+
+                                {/* Button */}
+                                {showButtons && (
+                                  <>
+                                    {isEditor || !hasUrl ? (
+                                      <div className="mt-auto pt-2">
+                                        {buttonEl}
+                                      </div>
+                                    ) : (
+                                      <a
+                                        href={product.productUrl}
+                                        target={
+                                          openInNewTab ? "_blank" : undefined
+                                        }
+                                        rel={
+                                          openInNewTab
+                                            ? "noopener noreferrer"
+                                            : undefined
+                                        }
+                                        className="no-underline mt-auto pt-2 block"
+                                      >
+                                        {buttonEl}
+                                      </a>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </StyledCard>
+                          </EditablePart>
+                        );
+                      })}
+                    </StyledScrollArea>
+                  );
+                })()}
+              </EditablePart>
+            )}
           </EditablePart>
         )}
       </StyledContainer>

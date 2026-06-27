@@ -83,6 +83,7 @@ type SimplePageBuilderProps = {
   initialUrl?: string;
   initialCategoryId?: string;
   initialThumbnail?: string;
+  suppressSmartSuggestions?: boolean;
 };
 
 type CategoryOption = {
@@ -115,7 +116,7 @@ type CreatedPageResponse = {
 let categoryOptionsCache: CategoryOption[] | null = null;
 let categoryOptionsRequestFailed = false;
 
-const BUILDER_META_SUFFIX = "Radlink Builder";
+const BUILDER_META_SUFFIX = "صفحه‌ساز رادلینک";
 
 function compactMetaText(value: string | undefined, fallback: string) {
   const text = value?.trim() || fallback;
@@ -134,12 +135,12 @@ function getBuilderActionLabel({
   sourceTemplateId?: string;
 }) {
   if (saveMode === "template") {
-    return templateId ? "Edit template" : "Create template";
+    return templateId ? "ویرایش تمپلیت" : "ساخت تمپلیت";
   }
 
-  if (pageId) return "Edit page";
-  if (sourceTemplateId) return "Create page from template";
-  return "Create page";
+  if (pageId) return "ویرایش صفحه";
+  if (sourceTemplateId) return "ساخت صفحه از تمپلیت";
+  return "ساخت صفحه";
 }
 
 function upsertMetaTag(selector: string, attrs: Record<string, string>) {
@@ -367,6 +368,7 @@ export default function SimplePageBuilder({
   initialUrl,
   initialCategoryId,
   initialThumbnail,
+  suppressSmartSuggestions = false,
 }: SimplePageBuilderProps = {}) {
   const initialState = useMemo(() => createInitialBuilderState(), []);
 
@@ -557,12 +559,12 @@ export default function SimplePageBuilder({
     });
     const entityName = compactMetaText(
       pageTitle,
-      saveMode === "template" ? "Untitled template" : "Untitled page",
+      saveMode === "template" ? "تمپلیت بدون عنوان" : "صفحه بدون عنوان",
     );
     const title = `${actionLabel}: ${entityName} | ${BUILDER_META_SUFFIX}`;
     const description = compactMetaText(
       pageDescription,
-      `${actionLabel} "${entityName}" in ${BUILDER_META_SUFFIX}.`,
+      `${actionLabel} «${entityName}» در ${BUILDER_META_SUFFIX}.`,
     );
 
     return { title, description };
@@ -1733,6 +1735,7 @@ export default function SimplePageBuilder({
             {/* Canvas */}
             <CanvasContent
               onApplyTemplate={applyTemplate}
+              showSmartSuggestions={!suppressSmartSuggestions}
               sortedBlocks={sortedBlocks}
               availableBlockTypes={catalogBlockTypes}
               blockIds={blockIds}

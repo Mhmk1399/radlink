@@ -41,9 +41,9 @@ export function createDefaultVideoBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#ffffff" },
+                    backgroundColor: { mobile: "#EBF2FA" },
                     borderRadius: { mobile: 20 },
-                    borderColor: { mobile: "#e5e7eb" },
+                    borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -52,7 +52,7 @@ export function createDefaultVideoBlock(order: number): PageBlock {
                 label: "عنوان",
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
-                    color: { mobile: "#111827" },
+                    color: { mobile: "#064789" },
                     fontSize: { mobile: 20 },
                     animation: "none",
                 },
@@ -61,7 +61,7 @@ export function createDefaultVideoBlock(order: number): PageBlock {
                 label: "توضیحات",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#6b7280" },
+                    color: { mobile: "#427AA1" },
                     fontSize: { mobile: 14 },
                 },
             },
@@ -70,7 +70,7 @@ export function createDefaultVideoBlock(order: number): PageBlock {
                 allowedStyleKeys: ["borderRadius", "borderColor", "borderWidth"],
                 style: {
                     borderRadius: { mobile: 14 },
-                    borderColor: { mobile: "#e5e7eb" },
+                    borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 0 },
                 },
             },
@@ -87,7 +87,7 @@ export function createDefaultVideoBlock(order: number): PageBlock {
                 ],
                 style: {
                     color: { mobile: "#ffffff" },
-                    backgroundColor: { mobile: "#111827" },
+                    backgroundColor: { mobile: "#064789" },
                     fontSize: { mobile: 14 },
                     borderRadius: { mobile: 12 },
                     borderColor: { mobile: "transparent" },

@@ -49,6 +49,28 @@ function getPageLabel(value: unknown) {
   return toText(value.title) || toText(value.url) || getId(value);
 }
 
+function getCreatedAt(value: unknown, id: string) {
+  if (typeof value === "string" && value) return value;
+  if (!/^[a-f\d]{24}$/i.test(id)) return "";
+
+  const timestamp = Number.parseInt(id.slice(0, 8), 16) * 1000;
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
+function formatFaDate(value?: string) {
+  if (!value) return "-";
+  try {
+    return new Intl.DateTimeFormat("fa-IR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Tehran",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
 function openDownload(dataUrl: string, filename: string) {
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -69,6 +91,7 @@ type QRCodeRow = {
   imageurl?: string;
   shortcode: string;
   isActive: boolean;
+  createdAt?: string;
   [key: string]: unknown;
 };
 
@@ -111,10 +134,11 @@ export default function QRCodesSection({
                   isDark ? "bg-white" : "bg-white",
                 )}
               >
-                <img
-                  src={value}
-                  alt={`QR ${row.shortcode}`}
-                  className="h-full w-full object-contain"
+                <span
+                  role="img"
+                  aria-label={`QR ${row.shortcode}`}
+                  className="h-full w-full bg-contain bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url("${value}")` }}
                 />
               </span>
               <span className={cn("font-mono text-xs", t.textDisabled)}>
@@ -191,6 +215,19 @@ export default function QRCodesSection({
         ),
       },
       {
+        key: "createdAt",
+        label: "تاریخ ایجاد",
+        editable: false,
+        sortable: true,
+        dateFilter: true,
+        copyable: true,
+        render: (value) => (
+          <span className={cn("text-xs", t.textMuted)}>
+            {formatFaDate(typeof value === "string" ? value : undefined)}
+          </span>
+        ),
+      },
+      {
         key: "isActive",
         label: "وضعیت",
         inputType: "checkbox",
@@ -258,6 +295,7 @@ export default function QRCodesSection({
             imageurl: toText(qr.imageurl),
             shortcode: toText(qr.shortcode),
             isActive: qr.isActive !== false,
+            createdAt: getCreatedAt(qr.createdAt, id),
           };
         });
       },

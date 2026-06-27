@@ -77,6 +77,7 @@
 // src/app/api/pages/[pageId]/route.ts
 
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
@@ -193,6 +194,8 @@ export const GET = compose(
             { status: 404 }
         );
     }
+
+    revalidatePath("/[url]", "page");
 
     return NextResponse.json({ page });
 });
@@ -384,6 +387,8 @@ export const DELETE = compose(
             { status: 404 }
         );
     }
+
+    revalidatePath("/[url]", "page");
 
     return NextResponse.json({
         message: "صفحه حذف شد",

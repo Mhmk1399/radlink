@@ -19,6 +19,9 @@ import { VideoBlock } from "./videos/VideoBlock";
 import { contactInfoSchema } from "./contact-info/contactInfo.schema";
 import { createDefaultContactInfoBlock } from "./contact-info/contactInfo.default";
 import { ContactInfoBlock } from "./contact-info/ContactInfoBlock";
+import { contactSaveSchema } from "./contact-save/contactSave.schema";
+import { createDefaultContactSaveBlock } from "./contact-save/contactSave.default";
+import { ContactSaveBlock } from "./contact-save/ContactSaveBlock";
 
 import { ctaSchema } from "./CTA/cta.schema";
 import { createDefaultCtaBlock } from "./CTA/cta.default";
@@ -83,6 +86,7 @@ import {
     HiOutlinePlayCircle,
     HiOutlineShoppingBag,
     HiOutlineCalendarDays,
+    HiOutlineUserPlus,
 } from "react-icons/hi2";
 
 export type BlockCategory =
@@ -194,6 +198,18 @@ export const blockRegistry = {
         createDefaultBlock: createDefaultContactInfoBlock,
     },
 
+    contactSave: {
+        type: "contactSave",
+        label: "ذخیره مخاطب",
+        description:
+            "دکمه ذخیره نام، نام خانوادگی و شماره همراه به‌عنوان مخاطب در آیفون و اندروید.",
+        icon: React.createElement(HiOutlineUserPlus, { size: 18 }),
+        category: "contact",
+        component: ContactSaveBlock,
+        schema: contactSaveSchema,
+        createDefaultBlock: createDefaultContactSaveBlock,
+    },
+
     mapLinks: {
         type: "mapLinks",
         label: "لینک نقشه",
@@ -286,7 +302,6 @@ export const blockRegistry = {
         createDefaultBlock: createDefaultBookingFormBlock,
     },
 } as const;
-console.log(Object.keys(blockRegistry));
 
 export type BlockType = keyof typeof blockRegistry;
 

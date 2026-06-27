@@ -127,13 +127,13 @@ export default function EditPageBuilder() {
 
         // Update document title
         if (page.title) {
-          document.title = `${page.title} - ویرایش`;
+          document.title = `${page.title} - ویرایش صفحه`;
         }
-        const metadataPageTitle = page.title || "Untitled page";
+        const metadataPageTitle = page.title || "صفحه بدون عنوان";
         setClientMetadata(
-          `Edit page: ${metadataPageTitle} | Radlink Builder`,
+          `ویرایش صفحه: ${metadataPageTitle} | صفحه‌ساز رادلینک`,
           page.description ||
-            `Edit page "${metadataPageTitle}" in Radlink Builder.`,
+            `ویرایش صفحه «${metadataPageTitle}» در صفحه‌ساز رادلینک.`,
         );
       } catch (err) {
         setError(err instanceof Error ? err.message : "خطا در بارگذاری صفحه");

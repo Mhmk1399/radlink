@@ -1,20 +1,67 @@
-"use server";
-
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Types } from "mongoose";
+import { cache } from "react";
 import { connectDB } from "@/lib/data/db";
+import Notification from "@/models/notification";
 import Page from "@/models/pages";
+import PageNotificationModal, {
+  type PublicPageNotification,
+} from "./PageNotificationModal";
 import PageRenderer from "./PageRenderer";
 
 type Props = {
   params: Promise<{ url: string }>;
 };
 
+export const revalidate = 60;
+
+const getPublicPage = cache(async (url: string) => {
+  await connectDB();
+  return Page.findOne({ url }).lean();
+});
+
+function toClientValue(value: unknown): unknown {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (value instanceof Types.ObjectId) return value.toString();
+  if (value instanceof Date) return value.toISOString();
+  if (Buffer.isBuffer(value)) return value.toString("base64");
+  if (Array.isArray(value)) return value.map(toClientValue);
+
+  if (value instanceof Map) {
+    return Object.fromEntries(
+      Array.from(value.entries(), ([key, item]) => [
+        String(key),
+        toClientValue(item),
+      ]),
+    );
+  }
+
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        toClientValue(item),
+      ]),
+    );
+  }
+
+  return String(value);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { url } = await params;
 
-  await connectDB();
-  const page = await Page.findOne({ url }).lean();
+  const page = await getPublicPage(url);
 
   if (!page) {
     return {
@@ -43,7 +90,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: String(page.seo?.title || page.title || ""),
       description: String(page.seo?.description || page.description || ""),
-      images: page.seo?.ogImage ? [String(page.seo.ogImage)] : [],
+      images:
+        page.seo?.ogImage || page.thumbnail
+          ? [String(page.seo?.ogImage || page.thumbnail)]
+          : [],
       type: "website",
       locale: "fa_IR",
     },
@@ -53,15 +103,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PageRoute({ params }: Props) {
   const { url } = await params;
 
-  await connectDB();
-
-  const page = await Page.findOne({ url }).lean();
-  console.log(page);
+  const page = await getPublicPage(url);
 
   if (!page) return notFound();
 
+  const rawNotifications = await Notification.find({
+    $or: [{ page: page._id }, { isGlobal: true }],
+  })
+    .select("title subtitle description message closeable createdAt")
+    .sort({ createdAt: -1 })
+    .lean();
+  const notifications: PublicPageNotification[] = rawNotifications
+    .map((notification) => ({
+      id: String(notification._id),
+      title: String(notification.title || "اعلان"),
+      subtitle: String(notification.subtitle || ""),
+      description: String(
+        notification.description || notification.message || "",
+      ),
+      closeable: Boolean(notification.closeable),
+    }))
+    .filter((notification) => notification.description);
+  const clientBlocks = (page.blocks ?? []).map(
+    (block) => toClientValue(block) as Record<string, unknown>,
+  );
+
   return (
     <div className="w-full px-2 pt-2 pb-10 bg-white">
+      <PageNotificationModal notifications={notifications} />
       <header
         className="mb-8 rounded-3xl border border-neutral-200 bg-neutral-50 p-6 shadow-sm"
         dir="rtl"
@@ -76,12 +145,21 @@ export default async function PageRoute({ params }: Props) {
 
       <section className="space-y-6 overflow-hidden">
         <PageRenderer
-          blocks={page.blocks ?? []}
+          blocks={clientBlocks}
           pageData={{
             title: page.title,
             description: page.description,
             favicon: page.favicon,
-            settings: page.settings,
+            settings: {
+              favicon:
+                typeof page.settings?.favicon === "string"
+                  ? page.settings.favicon
+                  : undefined,
+              appleTouchIcon:
+                typeof page.settings?.appleTouchIcon === "string"
+                  ? page.settings.appleTouchIcon
+                  : undefined,
+            },
           }}
         />
       </section>

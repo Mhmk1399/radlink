@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { createLiaraS3Client, getLiaraBucketName, getLiaraEndpoint } from "@/lib/s3";
+import { getLiaraEndpoint } from "@/lib/s3";
+import { uploadLiaraObject } from "@/lib/liaraStorage";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import type { AuthRequest } from "@/lib/auth/types";
@@ -26,23 +26,6 @@ function jsonError(message: string, status = 500, extra?: Record<string, unknown
         { success: false, message, error: message, ...(extra ?? {}) },
         { status }
     );
-}
-
-function buildLiaraPublicUrl(bucketName: string, key: string, endpoint: string) {
-    const configuredBase =
-        process.env.LIARA_PUBLIC_URL ||
-        process.env.NEXT_PUBLIC_LIARA_PUBLIC_URL ||
-        "";
-
-    if (configuredBase) {
-        return `${configuredBase.replace(/\/+$/, "")}/${key}`;
-    }
-
-    if (endpoint.includes("storage.iran.liara.site")) {
-        return `${endpoint.replace(/\/+$/, "")}/${bucketName}/${key}`;
-    }
-
-    return `https://${bucketName}.storage.c2.liara.space/${key}`;
 }
 
 export const POST = compose(
@@ -106,38 +89,35 @@ export const POST = compose(
             cleanFileName = `${timestamp}_${randomId}_${cleanFileName}`;
         }
 
-        const key = `uploads/${cleanFileName}`;
+        const key = `rad/${cleanFileName}`;
 
         // Convert file to buffer
         const buffer = Buffer.from(await file.arrayBuffer());
 
         // URL-encode metadata values to handle special characters (e.g., Persian in originalName)
         // Upload to Liara Object Storage
-        const bucketName = getLiaraBucketName();
-        const activeEndpoint = getLiaraEndpoint();
-        const uploadCommand = new PutObjectCommand({
-            Bucket: bucketName,
-            Key: key,
-            Body: buffer,
-            ContentType: file.type,
-            Metadata: {
+        const uploadResult = await uploadLiaraObject({
+            key,
+            body: buffer,
+            contentType: file.type,
+            metadata: {
                 originalName: encodeURIComponent(file.name),
                 uploadedAt: new Date().toISOString(),
                 fileSize: file.size.toString(),
             },
+            cacheControl: "public, max-age=31536000, immutable",
         });
-
-
-        const uploadResult = await createLiaraS3Client().send(uploadCommand);
-        console.log(uploadResult);
 
         // Generate public URL for Liara Object Storage
 
-        const publicUrl = buildLiaraPublicUrl(bucketName, key, activeEndpoint);
+        const publicUrl = uploadResult.url;
         const fileDoc = await FileModel.create({
             filename: file.name,
             path: publicUrl,
             owner: req.ctx.user!._id,
+            mimeType: file.type,
+            size: file.size,
+            kind: "upload",
         });
 
         return NextResponse.json({

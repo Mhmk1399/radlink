@@ -39,19 +39,26 @@ export function useHashRoute(defaultSection: AdminSection = "dashboard") {
 
         readHash();
         window.addEventListener("hashchange", readHash);
-        return () => window.removeEventListener("hashchange", readHash);
+        window.addEventListener("popstate", readHash);
+        return () => {
+            window.removeEventListener("hashchange", readHash);
+            window.removeEventListener("popstate", readHash);
+        };
     }, [defaultSection]);
 
     // Navigate to a section
     const navigate = useCallback((to: AdminSection) => {
-        if (to === "dashboard") {
-            // Remove hash entirely for dashboard
-            history.pushState(null, "", window.location.pathname);
-            setSection("dashboard");
-        } else {
-            window.location.hash = to;
-            // hashchange event will update state
-        }
+        const nextUrl = new URL(window.location.href);
+        nextUrl.hash = to === "dashboard" ? "" : to;
+
+        // Keep Next.js' internal history state attached to hash-only entries.
+        // Without it, Back can restore the URL while leaving the previous route UI mounted.
+        window.history.pushState(
+            window.history.state,
+            "",
+            `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
+        );
+        setSection(to);
     }, []);
 
     return { section, navigate };

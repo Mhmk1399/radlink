@@ -37,9 +37,9 @@ export function createDefaultTestimonialBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#ffffff" },
+                    backgroundColor: { mobile: "#EBF2FA" },
                     borderRadius: { mobile: 20 },
-                    borderColor: { mobile: "#e5e7eb" },
+                    borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -48,7 +48,7 @@ export function createDefaultTestimonialBlock(order: number): PageBlock {
                 label: "متن نظر",
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
-                    color: { mobile: "#1f2937" },
+                    color: { mobile: "#064789" },
                     fontSize: { mobile: 16 },
                     animation: "none",
                 },
@@ -57,7 +57,7 @@ export function createDefaultTestimonialBlock(order: number): PageBlock {
                 label: "نام",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#111827" },
+                    color: { mobile: "#064789" },
                     fontSize: { mobile: 16 },
                 },
             },
@@ -65,7 +65,7 @@ export function createDefaultTestimonialBlock(order: number): PageBlock {
                 label: "سمت",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#6b7280" },
+                    color: { mobile: "#427AA1" },
                     fontSize: { mobile: 13 },
                 },
             },
@@ -78,9 +78,9 @@ export function createDefaultTestimonialBlock(order: number): PageBlock {
                     "borderWidth",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#f3f4f6" },
+                    backgroundColor: { mobile: "#EBF2FA" },
                     borderRadius: { mobile: 999 },
-                    borderColor: { mobile: "#e5e7eb" },
+                    borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 2 },
                 },
             },

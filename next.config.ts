@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
         hostname: "arziplus.storage.c2.liara.space",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "arziplus.storage.c2.liara.site",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "storadge.arziplus.com",
+        pathname: "/**",
+      },
     
     ],
   },

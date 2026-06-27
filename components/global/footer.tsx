@@ -284,7 +284,7 @@ export function SmartLandingFooter() {
               </Link>
 
               <Link
-                href="/login"
+                href="/auth"
                 className={cn(
                   components.ghostButton,
                   "w-full justify-center px-6",

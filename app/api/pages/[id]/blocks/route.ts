@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
@@ -102,5 +103,6 @@ export const PATCH = compose(
     }
 
     await page.save();
+    revalidatePath("/[url]", "page");
     return NextResponse.json({ blocks: page.blocks });
 });

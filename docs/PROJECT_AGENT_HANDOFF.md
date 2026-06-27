@@ -1,0 +1,668 @@
+# Radlink Project Agent Handoff
+
+Last reviewed: 2026-06-27  
+Workspace: `D:\Next\radlink`
+
+## Purpose
+
+This document is the durable context for another coding agent continuing work on Radlink. It summarizes the architecture, major features implemented during the current development thread, important files, runtime behavior, access-control rules, known risks, and recommended verification steps.
+
+## Current Repository State
+
+- The admin, builder, access, ticket, profile, notification, QR, and user-management work described here is committed in the repository.
+- At the time this document was created, the only unrelated dirty files were:
+  - `app/page.tsx`
+  - `components/global/footer.tsx`
+- Do not revert those unrelated changes unless the user explicitly requests it.
+- Recent relevant commits:
+  - `7b4001a edit ui ux`
+  - `48b7732 bugs and authorize`
+
+## Technology Stack
+
+- Next.js `16.2.6` with App Router
+- React `19.2.4`
+- TypeScript
+- MongoDB and Mongoose `8.24`
+- SWR `2.4`
+- Zustand
+- Tailwind CSS `4`
+- `@dnd-kit/*` for builder drag-and-drop
+- `qrcode` for local, non-expiring QR generation
+- AWS SDK S3 client for Liara Object Storage
+- `react-multi-date-picker` and Persian calendar support
+- JWT authentication with `auth_token` stored in `localStorage`
+
+Important repository rule: before changing Next.js behavior, read the relevant documentation under `node_modules/next/dist/docs/` because this project uses a version with breaking changes.
+
+## High-Level Architecture
+
+```mermaid
+flowchart TD
+  Browser[Admin or Builder UI] --> Token[auth_token]
+  Token --> Me[/api/auth/me]
+  Me --> AccessHook[useAccess / AdminAuthContext]
+  AccessHook --> AdminUI[Admin sections and DynamicTable]
+  AccessHook --> BuilderGuard[Builder authorization]
+
+  AdminUI --> API[App Router API routes]
+  BuilderGuard --> API
+  API --> Compose[compose + auth middleware]
+  Compose --> AccessRules[Global access rules]
+  AccessRules --> Mongo[(MongoDB)]
+
+  Registry[blockRegistry.ts] --> Sync[/api/blocks/sync]
+  Sync --> BlockDB[(Block documents)]
+  BlockDB --> Builder[PageBuilder block availability]
+
+  Builder --> PageAPI[/api/pages]
+  Builder --> TemplateAPI[/api/templates]
+  PageAPI --> QRService[Local QR generation]
+  QRService --> QRDB[(QR documents)]
+
+  UploadUI --> UploadAPI[/api/uploads]
+  UploadAPI --> Liara[Liara Object Storage]
+  UploadAPI --> FileDB[(File documents)]
+```
+
+## Authentication and Global Authorization
+
+### Core Files
+
+- `contexts/AdminAuthContext.tsx`
+  - Protects `/admin`.
+  - Reads `auth_token`, loads the current user, and redirects unauthenticated users to `/auth`.
+  - Shows a Persian toast explaining the redirect.
+
+- `contexts/UserContext.tsx`
+  - Shared current-user state.
+  - Profile updates must refresh this context so names, phone numbers, and avatar data update without logout/login.
+
+- `hook/auth/useAccess.ts`
+  - Client-side access API.
+  - Exposes `can(component, action)`, `canOnResource(resource, id, action)`, `isSuperAdmin`, current user, and loading/error state.
+  - `superAdmin` always has full access.
+
+- `lib/auth/compose.ts`
+  - Central API route composition.
+  - Runs middleware and global access enforcement before route handlers.
+
+- `lib/auth/middlewares.ts`
+  - Database, authentication, status, role, agent, and explicit permission middleware.
+
+- `lib/auth/accessCatalog.ts`
+  - Static component catalog and supported actions.
+  - Main actions are `view`, `create`, `update`, `delete`, and `publish`.
+
+- `lib/auth/accessRules.ts`
+  - Maps API paths and HTTP methods to component/action requirements.
+  - Add every new protected API feature here.
+
+- `lib/auth/enforceAccess.ts`
+  - Authoritative global request decision.
+  - Returns Persian `401/403` responses with required-access metadata.
+
+- `lib/auth/resolveUserAccess.ts`
+  - Resolves permissions and accesses into a flat runtime access map.
+
+- `lib/auth/accessCache.ts`
+  - TTL cache for resolved user access.
+  - Permission/access mutations must invalidate affected users.
+
+### Data Model
+
+- `models/access.ts`
+  - Reusable access rule document.
+  - Supports static components and dynamic resources.
+  - Dynamic resource groups: templates, blocks, and pages.
+
+- `models/permission.ts`
+  - Groups access documents.
+  - Tracks `assignedToUsers`, `grantedBy`, and `isActive`.
+
+- `models/users.ts`
+  - Stores permission IDs in `permissions`.
+
+### Required Behavior
+
+- Frontend checks improve UX, but backend checks are authoritative.
+- `superAdmin` bypass must remain centralized and unrestricted.
+- Static component rules control screens and UI-only components such as sidebar items.
+- Dynamic rules control individual page, template, and block records.
+- All access errors shown to users should be Persian and explain the denied action.
+
+Full access-system documentation already exists in:
+
+- `docs/ACCESS_PERMISSION_SYSTEM.md`
+
+## Admin Routing and Shell
+
+- `app/admin/page.tsx`
+  - Wraps the admin app in `AdminAuthProvider`.
+  - Lazy-loads admin sections.
+  - Routes the current hash section to its component.
+
+- `hook/admin/useHashRoute.ts`
+  - Defines all `AdminSection` keys and section metadata.
+  - Current implemented sections include dashboard, users, agents, permissions, accesses, pages, templates, blocks, categories, QR codes, tickets, notifications, and profile.
+
+- `components/admin/AdminShell.tsx`
+  - Sidebar, header, responsive admin layout, current-user display, logout flow, and notifications dropdown.
+  - Sidebar visibility is permission-aware.
+  - Uses real notification data through SWR.
+  - Listens for the `admin-profile-updated` browser event to update name/phone/avatar immediately.
+
+## DynamicTable
+
+- `components/global/DynamicTable.tsx`
+- `types/table.ts`
+- `hook/table/useTableData.ts`
+
+Important behavior:
+
+- Reusable CRUD table with view/create/edit/delete modals.
+- Supports SWR data loading, pagination, search, sort, filters, date filters, export, mobile cards, copy, and custom row actions.
+- Built-in create/update/delete controls are access-aware.
+- Delete actions use the table confirmation modal.
+- Filter dropdowns display Persian `label` values while retaining English/backend `value` values.
+- Boolean option mappings use values such as `"true"` and `"false"` while showing Persian text.
+- Checkbox fields remain checkboxes even when `options` are supplied for filter labels.
+- Nested keys such as `limits.files` are supported through `getNestedValue`.
+- Avoid rendering a `<div>` from a column renderer where DynamicTable wraps content in `<p>`; use a `<span>` root to prevent hydration errors.
+
+## Admin Sections
+
+### Users
+
+- `components/admin/UsersSection.tsx`
+- `app/api/users/route.ts`
+- `app/api/users/[id]/route.ts`
+- `models/users.ts`
+
+Implemented behavior:
+
+- User CRUD with Persian role/status labels.
+- Role and status editing follows access and super-admin rules.
+- `createdBy` and `updatedBy` are populated and shown as user labels instead of raw IDs.
+- Agent selection loads `/api/agents?limit=100` and appears as a clearable `CustomSelect`.
+- Empty agent selection sends `""`; the PATCH route uses `$unset` to remove `agentid`.
+- Limits are edited through four numeric inputs:
+  - `limits.files`
+  - `limits.blocks`
+  - `limits.pages`
+  - `limits.landingPages`
+- The display-only `limits` summary is not editable, preventing `[object Object]`.
+- Create/update payloads rebuild the nested `limits` object.
+- Display-only permissions are removed from update payloads to avoid ObjectId validation failures.
+- System-driven fields are read-only and absent from edit forms:
+  - `lastLoginAt`
+  - `lastOtpRequestAt`
+  - `phoneVerifiedAt`
+  - `createdAt`
+  - `updatedAt`
+  - `isPhoneVerified`
+  - `isDeleted`
+
+Known model issue:
+
+- `models/users.ts` currently declares `agentid` with `ref: "User"`.
+- Agent creation stores an Agent document ID in `agentid`.
+- The UI follows the current API behavior and uses Agent IDs.
+- A future cleanup should change the model reference to `ref: "Agent"` and verify existing database values before migration.
+
+### Agents
+
+- `components/admin/AgentsSection.tsx`
+- `app/api/agents/route.ts`
+- `app/api/agents/[id]/route.ts`
+- `app/api/agents/[id]/toggle/route.ts`
+- `models/agent.ts`
+
+Implemented behavior:
+
+- Full admin CRUD.
+- Personal/company type handling.
+- User association.
+- Four limits and price-per-landing fields.
+- Active/inactive power toggle with refreshed data.
+- Persian filter labels.
+
+### Accesses and Permissions
+
+- `components/admin/AccessesSection.tsx`
+- `components/admin/PermissionsSection.tsx`
+- `app/api/accesses/*`
+- `app/api/permissions/*`
+
+Implemented behavior:
+
+- Access create/update/delete.
+- Static component and action selection.
+- Dynamic page/template/block selection.
+- Access duplication creates a new database document rather than mutating the source.
+- Active/inactive toggle.
+- Permission creation/update/deactivation and user assignment.
+- Populated assigned users, granting user, and access documents.
+- Cache invalidation after relationship changes.
+
+### Categories and Templates
+
+- `components/admin/CategoriesSection.tsx`
+- `components/admin/TemplatesSection.tsx`
+- `app/api/categories/*`
+- `app/api/templates/*`
+- `models/category.ts`
+- `models/template.ts`
+
+Implemented behavior:
+
+- Category CRUD using DynamicTable.
+- One category can contain multiple templates.
+- Templates populate category and block references.
+- Template active/inactive power toggle.
+- Template builder supports category selection and thumbnail upload.
+- Category options are cached in the builder to avoid repeated requests and 403 loops.
+- Models required by Mongoose populate must be imported before querying; this was necessary to avoid `MissingSchemaError` for `Block`.
+
+### Blocks
+
+- `builder/blocks/blockRegistry.ts`
+- `models/blocks.ts`
+- `app/api/blocks/sync/route.ts`
+- `app/api/blocks/route.ts`
+- `app/api/blocks/[id]/route.ts`
+- `components/admin/BlocksSection.tsx`
+- `lib/auth/builderBlockAccess.ts`
+
+Implemented behavior:
+
+- Registry remains the source of React renderers and local block definitions.
+- Sync route writes registry metadata, schemas, defaults, styles, and elements to MongoDB.
+- Admin block table can sync registry data and activate/deactivate blocks.
+- Builder loads database block availability/access and prevents unauthorized blocks from being used in page creation/update.
+- Page APIs call `assertBuilderBlockAccess` so direct requests cannot save unauthorized blocks.
+
+### Pages and QR Codes
+
+- `components/admin/PagesSection.tsx`
+- `components/admin/QRCodesSection.tsx`
+- `app/api/pages/*`
+- `app/api/qr/*`
+- `models/pages.ts`
+- `models/qr.ts`
+
+Implemented behavior:
+
+- Page CRUD and populated owner selection.
+- Owner edit uses all users in `CustomSelect`.
+- Created timestamps are system-generated, not user input.
+- Page status can be toggled between published and draft from the table.
+- Edit modal includes a publish checkbox.
+- Page creation generates a non-expiring QR code using the local `qrcode` library.
+- QR records store the page, owner/creator, target URL, shortcode, image URL/data, and active state.
+- QR admin table supports CRUD visibility and active/inactive power toggle.
+
+### Tickets
+
+- `components/admin/TicketsSection.tsx`
+- `app/api/tickets/route.ts`
+- `app/api/tickets/[id]/route.ts`
+- `app/api/tickets/[id]/assign/route.ts`
+- `models/tickets.ts`
+
+Implemented behavior:
+
+- Non-super-admin users can create tickets.
+- Super admin sees all tickets; normal users see their own.
+- Super admin can update status, priority, and assignee.
+- Requester is read-only.
+- Conversation-style modal supports replies by both staff and users.
+- Reply attachments upload through `/api/uploads` and are stored in `models/files.ts`.
+- `replies.author` and `replies.attachments` population is supported.
+- Closed tickets cannot receive messages or attachments:
+  - Composer, upload, shortcut, and send button are disabled in the UI.
+  - API rejects reply payloads when status is `closed`.
+  - Super admin may still change metadata or reopen the ticket.
+- Ticket status/priority filters display Persian labels while retaining English values.
+
+### Files
+
+- `components/admin/FilesSection.tsx`
+- `app/api/files/route.ts`
+- `app/api/files/[id]/route.ts`
+- `models/files.ts`
+
+Implemented behavior:
+
+- The admin `files` hash route now opens a real Files section.
+- The list API explicitly registers the User model and populates each file owner.
+- Uploader display falls back through full name, phone number, email, and owner ID.
+- Files are sorted newest first by ObjectId.
+- The table shows an image preview or file-type icon, filename, type, uploader, and storage URL.
+- Users with view access can open the stored file in a new tab.
+- Users with delete access can delete through DynamicTable's confirmation modal.
+- The API remains ownership-aware: admins can see all files and non-admin users see their own.
+
+### Products
+
+- `components/admin/ProductsSection.tsx`
+- `app/api/products/route.ts`
+- `app/api/products/[id]/route.ts`
+- `models/products.ts`
+
+Implemented behavior:
+
+- The admin `products` hash route now opens a full CRUD Products section.
+- Product fields include name, description, non-negative price, image URLs, and system timestamps.
+- Image URLs are edited as one URL per line and normalized to a unique `string[]`.
+- The table shows the main image, image count, description, price, image previews, and creation date.
+- Product actions are gated by `admin.products` create/update/delete/view access.
+- Product API inputs are trimmed and validated with Persian errors.
+- Invalid product IDs return a controlled `400` response instead of a Mongoose cast error.
+
+### Notifications
+
+- `components/admin/NotificationsSection.tsx`
+- `app/api/notifications/route.ts`
+- `app/api/notifications/[id]/route.ts`
+- `models/notification.ts`
+
+Implemented behavior:
+
+- Notification CRUD through DynamicTable.
+- User selection for targeted notifications.
+- Global/private and closeable yes/no filters use Persian labels.
+- Admin header dropdown uses real SWR-backed data.
+
+### Dashboard
+
+- `components/admin/DashboardSection.tsx`
+- `hook/admin/useDashboardStats.ts`
+- `app/api/admin/dashboard/route.ts`
+
+Implemented behavior:
+
+- Aggregates important counts and recent data:
+  - users
+  - blocks
+  - pages
+  - templates
+  - open/in-progress tickets
+  - agents
+  - QR codes
+  - other available admin metrics
+- Uses SWR caching to avoid a database request on every render.
+- Dashboard greeting listens for live profile updates.
+
+### Profile
+
+- `components/admin/ProfileSection.tsx`
+- `app/api/auth/me/route.ts`
+- `contexts/UserContext.tsx`
+
+Implemented behavior:
+
+- Dedicated profile UI rather than DynamicTable.
+- Reads authenticated user data from `/api/auth/me`.
+- User can edit allowed profile fields.
+- Avatar uses a designed file input and `/api/uploads`.
+- Successful profile edits update SWR, UserContext, AdminShell, and Dashboard without requiring logout/login.
+- Uses the `admin-profile-updated` custom event for cross-component synchronization.
+
+## Builder
+
+### Entry Points
+
+- `app/builder/page.tsx`
+  - URL-driven page/template creation and template editing.
+  - Supports query parameters such as `mode=template` and `templateId`.
+  - Brand-new page creation without `templateId` now pauses before mounting
+    `PageBuilder` and opens the categorized template-start modal.
+  - Selecting a template reuses the existing `initialBlocks` and
+    `sourceTemplateId` hydration path.
+  - Selecting a blank page mounts the existing builder with an empty canvas.
+
+- `app/builder/[pageId]/page.tsx`
+  - Existing page editing.
+
+- `hook/auth/builderAuthorization.ts`
+  - Shared builder guard.
+  - Missing/invalid token redirects to `/auth` with an authentication toast.
+  - Valid token without access redirects to `/admin` with a permission toast.
+  - Supports broad builder access and dynamic page/template update access.
+
+### Main Editor
+
+- `builder/SmartSuggestions.tsx`
+  - Database-backed, required first-step modal for new page creation.
+  - Shows categories and filters active templates by category.
+  - Loads the selected template only when clicked.
+  - Provides a blank-page path even when the catalog request fails.
+  - Preserves the previous static quick suggestions as
+    `LegacySmartSuggestions`.
+
+- `app/api/builder/template-catalog/route.ts`
+  - Authenticated catalog endpoint dedicated to page creation.
+  - Requires `builder.page:create` unless the user is `superAdmin`.
+  - Returns active categories and active templates.
+  - Filters templates against the user's allowed active blocks.
+  - Returns full template data only for the selected template.
+
+- `builder/editor/PageBuilder.tsx`
+  - Main create/edit logic for pages and templates.
+  - Loads templates/pages, database block availability, and category options.
+  - Saves page or template based on mode.
+  - Generates QR after page creation.
+  - Tracks unsaved state and leave confirmation.
+  - Updates document title/meta description based on create/edit and page/template mode.
+
+- `builder/BuilderModals.tsx`
+  - Save/create modal UI.
+  - Page title and meta description.
+  - Template category selection.
+  - Thumbnail upload with validation, loading state, preview, error handling, and URL fallback.
+
+- `builder/editor/PhoneLivePreview.tsx`
+  - Uses an iframe/portal-based document so mobile media queries evaluate against a genuinely narrow viewport.
+  - Scroll remains functional.
+  - Scrollbars are hidden in Firefox and WebKit.
+
+### Block Rendering and Authorization
+
+- `builder/blocks/blockRegistry.ts`
+  - Maps block type to renderer, schema, defaults, category, icon, and metadata.
+
+- `builder/blocks/contact-save/contactSave.default.ts`
+- `builder/blocks/contact-save/contactSave.schema.ts`
+- `builder/blocks/contact-save/ContactSaveBlock.tsx`
+  - Defines the `contactSave` block.
+  - Generates a UTF-8 vCard 3.0 `.vcf` contact containing first name, last name, mobile number, and optional organization.
+  - Converts Persian and Arabic phone digits to ASCII.
+  - Uses a downloadable/openable `text/vcard` data link for iOS and Android compatibility.
+  - Supports editable button text, icon visibility, and container/button/icon styles.
+  - Requires the existing Admin Blocks sync action before it appears in the database-driven builder catalog.
+
+- `lib/auth/builderBlockAccess.ts`
+  - Resolves which database blocks a user may use.
+
+- `app/api/pages/route.ts`
+- `app/api/pages/[id]/route.ts`
+  - Enforce authorized block use during create and update.
+
+## File Uploads and Liara
+
+- `app/api/uploads/route.ts`
+- `lib/s3.ts`
+- `models/files.ts`
+
+Behavior:
+
+- Authenticated multipart upload.
+- File type and 10 MB size validation.
+- Non-ASCII filenames receive generated ASCII-safe object keys.
+- Uploads to Liara through AWS S3 SDK.
+- Creates a File document with owner, original filename, and public path.
+- Returns both top-level `url` and detailed file metadata.
+- Handles common Liara errors with Persian messages.
+
+Required environment variables:
+
+- `LIARA_BUCKET_NAME`
+- `LIARA_ENDPOINT`
+- `LIARA_ACCESS_KEY`
+- `LIARA_SECRET_KEY`
+- Optional public URL:
+  - `LIARA_PUBLIC_URL`
+  - `NEXT_PUBLIC_LIARA_PUBLIC_URL`
+
+Known deployment issue:
+
+- `ECONNREFUSED 10.10.34.35:443` is an endpoint/network configuration problem, not a browser upload bug.
+- `LIARA_ENDPOINT` must match the SDK endpoint from the Liara bucket panel and must be reachable from the Next.js server runtime.
+- `GET /api/uploads` reports current upload configuration readiness.
+
+## Models and Their Main Responsibilities
+
+- `models/users.ts`: users, roles, status, permissions, limits, verification and audit fields.
+- `models/agent.ts`: agent profile, type, company data, pricing, limits, active state.
+- `models/access.ts`: static and dynamic action rules.
+- `models/permission.ts`: access grouping and user assignment.
+- `models/category.ts`: template categories.
+- `models/template.ts`: builder template content, blocks, category, thumbnail, active state.
+- `models/blocks.ts`: synchronized block definition and active state.
+- `models/pages.ts`: created pages, owner, template, blocks, SEO/settings, publish state.
+- `models/qr.ts`: generated page QR records.
+- `models/tickets.ts`: requester, assignee, status, priority, replies, attachments.
+- `models/files.ts`: uploaded file metadata and ownership.
+- `models/notification.ts`: global or user-targeted notifications.
+- `models/products.ts`: product data and API-backed admin feature.
+
+## UI and Localization Rules Established
+
+- Admin-facing labels and errors are Persian.
+- Backend enum values remain English.
+- DynamicTable filters use Persian labels with original English values.
+- Use `CustomSelect` for relational fields.
+- Use power icons for active/inactive table actions.
+- Refresh table data after successful toggles.
+- Use DynamicTable's confirmation modal for deletes.
+- Avoid nested block elements inside `<p>` wrappers to prevent hydration errors.
+- Dates and audit fields must be generated by system behavior, not manually entered.
+
+## Known Risks and Cleanup Opportunities
+
+1. Fix the `agentid` Mongoose reference mismatch after reviewing production data.
+2. Several source files contain mojibake in comments or strings when displayed through some Windows shell encodings. Confirm actual UTF-8 file content before rewriting text.
+3. The upload route still contains debug `console.log` statements that may be removed after storage configuration is stable.
+4. `graphify-out/` and `.claude/` were committed in a recent change and are large; decide separately whether they belong in the repository.
+5. Run full browser testing for access combinations, especially static view-only access plus dynamic resource update access.
+6. Do not rely only on frontend visibility checks; every new route must be mapped and enforced on the backend.
+
+## How to Add a New Admin Feature
+
+1. Create or update the Mongoose model.
+2. Add composed API routes with `withDB`, `withAuth`, and relevant status/role checks.
+3. Add the component key to `lib/auth/accessCatalog.ts`.
+4. Map API paths and methods in `lib/auth/accessRules.ts`.
+5. Add the section key and metadata to `hook/admin/useHashRoute.ts`.
+6. Add lazy loading and routing in `app/admin/page.tsx`.
+7. Add permission-aware sidebar visibility in `AdminShell`.
+8. Build the section with DynamicTable or a dedicated UI.
+9. Use Persian labels/errors while preserving backend enum values.
+10. Verify as super admin, view-only user, update-only dynamic resource user, and unauthorized user.
+
+## Verification Checklist
+
+Run:
+
+```powershell
+cmd /c npx tsc --noEmit
+cmd /c npm run lint
+cmd /c npm run build
+```
+
+Then manually verify:
+
+- `/admin` without a token redirects to `/auth` with a Persian toast.
+- `/builder` without a token redirects to `/auth`.
+- `/builder` with a token but without permission redirects to `/admin`.
+- Super admin can perform all actions.
+- View-only users cannot create, edit, delete, publish, or toggle.
+- Access and permission edits invalidate cached permissions.
+- Closed tickets reject replies and attachments in both UI and API.
+- Page creation produces one valid QR record.
+- Template thumbnail upload persists and reloads.
+- Mobile preview uses true mobile media-query behavior and has hidden scrollbars.
+- User agent select can be cleared.
+- User limits save as four numbers.
+- User dates do not appear in edit forms.
+
+## Recommended Starting Point for the Next Agent
+
+1. Read `AGENTS.md`.
+2. Read this document.
+3. Read `docs/ACCESS_PERMISSION_SYSTEM.md`.
+4. Run `git status --short` and preserve unrelated user changes.
+5. Read local Next.js docs for the exact feature being changed.
+6. Run TypeScript before and after modifications.
+7. Test both frontend gating and direct API requests.
+
+---
+
+############ PROMT FOR CHANGE THE DEFAULT COLORS ####################
+Review every `*.default.ts` file inside `builder/blocks/` and unify ONLY the default color values across all blocks.
+
+Use only this complementary color palette:
+
+- Primary: `#064789`
+- Secondary: `#427AA1`
+- Light/background: `#EBF2FA`
+
+Rules:
+
+1. Change ONLY color-related values:
+   - `color`
+   - `backgroundColor`
+   - `borderColor`
+
+2. Do NOT change, add, remove, rename, reorder, or refactor anything else.
+
+3. Do NOT modify:
+   - Data/content
+   - Text
+   - Types
+   - Functions
+   - Imports/exports
+   - Element names
+   - `allowedStyleKeys`
+   - Font sizes
+   - Border widths
+   - Border radiuses
+   - Animations
+   - Responsive breakpoints
+   - Settings
+   - Block structure
+   - Registry
+   - Schema files
+   - Component files
+
+4. Preserve all responsive objects and their existing keys exactly. Replace only their color values.
+
+5. Use the palette consistently:
+   - `#064789` for primary text, strong surfaces, and important actions.
+   - `#427AA1` for secondary actions, accents, icons, and borders.
+   - `#EBF2FA` for light backgrounds and soft surfaces.
+   - White may be used only when required for readable text on `#064789` or `#427AA1`.
+   - Transparent values may remain transparent where necessary.
+
+6. Maintain accessible contrast between foreground and background colors.
+
+7. Do not introduce gradients or any additional colors.
+
+8. Do not alter existing logic or behavior.
+
+9. After editing, run:
+   - `npx tsc --noEmit`
+   - Focused ESLint on the modified default files.
+
+The final diff must contain color-value replacements only. If any non-color change appears, revert it.

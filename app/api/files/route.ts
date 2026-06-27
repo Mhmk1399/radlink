@@ -3,6 +3,8 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import File from "@/models/files";
+import "@/models/pages";
+import "@/models/users";
 
 // POST /api/files — register an uploaded file record
 export const POST = compose(
@@ -37,7 +39,9 @@ export const GET = compose(
 
     const [files, total] = await Promise.all([
         File.find(query)
-            .populate("owner", "firstName lastName phoneNumber")
+            .populate("owner", "firstName lastName phoneNumber email")
+            .populate("page", "title url")
+            .sort({ createdAt: -1, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

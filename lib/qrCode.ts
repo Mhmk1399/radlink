@@ -1,5 +1,10 @@
 import { randomBytes } from "crypto";
 import QRCode from "qrcode";
+import {
+    deleteLiaraObject,
+    uploadLiaraObject,
+} from "@/lib/liaraStorage";
+import File from "@/models/files";
 import QR from "@/models/qr";
 
 const SHORTCODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -30,6 +35,16 @@ export async function generateQrImageDataUrl(targetUrl: string) {
         margin: 2,
         scale: 8,
         type: "image/png",
+        width: 512,
+    });
+}
+
+export async function generateQrImageBuffer(targetUrl: string) {
+    return QRCode.toBuffer(targetUrl, {
+        errorCorrectionLevel: "M",
+        margin: 2,
+        scale: 8,
+        type: "png",
         width: 512,
     });
 }
@@ -68,16 +83,54 @@ export async function createQrForPage({
     if (existingQr) return existingQr;
 
     const targetUrl = buildPageTargetUrl(pageUrl, requestUrl);
-    const [imageurl, shortcode] = await Promise.all([
-        generateQrImageDataUrl(targetUrl),
+    const [imageBuffer, shortcode] = await Promise.all([
+        generateQrImageBuffer(targetUrl),
         generateUniqueQrShortcode(),
     ]);
 
-    return QR.create({
-        page: pageId,
-        owner: creatorId,
-        targetUrl,
-        imageurl,
-        shortcode,
+    const filename = `qr-${shortcode}.png`;
+    const key = `rad/qrcodes/${filename}`;
+    const uploaded = await uploadLiaraObject({
+        key,
+        body: imageBuffer,
+        contentType: "image/png",
+        cacheControl: "public, max-age=31536000, immutable",
+        metadata: {
+            originalName: filename,
+            uploadedAt: new Date().toISOString(),
+            fileSize: imageBuffer.length.toString(),
+            pageId,
+            creatorId,
+        },
     });
+
+    let fileId: string | null = null;
+
+    try {
+        const file = await File.create({
+            filename,
+            path: uploaded.url,
+            owner: creatorId,
+            mimeType: "image/png",
+            size: imageBuffer.length,
+            kind: "qr",
+            page: pageId,
+        });
+        fileId = String(file._id);
+
+        return await QR.create({
+            page: pageId,
+            owner: creatorId,
+            file: file._id,
+            targetUrl,
+            imageurl: uploaded.url,
+            shortcode,
+        });
+    } catch (error) {
+        if (fileId) {
+            await File.findByIdAndDelete(fileId).catch(() => null);
+        }
+        await deleteLiaraObject(uploaded.key).catch(() => null);
+        throw error;
+    }
 }

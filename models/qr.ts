@@ -1,6 +1,18 @@
-import mongoose from "mongoose";    
+import mongoose, { type Model, type Types } from "mongoose";
 
-const qrSchema = new mongoose.Schema({
+export interface IQR {
+    page: Types.ObjectId;
+    owner: Types.ObjectId;
+    file?: Types.ObjectId;
+    targetUrl: string;
+    imageurl?: string;
+    shortcode: string;
+    isActive: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+const qrSchema = new mongoose.Schema<IQR>({
     page: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Page",
@@ -10,6 +22,10 @@ const qrSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
+    },
+    file: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "File",
     },
     targetUrl: {
         type: String,
@@ -27,9 +43,11 @@ const qrSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+}, {
+    timestamps: true,
 });
 
-const QR: mongoose.Model<any> =
-    mongoose.models.QR || mongoose.model("QR", qrSchema);
+const QR: Model<IQR> =
+    mongoose.models.QR || mongoose.model<IQR>("QR", qrSchema);
 
 export default QR;

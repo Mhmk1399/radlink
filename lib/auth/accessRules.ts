@@ -116,6 +116,17 @@ export function getAccessTargetForRequest(
   }
 
   if (
+    pathname === "/api/pages" &&
+    normalizedMethod === "GET" &&
+    searchParams.get("mode") === "notification-options"
+  ) {
+    return {
+      component: "admin.notifications",
+      action: "view",
+    };
+  }
+
+  if (
     pathname === "/api/blocks" &&
     normalizedMethod === "GET" &&
     searchParams.get("mode") === "builder"

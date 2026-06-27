@@ -84,6 +84,7 @@
 // src/app/api/pages/route.ts
 
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
@@ -331,6 +332,8 @@ export const POST = compose(
         .populate("template", "name thumbnail category")
         .lean({ virtuals: true });
 
+    revalidatePath(`/${page.url}`);
+
     return NextResponse.json({ page: populatedPage ?? page, qr }, { status: 201 });
 });
 
@@ -345,6 +348,7 @@ export const GET = compose(
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isPublished = searchParams.get("isPublished");
+    const mode = searchParams.get("mode");
 
     const evaluated = await evaluateRequestAccess(req);
     const isAdmin =
@@ -355,6 +359,16 @@ export const GET = compose(
 
     if (isPublished !== null) {
         query.isPublished = isPublished === "true";
+    }
+
+    if (mode === "notification-options") {
+        const pages = await Page.find(query)
+            .select("title url owner isPublished")
+            .sort({ updatedAt: -1 })
+            .limit(limit)
+            .lean();
+
+        return NextResponse.json({ pages });
     }
 
     const [pages, total] = await Promise.all([

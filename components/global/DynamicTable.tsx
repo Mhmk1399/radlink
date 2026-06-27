@@ -35,12 +35,7 @@ import {
   HiMiniClipboardDocumentCheck,
 } from "react-icons/hi2";
 import { LuPackage } from "react-icons/lu";
-import {
-  
-  animation,
-  focus,
- 
-} from "@/lib/design/tokens";
+import { animation, focus } from "@/lib/design/tokens";
 import { useAccess } from "@/hook/auth/useAccess";
 import { getAccessTargetForRequest } from "@/lib/auth/accessRules";
 import CustomSelect from "../ui/customSelect";
@@ -60,6 +55,7 @@ import {
 } from "@/types/table";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { CSSProperties } from "react";
+type ThemeTokens = typeof themeTokens.dark | typeof themeTokens.light;
 
 /* ══════════════════════════════════════════════
    THEME TOKENS — soft, eye-friendly palette
@@ -324,6 +320,336 @@ const datePickerStyles = `
 }
 `;
 
+// Replace the loading-related sections in your DynamicTable component
+
+/* ══════════════════════════════════════════════
+   SKELETON COMPONENTS — Refined Loading States
+   ══════════════════════════════════════════════ */
+
+function SkeletonPulse({
+  className,
+  style,
+  isDark,
+}: {
+  className?: string;
+  style?: CSSProperties;
+  isDark: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded",
+        isDark ? "bg-[#2a2a32]/60" : "bg-[#e8e4dc]/50",
+        className,
+      )}
+      style={style}
+    >
+      <div
+        className={cn(
+          "absolute inset-0",
+          isDark
+            ? "bg-linear-to-l from-transparent via-[#ffffff06] to-transparent"
+            : "bg-linear-to-l from-transparent via-[#ffffff60] to-transparent",
+          "animate-[shimmer_2s_ease-in-out_infinite]",
+        )}
+      />
+    </div>
+  );
+}
+
+function DesktopTableSkeleton({
+  rowCount,
+  visibleCols,
+  showRowNumbers,
+  hasActions,
+  isDark,
+  t,
+}: {
+  rowCount: number;
+  visibleCols: ColumnDef<any>[];
+  showRowNumbers: boolean;
+  hasActions: boolean;
+  isDark: boolean;
+  t: ThemeTokens;
+}) {
+  // Vary widths per column type for realistic feel
+  const getColWidth = (col: ColumnDef<any>, seed: number) => {
+    if (col.inputType === "number") return 40 + (seed % 20);
+    if (col.dateFilter || col.inputType === "date") return 70;
+    if (col.key.includes("name") || col.key.includes("title"))
+      return 55 + (seed % 30);
+    if (col.key.includes("email") || col.key.includes("url"))
+      return 65 + (seed % 20);
+    return 45 + (seed % 35);
+  };
+
+  return (
+    <>
+      {Array.from({ length: rowCount }).map((_, rowIdx) => (
+        <tr
+          key={`skeleton-row-${rowIdx}`}
+          className={cn(
+            "border-b last:border-b-0",
+            t.divider,
+            "transition-opacity duration-500",
+          )}
+          style={{
+            animationDelay: `${rowIdx * 60}ms`,
+            animation: "skeleton-row-in 0.4s ease-out both",
+          }}
+          role="row"
+          aria-busy="true"
+          aria-label="در حال بارگذاری..."
+        >
+          {/* Checkbox skeleton */}
+          <td className="w-10 px-3 py-3.5">
+            <SkeletonPulse
+              className="h-5 w-5 rounded-md"
+              isDark={isDark}
+              style={{ animationDelay: `${rowIdx * 60}ms` }}
+            />
+          </td>
+
+          {/* Row number skeleton */}
+          {showRowNumbers && (
+            <td className="w-12 px-3 py-3.5">
+              <SkeletonPulse
+                className="h-4 w-7 rounded"
+                isDark={isDark}
+                style={{ animationDelay: `${rowIdx * 60 + 30}ms` }}
+              />
+            </td>
+          )}
+
+          {/* Column skeletons */}
+          {visibleCols.map((col, colIdx) => {
+            const width = getColWidth(col, rowIdx * 7 + colIdx * 3);
+            return (
+              <td key={col.key} className="px-4 py-3.5">
+                <div className="flex flex-col gap-1">
+                  <SkeletonPulse
+                    className="h-4 rounded"
+                    isDark={isDark}
+                    style={{
+                      width: `${width}%`,
+                      animationDelay: `${rowIdx * 60 + colIdx * 40}ms`,
+                    }}
+                  />
+                  {/* Occasionally show a second line for text-heavy columns */}
+                  {(col.inputType === "textarea" ||
+                    col.key.includes("description")) &&
+                    rowIdx % 2 === 0 && (
+                      <SkeletonPulse
+                        className="h-3 rounded"
+                        isDark={isDark}
+                        style={{
+                          width: `${width * 0.6}%`,
+                          animationDelay: `${rowIdx * 60 + colIdx * 40 + 100}ms`,
+                        }}
+                      />
+                    )}
+                </div>
+              </td>
+            );
+          })}
+
+          {/* Actions skeleton */}
+          {hasActions && (
+            <td className="px-4 py-3.5">
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <SkeletonPulse
+                    key={i}
+                    className="h-7 w-7 rounded-lg"
+                    isDark={isDark}
+                    style={{
+                      animationDelay: `${rowIdx * 60 + i * 50 + 200}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+            </td>
+          )}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function MobileCardSkeleton({
+  cardCount,
+  showRowNumbers,
+  hasActions,
+  isDark,
+  t,
+}: {
+  cardCount: number;
+  showRowNumbers: boolean;
+  hasActions: boolean;
+  isDark: boolean;
+  t: ThemeTokens;
+}) {
+  return (
+    <>
+      {Array.from({ length: cardCount }).map((_, idx) => (
+        <div
+          key={`mobile-skeleton-${idx}`}
+          className={cn("p-4", idx < cardCount - 1 && "border-b", t.divider)}
+          style={{
+            animationDelay: `${idx * 80}ms`,
+            animation: "skeleton-row-in 0.4s ease-out both",
+          }}
+          role="article"
+          aria-busy="true"
+          aria-label="در حال بارگذاری..."
+        >
+          {/* Header row */}
+          <div className="flex items-start gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              {showRowNumbers && (
+                <SkeletonPulse
+                  className="h-4 w-5 rounded"
+                  isDark={isDark}
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                />
+              )}
+              <SkeletonPulse
+                className="h-5 w-5 rounded-md"
+                isDark={isDark}
+                style={{ animationDelay: `${idx * 80 + 20}ms` }}
+              />
+            </div>
+            <div className="flex-1">
+              <SkeletonPulse
+                className="h-2.5 w-12 rounded mb-1.5"
+                isDark={isDark}
+                style={{ animationDelay: `${idx * 80 + 40}ms` }}
+              />
+              <SkeletonPulse
+                className="h-4.5 rounded"
+                isDark={isDark}
+                style={{
+                  width: `${55 + (idx % 3) * 15}%`,
+                  animationDelay: `${idx * 80 + 60}ms`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Fields grid */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 mr-8">
+            {[0, 1, 2, 3].map((fi) => (
+              <div key={fi}>
+                <SkeletonPulse
+                  className="h-2.5 w-10 rounded mb-1"
+                  isDark={isDark}
+                  style={{ animationDelay: `${idx * 80 + fi * 50 + 80}ms` }}
+                />
+                <SkeletonPulse
+                  className="h-3.5 rounded"
+                  isDark={isDark}
+                  style={{
+                    width: `${50 + ((fi + idx) % 4) * 12}%`,
+                    animationDelay: `${idx * 80 + fi * 50 + 100}ms`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Actions skeleton */}
+          {hasActions && (
+            <div
+              className={cn(
+                "mt-3 flex items-center gap-1.5 border-t pt-3 mr-8",
+                t.divider,
+              )}
+            >
+              {[0, 1, 2].map((i) => (
+                <SkeletonPulse
+                  key={i}
+                  className="h-7 w-7 rounded-lg"
+                  isDark={isDark}
+                  style={{ animationDelay: `${idx * 80 + i * 60 + 200}ms` }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function TableLoadingBar({ isDark }: { isDark: boolean }) {
+  return (
+    <div
+      className={cn(
+        "relative h-0.5 w-full overflow-hidden",
+        isDark ? "bg-[#c9a84c]/6" : "bg-[#8a7032]/4",
+      )}
+      role="progressbar"
+      aria-label="در حال بارگذاری"
+      aria-valuetext="در حال بارگذاری داده‌ها"
+    >
+      <div
+        className={cn(
+          "absolute inset-y-0 w-2/5",
+          isDark
+            ? "bg-linear-to-r from-transparent via-[#c9a84c]/30 to-transparent"
+            : "bg-linear-to-r from-transparent via-[#8a7032]/25 to-transparent",
+          "animate-[loading-bar_1.4s_ease-in-out_infinite]",
+        )}
+      />
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   ADDITIONAL KEYFRAMES for loading animations
+   Add these to your animation.keyframes or
+   include in the <style> tag
+   ══════════════════════════════════════════════ */
+
+const loadingKeyframes = `
+@keyframes shimmer {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes skeleton-row-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loading-bar {
+  0% { left: -40%; }
+  50% { left: 60%; }
+  100% { left: 100%; }
+}
+
+@keyframes dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+`;
 function getDatePickerVariables(isDark: boolean): CSSProperties {
   return {
     ["--dt-bg" as string]: isDark ? "#1e1e26" : "#ffffff",
@@ -1842,6 +2168,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     editableCols.forEach((col) => {
+      if (col.hiddenInForm?.(formData as Partial<T>)) return;
       if (col.required) {
         const v = formData[col.key];
         if (v === undefined || v === null || String(v).trim() === "")
@@ -2005,6 +2332,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     <>
       <style>{animation.keyframes}</style>
       <style>{datePickerStyles}</style>
+      <style>{loadingKeyframes}</style>
 
       <section
         className="w-full"
@@ -2038,7 +2366,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 disabled={isValidating}
                 title="بارگذاری مجدد"
                 aria-label="بارگذاری مجدد داده‌ها"
-                className={cn(iconButton, isValidating && "animate-spin")}
+                className={cn(
+                  iconButton,
+                  isValidating && "animate-spin pointer-events-none",
+                )}
               >
                 <Icon.Refresh />
               </button>
@@ -2114,24 +2445,36 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <ErrorBanner error={fetchError} onRetry={() => mutate()} />
         )}
 
-        {/* ── Validating ── */}
+        {/* ── Inline revalidation indicator (non-blocking) ── */}
         {isValidating && !isLoading && (
           <div
             className={cn(
-              "mb-3 flex flex-row-reverse items-center justify-between rounded-xl px-4 py-2.5 border",
+              "mb-3 flex items-center gap-2.5 rounded-xl px-4 py-2.5 border",
               t.activeBg,
               t.borderAccent,
+              "animate-[fade-in_.3s_ease-out_both]",
             )}
             role="status"
             aria-live="polite"
           >
-            <div
-              className={cn(
-                "h-1.5 w-1.5 rounded-full animate-pulse",
-                isDark ? "bg-[#c9a84c]" : "bg-[#8a7032]",
-              )}
-            />
-            <span className={t.textMuted}>در حال بروزرسانی…</span>
+            <div className="flex items-center gap-1">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-1 w-1 rounded-full",
+                    isDark ? "bg-[#c9a84c]" : "bg-[#8a7032]",
+                  )}
+                  style={{
+                    animation: "dot-bounce 1.2s ease-in-out infinite",
+                    animationDelay: `${i * 150}ms`,
+                  }}
+                />
+              ))}
+            </div>
+            <span className={cn("text-xs", t.textMuted)}>
+              در حال بروزرسانی…
+            </span>
           </div>
         )}
 
@@ -2223,7 +2566,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         )}
 
         {/* ── Table Card ── */}
-        <div ref={pullRef as any} className={tableCard}>
+        <div ref={pullRef as any} className={cn(tableCard, "relative")}>
           <div className="block md:hidden">
             <PullIndicator
               distance={pullDistance}
@@ -2232,31 +2575,17 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             />
           </div>
 
-          {(loading || isValidating) && (
-            <div
-              className={cn(
-                "relative h-0.5 w-full overflow-hidden",
-                isDark ? "bg-[#c9a84c]/8" : "bg-[#8a7032]/6",
-              )}
-            >
-              <div
-                className={cn(
-                  "absolute inset-y-0 right-0 w-1/3 animate-[shimmer_1.5s_linear_infinite]",
-                  isDark
-                    ? "bg-gradient-to-l from-transparent via-[#c9a84c]/25 to-transparent"
-                    : "bg-gradient-to-l from-transparent via-[#8a7032]/20 to-transparent",
-                )}
-              />
-            </div>
-          )}
+          {/* Top loading bar — shows during any loading/revalidation */}
+          {(loading || isValidating) && <TableLoadingBar isDark={isDark} />}
 
           {/* ── Desktop Table ── */}
           <div className="hidden md:block overflow-x-auto">
             <table
-              className="w-full text-right"
+              className="w-full text-right text-nowrap"
               role="table"
               aria-label={title || "جدول"}
               aria-rowcount={totalItems}
+              aria-busy={loading}
             >
               <thead
                 className={
@@ -2272,6 +2601,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     <button
                       type="button"
                       onClick={toggleAllSelection}
+                      disabled={loading && data.length === 0}
                       title={isAllSelected ? "لغو انتخاب همه" : "انتخاب همه"}
                       aria-label={
                         isAllSelected
@@ -2279,8 +2609,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           : "انتخاب همه ردیف‌ها"
                       }
                       aria-pressed={isAllSelected}
-                      className={checkboxClasses(
-                        isAllSelected || isSomeSelected,
+                      className={cn(
+                        checkboxClasses(isAllSelected || isSomeSelected),
+                        loading &&
+                          data.length === 0 &&
+                          "opacity-30 pointer-events-none",
                       )}
                     >
                       <CheckboxIcon
@@ -2351,70 +2684,56 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 </tr>
               </thead>
               <tbody>
+                {/* ═══ LOADING STATE: Initial load with no data ═══ */}
                 {loading && data.length === 0 ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr
-                      key={`sk-${i}`}
-                      className={cn("border-b", t.divider)}
-                      role="row"
-                      aria-busy="true"
-                    >
-                      <td className="px-3 py-3">
-                        <div
-                          className={cn(
-                            "h-5 w-5 rounded animate-pulse",
-                            isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                          )}
-                        />
-                      </td>
-                      {showRowNumbers && (
-                        <td className="px-3 py-3">
-                          <div
-                            className={cn(
-                              "h-4 w-6 rounded animate-pulse",
-                              isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                            )}
-                          />
-                        </td>
-                      )}
-                      {visibleCols.map((col) => (
-                        <td key={col.key} className="px-4 py-3">
-                          <div
-                            className={cn(
-                              "h-4 rounded animate-pulse",
-                              isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                            )}
-                            style={{ width: `${60 + Math.random() * 40}%` }}
-                          />
-                        </td>
-                      ))}
-                      {hasActions && (
-                        <td className="px-4 py-3">
-                          <div
-                            className={cn(
-                              "h-4 w-20 rounded animate-pulse",
-                              isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                            )}
-                          />
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                ) : paginatedRows.length === 0 ? (
+                  <DesktopTableSkeleton
+                    rowCount={Math.min(currentPageSize, 8)}
+                    visibleCols={visibleCols}
+                    showRowNumbers={showRowNumbers}
+                    hasActions={hasActions}
+                    isDark={isDark}
+                    t={t}
+                  />
+                ) : /* ═══ EMPTY STATE ═══ */
+                paginatedRows.length === 0 ? (
                   <tr role="row">
                     <td colSpan={totalColCount} className="py-16 text-center">
                       <div
                         className={cn(
                           "flex flex-col items-center gap-3",
                           t.textMuted,
+                          "animate-[fade-in_.4s_ease-out_both]",
                         )}
                       >
-                        <Icon.Empty />
-                        <p className="text-sm">{emptyMessage}</p>
+                        <div
+                          className={cn(
+                            "flex h-16 w-16 items-center justify-center rounded-2xl",
+                            isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
+                          )}
+                        >
+                          <Icon.Empty />
+                        </div>
+                        <div>
+                          <p
+                            className={cn(
+                              "text-sm font-medium mb-1",
+                              t.textSecondary,
+                            )}
+                          >
+                            {emptyMessage}
+                          </p>
+                          {(debouncedSearch || activeFiltersCount > 0) && (
+                            <p className={cn("text-xs", t.textDisabled)}>
+                              فیلترها را تغییر دهید یا عبارت جستجو را ویرایش
+                              کنید
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
                 ) : (
+                  /* ═══ DATA ROWS ═══ */
                   paginatedRows.map((row, ri) => {
                     const rowKey = String(row[primaryKey] ?? ri);
                     const isSelected = selectedRows.has(rowKey);
@@ -2430,9 +2749,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         className={cn(
                           "group border-b last:border-b-0",
                           t.divider,
-                          "transition-colors duration-200",
+                          "transition-all duration-200",
                           isSelected ? rowSelected : rowHover,
                           doubleClickToEdit && canUpdate && "cursor-pointer",
+                          // Subtle fade when revalidating existing data
+                          isValidating &&
+                            !isLoading &&
+                            "opacity-80 transition-opacity duration-300",
                         )}
                       >
                         <td className="w-10 px-3 py-3" role="cell">
@@ -2556,43 +2879,47 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
           {/* ── Mobile Card List ── */}
           <div className={cn("block md:hidden divide-y", t.divider)}>
+            {/* ═══ MOBILE LOADING STATE ═══ */}
             {loading && data.length === 0 ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={`msk-${i}`} className="p-4">
-                  <div className="flex items-start gap-3 mb-2">
-                    <div
-                      className={cn(
-                        "h-5 w-5 rounded animate-pulse",
-                        isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                      )}
-                    />
-                    <div className="flex-1 space-y-2">
-                      <div
-                        className={cn(
-                          "h-3 w-16 rounded animate-pulse",
-                          isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                        )}
-                      />
-                      <div
-                        className={cn(
-                          "h-4 w-32 rounded animate-pulse",
-                          isDark ? "bg-[#2a2a32]" : "bg-[#e8e4dc]",
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))
+              <MobileCardSkeleton
+                cardCount={Math.min(currentPageSize, 5)}
+                showRowNumbers={showRowNumbers}
+                hasActions={hasActions}
+                isDark={isDark}
+                t={t}
+              />
             ) : paginatedRows.length === 0 ? (
               <div className="py-16 text-center">
                 <div
                   className={cn(
                     "flex flex-col items-center gap-3",
                     t.textMuted,
+                    "animate-[fade-in_.4s_ease-out_both]",
                   )}
                 >
-                  <Icon.Empty />
-                  <p className="text-sm">{emptyMessage}</p>
+                  <div
+                    className={cn(
+                      "flex h-16 w-16 items-center justify-center rounded-2xl",
+                      isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
+                    )}
+                  >
+                    <Icon.Empty />
+                  </div>
+                  <div>
+                    <p
+                      className={cn(
+                        "text-sm font-medium mb-1",
+                        t.textSecondary,
+                      )}
+                    >
+                      {emptyMessage}
+                    </p>
+                    {(debouncedSearch || activeFiltersCount > 0) && (
+                      <p className={cn("text-xs", t.textDisabled)}>
+                        فیلترها را تغییر دهید یا عبارت جستجو را ویرایش کنید
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -2608,14 +2935,18 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     aria-label={`ردیف ${toPersianDigits(globalIdx)}`}
                     onDoubleClick={() => handleRowDoubleClick(row)}
                     className={cn(
-                      "group p-4 transition-colors duration-200",
+                      "group p-4 transition-all duration-200",
                       isSelected
                         ? isDark
-                          ? "bg-[#c9a84c]/[0.03]"
-                          : "bg-[#8a7032]/[0.02]"
+                          ? "bg-[#c9a84c]/3"
+                          : "bg-[#8a7032]/2"
                         : isDark
                           ? "active:bg-[#ffffff04]"
                           : "active:bg-[#00000003]",
+                      // Subtle fade when revalidating
+                      isValidating &&
+                        !isLoading &&
+                        "opacity-80 transition-opacity duration-300",
                     )}
                   >
                     <div className="flex items-start gap-3 mb-2">
@@ -2948,7 +3279,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   >
                     {col.label}
                   </dt>
-                  <dd className={cn("break-words text-sm", t.textPrimary)}>
+                  <dd className={cn("wrap-break-word text-sm", t.textPrimary)}>
                     {display}
                   </dd>
                 </div>
@@ -3020,6 +3351,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <div className="max-h-[60vh] overflow-y-auto overflow-x-visible px-5 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {editableCols.map((col) => {
+                if (col.hiddenInForm?.(formData as Partial<T>)) return null;
+
                 const fv = formData[col.key];
                 const error = formErrors[col.key];
                 const inputType = col.inputType || "text";

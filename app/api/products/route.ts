@@ -4,18 +4,41 @@ import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Product from "@/models/products";
 
+function normalizeImages(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(
+        value
+            .filter((image): image is string => typeof image === "string")
+            .map((image) => image.trim())
+            .filter(Boolean)
+    )];
+}
+
 export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
     withRole("admin", "superAdmin")
 )(async (req: AuthRequest) => {
-    const { name, description, price, images } = await req.json();
-    if (!name || price === undefined) {
-        return NextResponse.json({ message: "نام و قیمت الزامی هستند." }, { status: 400 });
+    const body = await req.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const description =
+        typeof body.description === "string" ? body.description.trim() : "";
+    const price = Number(body.price);
+
+    if (!name) {
+        return NextResponse.json({ message: "نام محصول الزامی است." }, { status: 400 });
+    }
+    if (!Number.isFinite(price) || price < 0) {
+        return NextResponse.json({ message: "قیمت محصول معتبر نیست." }, { status: 400 });
     }
 
-    const product = await Product.create({ name, description, price, images: images ?? [] });
+    const product = await Product.create({
+        name,
+        description,
+        price,
+        images: normalizeImages(body.images),
+    });
     return NextResponse.json({ product }, { status: 201 });
 });
 
@@ -29,7 +52,11 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
 
     const [products, total] = await Promise.all([
-        Product.find().skip((page - 1) * limit).limit(limit).lean(),
+        Product.find()
+            .sort({ _id: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
         Product.countDocuments(),
     ]);
 

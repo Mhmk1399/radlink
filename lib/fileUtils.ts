@@ -15,14 +15,55 @@ export interface LiaraFileInfo {
  * @returns Liara Object Storage URL
  */
 export function getLiaraUrl(key: string): string {
-  // Use the public environment variable for client-side access
+  const configuredBase = (
+    process.env.NEXT_PUBLIC_STORAGE_URL ||
+    process.env.NEXT_PUBLIC_LIARA_PUBLIC_URL ||
+    ""
+  ).replace(/\/+$/, '');
   const bucketName = process.env.NEXT_PUBLIC_LIARA_BUCKET_NAME || 'arziplus';
   
   if (!process.env.NEXT_PUBLIC_LIARA_BUCKET_NAME) {
     console.warn('NEXT_PUBLIC_LIARA_BUCKET_NAME not configured, using fallback');
   }
-  
-  return `https://${bucketName}.storage.c2.liara.space/${key}`;
+
+  const baseUrl =
+    configuredBase || `https://${bucketName}.storage.c2.liara.site`;
+  const encodedKey = key
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/');
+
+  return `${baseUrl}/${encodedKey}`;
+}
+
+export function normalizeLiaraUrl(url: string): string {
+  if (!url) return "";
+
+  const configuredBase = (
+    process.env.NEXT_PUBLIC_STORAGE_URL ||
+    process.env.NEXT_PUBLIC_LIARA_PUBLIC_URL ||
+    ""
+  ).replace(/\/+$/, "");
+
+  if (!configuredBase) {
+    return url.replace(
+      ".storage.c2.liara.space/",
+      ".storage.c2.liara.site/",
+    );
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    const isLiaraStorageUrl =
+      parsedUrl.hostname.includes(".storage.") &&
+      parsedUrl.hostname.includes(".liara.");
+
+    return isLiaraStorageUrl
+      ? `${configuredBase}${parsedUrl.pathname}${parsedUrl.search}`
+      : url;
+  } catch {
+    return url;
+  }
 }
 
 // Alias for backward compatibility
@@ -50,13 +91,16 @@ export function getCloudFrontUrls(keys: string[]): string[] {
  * @returns File key
  */
 export function extractKeyFromUrl(url: string): string {
-  const bucketName = process.env.NEXT_PUBLIC_LIARA_BUCKET_NAME;
-  
-  if (!bucketName || !url.includes('.storage.c2.liara.space')) {
+  try {
+    const parsedUrl = new URL(normalizeLiaraUrl(url));
+    if (!parsedUrl.hostname.includes(".storage.") || !parsedUrl.hostname.includes(".liara.")) {
+      return "";
+    }
+
+    return decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
+  } catch {
     return '';
   }
-  
-  return url.split(`${bucketName}.storage.c2.liara.space/`)[1] || '';
 }
 
 /**
@@ -69,8 +113,14 @@ export async function uploadFile(file: File): Promise<LiaraFileInfo | null> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/upload', {
+    const token =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("auth_token")
+        : null;
+
+    const response = await fetch('/api/uploads', {
       method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: formData,
     });
 
