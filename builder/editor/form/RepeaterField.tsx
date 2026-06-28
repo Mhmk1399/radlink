@@ -16,6 +16,7 @@ import {
   HiOutlineXMark,
   HiOutlineCheck,
 } from "react-icons/hi2";
+import { uploadFile } from "@/lib/fileUtils";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -91,37 +92,34 @@ function RepeaterImageField({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [mode, setMode] = useState<"upload" | "url">(value ? "url" : "upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const hasPreview = isValidImageUrl(value) && !previewError;
 
-  const simulateUpload = useCallback(
-    (file: File) => {
+  const uploadSelectedFile = useCallback(
+    async (file: File) => {
       setIsUploading(true);
-      setUploadProgress(0);
-      const iv = setInterval(() => {
-        setUploadProgress((p) => {
-          if (p >= 95) {
-            clearInterval(iv);
-            return 95;
-          }
-          return p + Math.random() * 15;
-        });
-      }, 200);
-      const url = URL.createObjectURL(file);
-      setTimeout(() => {
-        clearInterval(iv);
+      setUploadProgress(20);
+      setUploadError(null);
+      try {
+        const uploaded = await uploadFile(file);
         setUploadProgress(100);
-        onChange(url);
+        onChange(uploaded.url);
         setMode("url");
         setPreviewError(false);
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 500);
-      }, 1500);
+      } catch (error) {
+        setUploadError(
+          error instanceof Error
+            ? error.message
+            : "آپلود تصویر با خطا مواجه شد.",
+        );
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
     },
     [onChange],
   );
@@ -131,9 +129,9 @@ function RepeaterImageField({
       if (!files?.length) return;
       const f = files[0];
       if (!f.type.startsWith("image/")) return;
-      simulateUpload(f);
+      void uploadSelectedFile(f);
     },
-    [simulateUpload],
+    [uploadSelectedFile],
   );
 
   return (
@@ -278,6 +276,11 @@ function RepeaterImageField({
         <div className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-medium text-red-600">
           <HiOutlineXMark size={11} />
           لینک نامعتبر
+        </div>
+      )}
+      {uploadError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-medium text-red-600">
+          {uploadError}
         </div>
       )}
     </div>

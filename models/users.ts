@@ -24,7 +24,6 @@ export interface IUser extends Document {
     files: number;
     blocks: number;
     pages: number;
-    landingPages: number;
   };
 
   lastLoginAt?: Date;
@@ -131,11 +130,6 @@ const UserSchema = new Schema<IUser>(
         min: 0,
       },
 
-      landingPages: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
     },
 
     lastLoginAt: {
@@ -170,7 +164,7 @@ const UserSchema = new Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
-    agentid: { type: Schema.Types.ObjectId, ref: "User" },
+    agentid: { type: Schema.Types.ObjectId, ref: "Agent" },
   },
   {
     timestamps: true,

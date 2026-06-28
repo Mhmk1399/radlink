@@ -55,6 +55,26 @@ function normalizeBuilderBlocks(value: unknown) {
     return value.filter((block) => typeof block === "object" && block !== null);
 }
 
+function normalizeTemplateBackground(value: unknown, style?: Record<string, unknown>) {
+    const background =
+        typeof value === "object" && value !== null
+            ? (value as Record<string, unknown>)
+            : {};
+    const colors =
+        style?.colors && typeof style.colors === "object"
+            ? (style.colors as Record<string, unknown>)
+            : {};
+    const rawColor = String(background.color ?? colors.background ?? "").trim();
+    const rawImage = String(background.image ?? style?.bgImage ?? "").trim();
+
+    return {
+        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
+            ? rawColor
+            : "#ffffff",
+        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
+    };
+}
+
 // POST /api/templates — admin creates a template
 export const POST = compose(
     withDB(),
@@ -71,6 +91,7 @@ export const POST = compose(
         categoryId,
         blocks,
         builderBlocks,
+        background,
     } = await req.json();
 
     if (!name) {
@@ -92,6 +113,10 @@ export const POST = compose(
         category: normalizedCategory,
         blocks: normalizeObjectIdArray(blocks),
         builderBlocks: normalizeBuilderBlocks(builderBlocks),
+        background: normalizeTemplateBackground(
+            background,
+            style && typeof style === "object" ? style : undefined
+        ),
     });
 
     if (normalizedCategory) {

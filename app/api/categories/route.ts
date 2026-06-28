@@ -75,12 +75,47 @@ export const GET = compose(
 
     const [categories, total] = await Promise.all([
         Category.find()
-            .populate("templates", "name thumbnail")
+            .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
         Category.countDocuments(),
     ]);
 
-    return NextResponse.json({ categories, total, page, limit });
+    const categoryIds = categories.map((category) => category._id);
+    const templates = categoryIds.length
+        ? await Template.find({ category: { $in: categoryIds } })
+              .select("name thumbnail category")
+              .sort({ name: 1 })
+              .lean()
+        : [];
+    const templatesByCategory = new Map<
+        string,
+        Array<{ _id: string; id: string; name: string; thumbnail?: string }>
+    >();
+
+    templates.forEach((template) => {
+        const categoryId = String(template.category ?? "");
+        if (!categoryId) return;
+
+        const items = templatesByCategory.get(categoryId) ?? [];
+        items.push({
+            _id: String(template._id),
+            id: String(template._id),
+            name: template.name,
+            thumbnail: template.thumbnail,
+        });
+        templatesByCategory.set(categoryId, items);
+    });
+
+    const rows = categories.map((category) => {
+        const linkedTemplates = templatesByCategory.get(String(category._id)) ?? [];
+        return {
+            ...category,
+            templates: linkedTemplates,
+            templateCount: linkedTemplates.length,
+        };
+    });
+
+    return NextResponse.json({ categories: rows, total, page, limit });
 });

@@ -81,8 +81,15 @@ import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
-import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import {
+    hasGlobalOwnerScope,
+    withOwnerScope,
+} from "@/lib/auth/ownership";
+import {
+    checkUserQuota,
+    quotaExceededResponse,
+} from "@/lib/auth/quota";
 import type { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import User from "@/models/users";
@@ -155,6 +162,21 @@ function normalizeUrl(value: string) {
         .replace(/-+/g, "-");
 }
 
+function normalizePageBackground(value: unknown) {
+    const background = isObject(value) ? value : {};
+    const rawColor =
+        typeof background.color === "string" ? background.color.trim() : "";
+    const rawImage =
+        typeof background.image === "string" ? background.image.trim() : "";
+
+    return {
+        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
+            ? rawColor
+            : "#ffffff",
+        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
+    };
+}
+
 export const GET = compose(
     withDB(),
     withAuth(),
@@ -170,18 +192,9 @@ export const GET = compose(
         );
     }
 
-    const evaluated = await evaluateRequestAccess(req);
-    const isAdmin =
-        ["admin", "superAdmin"].includes(user.role) ||
-        (evaluated.matched && evaluated.granted);
-
-    const query: Record<string, unknown> = {
+    const query: Record<string, unknown> = withOwnerScope(user, {
         _id: id,
-    };
-
-    if (!isAdmin) {
-        query.owner = user._id;
-    }
+    });
 
     const page = await Page.findOne(query)
         .populate("owner", "firstName lastName email phoneNumber")
@@ -218,10 +231,7 @@ export const PATCH = compose(
     const body = await req.json();
     const update: Record<string, unknown> = {};
 
-    const evaluated = await evaluateRequestAccess(req);
-    const isAdmin =
-        ["admin", "superAdmin"].includes(user.role) ||
-        (evaluated.matched && evaluated.granted);
+    const isAdmin = hasGlobalOwnerScope(user);
 
     const requestedOwnerId = getOptionalObjectId(body.ownerId);
     if (requestedOwnerId === null) {
@@ -304,6 +314,10 @@ export const PATCH = compose(
         update.styleOverride = body.styleOverride;
     }
 
+    if (isObject(body.background)) {
+        update.background = normalizePageBackground(body.background);
+    }
+
     if (typeof body.logo === "string") {
         update.logo = body.logo.trim();
     }
@@ -321,12 +335,39 @@ export const PATCH = compose(
         update.publishedAt = body.isPublished ? new Date() : undefined;
     }
 
-    const query: Record<string, unknown> = {
+    const query: Record<string, unknown> = withOwnerScope(user, {
         _id: id,
-    };
+    });
 
-    if (!isAdmin) {
-        query.owner = user._id;
+    if (body.blocks !== undefined) {
+        const currentPage = await Page.findOne(query).select("owner blocks");
+        if (!currentPage) {
+            return NextResponse.json(
+                { message: "صفحه پیدا نشد" },
+                { status: 404 }
+            );
+        }
+
+        const ownerUser =
+            String(currentPage.owner) === String(user._id)
+                ? user
+                : await User.findById(currentPage.owner);
+
+        if (!ownerUser) {
+            return NextResponse.json(
+                { message: "مالک صفحه پیدا نشد." },
+                { status: 404 }
+            );
+        }
+
+        const nextBlocks = Array.isArray(update.blocks) ? update.blocks : [];
+        const blockQuota = await checkUserQuota({
+            user: ownerUser,
+            resource: "blocks",
+            absoluteUsage: nextBlocks.length,
+            currentUsage: currentPage.blocks.length,
+        });
+        if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
     }
 
     const page = await Page.findOneAndUpdate(
@@ -348,6 +389,8 @@ export const PATCH = compose(
         );
     }
 
+    revalidatePath(`/${page.url}`);
+
     return NextResponse.json({ page });
 });
 
@@ -366,18 +409,9 @@ export const DELETE = compose(
         );
     }
 
-    const evaluated = await evaluateRequestAccess(req);
-    const isAdmin =
-        ["admin", "superAdmin"].includes(user.role) ||
-        (evaluated.matched && evaluated.granted);
-
-    const query: Record<string, unknown> = {
+    const query: Record<string, unknown> = withOwnerScope(user, {
         _id: id,
-    };
-
-    if (!isAdmin) {
-        query.owner = user._id;
-    }
+    });
 
     const page = await Page.findOneAndDelete(query);
 

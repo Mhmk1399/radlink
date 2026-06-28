@@ -92,7 +92,6 @@ function normalizeLimits(value: unknown): User["limits"] {
     files: Number(limits.files ?? 0),
     blocks: Number(limits.blocks ?? 0),
     pages: Number(limits.pages ?? 0),
-    landingPages: Number(limits.landingPages ?? 0),
   };
 }
 

@@ -31,6 +31,26 @@ function normalizeBuilderBlocks(value: unknown) {
     return value.filter((block) => typeof block === "object" && block !== null);
 }
 
+function normalizeTemplateBackground(value: unknown, style?: Record<string, unknown>) {
+    const background =
+        typeof value === "object" && value !== null
+            ? (value as Record<string, unknown>)
+            : {};
+    const colors =
+        style?.colors && typeof style.colors === "object"
+            ? (style.colors as Record<string, unknown>)
+            : {};
+    const rawColor = String(background.color ?? colors.background ?? "").trim();
+    const rawImage = String(background.image ?? style?.bgImage ?? "").trim();
+
+    return {
+        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
+            ? rawColor
+            : "#ffffff",
+        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
+    };
+}
+
 async function syncCategoryLink(
     templateId: string,
     previousCategory?: string,
@@ -89,6 +109,12 @@ export const PATCH = compose(
     if (typeof body.description === "string") template.description = body.description.trim();
     if (typeof body.thumbnail === "string") template.thumbnail = body.thumbnail.trim();
     if (body.style && typeof body.style === "object") template.style = body.style;
+    if (body.background && typeof body.background === "object") {
+        template.background = normalizeTemplateBackground(
+            body.background,
+            body.style && typeof body.style === "object" ? body.style : undefined
+        );
+    }
     if (body.blocks !== undefined) template.set("blocks", normalizeObjectIdArray(body.blocks));
     if (body.builderBlocks !== undefined) template.builderBlocks = normalizeBuilderBlocks(body.builderBlocks);
     if (typeof body.isActive === "boolean") template.isActive = body.isActive;

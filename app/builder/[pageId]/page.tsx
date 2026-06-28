@@ -14,6 +14,10 @@ type PageMetadata = {
   title: string;
   description: string;
   url: string;
+  background: {
+    color: string;
+    image: string;
+  };
 };
 
 function setClientMetadata(title: string, description: string) {
@@ -110,6 +114,16 @@ export default function EditPageBuilder() {
           title: page.title || "صفحه جدید",
           description: page.description || "",
           url: page.url || "new-page",
+          background: {
+            color:
+              typeof page.background?.color === "string"
+                ? page.background.color
+                : "#ffffff",
+            image:
+              typeof page.background?.image === "string"
+                ? page.background.image
+                : "",
+          },
         });
 
         // Update favicon dynamically
@@ -170,6 +184,7 @@ export default function EditPageBuilder() {
       initialTitle={pageMetadata?.title}
       initialDescription={pageMetadata?.description}
       initialUrl={pageMetadata?.url}
+      initialBackground={pageMetadata?.background}
     />
   );
 }

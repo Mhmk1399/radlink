@@ -21,7 +21,6 @@ export interface IAgent extends Document {
         files: number;
         blocks: number;
         pages: number;
-        landingPages: number;
     };
 
     isActive: boolean;
@@ -116,11 +115,6 @@ const AgentSchema = new Schema<IAgent>(
                 min: 0,
             },
 
-            landingPages: {
-                type: Number,
-                default: 0,
-                min: 0,
-            },
         },
 
         isActive: {

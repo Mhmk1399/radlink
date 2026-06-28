@@ -23,6 +23,7 @@ import { PersianDateTimePicker } from "./PersianDateTimePicker";
 import { RepeaterField } from "./RepeaterField";
 import { SelectField } from "./SelectField";
 import type { SelectFieldConfig } from "@/types/blocks/builder.types";
+import { uploadFile } from "@/lib/fileUtils";
 /* ================================================================== */
 /*  Types                                                              */
 /* ================================================================== */
@@ -271,37 +272,32 @@ function ImageUploadField({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [mode, setMode] = useState<"upload" | "url">(value ? "url" : "upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const hasPreview = isValidImageUrl(value) && !previewError;
 
-  const simulateUpload = useCallback(
-    (file: File) => {
+  const uploadSelectedFile = useCallback(
+    async (file: File) => {
       setIsUploading(true);
-      setUploadProgress(0);
-      const iv = setInterval(() => {
-        setUploadProgress((p) => {
-          if (p >= 95) {
-            clearInterval(iv);
-            return 95;
-          }
-          return p + Math.random() * 15;
-        });
-      }, 200);
-      const url = URL.createObjectURL(file);
-      setTimeout(() => {
-        clearInterval(iv);
+      setUploadProgress(20);
+      setUploadError(null);
+      try {
+        const uploaded = await uploadFile(file);
         setUploadProgress(100);
-        onChange(url);
+        onChange(uploaded.url);
         setMode("url");
         setPreviewError(false);
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 500);
-      }, 1500);
+      } catch (error) {
+        setUploadError(
+          error instanceof Error ? error.message : "آپلود تصویر با خطا مواجه شد.",
+        );
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
     },
     [onChange],
   );
@@ -311,9 +307,9 @@ function ImageUploadField({
       if (!files?.length) return;
       const f = files[0];
       if (!f.type.startsWith("image/")) return;
-      simulateUpload(f);
+      void uploadSelectedFile(f);
     },
-    [simulateUpload],
+    [uploadSelectedFile],
   );
 
   return (
@@ -464,6 +460,11 @@ function ImageUploadField({
           <HiOutlineXMark size={13} /> لینک تصویر نامعتبر است
         </div>
       )}
+      {uploadError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-600">
+          {uploadError}
+        </div>
+      )}
     </div>
   );
 }
@@ -484,38 +485,30 @@ function VideoUploadField({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [mode, setMode] = useState<"upload" | "url">(value ? "url" : "upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const hasPreview = Boolean(value);
 
-  const simulateUpload = useCallback(
-    (file: File) => {
+  const uploadSelectedFile = useCallback(
+    async (file: File) => {
       setIsUploading(true);
-      setUploadProgress(0);
-
-      const iv = setInterval(() => {
-        setUploadProgress((p) => {
-          if (p >= 95) {
-            clearInterval(iv);
-            return 95;
-          }
-          return p + Math.random() * 12;
-        });
-      }, 250);
-
-      const url = URL.createObjectURL(file);
-
-      setTimeout(() => {
-        clearInterval(iv);
+      setUploadProgress(20);
+      setUploadError(null);
+      try {
+        const uploaded = await uploadFile(file);
         setUploadProgress(100);
-        onChange(url);
+        onChange(uploaded.url);
         setMode("url");
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 500);
-      }, 2000);
+      } catch (error) {
+        setUploadError(
+          error instanceof Error ? error.message : "آپلود ویدئو با خطا مواجه شد.",
+        );
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
     },
     [onChange],
   );
@@ -525,9 +518,9 @@ function VideoUploadField({
       if (!files?.length) return;
       const f = files[0];
       if (!f.type.startsWith("video/")) return;
-      simulateUpload(f);
+      void uploadSelectedFile(f);
     },
-    [simulateUpload],
+    [uploadSelectedFile],
   );
 
   return (
@@ -669,6 +662,11 @@ function VideoUploadField({
             <HiOutlineCheck size={11} />
             آپلود شده
           </div>
+        </div>
+      )}
+      {uploadError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-600">
+          {uploadError}
         </div>
       )}
     </div>

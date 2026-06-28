@@ -23,6 +23,6 @@ export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.products", label: "محصولات" },
   { key: "admin.tickets", label: "تیکت‌ها" },
   { key: "admin.notifications", label: "اعلانات" },
-   { key: "builder.page", label: "صفحه‌ساز صفحات" },
+  { key: "builder.page", label: "ساخت صفحه از ادمین" },
   { key: "builder.template", label: "صفحه‌ساز تمپلیت‌ها" },
 ] as const;

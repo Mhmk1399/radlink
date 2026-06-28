@@ -5,13 +5,10 @@ export interface INotification extends Document {
     title: string;
     subtitle?: string;
     description: string;
+    type: "info" | "danger";
     closeable: boolean;
     createdAt: Date;
     updatedAt: Date;
-
-    // Legacy fields are kept readable while existing records are migrated.
-    User?: Types.ObjectId;
-    message?: string;
     isGlobal?: boolean;
 }
 
@@ -40,19 +37,16 @@ const notificationSchema = new Schema<INotification>(
             trim: true,
             maxlength: 2000,
         },
+        type: {
+            type: String,
+            enum: ["info", "danger"],
+            required: true,
+            default: "info",
+            index: true,
+        },
         closeable: {
             type: Boolean,
             default: true,
-        },
-
-        // Legacy compatibility. New API writes do not use these fields.
-        User: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
-        message: {
-            type: String,
-            trim: true,
         },
         isGlobal: {
             type: Boolean,

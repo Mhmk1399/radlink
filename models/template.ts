@@ -2,6 +2,11 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 type StyleMap = Record<string, unknown>;
 
+export type TemplateBackground = {
+    color: string;
+    image: string;
+};
+
 // Full design token set — the visual skin of the template.
 // Consumed by styled-components on the frontend.
 export interface TemplateStyle {
@@ -51,6 +56,7 @@ export interface ITemplate extends Document {
 
     // The full style skin — consumed by styled-components
     style: TemplateStyle;
+    background: TemplateBackground;
 
     category?: Types.ObjectId;
 
@@ -104,6 +110,18 @@ const TemplateSchema = new Schema<ITemplate>(
         thumbnail:   { type: String, trim: true },
 
         style: { type: TemplateStyleSchema, required: true },
+        background: {
+            color: {
+                type: String,
+                trim: true,
+                default: "#ffffff",
+            },
+            image: {
+                type: String,
+                trim: true,
+                default: "",
+            },
+        },
 
         category: { type: Schema.Types.ObjectId, ref: "Category", index: true },
 

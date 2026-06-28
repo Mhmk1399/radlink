@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getLiaraEndpoint } from "@/lib/s3";
-import { uploadLiaraObject } from "@/lib/liaraStorage";
+import { deleteLiaraObject, uploadLiaraObject } from "@/lib/liaraStorage";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import type { AuthRequest } from "@/lib/auth/types";
+import {
+    checkUserQuota,
+    quotaExceededResponse,
+} from "@/lib/auth/quota";
 import FileModel from "@/models/files";
 
 // Allowed file types and size limits
@@ -13,13 +17,19 @@ const ALLOWED_TYPES = [
     "image/png",
     "image/gif",
     "image/webp",
+    "image/avif",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/x-m4v",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/plain",
 ];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 function jsonError(message: string, status = 500, extra?: Record<string, unknown>) {
     return NextResponse.json(
@@ -36,6 +46,12 @@ export const POST = compose(
     const activeEndpoint = getLiaraEndpoint();
 
     try {
+        const quota = await checkUserQuota({
+            user: req.ctx.user!,
+            resource: "files",
+        });
+        if (!quota.allowed) return quotaExceededResponse(quota);
+
         // Check if required environment variables are set
         if (!process.env.LIARA_BUCKET_NAME) {
             console.log("LIARA_BUCKET_NAME environment variable is not set");
@@ -58,9 +74,12 @@ export const POST = compose(
         }
 
         // Validate file size
-        if (file.size > MAX_FILE_SIZE) {
+        const maxFileSize = file.type.startsWith("video/")
+            ? MAX_VIDEO_SIZE
+            : MAX_FILE_SIZE;
+        if (file.size > maxFileSize) {
             return jsonError("حجم فایل بیش از حد مجاز است.", 400, {
-                maxFileSize: MAX_FILE_SIZE,
+                maxFileSize,
             });
         }
 
@@ -111,14 +130,20 @@ export const POST = compose(
         // Generate public URL for Liara Object Storage
 
         const publicUrl = uploadResult.url;
-        const fileDoc = await FileModel.create({
-            filename: file.name,
-            path: publicUrl,
-            owner: req.ctx.user!._id,
-            mimeType: file.type,
-            size: file.size,
-            kind: "upload",
-        });
+        let fileDoc;
+        try {
+            fileDoc = await FileModel.create({
+                filename: file.name,
+                path: publicUrl,
+                owner: req.ctx.user!._id,
+                mimeType: file.type,
+                size: file.size,
+                kind: "upload",
+            });
+        } catch (error) {
+            await deleteLiaraObject(key).catch(() => null);
+            throw error;
+        }
 
         return NextResponse.json({
             success: true,
@@ -207,6 +232,7 @@ export async function GET() {
                 activeEndpoint,
                 allowedTypes: ALLOWED_TYPES,
                 maxFileSize: `${MAX_FILE_SIZE / (1024 * 1024)}MB`,
+                maxVideoSize: `${MAX_VIDEO_SIZE / (1024 * 1024)}MB`,
             },
         });
     } catch (error) {

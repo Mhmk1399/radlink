@@ -45,7 +45,6 @@ type AgentLimits = {
   files: number;
   blocks: number;
   pages: number;
-  landingPages: number;
 };
 
 type AgentRow = {
@@ -92,11 +91,10 @@ type AgentFormState = {
     files: string;
     blocks: string;
     pages: string;
-    landingPages: string;
   };
 };
 
-const emptyLimits = { files: 0, blocks: 0, pages: 0, landingPages: 0 };
+const emptyLimits = { files: 0, blocks: 0, pages: 0 };
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -152,7 +150,7 @@ function emptyForm(): AgentFormState {
     ceoName: "",
     economicNumber: "",
     registrationNumber: "",
-    limits: { files: "0", blocks: "0", pages: "0", landingPages: "0" },
+    limits: { files: "0", blocks: "0", pages: "0" },
   };
 }
 function formFromRow(row: AgentRow): AgentFormState {
@@ -171,7 +169,6 @@ function formFromRow(row: AgentRow): AgentFormState {
       files: String(row.limits.files ?? 0),
       blocks: String(row.limits.blocks ?? 0),
       pages: String(row.limits.pages ?? 0),
-      landingPages: String(row.limits.landingPages ?? 0),
     },
   };
 }
@@ -198,7 +195,6 @@ function toPayload(form: AgentFormState) {
       files: toNumber(form.limits.files),
       blocks: toNumber(form.limits.blocks),
       pages: toNumber(form.limits.pages),
-      landingPages: toNumber(form.limits.landingPages),
     },
   };
 }
@@ -431,7 +427,6 @@ export default function AgentsSection({
             files: toNumber(limits.files),
             blocks: toNumber(limits.blocks),
             pages: toNumber(limits.pages),
-            landingPages: toNumber(limits.landingPages),
           };
           const type: AgentType =
             agent.type === "company" ? "company" : "personal";
@@ -453,7 +448,7 @@ export default function AgentsSection({
             economicNumber: toText(agent.economicNumber),
             registrationNumber: toText(agent.registrationNumber),
             limits: normalizedLimits,
-            limitsSummary: `فایل: ${normalizedLimits.files}، بلاک: ${normalizedLimits.blocks}، صفحه: ${normalizedLimits.pages}، لندینگ: ${normalizedLimits.landingPages}`,
+            limitsSummary: `فایل: ${normalizedLimits.files}، بلاک: ${normalizedLimits.blocks}، صفحه: ${normalizedLimits.pages}`,
             isActive: agent.isActive !== false,
             createdAt: toText(agent.createdAt),
             updatedAt: toText(agent.updatedAt),
@@ -1136,12 +1131,6 @@ export default function AgentsSection({
                       icon={<FaBriefcase className="h-3.5 w-3.5" />}
                       value={form.limits.pages}
                       onChange={(v) => updateLimit("pages", v)}
-                    />
-                    <LimitCard
-                      label="لندینگ"
-                      icon={<FaLandmark className="h-3.5 w-3.5" />}
-                      value={form.limits.landingPages}
-                      onChange={(v) => updateLimit("landingPages", v)}
                     />
                   </div>
                 </div>

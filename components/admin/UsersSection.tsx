@@ -70,7 +70,6 @@ type UserRow = {
     files: number;
     blocks: number;
     pages: number;
-    landingPages: number;
   };
   lastLoginAt?: string;
   lastOtpRequestAt?: string;
@@ -78,6 +77,7 @@ type UserRow = {
   isPhoneVerified: boolean;
   isDeleted: boolean;
   agentid?: string; // matches model field name (lowercase)
+  agentLabel?: string;
   createdBy?: string;
   updatedBy?: string;
   createdAt: string;
@@ -85,7 +85,6 @@ type UserRow = {
   "limits.files"?: number;
   "limits.blocks"?: number;
   "limits.pages"?: number;
-  "limits.landingPages"?: number;
 };
 
 type SelectOption = {
@@ -235,7 +234,6 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
       files: Math.max(0, Number(item["limits.files"]) || 0),
       blocks: Math.max(0, Number(item["limits.blocks"]) || 0),
       pages: Math.max(0, Number(item["limits.pages"]) || 0),
-      landingPages: Math.max(0, Number(item["limits.landingPages"]) || 0),
     },
   };
 
@@ -243,7 +241,6 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
   delete payload["limits.files"];
   delete payload["limits.blocks"];
   delete payload["limits.pages"];
-  delete payload["limits.landingPages"];
   delete payload.permissions;
 
   payload.agentid =
@@ -274,7 +271,10 @@ export default function UsersSection({
       ? (localStorage.getItem("auth_token") ?? "")
       : "";
 
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const headers = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+    [token],
+  );
   const [agentOptions, setAgentOptions] = useState<SelectOption[]>([]);
 
   useEffect(() => {
@@ -329,7 +329,7 @@ export default function UsersSection({
     return () => {
       ignore = true;
     };
-  }, [token]);
+  }, [headers, token]);
 
   /* ── Transform API response → UserRow[] ── */
   const transformResponse = useMemo(
@@ -348,6 +348,14 @@ export default function UsersSection({
 
         return raw.map((u: any) => {
           const userId = String(u._id ?? u.id ?? "");
+          const agentId = getObjectId(u.agentid);
+          const agentLabel =
+            u.agentid && typeof u.agentid === "object"
+              ? getAgentOptionLabel(
+                  u.agentid as Record<string, unknown>,
+                  agentId,
+                )
+              : "";
 
           return {
             ...u,
@@ -359,11 +367,8 @@ export default function UsersSection({
               [u.firstName, u.lastName].filter(Boolean).join(" ") ||
               "",
             // Normalise agentid (model uses lowercase)
-            agentid: u.agentid
-              ? typeof u.agentid === "object"
-                ? String(u.agentid._id ?? u.agentid.id ?? u.agentid)
-                : String(u.agentid)
-              : undefined,
+            agentid: agentId || undefined,
+            agentLabel,
             // Normalise permissions (populated docs or raw ObjectId strings)
             permissions: Array.isArray(u.permissions)
               ? u.permissions.map((p: any) =>
@@ -377,12 +382,10 @@ export default function UsersSection({
               files: u.limits?.files ?? 0,
               blocks: u.limits?.blocks ?? 0,
               pages: u.limits?.pages ?? 0,
-              landingPages: u.limits?.landingPages ?? 0,
             },
             "limits.files": u.limits?.files ?? 0,
             "limits.blocks": u.limits?.blocks ?? 0,
             "limits.pages": u.limits?.pages ?? 0,
-            "limits.landingPages": u.limits?.landingPages ?? 0,
             // Normalise createdBy / updatedBy
             createdBy: formatUserRef(u.createdBy),
             updatedBy: formatUserRef(u.updatedBy),
@@ -491,15 +494,16 @@ export default function UsersSection({
       },
       {
         key: "agentid",
-        label: "نماینده",
+        label: "نماینده این کاربر",
         sortable: true,
         options: agentOptions,
-        placeholder: "بدون نماینده",
         copyable: true,
         hideOnMobile: true,
-        render: (value) => (
+        placeholder: "انتخاب نماینده یا بدون نماینده",
+        render: (value, row) => (
           <span className="text-sm text-slate-400">
-            {agentOptions.find((option) => option.value === value)?.label ??
+            {row.agentLabel ||
+              agentOptions.find((option) => option.value === value)?.label ||
               String(value || "—")}
           </span>
         ),
@@ -544,23 +548,18 @@ export default function UsersSection({
         placeholder: "0",
       },
       {
-        key: "limits.landingPages",
-        label: "محدودیت لندینگ",
-        inputType: "number",
-        visible: false,
-        placeholder: "0",
-      },
-      {
         key: "limits",
         label: "محدودیت‌ها",
         editable: false,
         render: (value) => {
           const l = value as UserRow["limits"];
           if (!l) return "—";
+          const showLimit = (value: number) =>
+            value > 0 ? String(value) : "نامحدود";
           return (
             <span className="text-xs text-slate-500">
-              فایل: {l.files} · بلوک: {l.blocks} · صفحه: {l.pages} · لندینگ:{" "}
-              {l.landingPages}
+              فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
+              {showLimit(l.pages)}
             </span>
           );
         },
@@ -587,7 +586,7 @@ export default function UsersSection({
         render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
       {
-        key: "lastOtpRequestAt" as any,
+        key: "lastOtpRequestAt",
         label: "آخرین درخواست OTP",
         sortable: true,
         dateFilter: true,
@@ -663,7 +662,7 @@ export default function UsersSection({
         render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
     ],
-    [],
+    [agentOptions],
   );
 
   /* ══════════════════════════════════════════
@@ -737,6 +736,7 @@ export default function UsersSection({
         title="لیست کاربران"
         subtitle="مشاهده، جستجو و مرور تمامی کاربران"
         primaryKey="_id"
+        canUpdate={canUpdateUsers}
         headers={headers}
         pageSize={8}
         pageSizes={[5, 8, 10, 20]}

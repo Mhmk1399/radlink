@@ -711,6 +711,7 @@ function SidebarLayersPanel({
 export function BlocksSidebar({
   blocks,
   availableBlocks: allowedPaletteBlocks,
+  isBlocksLoading = false,
   selectedBlockId,
   onSelectBlock,
   onDeleteBlock,
@@ -724,6 +725,7 @@ export function BlocksSidebar({
 }: {
   blocks: PageBlock[];
   availableBlocks?: SidebarCatalogBlock[];
+  isBlocksLoading?: boolean;
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
   onDeleteBlock: (id: string) => void;
@@ -850,7 +852,7 @@ export function BlocksSidebar({
                 <HiOutlinePlus size={13} />
                 بلاک‌ها
                 <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-emerald-100 px-1 text-[9px] font-bold tabular-nums text-emerald-700">
-                  {availableBlocks.length}
+                  {isBlocksLoading ? "..." : availableBlocks.length}
                 </span>
               </button>
               <button
@@ -892,6 +894,7 @@ export function BlocksSidebar({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    disabled={isBlocksLoading}
                     placeholder="جستجوی بلاک..."
                     className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2.5 pr-9 pl-3 text-[12px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
                   />
@@ -908,7 +911,27 @@ export function BlocksSidebar({
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-200">
-                {filteredPaletteBlocks.length === 0 ? (
+                {isBlocksLoading ? (
+                  <div
+                    className="space-y-2 px-1 py-2"
+                    role="status"
+                    aria-label="در حال دریافت بلاک‌ها"
+                  >
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="flex animate-pulse items-center gap-3 rounded-2xl border border-neutral-100 p-3"
+                      >
+                        <div className="h-10 w-10 shrink-0 rounded-xl bg-neutral-200" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="h-3 w-2/5 rounded bg-neutral-200" />
+                          <div className="h-2.5 w-4/5 rounded bg-neutral-100" />
+                        </div>
+                      </div>
+                    ))}
+                    <span className="sr-only">در حال دریافت بلاک‌ها...</span>
+                  </div>
+                ) : filteredPaletteBlocks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <span className="mb-2 text-2xl">🔍</span>
                     <p className="text-[12px] font-semibold text-neutral-500">

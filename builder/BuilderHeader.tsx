@@ -17,6 +17,7 @@ import { SaveIndicator, BlockCountBadge } from "./BuilderOverlays";
 interface BuilderHeaderProps {
   blocksCount: number;
   justSaved: boolean;
+  mode: "page" | "template";
   pageId: string | null;
   isServerSaving: boolean;
   canUndo: boolean;
@@ -35,6 +36,7 @@ interface BuilderHeaderProps {
 export function BuilderHeader({
   blocksCount,
   justSaved,
+  mode,
   pageId,
   isServerSaving,
   canUndo,
@@ -49,6 +51,18 @@ export function BuilderHeader({
   onClearAll,
   onStartTour,
 }: BuilderHeaderProps) {
+  const saveButtonLabel = isServerSaving
+    ? mode === "template"
+      ? "در حال ذخیره تمپلیت..."
+      : "در حال ذخیره صفحه..."
+    : mode === "template"
+      ? pageId
+        ? "ذخیره تغییرات تمپلیت"
+        : "ساخت تمپلیت"
+      : pageId
+        ? "ذخیره تغییرات صفحه"
+        : "ساخت صفحه";
+
   return (
     <header
       data-tour="tour-header"
@@ -59,18 +73,16 @@ export function BuilderHeader({
         <div className="flex items-center justify-between gap-3">
           {/* Left side */}
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-[13px] font-black text-white shadow-lg shadow-neutral-900/20">
-              ص
-            </div>
+           
             <div className="hidden sm:block">
-              <h1 className="text-[15px] font-extrabold text-neutral-900">
-                صفحه‌ساز
+              <h1 className="text-sm font-extrabold text-neutral-900">
+                صفحه‌ساز رادلینک
               </h1>
             </div>
             <div data-tour="tour-save-indicator">
               <SaveIndicator saved={justSaved} />
             </div>{" "}
-            <BlockCountBadge count={blocksCount} />
+            {/* <BlockCountBadge count={blocksCount} /> */}
           </div>
 
           {/* Right side */}
@@ -156,7 +168,7 @@ export function BuilderHeader({
                 <HiOutlinePlus size={14} />
               )}
               <span className="hidden sm:inline">
-                {isServerSaving ? "ذخیره..." : pageId ? "ذخیره" : "ساخت صفحه"}
+                {saveButtonLabel}
               </span>
             </button>
 

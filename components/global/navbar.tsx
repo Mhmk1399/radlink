@@ -16,6 +16,7 @@ import {
   accentTokens,
 } from "@/lib/design/design-system";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 /* ──────────────────────────────────────────────
    KEYFRAMES
@@ -259,81 +260,15 @@ export default function SmartLandingNavbar() {
                 )}
                 aria-label="صفحه اصلی"
               >
-                <span
-                  className={cn(
-                    "relative flex items-center justify-center overflow-hidden transition-all duration-500",
-                    layout.radius.lg,
-                    borders.strong,
-                    gradients.logo,
-                    // Shrink logo on scroll
-                    scrolled ? "h-9 w-9" : "h-11 w-11",
-                    scrolled
-                      ? shadows.logo
-                      : cn(shadows.logo, "nav-logo-pulse"),
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute inset-[1px] rounded-[12px]",
-                      gradients.innerHighlight,
-                    )}
-                  />
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 24 24"
-                    className={cn(
-                      "relative z-10 transition-all duration-500",
-                      scrolled ? "h-4 w-4" : "h-5 w-5",
-                    )}
-                    fill="none"
-                  >
-                    <rect
-                      x="4"
-                      y="5"
-                      width="16"
-                      height="3"
-                      rx="1.5"
-                      className="fill-white"
-                    />
-                    <rect
-                      x="4"
-                      y="10.5"
-                      width="11"
-                      height="3"
-                      rx="1.5"
-                      className="fill-sky-100"
-                    />
-                    <rect
-                      x="4"
-                      y="16"
-                      width="7"
-                      height="3"
-                      rx="1.5"
-                      className="fill-cyan-200"
-                    />
-                  </svg>
-                </span>
-
                 <span className="flex flex-col leading-none">
-                  <span
-                    className={cn(
-                      "font-semibold tracking-tight text-white transition-all duration-500",
-                      scrolled ? "text-xs sm:text-sm" : "text-sm sm:text-base",
-                    )}
-                  >
-                    رادلینک{" "}
-                  </span>
-                  <span
-                    className={cn(
-                      "mt-0.5 transition-all duration-500 overflow-hidden",
-                      typography.brandSub,
-                      scrolled
-                        ? "max-h-0 opacity-0"
-                        : "max-h-5 opacity-100 hidden sm:block",
-                    )}
-                  >
-                    ساخت سریع لندینگ حرفه‌ای
-                  </span>
+                  <Image
+                    src="/assets/images/logo.png"
+                    width={150}
+                    height={200}
+                    alt="logo"
+                    className="object-cover h-10"
+                  />
+               
                 </span>
               </Link>
 

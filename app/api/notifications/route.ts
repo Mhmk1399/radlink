@@ -9,6 +9,7 @@ import Page from "@/models/pages";
 import "@/models/users";
 
 const PAGE_POPULATE_FIELDS = "title url owner isPublished";
+const NOTIFICATION_TYPES = new Set(["info", "danger"]);
 
 function cleanText(value: unknown, maxLength: number) {
     return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -23,7 +24,7 @@ function normalizeNotificationContent(body: Record<string, unknown>) {
     return {
         title: cleanText(body.title, 120),
         subtitle: cleanText(body.subtitle, 180),
-        description: cleanText(body.description ?? body.message, 2000),
+        description: cleanText(body.description, 2000),
     };
 }
 
@@ -38,6 +39,7 @@ export const POST = compose(
     const isGlobal = Boolean(body.isGlobal);
     const pageId = getPageId(body);
     const content = normalizeNotificationContent(body);
+    const type = cleanText(body.type, 20);
 
     if (!isGlobal && !mongoose.Types.ObjectId.isValid(pageId)) {
         return NextResponse.json(
@@ -57,6 +59,12 @@ export const POST = compose(
             { status: 400 },
         );
     }
+    if (!NOTIFICATION_TYPES.has(type)) {
+        return NextResponse.json(
+            { message: "نوع اعلان باید اطلاعاتی یا خطر باشد." },
+            { status: 400 },
+        );
+    }
 
     if (!isGlobal) {
         const pageExists = await Page.exists({ _id: pageId });
@@ -71,6 +79,7 @@ export const POST = compose(
     const created = await Notification.create({
         page: isGlobal ? undefined : pageId,
         ...content,
+        type,
         closeable: body.closeable === undefined ? true : Boolean(body.closeable),
         isGlobal,
     });
@@ -107,7 +116,6 @@ export const GET = compose(
             $or: [
                 { page: { $in: ownedPageIds } },
                 { isGlobal: true },
-                { User: user._id }, // Legacy user-targeted records.
             ],
         };
     }
@@ -115,7 +123,6 @@ export const GET = compose(
     const [notifications, total] = await Promise.all([
         Notification.find(query)
             .populate("page", PAGE_POPULATE_FIELDS)
-            .populate("User", "firstName lastName phoneNumber email role status")
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)

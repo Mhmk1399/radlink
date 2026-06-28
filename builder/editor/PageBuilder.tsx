@@ -63,10 +63,12 @@ import {
 } from "../BuilderOverlays";
 import {
   BlockCatalogModal,
+  PageSaveResultModal,
   ClearAllConfirmModal,
   PageMetaModal,
 } from "../BuilderModals";
 import { BuilderTour } from "../BuilderTour";
+import { useAccess } from "@/hook/auth/useAccess";
 
 /* ================================================================== */
 /*  Props                                                              */
@@ -83,6 +85,10 @@ type SimplePageBuilderProps = {
   initialUrl?: string;
   initialCategoryId?: string;
   initialThumbnail?: string;
+  initialBackground?: {
+    color?: string;
+    image?: string;
+  };
   suppressSmartSuggestions?: boolean;
 };
 
@@ -188,6 +194,8 @@ type BuilderSaveSnapshotInput = {
   url: string;
   categoryId: string;
   thumbnail: string;
+  backgroundColor: string;
+  backgroundImage: string;
   blocks: PageBlock[];
 };
 
@@ -198,6 +206,8 @@ function serializeBuilderSaveState({
   url,
   categoryId,
   thumbnail,
+  backgroundColor,
+  backgroundImage,
   blocks,
 }: BuilderSaveSnapshotInput) {
   return JSON.stringify({
@@ -207,6 +217,7 @@ function serializeBuilderSaveState({
     url: saveMode === "page" ? url : "",
     categoryId: saveMode === "template" ? categoryId : "",
     thumbnail: saveMode === "template" ? thumbnail : "",
+    background: { color: backgroundColor, image: backgroundImage },
     blocks,
   });
 }
@@ -368,6 +379,7 @@ export default function SimplePageBuilder({
   initialUrl,
   initialCategoryId,
   initialThumbnail,
+  initialBackground,
   suppressSmartSuggestions = false,
 }: SimplePageBuilderProps = {}) {
   const initialState = useMemo(() => createInitialBuilderState(), []);
@@ -409,6 +421,12 @@ export default function SimplePageBuilder({
   const [templateThumbnail, setTemplateThumbnail] = useState(
     initialThumbnail || "",
   );
+  const [pageBackgroundColor, setPageBackgroundColor] = useState(
+    initialBackground?.color || "#ffffff",
+  );
+  const [pageBackgroundImage, setPageBackgroundImage] = useState(
+    initialBackground?.image || "",
+  );
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [leaveAfterMetaSave, setLeaveAfterMetaSave] = useState(false);
 
@@ -420,6 +438,8 @@ export default function SimplePageBuilder({
       url: pageUrl,
       categoryId: templateCategoryId,
       thumbnail: templateThumbnail,
+      backgroundColor: pageBackgroundColor,
+      backgroundImage: pageBackgroundImage,
       blocks,
     }),
   );
@@ -427,10 +447,16 @@ export default function SimplePageBuilder({
   const [masterBlocks, setMasterBlocks] = useState<
     Record<string, MasterBlockDefinition>
   >({});
+  const [isMasterBlocksLoading, setIsMasterBlocksLoading] = useState(true);
 
   /* ── UI state ── */
   const [isServerSaving, setIsServerSaving] = useState(false);
   const [serverSaveError, setServerSaveError] = useState<string | null>(null);
+  const [pageSaveResult, setPageSaveResult] = useState<{
+    status: "success" | "error";
+    message: string;
+    pageUrl?: string;
+  } | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [isPhonePreviewOpen, setIsPhonePreviewOpen] = useState(false);
   const [breakpoint, setBreakpoint] = useState<Breakpoint>("mobile");
@@ -452,6 +478,22 @@ export default function SimplePageBuilder({
 
   /* ── Toast & Onboarding ── */
   const toast = useToast();
+  const { user: authUser, isSuperAdmin } = useAccess();
+  const blockLimit =
+    saveMode === "template" || isSuperAdmin || !authUser?.limits?.blocks
+      ? 0
+      : Math.max(0, Math.floor(authUser.limits.blocks));
+  const canAddBlockCount = useCallback(
+    (count = 1) => {
+      if (blockLimit === 0 || blocks.length + count <= blockLimit) return true;
+      toast.show(
+        `سقف مجاز بلاک‌های این صفحه ${blockLimit} عدد است.`,
+        "error",
+      );
+      return false;
+    },
+    [blockLimit, blocks.length, toast],
+  );
 
   /* ── Derived ── */
   const sortedBlocks = useMemo(
@@ -516,6 +558,8 @@ export default function SimplePageBuilder({
         url: pageUrl,
         categoryId: templateCategoryId,
         thumbnail: templateThumbnail,
+        backgroundColor: pageBackgroundColor,
+        backgroundImage: pageBackgroundImage,
         blocks,
       }),
     [
@@ -525,6 +569,8 @@ export default function SimplePageBuilder({
       pageUrl,
       templateCategoryId,
       templateThumbnail,
+      pageBackgroundColor,
+      pageBackgroundImage,
       blocks,
     ],
   );
@@ -646,6 +692,8 @@ export default function SimplePageBuilder({
         if (!cancelled) setMasterBlocks(next);
       } catch {
         if (!cancelled) setMasterBlocks({});
+      } finally {
+        if (!cancelled) setIsMasterBlocksLoading(false);
       }
     }
 
@@ -836,6 +884,7 @@ export default function SimplePageBuilder({
 
   const addBlock = useCallback(
     (type: string) => {
+      if (!canAddBlockCount()) return;
       const config = blockRegistry[type as keyof typeof blockRegistry];
       if (!allowedBlockTypes.has(type)) {
         toast.show(
@@ -854,6 +903,7 @@ export default function SimplePageBuilder({
     [
       allowedBlockTypes,
       blocks,
+      canAddBlockCount,
       createBlockFromSource,
       setBlocks,
       sortedBlocks.length,
@@ -936,6 +986,7 @@ export default function SimplePageBuilder({
 
   const duplicateBlockById = useCallback(
     (id: string) => {
+      if (!canAddBlockCount()) return;
       const idx = sortedBlocks.findIndex((b) => b.instanceId === id);
       if (idx === -1) return;
       const sourceBlock = sortedBlocks[idx];
@@ -961,7 +1012,14 @@ export default function SimplePageBuilder({
       setSelectedBlockId(dup.instanceId);
       setSelectedElementId("container");
     },
-    [allowedBlockTypes, blocks, setBlocks, sortedBlocks, toast],
+    [
+      allowedBlockTypes,
+      blocks,
+      canAddBlockCount,
+      setBlocks,
+      sortedBlocks,
+      toast,
+    ],
   );
 
   const duplicateSelectedBlock = useCallback(() => {
@@ -1182,6 +1240,10 @@ export default function SimplePageBuilder({
             keywords: [],
           },
           settings: { direction: "rtl" },
+          background: {
+            color: pageBackgroundColor,
+            image: pageBackgroundImage,
+          },
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1201,11 +1263,17 @@ export default function SimplePageBuilder({
       });
 
       setPageId(getCreatedDocumentId(createdPage) || null);
+      setPageSaveResult({
+        status: "success",
+        message: "صفحه با موفقیت ساخته شد و اکنون قابل مشاهده است.",
+        pageUrl: buildClientPageTargetUrl(createdPage.url ?? pageUrl),
+      });
       toast.show("صفحه با موفقیت ساخته شد! 🎉", "success");
       return createdPage;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ساخت صفحه";
       setServerSaveError(msg);
+      setPageSaveResult({ status: "error", message: msg });
       toast.show(msg, "error");
       return null;
     } finally {
@@ -1217,6 +1285,8 @@ export default function SimplePageBuilder({
     pageDescription,
     sourceTemplateId,
     blocks,
+    pageBackgroundColor,
+    pageBackgroundImage,
     ensureQrForCreatedPage,
     toast,
   ]);
@@ -1245,15 +1315,25 @@ export default function SimplePageBuilder({
             keywords: [],
           },
           settings: { direction: "rtl" },
+          background: {
+            color: pageBackgroundColor,
+            image: pageBackgroundImage,
+          },
         }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) throw new Error(json?.message ?? "خطا در ذخیره صفحه");
+      setPageSaveResult({
+        status: "success",
+        message: "تغییرات صفحه با موفقیت ذخیره شد.",
+        pageUrl: buildClientPageTargetUrl(json?.page?.url ?? pageUrl),
+      });
       toast.show("تغییرات ذخیره شد ✅", "success");
       return json.page;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ذخیره صفحه";
       setServerSaveError(msg);
+      setPageSaveResult({ status: "error", message: msg });
       toast.show(msg, "error");
       return null;
     } finally {
@@ -1266,6 +1346,8 @@ export default function SimplePageBuilder({
     pageDescription,
     sourceTemplateId,
     blocks,
+    pageBackgroundColor,
+    pageBackgroundImage,
     createPageOnServer,
     toast,
   ]);
@@ -1287,6 +1369,10 @@ export default function SimplePageBuilder({
           thumbnail: templateThumbnail,
           categoryId: templateCategoryId || undefined,
           builderBlocks: blocks,
+          background: {
+            color: pageBackgroundColor,
+            image: pageBackgroundImage,
+          },
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1308,6 +1394,8 @@ export default function SimplePageBuilder({
     templateThumbnail,
     templateCategoryId,
     blocks,
+    pageBackgroundColor,
+    pageBackgroundImage,
     toast,
   ]);
 
@@ -1330,6 +1418,10 @@ export default function SimplePageBuilder({
           thumbnail: templateThumbnail,
           categoryId: templateCategoryId || undefined,
           builderBlocks: blocks,
+          background: {
+            color: pageBackgroundColor,
+            image: pageBackgroundImage,
+          },
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1353,6 +1445,8 @@ export default function SimplePageBuilder({
     templateThumbnail,
     templateCategoryId,
     blocks,
+    pageBackgroundColor,
+    pageBackgroundImage,
     toast,
   ]);
   const validateBeforeServerSave = useCallback((): string | null => {
@@ -1500,6 +1594,14 @@ export default function SimplePageBuilder({
         return;
       }
 
+      if (blockLimit > 0 && allowedTypes.length > blockLimit) {
+        toast.show(
+          `این قالب ${allowedTypes.length} بلاک دارد، اما سقف مجاز شما ${blockLimit} بلاک در هر صفحه است.`,
+          "error",
+        );
+        return;
+      }
+
       allowedTypes.forEach((type, index) => {
         const block = createBlockFromSource(type, index);
         if (block) newBlocks.push(block);
@@ -1517,7 +1619,13 @@ export default function SimplePageBuilder({
         "success",
       );
     },
-    [allowedBlockTypes, createBlockFromSource, setBlocks, toast],
+    [
+      allowedBlockTypes,
+      blockLimit,
+      createBlockFromSource,
+      setBlocks,
+      toast,
+    ],
   );
 
   const handleDragEnd = useCallback(
@@ -1535,6 +1643,7 @@ export default function SimplePageBuilder({
 
       // ═══ Case 1: Palette → Canvas ═══
       if (data?.fromPalette) {
+        if (!canAddBlockCount()) return;
         const blockType = data.blockType as string;
         const config = blockRegistry[blockType as keyof typeof blockRegistry];
         if (!allowedBlockTypes.has(blockType)) {
@@ -1634,6 +1743,7 @@ export default function SimplePageBuilder({
       addBlock,
       allowedBlockTypes,
       blocks,
+      canAddBlockCount,
       createBlockFromSource,
       setBlocks,
       sortedBlocks,
@@ -1667,6 +1777,7 @@ export default function SimplePageBuilder({
         <BuilderHeader
           blocksCount={blocks.length}
           justSaved={justSaved}
+          mode={saveMode}
           pageId={saveMode === "template" ? templateId : pageId}
           isServerSaving={isServerSaving}
           canUndo={history.canUndo}
@@ -1698,6 +1809,7 @@ export default function SimplePageBuilder({
           <BlocksSidebar
             blocks={sortedBlocks}
             availableBlocks={catalogBlocks}
+            isBlocksLoading={isMasterBlocksLoading}
             selectedBlockId={selectedBlockId}
             onSelectBlock={handleSelectBlock}
             onDeleteBlock={(id) => removeBlockById(id)}
@@ -1734,6 +1846,10 @@ export default function SimplePageBuilder({
 
             {/* Canvas */}
             <CanvasContent
+              background={{
+                color: pageBackgroundColor,
+                image: pageBackgroundImage,
+              }}
               onApplyTemplate={applyTemplate}
               showSmartSuggestions={!suppressSmartSuggestions}
               sortedBlocks={sortedBlocks}
@@ -1799,6 +1915,7 @@ export default function SimplePageBuilder({
         onClose={() => setCatalogOpen(false)}
         onAdd={addBlock}
         availableBlocks={catalogBlocks}
+        isLoading={isMasterBlocksLoading}
       />
 
       <PageMetaModal
@@ -1811,11 +1928,15 @@ export default function SimplePageBuilder({
         categoryId={templateCategoryId}
         categoryOptions={categoryOptions}
         thumbnail={templateThumbnail}
+        backgroundColor={pageBackgroundColor}
+        backgroundImage={pageBackgroundImage}
         onTitleChange={setPageTitle}
         onDescriptionChange={setPageDescription}
         onUrlChange={setPageUrl}
         onCategoryIdChange={setTemplateCategoryId}
         onThumbnailChange={setTemplateThumbnail}
+        onBackgroundColorChange={setPageBackgroundColor}
+        onBackgroundImageChange={setPageBackgroundImage}
         onClose={() => {
           setPageMetaOpen(false);
           setLeaveAfterMetaSave(false);
@@ -1826,9 +1947,18 @@ export default function SimplePageBuilder({
         saveError={serverSaveError}
       />
 
+      <PageSaveResultModal
+        result={pageSaveResult}
+        onClose={() => setPageSaveResult(null)}
+      />
+
       <PhonePreviewModal
         open={isPhonePreviewOpen}
         blocks={blocks}
+        background={{
+          color: pageBackgroundColor,
+          image: pageBackgroundImage,
+        }}
         onClose={() => setIsPhonePreviewOpen(false)}
       />
       <LeaveBuilderConfirmModal

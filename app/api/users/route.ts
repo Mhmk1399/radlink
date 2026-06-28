@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import {
     withDB,
@@ -11,6 +12,7 @@ import User, {
     UserRole,
     UserStatus,
 } from "@/models/users";
+import Agent from "@/models/agent";
 import "@/models/permission";
 
 // GET /api/users
@@ -81,6 +83,14 @@ export const GET = compose(
     const [users, total] = await Promise.all([
         User.find(query)
             .populate("permissions", "name isActive")
+            .populate({
+                path: "agentid",
+                select: "user type companyName",
+                populate: {
+                    path: "user",
+                    select: "firstName lastName phoneNumber email",
+                },
+            })
              .populate(
                 "createdBy",
                 "firstName lastName phoneNumber role",
@@ -158,6 +168,25 @@ export const POST = compose(
                 },
                 { status: 400 },
             );
+        }
+
+        const agentId =
+            typeof body.agentid === "string" ? body.agentid.trim() : "";
+        if (agentId) {
+            if (!mongoose.Types.ObjectId.isValid(agentId)) {
+                return NextResponse.json(
+                    { message: "شناسه نماینده معتبر نیست." },
+                    { status: 400 },
+                );
+            }
+
+            const agentExists = await Agent.exists({ _id: agentId });
+            if (!agentExists) {
+                return NextResponse.json(
+                    { message: "نماینده انتخاب‌شده پیدا نشد." },
+                    { status: 404 },
+                );
+            }
         }
 
         const allowedRoles: UserRole[] = [
@@ -246,7 +275,7 @@ export const POST = compose(
             role,
             status,
 
-            agentid: body.agentid || undefined,
+            agentid: agentId || undefined,
 
             permissions: Array.isArray(body.permissions)
                 ? body.permissions
@@ -265,10 +294,6 @@ export const POST = compose(
                     0,
                     Number(body.limits?.pages ?? 0),
                 ),
-                landingPages: Math.max(
-                    0,
-                    Number(body.limits?.landingPages ?? 0),
-                ),
             },
 
             isPhoneVerified: Boolean(body.isPhoneVerified),
@@ -286,6 +311,14 @@ export const POST = compose(
 
         const populatedUser = await User.findById(user._id)
             .populate("permissions", "name isActive")
+            .populate({
+                path: "agentid",
+                select: "user type companyName",
+                populate: {
+                    path: "user",
+                    select: "firstName lastName phoneNumber email",
+                },
+            })
             .populate(
                 "createdBy",
                 "firstName lastName phoneNumber role",

@@ -221,7 +221,10 @@ export default function CategoriesSection({
                 ? String(template._id ?? template.id ?? "")
                 : String(template),
             ),
-            templateCount: templates.length,
+            templateCount:
+              typeof category.templateCount === "number"
+                ? category.templateCount
+                : templates.length,
           };
         });
       },

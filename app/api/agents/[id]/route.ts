@@ -7,6 +7,19 @@ import User from "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+function normalizeLimits(value: unknown) {
+    const limits =
+        typeof value === "object" && value !== null
+            ? (value as Record<string, unknown>)
+            : {};
+
+    return {
+        files: Math.max(0, Number(limits.files) || 0),
+        blocks: Math.max(0, Number(limits.blocks) || 0),
+        pages: Math.max(0, Number(limits.pages) || 0),
+    };
+}
+
 // GET /api/agents/[id] — admin or the agent themselves
 export const GET = compose(
     withDB(),
@@ -68,12 +81,21 @@ export const PATCH = compose(
 
     if (isAdmin) {
         for (const key of adminOnly) {
-            if (key in body) updates[key] = body[key];
+            if (key in body) {
+                updates[key] =
+                    key === "limits" ? normalizeLimits(body[key]) : body[key];
+            }
         }
     }
 
     const updated = await Agent.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
         .populate("user", "firstName lastName phoneNumber email role status");
+
+    if (isAdmin && "limits" in body) {
+        await User.findByIdAndUpdate(agent.user, {
+            limits: normalizeLimits(body.limits),
+        });
+    }
 
     return NextResponse.json({ agent: updated });
 });

@@ -18,6 +18,11 @@ type MeResponse = {
         lastName?: string;
         phoneNumber: string;
         permissions?: unknown[];
+        limits?: {
+            files: number;
+            blocks: number;
+            pages: number;
+        };
     };
     access: AccessMap;
 };

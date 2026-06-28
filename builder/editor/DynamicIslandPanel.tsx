@@ -377,9 +377,12 @@ function FloatingPortalPanel({
       if (pos) setCoords(pos);
     };
 
+    const resizeObserver = new ResizeObserver(update);
+    if (panelRef.current) resizeObserver.observe(panelRef.current);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
@@ -465,7 +468,7 @@ function Dropdown({
     >
       <div
         className={[
-          "max-h-[min(65vh,520px)] overflow-y-auto overscroll-contain p-4",
+          "max-h-[min(78dvh,720px)] overflow-y-auto overscroll-contain p-4",
           CUSTOM_SCROLLBAR,
         ].join(" ")}
       >
@@ -997,7 +1000,11 @@ function DesktopToolbar({
                     open={openDropdown === "content"}
                     onClose={() => setOpenDropdown(null)}
                     anchorEl={contentTriggerRef.current}
-                    width="w-[380px]"
+                    width={
+                      schema.contentFields.length > 4
+                        ? "w-[min(92vw,560px)]"
+                        : "w-[min(92vw,440px)]"
+                    }
                   >
                     <DynamicContentForm
                       fields={schema.contentFields}
@@ -1021,7 +1028,11 @@ function DesktopToolbar({
                     open={openDropdown === "style"}
                     onClose={() => setOpenDropdown(null)}
                     anchorEl={styleTriggerRef.current}
-                    width="w-[380px]"
+                    width={
+                      allowedKeys.length > 4
+                        ? "w-[min(92vw,560px)]"
+                        : "w-[min(92vw,440px)]"
+                    }
                   >
                     {/* header inside dropdown */}
                     <div className="mb-3 flex items-center justify-between">

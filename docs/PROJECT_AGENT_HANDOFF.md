@@ -1,6 +1,6 @@
 # Radlink Project Agent Handoff
 
-Last reviewed: 2026-06-27  
+Last reviewed: 2026-06-28
 Workspace: `D:\Next\radlink`
 
 ## Purpose
@@ -186,13 +186,14 @@ Implemented behavior:
 - `createdBy` and `updatedBy` are populated and shown as user labels instead of raw IDs.
 - Agent selection loads `/api/agents?limit=100` and appears as a clearable `CustomSelect`.
 - Empty agent selection sends `""`; the PATCH route uses `$unset` to remove `agentid`.
-- Limits are edited through four numeric inputs:
+- User limits are edited through three numeric inputs:
   - `limits.files`
   - `limits.blocks`
   - `limits.pages`
-  - `limits.landingPages`
 - The display-only `limits` summary is not editable, preventing `[object Object]`.
 - Create/update payloads rebuild the nested `limits` object.
+- `0` means unlimited. The obsolete `landingPages` field was removed from both
+  user and agent limit contracts.
 - Display-only permissions are removed from update payloads to avoid ObjectId validation failures.
 - System-driven fields are read-only and absent from edit forms:
   - `lastLoginAt`
@@ -594,8 +595,151 @@ Then manually verify:
 - Template thumbnail upload persists and reloads.
 - Mobile preview uses true mobile media-query behavior and has hidden scrollbars.
 - User agent select can be cleared.
-- User limits save as four numbers.
+- User limits save as three numbers; zero means unlimited.
 - User dates do not appear in edit forms.
+
+## 2026-06-28 Architecture Addendum
+
+This section records the latest behavior and overrides older statements elsewhere
+in this document when they conflict.
+
+### Global User Quotas
+
+User quota fields are now only:
+
+- `limits.files`: maximum owned user uploads.
+- `limits.pages`: maximum owned Page documents.
+- `limits.blocks`: maximum blocks in one page.
+
+`models/users.ts`, user API payloads, auth/profile types, and
+`components/admin/UsersSection.tsx` and `components/admin/AgentsSection.tsx` no
+longer contain `landingPages`. A value of `0` means unlimited, and `superAdmin`
+is always unlimited.
+
+Agent create/update APIs normalize the same three fields and synchronize them to
+the linked User document. The global quota engine always reads User limits, so
+there is no second competing runtime quota source.
+
+`lib/auth/quota.ts` is the central server policy. It calculates structured quota
+status and produces a Persian `403` response with code `QUOTA_EXCEEDED`.
+
+Enforcement boundaries:
+
+- `app/api/uploads/route.ts` checks before writing to Liara.
+- File usage counts only `File.kind === "upload"`; generated QR files do not
+  consume upload quota.
+- `app/api/pages/route.ts` checks page quota for the actual target owner and
+  validates the final per-page block count.
+- `app/api/pages/[id]/route.ts` checks the page owner's block quota before full
+  builder updates.
+- `app/api/pages/[id]/blocks/route.ts` checks before incremental block adds.
+- `builder/editor/PageBuilder.tsx` provides early feedback for add, duplicate,
+  drag-in, and applying a template. Server checks remain authoritative.
+
+Deleting an uploaded File or Page frees quota because usage is calculated from
+current database records.
+
+### Page and Template Backgrounds
+
+Both `models/pages.ts` and `models/template.ts` persist:
+
+```ts
+background: {
+  color: string;
+  image: string;
+}
+```
+
+The APIs validate hex colors and HTTP(S) image URLs. Existing template
+`style.colors.background` and `style.bgImage` values are supported as legacy
+fallbacks.
+
+There is one effective background in builder state:
+
+- Blank page/template: white default.
+- Edited page: its own saved background.
+- Edited template: its saved background.
+- Page created from a template: a copy of the selected template background.
+
+After template selection, the page owns the copied values. Public rendering never
+stacks template and page backgrounds. `builder/BuilderCanvas.tsx`,
+`builder/editor/PhoneLivePreview.tsx`, and the public `app/[url]/page.tsx` route
+render the same effective background. Public landing images use a fixed
+full-viewport layer with `cover`.
+
+`builder/BuilderModals.tsx` provides color and Liara image controls for both page
+and template modes. Background uploads use the shared authenticated uploader and
+therefore create owner-linked File records.
+
+### Upload Architecture
+
+All persistent client uploads should use `lib/fileUtils.ts#uploadFile` and
+`POST /api/uploads`. Covered surfaces include:
+
+- Profile avatars
+- Ticket attachments
+- Template thumbnails
+- Page/template backgrounds
+- Generic builder image and video fields
+- Repeater/product-card media
+
+The route uploads to Liara, then creates `models/files.ts` with authenticated
+owner, MIME type, size, and `kind: "upload"`. If database creation fails after
+the S3 write, the object is removed. Do not persist browser `blob:` URLs.
+
+Generated page QR PNG files use `kind: "qr"`, carry creator/page references, and
+do not consume the user upload quota.
+
+### Builder UX and Save Flow
+
+- Database blocks show skeleton loading states in the sidebar and catalog modal.
+- `DynamicIslandPanel` content/style popovers grow for dense schemas, remain
+  viewport-constrained, and scroll internally.
+- Save labels distinguish page/template create/edit modes.
+- Page create/update displays a response modal. Successful saves provide a safe
+  `target="_blank"` public-page link.
+- The AdminShell header exposes a `/builder` shortcut controlled by
+  `builder.page:create`; its catalog label is "ساخت صفحه از ادمین".
+- Browser back navigation away from `/builder` must update both URL and UI.
+
+### Category and Template Relationship
+
+`Template.category` is the authoritative relation. Category list/single APIs
+derive template names and `templateCount` from Template documents rather than
+trusting the historical `Category.templates` array, which may be stale.
+
+### Notifications and Public Landing
+
+Notifications target one page or use `isGlobal` for all pages. They support
+`info` and `danger`, custom title/subtitle/description, and closeable or blocking
+behavior. Public landing data must be converted to plain serializable values
+before passing from Server Components to Client Components.
+
+### Verification Additions
+
+- Finite file quota blocks the next user upload with `QUOTA_EXCEEDED`.
+- Finite page quota blocks the next page creation.
+- Finite block quota blocks builder additions and direct API saves.
+- Zero limits remain unlimited.
+- Template selection copies, rather than overlays, its background.
+- Category rows show names and counts from `Template.category`.
+
+### Owner-Scoped Admin Resources
+
+`lib/auth/ownership.ts` is the shared ownership policy for personal resources.
+Only `admin` and `superAdmin` receive global data scope. Users and agents are
+always restricted to their own records, even when they have static `view`,
+`update`, or `delete` access to the corresponding admin component.
+
+This policy is applied to list and item operations for:
+
+- Pages through `app/api/pages/*`
+- Files through `app/api/files/*`
+- QR codes through `app/api/qr/*`
+
+Permissions determine whether a user may perform an action; ownership determines
+which records that action may target. Do not treat a granted component access as
+global data visibility.
 
 ## Recommended Starting Point for the Next Agent
 

@@ -25,9 +25,25 @@ export const GET = compose(
     withStatus("active")
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
-    const category = await Category.findById(id).populate("templates", "name thumbnail").lean();
+    const category = await Category.findById(id).lean();
     if (!category) return NextResponse.json({ message: "دسته‌بندی پیدا نشد." }, { status: 404 });
-    return NextResponse.json({ category });
+    const templates = await Template.find({ category: id })
+        .select("name thumbnail")
+        .sort({ name: 1 })
+        .lean();
+
+    return NextResponse.json({
+        category: {
+            ...category,
+            templates: templates.map((template) => ({
+                _id: String(template._id),
+                id: String(template._id),
+                name: template.name,
+                thumbnail: template.thumbnail,
+            })),
+            templateCount: templates.length,
+        },
+    });
 });
 
 export const PATCH = compose(

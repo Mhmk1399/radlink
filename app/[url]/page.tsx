@@ -57,7 +57,28 @@ function toClientValue(value: unknown): unknown {
 
   return String(value);
 }
+function isValidBackgroundColor(value: unknown): value is string {
+  if (typeof value !== "string") return false;
 
+  const color = value.trim();
+
+  const isHex =
+    /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
+      color,
+    );
+
+  const isRgb =
+    /^rgb\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*\)$/i.test(
+      color,
+    );
+
+  const isRgba =
+    /^rgba\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:0|1|0?\.\d+)\s*\)$/i.test(
+      color,
+    );
+
+  return isHex || isRgb || isRgba;
+}
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { url } = await params;
 
@@ -110,7 +131,7 @@ export default async function PageRoute({ params }: Props) {
   const rawNotifications = await Notification.find({
     $or: [{ page: page._id }, { isGlobal: true }],
   })
-    .select("title subtitle description message closeable createdAt")
+    .select("title subtitle description type closeable createdAt")
     .sort({ createdAt: -1 })
     .lean();
   const notifications: PublicPageNotification[] = rawNotifications
@@ -118,18 +139,40 @@ export default async function PageRoute({ params }: Props) {
       id: String(notification._id),
       title: String(notification.title || "اعلان"),
       subtitle: String(notification.subtitle || ""),
-      description: String(
-        notification.description || notification.message || "",
-      ),
+      description: String(notification.description || ""),
+      type: (notification.type === "danger"
+        ? "danger"
+        : "info") as PublicPageNotification["type"],
       closeable: Boolean(notification.closeable),
     }))
     .filter((notification) => notification.description);
   const clientBlocks = (page.blocks ?? []).map(
     (block) => toClientValue(block) as Record<string, unknown>,
   );
+const backgroundColor = isValidBackgroundColor(page.background?.color)
+  ? page.background.color.trim()
+  : "#ffffff";
+  const backgroundImage =
+    typeof page.background?.image === "string" &&
+    /^https?:\/\//i.test(page.background.image)
+      ? page.background.image
+      : "";
 
   return (
-    <div className="w-full px-2 pt-2 pb-10 bg-white">
+    <div className="relative isolate min-h-screen w-full px-2 pb-10 pt-2">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          backgroundColor,
+          backgroundImage: backgroundImage
+            ? `url(${JSON.stringify(backgroundImage)})`
+            : undefined,
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+        }}
+      />
       <PageNotificationModal notifications={notifications} />
       <header
         className="mb-8 rounded-3xl border border-neutral-200 bg-neutral-50 p-6 shadow-sm"

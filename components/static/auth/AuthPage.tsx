@@ -61,7 +61,6 @@ interface BackendUser {
     files: number;
     blocks: number;
     pages: number;
-    landingPages: number;
   };
   lastLoginAt?: string;
   lastOtpRequestAt?: string;

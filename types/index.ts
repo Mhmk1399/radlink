@@ -89,8 +89,9 @@ export interface UserLimits {
     files: number;
     blocks: number;
     pages: number;
-    landingPages: number;
 }
+
+export type AgentLimits = UserLimits;
 
 export interface User extends BaseDocument {
     firstName?: string;
@@ -104,7 +105,7 @@ export interface User extends BaseDocument {
     role: UserRole;
     status: UserStatus;
     permissions: string[];
-    limits: UserLimits;
+    limits: AgentLimits;
     agentId?: string;
     agent?: Agent;
     lastLoginAt?: string;
@@ -125,7 +126,7 @@ export interface CreateUserPayload {
     fatherName?: string;
     role?: UserRole;
     status?: UserStatus;
-    limits?: Partial<UserLimits>;
+    limits?: Partial<AgentLimits>;
     agentId?: string;
 }
 

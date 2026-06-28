@@ -5,6 +5,19 @@ import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
 import User from "@/models/users";
 
+function normalizeLimits(value: unknown) {
+    const limits =
+        typeof value === "object" && value !== null
+            ? (value as Record<string, unknown>)
+            : {};
+
+    return {
+        files: Math.max(0, Number(limits.files) || 0),
+        blocks: Math.max(0, Number(limits.blocks) || 0),
+        pages: Math.max(0, Number(limits.pages) || 0),
+    };
+}
+
 // POST /api/agents — create agent from existing user
 export const POST = compose(
     withDB(),
@@ -25,6 +38,7 @@ export const POST = compose(
     const existing = await Agent.findOne({ user: userId });
     if (existing) return NextResponse.json({ message: "برای این کاربر قبلا نماینده ساخته شده است." }, { status: 409 });
 
+    const normalizedLimits = normalizeLimits(limits);
     const agent = await Agent.create({
         user: userId,
         type,
@@ -35,11 +49,15 @@ export const POST = compose(
         ceoName,
         economicNumber,
         registrationNumber,
-        limits: limits ?? { files: 0, blocks: 0, pages: 0, landingPages: 0 },
+        limits: normalizedLimits,
     });
 
     // Promote user role to agent and link agentid
-    await User.findByIdAndUpdate(userId, { role: "agent", agentid: agent._id });
+    await User.findByIdAndUpdate(userId, {
+        role: "agent",
+        agentid: agent._id,
+        limits: normalizedLimits,
+    });
 
     return NextResponse.json({ agent }, { status: 201 });
 });

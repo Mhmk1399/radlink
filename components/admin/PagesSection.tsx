@@ -78,6 +78,7 @@ function buildColumns(
   ownerOptions: SelectOption[],
   t: ReturnType<typeof useThemeTokens>,
   isDark: boolean,
+  showOwnerField: boolean,
 ): ColumnDef<AdminPageRow>[] {
   return [
     {
@@ -89,6 +90,7 @@ function buildColumns(
           <span className={cn("block text-sm font-semibold", t.textPrimary)}>
             {String(value ?? "—")}
           </span>
+
           {row.url && (
             <span
               className={cn(
@@ -115,23 +117,30 @@ function buildColumns(
         </span>
       ),
     },
-    {
-      key: "ownerId",
-      editable: true,
-      required: true,
-      options: ownerOptions,
-      placeholder: "سازنده صفحه را انتخاب کنید",
-      label: "سازنده",
-      hideOnMobile: true,
-      render: (_, row) => {
-        const ownerName = getUserLabel(row.owner as UserOptionSource);
-        return (
-          <span className={cn("text-sm", t.textMuted)}>
-            {String(ownerName ?? (row.ownerId as string) ?? "—")}
-          </span>
-        );
-      },
-    },
+
+    ...(showOwnerField
+      ? [
+          {
+            key: "ownerId",
+            editable: true,
+            required: true,
+            options: ownerOptions,
+            placeholder: "سازنده صفحه را انتخاب کنید",
+            label: "سازنده",
+            hideOnMobile: true,
+            render: (_: unknown, row: AdminPageRow) => {
+              const ownerName = getUserLabel(row.owner as UserOptionSource);
+
+              return (
+                <span className={cn("text-sm", t.textMuted)}>
+                  {ownerName || String(row.ownerId ?? "—")}
+                </span>
+              );
+            },
+          } satisfies ColumnDef<AdminPageRow>,
+        ]
+      : []),
+
     {
       key: "isPublished",
       label: "وضعیت",
@@ -144,7 +153,8 @@ function buildColumns(
         { label: "پیش‌نویس", value: "false" },
       ],
       render: (value) => {
-        const published = !!value;
+        const published = Boolean(value);
+
         return (
           <span
             className={cn(
@@ -166,6 +176,7 @@ function buildColumns(
                     : "bg-[#A09070]",
               )}
             />
+
             {published ? "منتشر شده" : "پیش‌نویس"}
           </span>
         );
@@ -194,7 +205,12 @@ export default function PagesSection({
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const router = useRouter();
-  const { can, canOnResource } = useAccess();
+  const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
+  const isNormalUser = user?.role === "user";
+
+  const shouldLoadUsers = !isAccessLoading && user !== null && !isNormalUser;
+
+  const showOwnerField = !isAccessLoading && user !== null && !isNormalUser;
   const canCreatePages = can("admin.pages", "create");
   const canUpdatePages = can("admin.pages", "update");
   const canDeletePages = can("admin.pages", "delete");
@@ -245,7 +261,14 @@ export default function PagesSection({
   );
 
   useEffect(() => {
-    let ignore = false;
+    // Do not request /api/users until the current user is loaded.
+    // Normal users must never fetch the users list.
+    if (!shouldLoadUsers) {
+      setOwnerOptions([]);
+      return;
+    }
+
+    const controller = new AbortController();
 
     async function loadUserOptions() {
       try {
@@ -256,8 +279,12 @@ export default function PagesSection({
         do {
           const response = await fetch(
             `/api/users?page=${usersPage}&limit=100`,
-            { headers },
+            {
+              headers,
+              signal: controller.signal,
+            },
           );
+
           const json = await response.json().catch(() => null);
 
           if (!response.ok) {
@@ -273,40 +300,47 @@ export default function PagesSection({
             : [];
 
           allUsers.push(...users);
+
           total =
             typeof json?.total === "number" ? json.total : allUsers.length;
+
           usersPage += 1;
         } while (allUsers.length < total && usersPage <= 50);
 
-        if (ignore) return;
-
         const unique = new Map<string, SelectOption>();
-        allUsers.forEach((user) => {
-          const value = getObjectId(user);
+
+        allUsers.forEach((userOption) => {
+          const value = getObjectId(userOption);
+
           if (!value) return;
+
           unique.set(value, {
             value,
-            label: getUserLabel(user) || value,
+            label: getUserLabel(userOption) || value,
           });
         });
 
         setOwnerOptions(Array.from(unique.values()));
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
         console.error("Failed to load page owner options", error);
       }
     }
 
-    loadUserOptions();
+    void loadUserOptions();
 
     return () => {
-      ignore = true;
+      controller.abort();
     };
-  }, [headers]);
+  }, [shouldLoadUsers, headers]);
 
   /* rebuild columns whenever theme or options change */
   const columns = useMemo(
-    () => buildColumns(ownerOptions, t, isDark),
-    [ownerOptions, t, isDark],
+    () => buildColumns(ownerOptions, t, isDark, showOwnerField),
+    [ownerOptions, t, isDark, showOwnerField],
   );
 
   async function togglePageStatus(row: AdminPageRow) {
@@ -455,11 +489,7 @@ export default function PagesSection({
                     void togglePageStatus(row);
                   }}
                   disabled={togglingPageId === pageId}
-                  title={
-                    row.isPublished
-                      ? "تبدیل به پیش‌نویس"
-                      : "انتشار صفحه"
-                  }
+                  title={row.isPublished ? "تبدیل به پیش‌نویس" : "انتشار صفحه"}
                   className={cn(
                     "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
                     row.isPublished
@@ -477,9 +507,7 @@ export default function PagesSection({
                     <FaPowerOff className="h-4 w-4" />
                   )}
                   <span className="sr-only">
-                    {row.isPublished
-                      ? "تبدیل به پیش‌نویس"
-                      : "انتشار صفحه"}
+                    {row.isPublished ? "تبدیل به پیش‌نویس" : "انتشار صفحه"}
                   </span>
                 </button>
               )}

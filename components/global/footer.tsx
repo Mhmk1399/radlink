@@ -16,6 +16,7 @@ import {
   animDelay,
 } from "@/lib/design/design-system";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 /* ──────────────────────────────────────────────
    DATA
@@ -115,68 +116,28 @@ export function SmartLandingFooter() {
             <div className="flex flex-col gap-5">
               {/* Logo */}
               <Link
-                href="/"
+                href="/base-landing"
+                onClick={(e) => {
+                  e.preventDefault();
+                 }}
                 className={cn(
-                  "group inline-flex w-fit items-center gap-3",
-                  layout.radius.lg,
+                  "group inline-flex items-center gap-2.5 rounded-2xl px-1 py-1 text-white",
                   animation.base,
-                  "hover:opacity-90",
+                  animation.activePressSmall,
+                  animation.motionSafe,
                   focus.ring,
                 )}
                 aria-label="صفحه اصلی"
               >
-                <span
-                  className={cn(
-                    "relative flex h-11 w-11 items-center justify-center overflow-hidden",
-                    layout.radius.lg,
-                    borders.strong,
-                    gradients.logo,
-                    shadows.logo,
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute inset-[1px] rounded-[15px]",
-                      gradients.innerHighlight,
-                    )}
-                  />
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    className="relative z-10 h-5 w-5"
-                    fill="none"
-                  >
-                    <rect
-                      x="4"
-                      y="5"
-                      width="16"
-                      height="3"
-                      rx="1.5"
-                      className="fill-white"
-                    />
-                    <rect
-                      x="4"
-                      y="10.5"
-                      width="11"
-                      height="3"
-                      rx="1.5"
-                      className="fill-sky-100"
-                    />
-                    <rect
-                      x="4"
-                      y="16"
-                      width="7"
-                      height="3"
-                      rx="1.5"
-                      className="fill-cyan-200"
-                    />
-                  </svg>
-                </span>
                 <span className="flex flex-col leading-none">
-                  <span className={typography.brandName}>رادلینک</span>
-                  <span className={cn("mt-1", typography.brandSub)}>
-                    ساخت سریع لندینگ با هوش مصنوعی
-                  </span>
+                  <Image
+                    src="/assets/images/logo.png"
+                    width={150}
+                    height={200}
+                    alt="logo"
+                    className="object-cover h-10"
+                  />
+               
                 </span>
               </Link>
 

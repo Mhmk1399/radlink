@@ -12,6 +12,7 @@ import React, {
   useId,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccess } from "@/hook/auth/useAccess";
@@ -56,7 +57,9 @@ import {
   FaAngleRight,
   FaEllipsis,
   FaTriangleExclamation,
+  FaPlus,
 } from "react-icons/fa6";
+import Image from "next/image";
 
 /* ══════════════════════════════════════════════
    SOFT PALETTE — eye-friendly, warm-tinted
@@ -751,11 +754,9 @@ type NotificationRecord = {
   _id?: string;
   id?: string;
   page?: unknown;
-  User?: unknown;
   title?: string;
   subtitle?: string;
   description?: string;
-  message?: string;
   closeable?: boolean;
   isGlobal?: boolean;
   createdAt?: string;
@@ -863,9 +864,7 @@ function NotificationDropdown({
     return (data?.notifications ?? [])
       .map((notification): NotifItem | null => {
         const id = String(notification._id ?? notification.id ?? "");
-        const message = String(
-          notification.description ?? notification.message ?? "",
-        ).trim();
+        const message = String(notification.description ?? "").trim();
         if (!id || !message || dismissedIds.has(id)) return null;
         return {
           id,
@@ -1681,17 +1680,12 @@ function Sidebar({
               )}
               aria-label="رادلینک — رفتن به داشبورد"
             >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg border",
-                  s.logoBg,
-                )}
-                aria-hidden="true"
-              >
-                <span className={cn("text-xs font-black", s.textAccent)}>
-                  لوگو
-                </span>
-              </div>
+              <Image
+                src="/assets/images/logo.png"
+                width={100}
+                height={100}
+                alt="logo"
+              />
               <div className="text-right">
                 <p
                   className={cn(
@@ -1989,7 +1983,10 @@ function Header({
 }) {
   const { s, isDark } = useShell();
   const { toggleTheme } = useTheme();
+  const { can, isLoading: isAccessLoading } = useAccess();
   const meta = SECTION_META.find((m) => m.key === currentSection);
+  const canCreatePageFromAdmin =
+    !isAccessLoading && can("builder.page", "create");
 
   return (
     <header
@@ -2084,6 +2081,24 @@ function Header({
             />
           )}
         </button>
+
+        {canCreatePageFromAdmin && (
+          <Link
+            href="/builder"
+            className={cn(
+              "inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all duration-200",
+              s.border,
+              s.hover,
+              s.textAccent,
+              focus.ring,
+            )}
+            aria-label="ساخت صفحه از ادمین"
+            title="ساخت صفحه از ادمین"
+          >
+            <FaPlus className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">ساخت صفحه</span>
+          </Link>
+        )}
 
         <NotificationDropdown navigate={navigate} />
         <UserDropdown

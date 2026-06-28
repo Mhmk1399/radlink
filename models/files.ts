@@ -49,6 +49,8 @@ const fileSchema = new mongoose.Schema<IFile>({
     timestamps: true,
 });
 
+fileSchema.index({ owner: 1, kind: 1 });
+
 const File: Model<IFile> =
     mongoose.models.File || mongoose.model<IFile>("File", fileSchema);
 

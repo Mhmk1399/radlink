@@ -176,6 +176,11 @@ export type PageBlockSettings = {
 
 export type PageStyleOverride = Record<string, unknown>;
 
+export type PageBackground = {
+    color: string;
+    image: string;
+};
+
 /* ================================================================== */
 /*  Embedded Page Block                                                */
 /* ================================================================== */
@@ -234,6 +239,8 @@ export interface IPage extends Document {
 
     // Page-level style overrides.
     styleOverride?: PageStyleOverride;
+
+    background: PageBackground;
 
     // Media
     logo?: string;
@@ -378,6 +385,19 @@ const PageSchema = new Schema<IPage>(
         styleOverride: {
             type: Schema.Types.Mixed,
             default: {},
+        },
+
+        background: {
+            color: {
+                type: String,
+                trim: true,
+                default: "#ffffff",
+            },
+            image: {
+                type: String,
+                trim: true,
+                default: "",
+            },
         },
 
         logo: {

@@ -26,6 +26,10 @@ type BuilderState = {
   initialUrl?: string;
   initialCategoryId?: string;
   initialThumbnail?: string;
+  initialBackground?: {
+    color: string;
+    image: string;
+  };
   requiresStartChoice?: boolean;
   suppressSmartSuggestions?: boolean;
 };
@@ -92,6 +96,23 @@ function getCategoryId(category: unknown) {
   if (typeof category === "string") return category;
   if (!isObject(category)) return "";
   return String(category._id ?? category.id ?? "");
+}
+
+function getTemplateBackground(template: Record<string, unknown>) {
+  const background = isObject(template.background) ? template.background : {};
+  const style = isObject(template.style) ? template.style : {};
+  const colors = isObject(style.colors) ? style.colors : {};
+  const rawColor = String(background.color ?? colors.background ?? "").trim();
+  const rawImage = String(background.image ?? style.bgImage ?? "").trim();
+
+  return {
+    color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
+      rawColor,
+    )
+      ? rawColor
+      : "#ffffff",
+    image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
+  };
 }
 
 async function fetchTemplate(templateId: string) {
@@ -200,6 +221,7 @@ export default function BuilderPage() {
           initialCategoryId: categoryId,
           initialThumbnail:
             typeof template.thumbnail === "string" ? template.thumbnail : "",
+          initialBackground: getTemplateBackground(template),
         });
       } catch (error) {
         if (!cancelled) {
@@ -276,6 +298,7 @@ export default function BuilderPage() {
               typeof template.thumbnail === "string"
                 ? template.thumbnail
                 : "",
+            initialBackground: getTemplateBackground(template),
           }));
         }}
       />
@@ -293,6 +316,7 @@ export default function BuilderPage() {
       initialUrl={state.initialUrl}
       initialCategoryId={state.initialCategoryId}
       initialThumbnail={state.initialThumbnail}
+      initialBackground={state.initialBackground}
       suppressSmartSuggestions={state.suppressSmartSuggestions}
     />
   );

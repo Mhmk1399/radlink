@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
+import { withOwnerScope } from "@/lib/auth/ownership";
 import File from "@/models/files";
 import "@/models/pages";
 import "@/models/users";
@@ -34,8 +35,7 @@ export const GET = compose(
     const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
-    const query = isAdmin ? {} : { owner: user._id };
+    const query = withOwnerScope(user);
 
     const [files, total] = await Promise.all([
         File.find(query)

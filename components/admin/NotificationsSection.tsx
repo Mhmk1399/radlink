@@ -57,6 +57,7 @@ type NotificationRow = {
   title: string;
   subtitle: string;
   description: string;
+  type: "info" | "danger";
   pageId: string;
   pageLabel: string;
   isGlobal: boolean;
@@ -172,6 +173,34 @@ export default function NotificationsSection({
         ),
       },
       {
+        key: "type",
+        label: "نوع اعلان",
+        required: true,
+        defaultValue: "info",
+        filterable: true,
+        options: [
+          { label: "اطلاعاتی", value: "info" },
+          { label: "خطر", value: "danger" },
+        ],
+        placeholder: "نوع اعلان را انتخاب کنید",
+        render: (value) => (
+          <span
+            className={cn(
+              "inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1",
+              value === "danger"
+                ? isDark
+                  ? "bg-red-500/10 text-red-400 ring-red-500/20"
+                  : "bg-red-50 text-red-700 ring-red-200"
+                : isDark
+                  ? "bg-blue-500/10 text-blue-400 ring-blue-500/20"
+                  : "bg-blue-50 text-blue-700 ring-blue-200",
+            )}
+          >
+            {value === "danger" ? "خطر" : "اطلاعاتی"}
+          </span>
+        ),
+      },
+      {
         key: "isGlobal",
         label: "اعلان عمومی",
         inputType: "checkbox",
@@ -270,9 +299,8 @@ export default function NotificationsSection({
             id,
             title: toText(notification.title) || "اعلان",
             subtitle: toText(notification.subtitle),
-            description:
-              toText(notification.description) ||
-              toText(notification.message),
+            description: toText(notification.description),
+            type: notification.type === "danger" ? "danger" : "info",
             pageId: getId(page) || getId(notification.page),
             pageLabel: getPageLabel(page),
             isGlobal: Boolean(notification.isGlobal),

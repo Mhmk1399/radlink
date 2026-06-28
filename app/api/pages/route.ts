@@ -88,9 +88,13 @@ import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
-import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { withOwnerScope } from "@/lib/auth/ownership";
 import { createQrForPage } from "@/lib/qrCode";
+import {
+    checkUserQuota,
+    quotaExceededResponse,
+} from "@/lib/auth/quota";
 import type { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import Template from "@/models/template";
@@ -189,6 +193,21 @@ function slugifyUrl(value: string) {
         .replace(/-+/g, "-");
 }
 
+function normalizePageBackground(value: unknown) {
+    const background = isObject(value) ? value : {};
+    const rawColor =
+        typeof background.color === "string" ? background.color.trim() : "";
+    const rawImage =
+        typeof background.image === "string" ? background.image.trim() : "";
+
+    return {
+        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
+            ? rawColor
+            : "#ffffff",
+        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
+    };
+}
+
 export const POST = compose(
     withDB(),
     withAuth(),
@@ -236,6 +255,7 @@ export const POST = compose(
     }
 
     let ownerId: mongoose.Types.ObjectId | string = user._id;
+    let ownerUser = user;
     if (requestedOwnerId && requestedOwnerId !== String(user._id)) {
         if (!["admin", "superAdmin"].includes(user.role)) {
             return NextResponse.json(
@@ -244,12 +264,12 @@ export const POST = compose(
             );
         }
 
-        const ownerExists = await User.exists({
+        const requestedOwner = await User.findOne({
             _id: requestedOwnerId,
             isDeleted: { $ne: true },
         });
 
-        if (!ownerExists) {
+        if (!requestedOwner) {
             return NextResponse.json(
                 { message: "کاربر انتخاب‌شده برای سازنده صفحه پیدا نشد." },
                 { status: 404 }
@@ -257,7 +277,14 @@ export const POST = compose(
         }
 
         ownerId = requestedOwnerId;
+        ownerUser = requestedOwner;
     }
+
+    const pageQuota = await checkUserQuota({
+        user: ownerUser,
+        resource: "pages",
+    });
+    if (!pageQuota.allowed) return quotaExceededResponse(pageQuota);
 
     const blockAccessError = await assertBuilderBlockAccess(req, body.blocks);
     if (blockAccessError) return blockAccessError;
@@ -280,6 +307,14 @@ export const POST = compose(
         const templateBlockAccessError = await assertBuilderBlockAccess(req, blocks);
         if (templateBlockAccessError) return templateBlockAccessError;
     }
+
+    const blockQuota = await checkUserQuota({
+        user: ownerUser,
+        resource: "blocks",
+        absoluteUsage: blocks.length,
+        currentUsage: 0,
+    });
+    if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
 
     const page = await Page.create({
         title,
@@ -306,6 +341,7 @@ export const POST = compose(
             body.styleOverride && typeof body.styleOverride === "object"
                 ? body.styleOverride
                 : {},
+        background: normalizePageBackground(body.background),
         isPublished: false,
     });
 
@@ -350,12 +386,7 @@ export const GET = compose(
     const isPublished = searchParams.get("isPublished");
     const mode = searchParams.get("mode");
 
-    const evaluated = await evaluateRequestAccess(req);
-    const isAdmin =
-        ["admin", "superAdmin"].includes(user.role) ||
-        (evaluated.matched && evaluated.granted);
-
-    const query: Record<string, unknown> = isAdmin ? {} : { owner: user._id };
+    const query: Record<string, unknown> = withOwnerScope(user);
 
     if (isPublished !== null) {
         query.isPublished = isPublished === "true";

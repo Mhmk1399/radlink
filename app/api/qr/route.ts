@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
+import {
+    canAccessOwnedResource,
+    withOwnerScope,
+} from "@/lib/auth/ownership";
 import { createQrForPage } from "@/lib/qrCode";
 import QR from "@/models/qr";
 import Page from "@/models/pages";
@@ -23,8 +27,7 @@ export const POST = compose(
     const page = await Page.findById(pageId);
     if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
-    if (!isAdmin && String(page.owner) !== String(user._id)) {
+    if (!canAccessOwnedResource(user, page.owner)) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -49,8 +52,7 @@ export const GET = compose(
     const limit    = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isActive = searchParams.get("isActive");
 
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
-    const query: Record<string, unknown> = isAdmin ? {} : { owner: user._id };
+    const query: Record<string, unknown> = withOwnerScope(user);
     if (isActive !== null) query.isActive = isActive === "true";
 
     const [qrs, total] = await Promise.all([

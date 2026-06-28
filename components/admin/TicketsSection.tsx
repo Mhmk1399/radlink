@@ -20,6 +20,7 @@ import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
+import { uploadFile } from "@/lib/fileUtils";
 import type { ColumnDef } from "@/types/table";
 
 /* ── types ── */
@@ -555,16 +556,8 @@ export default function TicketsSection({
     }
     try {
       setUploadingAttachment(true);
-      const fd = new FormData();
-      fd.append("file", file);
-      const r = await fetch("/api/uploads", {
-        method: "POST",
-        headers,
-        body: fd,
-      });
-      const json = await r.json().catch(() => null);
-      if (!r.ok) throw new Error(json?.message ?? "خطا در آپلود فایل");
-      const uploaded = normalizeUploadedFile(json);
+      const result = await uploadFile(file);
+      const uploaded = normalizeUploadedFile(result);
       if (!uploaded)
         throw new Error("شناسه فایل آپلود شده از سرور دریافت نشد.");
       setUploadedAttachments((prev) => [...prev, uploaded]);

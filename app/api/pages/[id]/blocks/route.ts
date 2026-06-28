@@ -3,9 +3,14 @@ import { revalidatePath } from "next/cache";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
+import {
+    checkUserQuota,
+    quotaExceededResponse,
+} from "@/lib/auth/quota";
 import { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import Block from "@/models/blocks";
+import User from "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,6 +47,25 @@ export const PATCH = compose(
 
     switch (action) {
         case "add": {
+            const ownerUser =
+                String(page.owner) === String(req.ctx.user!._id)
+                    ? req.ctx.user!
+                    : await User.findById(page.owner);
+            if (!ownerUser) {
+                return NextResponse.json(
+                    { message: "مالک صفحه پیدا نشد." },
+                    { status: 404 }
+                );
+            }
+
+            const blockQuota = await checkUserQuota({
+                user: ownerUser,
+                resource: "blocks",
+                absoluteUsage: page.blocks.length + 1,
+                currentUsage: page.blocks.length,
+            });
+            if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+
             // payload: { blockId }
             const masterBlock = await Block.findById(payload.blockId);
             if (!masterBlock) return NextResponse.json({ message: "بلاک پیدا نشد." }, { status: 404 });

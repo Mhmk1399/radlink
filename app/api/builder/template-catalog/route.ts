@@ -86,6 +86,10 @@ function normalizeTemplateSummary(template: TemplateRecord) {
       typeof template.description === "string" ? template.description : "",
     thumbnail:
       typeof template.thumbnail === "string" ? template.thumbnail : "",
+    background:
+      isRecord(template.background)
+        ? template.background
+        : undefined,
     categoryId,
   };
 }
@@ -130,7 +134,7 @@ export const GET = compose(
       isActive: true,
     })
       .select(
-        "name description thumbnail category blocks builderBlocks isActive",
+        "name description thumbnail background style category blocks builderBlocks isActive",
       )
       .populate(
         "blocks",
@@ -165,7 +169,7 @@ export const GET = compose(
       .lean(),
     Template.find({ isActive: true })
       .select(
-        "name description thumbnail category blocks builderBlocks isActive",
+        "name description thumbnail background style category blocks builderBlocks isActive",
       )
       .populate("blocks", "name type version isActive")
       .sort({ name: 1 })

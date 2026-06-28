@@ -11,6 +11,7 @@ import "@/models/users";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const PAGE_POPULATE_FIELDS = "title url owner isPublished";
+const NOTIFICATION_TYPES = new Set(["info", "danger"]);
 
 function cleanText(value: unknown, maxLength: number) {
     return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -23,7 +24,7 @@ function getReferenceId(value: unknown) {
 }
 
 async function canReadNotification(
-    notification: { page?: unknown; User?: unknown; isGlobal?: boolean },
+    notification: { page?: unknown; isGlobal?: boolean },
     user: NonNullable<AuthRequest["ctx"]["user"]>,
 ) {
     if (["admin", "superAdmin"].includes(user.role)) return true;
@@ -34,7 +35,7 @@ async function canReadNotification(
         return Boolean(await Page.exists({ _id: pageId, owner: user._id }));
     }
 
-    return getReferenceId(notification.User) === String(user._id);
+    return false;
 }
 
 export const GET = compose(
@@ -67,7 +68,6 @@ export const GET = compose(
 
     const notification = await Notification.findById(id)
         .populate("page", PAGE_POPULATE_FIELDS)
-        .populate("User", "firstName lastName phoneNumber email role status")
         .lean();
 
     return NextResponse.json({ notification });
@@ -147,8 +147,8 @@ export const PATCH = compose(
         update.subtitle = cleanText(body.subtitle, 180);
     }
 
-    if ("description" in body || "message" in body) {
-        const description = cleanText(body.description ?? body.message, 2000);
+    if ("description" in body) {
+        const description = cleanText(body.description, 2000);
         if (!description) {
             return NextResponse.json(
                 { message: "توضیحات اعلان الزامی است." },
@@ -156,6 +156,17 @@ export const PATCH = compose(
             );
         }
         update.description = description;
+    }
+
+    if ("type" in body) {
+        const type = cleanText(body.type, 20);
+        if (!NOTIFICATION_TYPES.has(type)) {
+            return NextResponse.json(
+                { message: "نوع اعلان باید اطلاعاتی یا خطر باشد." },
+                { status: 400 },
+            );
+        }
+        update.type = type;
     }
 
     if ("closeable" in body) update.closeable = Boolean(body.closeable);

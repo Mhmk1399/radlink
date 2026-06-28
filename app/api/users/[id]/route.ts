@@ -4,6 +4,7 @@ import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
 import User from "@/models/users";
+import Agent from "@/models/agent";
 import "@/models/permission";
 import mongoose from "mongoose";
 
@@ -40,6 +41,14 @@ export const GET = compose(
 
     const user = await User.findById(id)
         .populate("permissions", "name isActive")
+        .populate({
+            path: "agentid",
+            select: "user type companyName",
+            populate: {
+                path: "user",
+                select: "firstName lastName phoneNumber email",
+            },
+        })
         .populate("createdBy", "firstName lastName phoneNumber role")
         .populate("updatedBy", "firstName lastName phoneNumber role")
         .lean();
@@ -157,6 +166,14 @@ export const PATCH = compose(
                     { status: 400 }
                 );
             }
+
+            const agentExists = await Agent.exists({ _id: value });
+            if (!agentExists) {
+                return NextResponse.json(
+                    { message: "نماینده انتخاب‌شده پیدا نشد." },
+                    { status: 404 }
+                );
+            }
         }
 
         if (key === "permissions") {
@@ -207,10 +224,6 @@ export const PATCH = compose(
                 files: Math.max(0, Number(limits.files) || 0),
                 blocks: Math.max(0, Number(limits.blocks) || 0),
                 pages: Math.max(0, Number(limits.pages) || 0),
-                landingPages: Math.max(
-                    0,
-                    Number(limits.landingPages) || 0
-                ),
             };
         }
 
@@ -248,6 +261,14 @@ export const PATCH = compose(
         }
     )
         .populate("permissions", "name isActive")
+        .populate({
+            path: "agentid",
+            select: "user type companyName",
+            populate: {
+                path: "user",
+                select: "firstName lastName phoneNumber email",
+            },
+        })
         .populate(
             "createdBy",
             "firstName lastName phoneNumber role"

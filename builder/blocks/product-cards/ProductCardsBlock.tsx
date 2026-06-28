@@ -506,7 +506,7 @@ export default function ProductCardsBlock({
                           >
                             <StyledCard
                               $styleCss={cardStyle}
-                              className="w-[260px] min-w-[260px] sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
+                              className="w-[260px] my-2 min-w-[260px] sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
                             >
                               {/* Image */}
                               <EditablePart

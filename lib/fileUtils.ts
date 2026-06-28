@@ -3,6 +3,14 @@
 export interface LiaraFileInfo {
   key: string;
   url: string;
+  fileId: string;
+  file: {
+    _id?: string;
+    id?: string;
+    filename: string;
+    path: string;
+    owner?: string;
+  };
   originalName?: string;
   size?: number;
   type?: string;
@@ -108,34 +116,62 @@ export function extractKeyFromUrl(url: string): string {
  * @param file - File object to upload
  * @returns Promise with upload response
  */
-export async function uploadFile(file: File): Promise<LiaraFileInfo | null> {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
+export async function uploadFile(file: File): Promise<LiaraFileInfo> {
+  const token =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("auth_token")
+      : null;
 
-    const token =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem("auth_token")
-        : null;
-
-    const response = await fetch('/api/uploads', {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      body: formData,
-    });
-
-    const result = await response.json();
-    
-    if (result.success) {
-      return result.data;
-    }
-    
-    console.log('Upload failed:', result.error);
-    return null;
-  } catch (error) {
-    console.log('Upload error:', error);
-    return null;
+  if (!token) {
+    throw new Error("برای آپلود فایل ابتدا وارد حساب کاربری شوید.");
   }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/uploads", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok || !result?.success) {
+    throw new Error(
+      result?.message || result?.error || "آپلود فایل با خطا مواجه شد.",
+    );
+  }
+
+  const data = result.data;
+  const fileRecord = result.file ?? data?.file;
+  const url = normalizeLiaraUrl(
+    result.url ?? data?.url ?? fileRecord?.path ?? "",
+  );
+  const fileId = String(
+    data?.fileId ?? fileRecord?._id ?? fileRecord?.id ?? "",
+  );
+
+  if (!url || !fileId || !fileRecord) {
+    throw new Error("اطلاعات فایل ذخیره‌شده از سرور دریافت نشد.");
+  }
+
+  return {
+    key: String(data?.key ?? ""),
+    url,
+    fileId,
+    file: {
+      ...fileRecord,
+      _id: String(fileRecord._id ?? fileRecord.id ?? fileId),
+      filename: String(fileRecord.filename ?? file.name),
+      path: url,
+      owner:
+        fileRecord.owner === undefined ? undefined : String(fileRecord.owner),
+    },
+    originalName: String(data?.originalName ?? file.name),
+    size: Number(data?.size ?? file.size),
+    type: String(data?.type ?? file.type),
+    uploadedAt: String(data?.uploadedAt ?? new Date().toISOString()),
+  };
 }
 
 /**

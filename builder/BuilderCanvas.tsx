@@ -200,6 +200,7 @@ export function CanvasDropZone({
 /* ================================================================== */
 
 export function CanvasContent({
+  background,
   sortedBlocks,
   availableBlockTypes,
   blockIds,
@@ -216,6 +217,10 @@ export function CanvasContent({
   onApplyTemplate,
   showSmartSuggestions = true,
 }: {
+  background?: {
+    color?: string;
+    image?: string;
+  };
   sortedBlocks: PageBlock[];
   availableBlockTypes?: string[];
   blockIds: string[];
@@ -235,6 +240,16 @@ export function CanvasContent({
   const { setNodeRef, isOver } = useDroppable({ id: "canvas-drop-zone" });
   const isPaletteDragging = activePaletteType !== null;
   const isActive = isOver || isOverCanvas;
+  const backgroundStyle: React.CSSProperties = {
+    backgroundColor: background?.color || "#ffffff",
+    backgroundImage: background?.image
+      ? `url(${JSON.stringify(background.image)})`
+      : undefined,
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "cover",
+    backgroundAttachment: "fixed",
+  };
 
   // ── Empty state ──
   if (sortedBlocks.length === 0) {
@@ -247,6 +262,7 @@ export function CanvasContent({
             ? "border-blue-400 bg-blue-50/50 shadow-[inset_0_0_40px_rgba(59,130,246,0.06)]"
             : "border-neutral-200/60 bg-white/80",
         ].join(" ")}
+        style={backgroundStyle}
       >
         {isActive ? (
           /* حالت drag فعال */
@@ -288,7 +304,11 @@ export function CanvasContent({
   }
 
   return (
-    <div ref={setNodeRef} className="relative">
+    <div
+      ref={setNodeRef}
+      className="relative min-h-[420px] rounded-3xl"
+      style={backgroundStyle}
+    >
       <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
         {sortedBlocks.map((block, index) => (
           <div key={block.instanceId}>

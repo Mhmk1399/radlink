@@ -2,17 +2,12 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
+import { canAccessOwnedResource } from "@/lib/auth/ownership";
 import File from "@/models/files";
 import "@/models/pages";
 import "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function canAccess(user: AuthRequest["ctx"]["user"], ownerId: string) {
-    if (!user) return false;
-    if (["admin", "superAdmin"].includes(user.role)) return true;
-    return String(user._id) === ownerId;
-}
 
 export const GET = compose(
     withDB(),
@@ -29,7 +24,7 @@ export const GET = compose(
         file.owner && typeof file.owner === "object" && "_id" in file.owner
             ? String(file.owner._id)
             : String(file.owner);
-    if (!canAccess(req.ctx.user, ownerId)) {
+    if (!canAccessOwnedResource(req.ctx.user!, ownerId)) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     return NextResponse.json({ file });
@@ -43,7 +38,7 @@ export const DELETE = compose(
     const { id } = await ctx.params;
     const file = await File.findById(id);
     if (!file) return NextResponse.json({ message: "فایل پیدا نشد." }, { status: 404 });
-    if (!canAccess(req.ctx.user, String(file.owner))) {
+    if (!canAccessOwnedResource(req.ctx.user!, file.owner)) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     await file.deleteOne();

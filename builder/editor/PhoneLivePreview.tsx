@@ -15,6 +15,10 @@ import type { PageBlock } from "@/types/blocks/builder.types";
 type PhonePreviewModalProps = {
   open: boolean;
   blocks: PageBlock[];
+  background?: {
+    color?: string;
+    image?: string;
+  };
   onClose: () => void;
 };
 
@@ -45,7 +49,7 @@ function buildIframeDocument() {
         width: 100%;
         min-height: 100%;
         margin: 0;
-        background: #ffffff;
+        background: transparent;
         color-scheme: light;
         direction: rtl;
         overflow-x: hidden;
@@ -73,7 +77,7 @@ function buildIframeDocument() {
         min-height: 100%;
         padding-top: 62px;
         padding-bottom: 48px;
-        background: #ffffff;
+        background: transparent;
         scrollbar-width: none;
         -ms-overflow-style: none;
       }
@@ -107,11 +111,38 @@ function EmptyPreview() {
   );
 }
 
-function PhonePreviewContent({ blocks }: { blocks: PageBlock[] }) {
+function PhonePreviewContent({
+  blocks,
+  background,
+}: {
+  blocks: PageBlock[];
+  background?: {
+    color?: string;
+    image?: string;
+  };
+}) {
+  const color =
+    typeof background?.color === "string" ? background.color : "#ffffff";
+  const image =
+    typeof background?.image === "string" ? background.image : "";
+
   if (blocks.length === 0) return <EmptyPreview />;
 
   return (
-    <>
+    <div className="relative isolate min-h-full">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          backgroundColor: color,
+          backgroundImage: image
+            ? `url(${JSON.stringify(image)})`
+            : undefined,
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+        }}
+      />
       {blocks.map((block) => {
         const config = blockRegistry[block.type as keyof typeof blockRegistry];
 
@@ -135,7 +166,7 @@ function PhonePreviewContent({ blocks }: { blocks: PageBlock[] }) {
           <BlockComponent key={block.instanceId} block={block} mode="preview" />
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -160,6 +191,7 @@ function LiveClock() {
 export default function PhonePreviewModal({
   open,
   blocks,
+  background,
   onClose,
 }: PhonePreviewModalProps) {
   const sortedBlocks = useMemo(
@@ -472,7 +504,10 @@ export default function PhonePreviewModal({
                 {iframeDocument && previewRoot
                   ? createPortal(
                       <StyleSheetManager target={iframeDocument.head}>
-                        <PhonePreviewContent blocks={sortedBlocks} />
+                        <PhonePreviewContent
+                          blocks={sortedBlocks}
+                          background={background}
+                        />
                       </StyleSheetManager>,
                       previewRoot,
                     )

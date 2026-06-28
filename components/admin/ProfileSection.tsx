@@ -18,20 +18,18 @@ import {
   FaUser,
   FaCubes,
   FaFileLines,
-  FaLandmark,
 } from "react-icons/fa6";
 import { toast } from "@/components/ui/CustomToast";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
-import { normalizeLiaraUrl } from "@/lib/fileUtils";
+import { normalizeLiaraUrl, uploadFile } from "@/lib/fileUtils";
 import type { UserRole, UserStatus } from "@/types";
 
 type UserLimits = {
   files?: number;
   blocks?: number;
   pages?: number;
-  landingPages?: number;
 };
 
 type ProfileUser = {
@@ -104,7 +102,6 @@ function normalizeProfileUser(value: unknown): ProfileUser {
       files: toNumber(limits.files),
       blocks: toNumber(limits.blocks),
       pages: toNumber(limits.pages),
-      landingPages: toNumber(limits.landingPages),
     },
     isPhoneVerified: record.isPhoneVerified === true,
     lastLoginAt: toText(record.lastLoginAt),
@@ -205,36 +202,7 @@ async function uploadAvatar(file: File): Promise<string> {
     throw new Error("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/api/uploads", {
-    method: "POST",
-    headers: getAuthHeaders(false),
-    body: formData,
-  });
-  const json = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(
-      isRecord(json) && typeof json.message === "string"
-        ? json.message
-        : "آپلود تصویر با خطا مواجه شد.",
-    );
-  }
-
-  const url =
-    isRecord(json) && typeof json.url === "string"
-      ? json.url
-      : isRecord(json) &&
-          isRecord(json.data) &&
-          typeof json.data.url === "string"
-        ? json.data.url
-        : "";
-
-  if (!url) throw new Error("آدرس تصویر از سرور دریافت نشد.");
-
-  return url;
+  return (await uploadFile(file)).url;
 }
 
 const roleLabels: Record<UserRole, string> = {
@@ -386,7 +354,7 @@ function LimitCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
+  value: number | string;
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
@@ -620,23 +588,18 @@ function ProfileEditor({
   const limitItems = [
     {
       label: "فایل‌ها",
-      value: limits.files ?? 0,
+      value: limits.files ? limits.files : "نامحدود",
       icon: <FaFile className="h-3.5 w-3.5" />,
     },
     {
       label: "بلاک‌ها",
-      value: limits.blocks ?? 0,
+      value: limits.blocks ? limits.blocks : "نامحدود",
       icon: <FaCubes className="h-3.5 w-3.5" />,
     },
     {
       label: "صفحات",
-      value: limits.pages ?? 0,
+      value: limits.pages ? limits.pages : "نامحدود",
       icon: <FaFileLines className="h-3.5 w-3.5" />,
-    },
-    {
-      label: "لندینگ‌ها",
-      value: limits.landingPages ?? 0,
-      icon: <FaLandmark className="h-3.5 w-3.5" />,
     },
   ];
 
