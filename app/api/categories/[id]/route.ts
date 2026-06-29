@@ -62,6 +62,7 @@ export const PATCH = compose(
     const updates: Record<string, unknown> = {
         ...(name && { name }),
         ...(description !== undefined && { description }),
+        ...("isActive" in body && { isActive: Boolean(body.isActive) }),
     };
 
     let nextTemplateIds: string[] | null = null;

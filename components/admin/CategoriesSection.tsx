@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
-import { FaArrowRight, FaLayerGroup, FaPalette } from "react-icons/fa6";
+import { useMemo, useState } from "react";
+import {
+  FaArrowRight,
+  FaLayerGroup,
+  FaPalette,
+  FaPowerOff,
+} from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
 import { useAccess } from "@/hook/auth/useAccess";
@@ -42,6 +47,7 @@ type CategoryRow = {
   templates: TemplateSummary[];
   templateIds: string[];
   templateCount: number;
+  isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
   [key: string]: unknown;
@@ -58,6 +64,8 @@ export default function CategoriesSection({
   const canCreate = can("admin.categories", "create");
   const canUpdate = can("admin.categories", "update");
   const canDelete = can("admin.categories", "delete");
+  const [refreshToken, setRefreshToken] = useState(0);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const token =
     typeof window !== "undefined"
@@ -105,6 +113,40 @@ export default function CategoriesSection({
             className={cn("block max-w-[18rem] truncate text-sm", t.textMuted)}
           >
             {String(value ?? "-")}
+          </span>
+        ),
+      },
+      {
+        key: "isActive",
+        label: "وضعیت",
+        inputType: "checkbox",
+        defaultValue: true,
+        filterable: true,
+        options: [
+          { label: "فعال", value: "true" },
+          { label: "غیرفعال", value: "false" },
+        ],
+        placeholder: "نمایش دسته‌بندی در صفحه‌ساز",
+        render: (value) => (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1",
+              value
+                ? isDark
+                  ? "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20"
+                  : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                : isDark
+                  ? "bg-red-500/10 text-red-400 ring-red-500/20"
+                  : "bg-red-50 text-red-700 ring-red-200",
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                value ? "bg-emerald-500" : "bg-red-500",
+              )}
+            />
+            {value ? "فعال" : "غیرفعال"}
           </span>
         ),
       },
@@ -215,6 +257,7 @@ export default function CategoriesSection({
               typeof category.description === "string"
                 ? category.description
                 : undefined,
+            isActive: category.isActive !== false,
             templates: templates.filter(isRecord) as TemplateSummary[],
             templateIds: templates.map((template) =>
               isRecord(template)
@@ -230,6 +273,40 @@ export default function CategoriesSection({
       },
     [],
   );
+
+  async function toggleCategoryStatus(row: CategoryRow) {
+    if (!row._id || togglingId) return;
+
+    try {
+      setTogglingId(row._id);
+      const response = await fetch(`/api/categories/${row._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({ isActive: !row.isActive }),
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(json?.message ?? "تغییر وضعیت دسته‌بندی انجام نشد.");
+      }
+
+      toast.success(
+        row.isActive ? "دسته‌بندی غیرفعال شد." : "دسته‌بندی فعال شد.",
+      );
+      setRefreshToken((value) => value + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "تغییر وضعیت دسته‌بندی انجام نشد.",
+      );
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   return (
     <div className="space-y-5 sm:space-y-6" dir="rtl">
@@ -287,7 +364,7 @@ export default function CategoriesSection({
 
       {/* ── Table ── */}
       <DynamicTable<CategoryRow>
-        endpoint="/api/categories"
+        endpoint={`/api/categories?refresh=${refreshToken}`}
         updateMethod="PATCH"
         columns={columns}
         title="لیست دسته‌بندی‌ها"
@@ -306,6 +383,36 @@ export default function CategoriesSection({
         canUpdate={canUpdate}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        rowActions={(row) =>
+          canUpdate ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleCategoryStatus(row);
+              }}
+              disabled={togglingId === row._id}
+              title={
+                row.isActive ? "غیرفعال کردن دسته‌بندی" : "فعال کردن دسته‌بندی"
+              }
+              aria-label={
+                row.isActive ? "غیرفعال کردن دسته‌بندی" : "فعال کردن دسته‌بندی"
+              }
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-50",
+                row.isActive
+                  ? "text-red-500 hover:bg-red-500/10"
+                  : "text-emerald-500 hover:bg-emerald-500/10",
+              )}
+            >
+              {togglingId === row._id ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <FaPowerOff className="h-4 w-4" />
+              )}
+            </button>
+          ) : null
+        }
         onCreate={async (item, builtInCreate) => {
           await builtInCreate(item);
           toast.success("دسته‌بندی ایجاد شد");

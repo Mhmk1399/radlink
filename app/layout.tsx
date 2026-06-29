@@ -4,10 +4,16 @@ import { estedad } from "@/next-persian-fonts/estedad";
 import { Toaster } from "@/components/ui/CustomToast";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { StyledComponentsRegistry } from "@/lib/registry";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata: Metadata = {
   title: "راد لینک",
   description: "لندینگ ساز راد لینک",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -17,7 +23,6 @@ export default function RootLayout({
 }>) {
   return (
     <html
-    
       lang="fa"
       className={`${estedad.className}   h-full antialiased`}
       suppressHydrationWarning
@@ -27,7 +32,10 @@ export default function RootLayout({
         <ToastProvider />
         <Toaster position="top-right" maxToasts={5} />
         {/* <Navbar /> */}
-        <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+        <ThemeProvider defaultTheme="dark" >
+          {" "}
+          <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+        </ThemeProvider>
         {/* <DynamicIsland /> */}
         {/* <SmartLandingFooter /> */}
       </body>

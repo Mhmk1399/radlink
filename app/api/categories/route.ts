@@ -23,7 +23,7 @@ export const POST = compose(
     withStatus("active"),
     withRole("admin", "superAdmin")
 )(async (req: AuthRequest) => {
-    const { name, description, templates, templateIds } = await req.json();
+    const { name, description, templates, templateIds, isActive } = await req.json();
     if (!name) return NextResponse.json({ message: "نام دسته‌بندی الزامی است." }, { status: 400 });
 
     const normalizedTemplateIds = normalizeTemplateIds(templates ?? templateIds);
@@ -32,6 +32,7 @@ export const POST = compose(
         name,
         description,
         templates: normalizedTemplateIds,
+        isActive: isActive === undefined ? true : Boolean(isActive),
     });
 
     if (normalizedTemplateIds.length > 0) {
@@ -55,8 +56,8 @@ export const GET = compose(
     const mode = searchParams.get("mode");
 
     if (mode === "options") {
-        const categories = await Category.find()
-            .select("name")
+        const categories = await Category.find({ isActive: { $ne: false } })
+            .select("name isActive")
             .sort({ name: 1 })
             .limit(limit)
             .lean();

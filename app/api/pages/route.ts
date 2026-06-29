@@ -89,7 +89,10 @@ import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
-import { withOwnerScope } from "@/lib/auth/ownership";
+import {
+    withPageAccessScope,
+    withTemplateAccessScope,
+} from "@/lib/auth/resourceScope";
 import { createQrForPage } from "@/lib/qrCode";
 import {
     checkUserQuota,
@@ -98,6 +101,7 @@ import {
 import type { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import Template from "@/models/template";
+import Category from "@/models/category";
 import User from "@/models/users";
 import "@/models/blocks";
 
@@ -291,21 +295,40 @@ export const POST = compose(
 
     let blocks = Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [];
 
-    if (templateId && blocks.length === 0) {
-        const template = await Template.findById(templateId)
+    if (templateId) {
+        const templateQuery = await withTemplateAccessScope(user, {
+            _id: templateId,
+            isActive: true,
+        });
+        const template = await Template.findOne(templateQuery)
             .populate("blocks", "type version data settings elements isActive")
             .lean();
 
         if (!template) {
             return NextResponse.json(
-                { message: "تمپلیت پیدا نشد." },
+                { message: "تمپلیت پیدا نشد یا اجازه استفاده از آن را ندارید." },
                 { status: 404 }
             );
         }
 
-        blocks = getTemplateBlocks(template as Record<string, unknown>);
-        const templateBlockAccessError = await assertBuilderBlockAccess(req, blocks);
-        if (templateBlockAccessError) return templateBlockAccessError;
+        if (
+            template.category &&
+            !(await Category.exists({
+                _id: template.category,
+                isActive: { $ne: false },
+            }))
+        ) {
+            return NextResponse.json(
+                { message: "دسته‌بندی این تمپلیت غیرفعال است." },
+                { status: 400 }
+            );
+        }
+
+        if (blocks.length === 0) {
+            blocks = getTemplateBlocks(template as Record<string, unknown>);
+            const templateBlockAccessError = await assertBuilderBlockAccess(req, blocks);
+            if (templateBlockAccessError) return templateBlockAccessError;
+        }
     }
 
     const blockQuota = await checkUserQuota({
@@ -342,6 +365,8 @@ export const POST = compose(
                 ? body.styleOverride
                 : {},
         background: normalizePageBackground(body.background),
+        logo: typeof body.logo === "string" ? body.logo.trim() : "",
+        favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
         isPublished: false,
     });
 
@@ -386,11 +411,13 @@ export const GET = compose(
     const isPublished = searchParams.get("isPublished");
     const mode = searchParams.get("mode");
 
-    const query: Record<string, unknown> = withOwnerScope(user);
+    const filters: Record<string, unknown> = {};
 
     if (isPublished !== null) {
-        query.isPublished = isPublished === "true";
+        filters.isPublished = isPublished === "true";
     }
+
+    const query = await withPageAccessScope(user, filters);
 
     if (mode === "notification-options") {
         const pages = await Page.find(query)

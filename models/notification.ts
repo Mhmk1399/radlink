@@ -7,6 +7,7 @@ export interface INotification extends Document {
     description: string;
     type: "info" | "danger";
     closeable: boolean;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
     isGlobal?: boolean;
@@ -48,6 +49,11 @@ const notificationSchema = new Schema<INotification>(
             type: Boolean,
             default: true,
         },
+        isActive: {
+            type: Boolean,
+            default: true,
+            index: true,
+        },
         isGlobal: {
             type: Boolean,
             default: false,
@@ -58,7 +64,7 @@ const notificationSchema = new Schema<INotification>(
     },
 );
 
-notificationSchema.index({ page: 1, createdAt: -1 });
+notificationSchema.index({ page: 1, isActive: 1, createdAt: -1 });
 
 const Notification: Model<INotification> =
     (mongoose.models.Notification as Model<INotification> | undefined) ||

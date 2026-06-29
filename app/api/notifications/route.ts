@@ -81,6 +81,7 @@ export const POST = compose(
         ...content,
         type,
         closeable: body.closeable === undefined ? true : Boolean(body.closeable),
+        isActive: body.isActive === undefined ? true : Boolean(body.isActive),
         isGlobal,
     });
 
@@ -108,17 +109,28 @@ export const GET = compose(
     );
 
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
-    let query: Record<string, unknown> = {};
+    const includeInactive =
+        isAdmin && searchParams.get("includeInactive") === "true";
+    const conditions: Record<string, unknown>[] = [];
+
+    if (!includeInactive) {
+        conditions.push({ isActive: { $ne: false } });
+    }
 
     if (!isAdmin) {
         const ownedPageIds = await Page.find({ owner: user._id }).distinct("_id");
-        query = {
+        conditions.push({
             $or: [
                 { page: { $in: ownedPageIds } },
                 { isGlobal: true },
             ],
-        };
+        });
     }
+
+    const query: Record<string, unknown> =
+        conditions.length > 1
+            ? { $and: conditions }
+            : conditions[0] ?? {};
 
     const [notifications, total] = await Promise.all([
         Notification.find(query)

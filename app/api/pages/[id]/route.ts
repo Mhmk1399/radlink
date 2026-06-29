@@ -84,14 +84,19 @@ import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
 import {
     hasGlobalOwnerScope,
-    withOwnerScope,
 } from "@/lib/auth/ownership";
+import {
+    withPageAccessScope,
+    withTemplateAccessScope,
+} from "@/lib/auth/resourceScope";
 import {
     checkUserQuota,
     quotaExceededResponse,
 } from "@/lib/auth/quota";
 import type { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
+import Template from "@/models/template";
+import Category from "@/models/category";
 import User from "@/models/users";
 
 type RouteContext = {
@@ -192,9 +197,7 @@ export const GET = compose(
         );
     }
 
-    const query: Record<string, unknown> = withOwnerScope(user, {
-        _id: id,
-    });
+    const query = await withPageAccessScope(user, { _id: id }, "view");
 
     const page = await Page.findOne(query)
         .populate("owner", "firstName lastName email phoneNumber")
@@ -243,25 +246,27 @@ export const PATCH = compose(
 
     if (requestedOwnerId) {
         if (!isAdmin) {
-            return NextResponse.json(
-                { message: "شما اجازه تغییر سازنده صفحه را ندارید." },
-                { status: 403 }
-            );
+            if (String(requestedOwnerId) !== String(user._id)) {
+                return NextResponse.json(
+                    { message: "شما اجازه تغییر سازنده صفحه را ندارید." },
+                    { status: 403 }
+                );
+            }
+        } else {
+            const ownerExists = await User.exists({
+                _id: requestedOwnerId,
+                isDeleted: { $ne: true },
+            });
+
+            if (!ownerExists) {
+                return NextResponse.json(
+                    { message: "کاربر انتخاب‌شده برای سازنده صفحه پیدا نشد." },
+                    { status: 404 }
+                );
+            }
+
+            update.owner = requestedOwnerId;
         }
-
-        const ownerExists = await User.exists({
-            _id: requestedOwnerId,
-            isDeleted: { $ne: true },
-        });
-
-        if (!ownerExists) {
-            return NextResponse.json(
-                { message: "کاربر انتخاب‌شده برای سازنده صفحه پیدا نشد." },
-                { status: 404 }
-            );
-        }
-
-        update.owner = requestedOwnerId;
     }
 
     if (typeof body.title === "string") {
@@ -296,10 +301,43 @@ export const PATCH = compose(
         update.blocks = normalizeBlocks(body.blocks);
     }
 
-    if (typeof body.templateId === "string" && mongoose.Types.ObjectId.isValid(body.templateId)) {
-        update.template = body.templateId;
-    } else if (typeof body.template === "string" && mongoose.Types.ObjectId.isValid(body.template)) {
-        update.template = body.template;
+    const nextTemplateId =
+        typeof body.templateId === "string" && mongoose.Types.ObjectId.isValid(body.templateId)
+            ? body.templateId
+            : typeof body.template === "string" && mongoose.Types.ObjectId.isValid(body.template)
+              ? body.template
+              : undefined;
+
+    if (nextTemplateId) {
+        const templateQuery = await withTemplateAccessScope(user, {
+            _id: nextTemplateId,
+            isActive: true,
+        });
+        const selectedTemplate = await Template.findOne(templateQuery)
+            .select("category")
+            .lean();
+
+        if (!selectedTemplate) {
+            return NextResponse.json(
+                { message: "تمپلیت پیدا نشد یا اجازه استفاده از آن را ندارید." },
+                { status: 404 }
+            );
+        }
+
+        if (
+            selectedTemplate.category &&
+            !(await Category.exists({
+                _id: selectedTemplate.category,
+                isActive: { $ne: false },
+            }))
+        ) {
+            return NextResponse.json(
+                { message: "دسته‌بندی این تمپلیت غیرفعال است." },
+                { status: 400 }
+            );
+        }
+
+        update.template = nextTemplateId;
     }
 
     if (isObject(body.seo)) {
@@ -335,9 +373,7 @@ export const PATCH = compose(
         update.publishedAt = body.isPublished ? new Date() : undefined;
     }
 
-    const query: Record<string, unknown> = withOwnerScope(user, {
-        _id: id,
-    });
+    const query = await withPageAccessScope(user, { _id: id }, "update");
 
     if (body.blocks !== undefined) {
         const currentPage = await Page.findOne(query).select("owner blocks");
@@ -409,9 +445,7 @@ export const DELETE = compose(
         );
     }
 
-    const query: Record<string, unknown> = withOwnerScope(user, {
-        _id: id,
-    });
+    const query = await withPageAccessScope(user, { _id: id }, "delete");
 
     const page = await Page.findOneAndDelete(query);
 

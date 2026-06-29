@@ -42,7 +42,7 @@ function MinimalLoadingScreen() {
         <div className="inline-flex h-10 w-10 animate-spin rounded-full border-[3px] border-slate-700 border-t-violet-500" />
         <div>
           <h1 className="text-xl font-semibold tracking-wide text-white sm:text-2xl">
-           ... در حال بارگذاری صفحه ساز
+            ... در حال بارگذاری صفحه ساز
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
             لطفا صبر کنید
@@ -66,7 +66,9 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeTemplateBlocks(template: Record<string, unknown>): PageBlock[] {
+function normalizeTemplateBlocks(
+  template: Record<string, unknown>,
+): PageBlock[] {
   const builderBlocks = Array.isArray(template.builderBlocks)
     ? template.builderBlocks
     : [];
@@ -77,19 +79,19 @@ function normalizeTemplateBlocks(template: Record<string, unknown>): PageBlock[]
 
   const blocks = Array.isArray(template.blocks) ? template.blocks : [];
 
-  return blocks
-    .filter(isObject)
-    .map((block, index) => ({
-      instanceId: `${String(block.type ?? "block")}-${index}`,
-      blockId: String(block._id ?? block.id ?? ""),
-      type: typeof block.type === "string" ? block.type : "unknown",
-      version: typeof block.version === "number" ? block.version : 1,
-      order: index,
-      isActive: typeof block.isActive === "boolean" ? block.isActive : true,
-      data: isObject(block.data) ? block.data : {},
-      settings: isObject(block.settings) ? block.settings : { direction: "rtl" },
-      elements: isObject(block.elements) ? (block.elements as PageBlock["elements"]) : {},
-    }));
+  return blocks.filter(isObject).map((block, index) => ({
+    instanceId: `${String(block.type ?? "block")}-${index}`,
+    blockId: String(block._id ?? block.id ?? ""),
+    type: typeof block.type === "string" ? block.type : "unknown",
+    version: typeof block.version === "number" ? block.version : 1,
+    order: index,
+    isActive: typeof block.isActive === "boolean" ? block.isActive : true,
+    data: isObject(block.data) ? block.data : {},
+    settings: isObject(block.settings) ? block.settings : { direction: "rtl" },
+    elements: isObject(block.elements)
+      ? (block.elements as PageBlock["elements"])
+      : {},
+  }));
 }
 
 function getCategoryId(category: unknown) {
@@ -106,9 +108,7 @@ function getTemplateBackground(template: Record<string, unknown>) {
   const rawImage = String(background.image ?? style.bgImage ?? "").trim();
 
   return {
-    color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
-      rawColor,
-    )
+    color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
       ? rawColor
       : "#ffffff",
     image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
@@ -295,9 +295,7 @@ export default function BuilderPage() {
             initialUrl: "new-page",
             initialCategoryId: categoryId,
             initialThumbnail:
-              typeof template.thumbnail === "string"
-                ? template.thumbnail
-                : "",
+              typeof template.thumbnail === "string" ? template.thumbnail : "",
             initialBackground: getTemplateBackground(template),
           }));
         }}

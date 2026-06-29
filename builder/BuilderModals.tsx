@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import {
   HiOutlineCloudArrowUp,
   HiOutlineCheckCircle,
@@ -542,6 +543,8 @@ export function PageMetaModal({
   categoryId,
   categoryOptions = [],
   thumbnail,
+  logo,
+  favicon,
   backgroundColor = "#ffffff",
   backgroundImage = "",
   onTitleChange,
@@ -549,6 +552,8 @@ export function PageMetaModal({
   onUrlChange,
   onCategoryIdChange,
   onThumbnailChange,
+  onLogoChange,
+  onFaviconChange,
   onBackgroundColorChange,
   onBackgroundImageChange,
   onClose,
@@ -565,6 +570,8 @@ export function PageMetaModal({
   categoryId?: string;
   categoryOptions?: Array<{ value: string; label: string }>;
   thumbnail?: string;
+  logo?: string;
+  favicon?: string;
   backgroundColor?: string;
   backgroundImage?: string;
   onTitleChange: (v: string) => void;
@@ -572,6 +579,8 @@ export function PageMetaModal({
   onUrlChange: (v: string) => void;
   onCategoryIdChange?: (v: string) => void;
   onThumbnailChange?: (v: string) => void;
+  onLogoChange?: (v: string) => void;
+  onFaviconChange?: (v: string) => void;
   onBackgroundColorChange?: (v: string) => void;
   onBackgroundImageChange?: (v: string) => void;
   onClose: () => void;
@@ -581,6 +590,8 @@ export function PageMetaModal({
 }) {
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
   const [isThumbnailDragging, setIsThumbnailDragging] = useState(false);
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [thumbnailUploadError, setThumbnailUploadError] = useState<
@@ -588,6 +599,12 @@ export function PageMetaModal({
   >(null);
   const [isBackgroundUploading, setIsBackgroundUploading] = useState(false);
   const [backgroundUploadError, setBackgroundUploadError] = useState<
+    string | null
+  >(null);
+  const [uploadingPageImage, setUploadingPageImage] = useState<
+    "logo" | "favicon" | null
+  >(null);
+  const [pageImageUploadError, setPageImageUploadError] = useState<
     string | null
   >(null);
 
@@ -656,6 +673,40 @@ export function PageMetaModal({
     [onBackgroundImageChange],
   );
 
+  const handlePageImageFile = useCallback(
+    async (kind: "logo" | "favicon", file: File | null | undefined) => {
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setPageImageUploadError("فقط فایل تصویر قابل آپلود است.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setPageImageUploadError("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+        return;
+      }
+
+      try {
+        setUploadingPageImage(kind);
+        setPageImageUploadError(null);
+        const uploaded = await uploadFile(file);
+
+        if (kind === "logo") onLogoChange?.(uploaded.url);
+        else onFaviconChange?.(uploaded.url);
+      } catch (error) {
+        setPageImageUploadError(
+          error instanceof Error
+            ? error.message
+            : "آپلود تصویر با خطا مواجه شد.",
+        );
+      } finally {
+        setUploadingPageImage(null);
+      }
+    },
+    [onFaviconChange, onLogoChange],
+  );
+
   useEffect(() => {
     if (!open) return;
 
@@ -664,7 +715,8 @@ export function PageMetaModal({
         event.key === "Escape" &&
         !isSaving &&
         !isThumbnailUploading &&
-        !isBackgroundUploading
+        !isBackgroundUploading &&
+        !uploadingPageImage
       ) {
         onClose();
       }
@@ -690,7 +742,14 @@ export function PageMetaModal({
       document.body.style.paddingRight = previousPaddingRight;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose, isSaving, isThumbnailUploading, isBackgroundUploading]);
+  }, [
+    open,
+    onClose,
+    isSaving,
+    isThumbnailUploading,
+    isBackgroundUploading,
+    uploadingPageImage,
+  ]);
 
   if (!open) return null;
 
@@ -706,7 +765,8 @@ export function PageMetaModal({
           event.target === event.currentTarget &&
           !isSaving &&
           !isThumbnailUploading &&
-          !isBackgroundUploading
+          !isBackgroundUploading &&
+          !uploadingPageImage
         ) {
           onClose();
         }
@@ -910,6 +970,118 @@ export function PageMetaModal({
                   />
                 </div>
               </div>
+
+              <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                <div>
+                  <h3 className="text-[13px] font-black text-neutral-800">
+                    لوگو و آیکون صفحه
+                  </h3>
+                  <p className="mt-1 text-[11px] leading-5 text-neutral-400">
+                    لوگو بالای صفحه نمایش داده می‌شود و آیکون در تب مرورگر
+                    استفاده خواهد شد.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      {
+                        kind: "logo" as const,
+                        label: "لوگوی صفحه",
+                        value: logo,
+                        inputRef: logoInputRef,
+                        hint: "PNG، WebP یا SVG",
+                      },
+                      {
+                        kind: "favicon" as const,
+                        label: "آیکون مرورگر",
+                        value: favicon,
+                        inputRef: faviconInputRef,
+                        hint: "تصویر مربع پیشنهاد می‌شود",
+                      },
+                    ] as const
+                  ).map((item) => (
+                    <div key={item.kind}>
+                      <label className="mb-2 block text-[12px] font-bold text-neutral-600">
+                        {item.label}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => item.inputRef.current?.click()}
+                        disabled={Boolean(uploadingPageImage)}
+                        className="relative flex min-h-32 w-full overflow-hidden rounded-2xl border-2 border-dashed border-neutral-200 bg-white transition hover:border-emerald-300 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        {item.value ? (
+                          <Image
+                            src={item.value}
+                            alt={`پیش‌نمایش ${item.label}`}
+                            fill
+                            unoptimized
+                            sizes="(max-width: 640px) 100vw, 280px"
+                            className="absolute inset-0 h-full w-full object-contain p-4"
+                          />
+                        ) : null}
+                        <span
+                          className={[
+                            "relative z-10 flex w-full flex-col items-center justify-center px-3 py-5 text-center",
+                            item.value
+                              ? "bg-black/35 text-white opacity-0 transition hover:opacity-100"
+                              : "text-neutral-500",
+                          ].join(" ")}
+                        >
+                          {uploadingPageImage === item.kind ? (
+                            <span className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            <>
+                              <HiOutlineCloudArrowUp className="mb-2 h-7 w-7" />
+                              <span className="text-[12px] font-bold">
+                                {item.value ? "تغییر تصویر" : "انتخاب و آپلود"}
+                              </span>
+                              <span className="mt-1 text-[10px] opacity-70">
+                                {item.hint}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      </button>
+                      <input
+                        ref={item.inputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          void handlePageImageFile(
+                            item.kind,
+                            event.target.files?.[0],
+                          );
+                          event.target.value = "";
+                        }}
+                      />
+                      {item.value ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            item.kind === "logo"
+                              ? onLogoChange?.("")
+                              : onFaviconChange?.("")
+                          }
+                          disabled={Boolean(uploadingPageImage)}
+                          className="mt-2 inline-flex items-center gap-1 rounded-lg text-[11px] font-bold text-red-500 disabled:opacity-50"
+                        >
+                          <HiOutlineTrash className="h-3.5 w-3.5" />
+                          حذف
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+
+                {pageImageUploadError ? (
+                  <p className="text-[11px] font-medium text-red-500">
+                    {pageImageUploadError}
+                  </p>
+                ) : null}
+              </section>
 
               <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
                 <div>
@@ -1231,7 +1403,11 @@ export function PageMetaModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={isThumbnailUploading || isBackgroundUploading}
+            disabled={
+              isThumbnailUploading ||
+              isBackgroundUploading ||
+              Boolean(uploadingPageImage)
+            }
             className="flex-1 rounded-2xl border border-neutral-200 bg-white px-4 py-3.5 text-[13px] font-bold text-neutral-600 transition-all hover:bg-neutral-100 active:scale-[0.97]"
           >
             انصراف
@@ -1243,6 +1419,7 @@ export function PageMetaModal({
               isSaving ||
               isThumbnailUploading ||
               isBackgroundUploading ||
+              Boolean(uploadingPageImage) ||
               !title.trim() ||
               (mode === "page" && !url.trim())
             }

@@ -4,6 +4,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
 import Category from "@/models/category";
 import "@/models/blocks";
@@ -104,6 +105,18 @@ export const POST = compose(
     if (templateBlockAccessError) return templateBlockAccessError;
 
     const normalizedCategory = normalizeObjectId(category ?? categoryId);
+    if (
+        normalizedCategory &&
+        !(await Category.exists({
+            _id: normalizedCategory,
+            isActive: { $ne: false },
+        }))
+    ) {
+        return NextResponse.json(
+            { message: "دسته‌بندی انتخاب‌شده غیرفعال است یا پیدا نشد." },
+            { status: 400 }
+        );
+    }
 
     const template = await Template.create({
         name,
@@ -134,15 +147,18 @@ export const GET = compose(
     withAuth(),
     withStatus("active")
 )(async (req: AuthRequest) => {
+    const user = req.ctx.user!;
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? searchParams.get("pageSize") ?? 100));
     const category = searchParams.get("category");
     const isActive = searchParams.get("isActive");
 
-    const query: Record<string, unknown> = {};
-    if (category) query.category = category;
-    if (isActive !== null) query.isActive = isActive === "true";
+    const filters: Record<string, unknown> = {};
+    if (category) filters.category = category;
+    if (isActive !== null) filters.isActive = isActive === "true";
+
+    const query = await withTemplateAccessScope(user, filters);
 
     const [templates, total] = await Promise.all([
         Template.find(query)

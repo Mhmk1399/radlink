@@ -5,7 +5,8 @@ import {
   FaArrowRight,
   FaCheck,
   FaChevronDown,
-   FaPen,
+  FaMagnifyingGlass,
+  FaPen,
   FaPlus,
   FaShieldHalved,
   FaUsers,
@@ -263,6 +264,116 @@ function ThemeCheckbox({
   );
 }
 
+/* ── Search Input ── */
+function SearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+
+  return (
+    <div className="relative mb-2">
+      <FaMagnifyingGlass
+        className={cn(
+          "pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2",
+          t.textDisabled,
+        )}
+      />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={cn(
+          "w-full rounded-lg border py-2 pr-8 pl-3 text-xs outline-none transition-all duration-200",
+          t.inputBg,
+          t.borderInput,
+          t.textPrimary,
+          t.borderInputFocus,
+          isDark ? "placeholder:text-[#47443e]" : "placeholder:text-[#b0aa9e]",
+        )}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className={cn(
+            "absolute left-2 top-1/2 -translate-y-1/2 rounded p-0.5 transition-colors",
+            t.hoverBg,
+            t.textDisabled,
+          )}
+        >
+          <FaXmark className="h-2.5 w-2.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ── Virtual List ── renders only visible items for performance ── */
+const ITEM_HEIGHT = 40; // px — approximate height of each ThemeCheckbox row
+const VISIBLE_BUFFER = 5; // extra items rendered above/below viewport
+
+function VirtualList({
+  options,
+  values,
+  onToggle,
+  containerHeight,
+}: {
+  options: { value: string; label: string; sublabel?: string }[];
+  values: string[];
+  onToggle: (value: string) => void;
+  containerHeight: number;
+}) {
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const totalHeight = options.length * ITEM_HEIGHT;
+
+  const startIndex = Math.max(
+    0,
+    Math.floor(scrollTop / ITEM_HEIGHT) - VISIBLE_BUFFER,
+  );
+  const visibleCount =
+    Math.ceil(containerHeight / ITEM_HEIGHT) + VISIBLE_BUFFER * 2;
+  const endIndex = Math.min(options.length - 1, startIndex + visibleCount);
+
+  const visibleOptions = options.slice(startIndex, endIndex + 1);
+  const offsetTop = startIndex * ITEM_HEIGHT;
+
+  return (
+    <div
+      style={{ height: containerHeight, overflowY: "auto" }}
+      onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}
+      className="rounded-lg"
+    >
+      {/* Total height spacer */}
+      <div style={{ height: totalHeight, position: "relative" }}>
+        {/* Rendered slice */}
+        <div style={{ position: "absolute", top: offsetTop, width: "100%" }}>
+          <div className="grid gap-0.5 sm:grid-cols-2">
+            {visibleOptions.map((option) => (
+              <div key={option.value} style={{ minHeight: ITEM_HEIGHT }}>
+                <ThemeCheckbox
+                  checked={values.includes(option.value)}
+                  onChange={() => onToggle(option.value)}
+                  label={option.label}
+                  sublabel={option.sublabel}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Themed Collapsible Checklist ── */
 function CollapsibleChecklist({
   title,
@@ -273,6 +384,8 @@ function CollapsibleChecklist({
   onToggle,
   loading,
   defaultOpen,
+  searchPlaceholder,
+  searchMode, // "id" | "name"
 }: {
   title: string;
   icon: React.ReactNode;
@@ -282,10 +395,46 @@ function CollapsibleChecklist({
   onToggle: (value: string) => void;
   loading?: boolean;
   defaultOpen?: boolean;
+  searchPlaceholder: string;
+  searchMode: "id" | "name";
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const [open, setOpen] = useState(defaultOpen ?? false);
+  const [query, setQuery] = useState("");
+
+  // Reset search when closed
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
+
+  /* ── Filter logic:
+       - "id"   mode → match against option.value (the access _id / id)
+       - "name" mode → match against option.label (user full name / phone)
+  ── */
+  const filteredOptions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+
+    if (searchMode === "id") {
+      // Search access by id — match against value field which holds the id
+      return options.filter((o) => o.value.toLowerCase().includes(q));
+    }
+
+    // Search user by name — match against label (firstName + lastName) or sublabel (role · phone)
+    return options.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        (o.sublabel ?? "").toLowerCase().includes(q),
+    );
+  }, [options, query, searchMode]);
+
+  // Height of the scrollable list area
+  // Cap at 176px (~4 rows) so layout stays compact; virtual list handles the rest
+  const LIST_HEIGHT = Math.min(
+    Math.max(filteredOptions.length * ITEM_HEIGHT, ITEM_HEIGHT),
+    176,
+  );
 
   return (
     <section
@@ -299,6 +448,7 @@ function CollapsibleChecklist({
           : "bg-transparent",
       )}
     >
+      {/* Header toggle */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -343,6 +493,7 @@ function CollapsibleChecklist({
         />
       </button>
 
+      {/* Body */}
       {open && (
         <div className={cn("border-t px-3 pb-3 pt-2", t.divider)}>
           {loading ? (
@@ -354,31 +505,51 @@ function CollapsibleChecklist({
                 )}
               />
             </div>
-          ) : options.length === 0 ? (
-            <div
-              className={cn(
-                "rounded-lg border border-dashed p-4 text-center",
-                t.borderSubtle,
-              )}
-            >
-              <span className={cn("text-xs", t.textDisabled)}>{emptyText}</span>
-            </div>
           ) : (
-            <div
-              className={cn("max-h-44 overflow-y-auto rounded-lg", t.scrollbar)}
-            >
-              <div className="grid gap-0.5 sm:grid-cols-2">
-                {options.map((option) => (
-                  <ThemeCheckbox
-                    key={option.value}
-                    checked={values.includes(option.value)}
-                    onChange={() => onToggle(option.value)}
-                    label={option.label}
-                    sublabel={option.sublabel}
-                  />
-                ))}
-              </div>
-            </div>
+            <>
+              {/* ── Search box ── */}
+              {options.length > 0 && (
+                <SearchInput
+                  value={query}
+                  onChange={setQuery}
+                  placeholder={searchPlaceholder}
+                />
+              )}
+
+              {/* ── Results ── */}
+              {filteredOptions.length === 0 ? (
+                <div
+                  className={cn(
+                    "rounded-lg border border-dashed p-4 text-center",
+                    t.borderSubtle,
+                  )}
+                >
+                  <span className={cn("text-xs", t.textDisabled)}>
+                    {query ? "نتیجه‌ای یافت نشد" : emptyText}
+                  </span>
+                </div>
+              ) : (
+                /* Virtual list — only renders visible rows, safe for 10k+ items */
+                <VirtualList
+                  options={filteredOptions}
+                  values={values}
+                  onToggle={onToggle}
+                  containerHeight={LIST_HEIGHT}
+                />
+              )}
+
+              {/* ── Count hint ── */}
+              {filteredOptions.length > 0 && query && (
+                <p
+                  className={cn(
+                    "mt-1.5 text-right text-[11px]",
+                    t.textDisabled,
+                  )}
+                >
+                  {filteredOptions.length} نتیجه از {options.length}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -840,7 +1011,7 @@ export default function PermissionsSection({
       />
 
       {/* ══════════════════════════════════════════════
-          MODAL — Full screen mobile, centered desktop
+          MODAL
           ══════════════════════════════════════════════ */}
       {modalOpen && (
         <div
@@ -979,13 +1150,15 @@ export default function PermissionsSection({
                 />
               </div>
 
-              {/* Accesses checklist */}
+              {/* ── Accesses checklist — search by ID ── */}
               <CollapsibleChecklist
                 title="Accessها"
                 icon={<FaKey className="h-3 w-3" />}
                 emptyText="accessای برای انتخاب وجود ندارد."
                 loading={optionsLoading}
                 defaultOpen={true}
+                searchPlaceholder="جستجو بر اساس ID..."
+                searchMode="id"
                 options={accesses.map((access) => ({
                   value: access.id,
                   label: accessLabel(access),
@@ -1000,12 +1173,14 @@ export default function PermissionsSection({
                 }
               />
 
-              {/* Users checklist */}
+              {/* ── Users checklist — search by name ── */}
               <CollapsibleChecklist
                 title="کاربران دریافت‌کننده"
                 icon={<FaUsers className="h-3 w-3" />}
                 emptyText="کاربری برای انتخاب وجود ندارد."
                 loading={optionsLoading}
+                searchPlaceholder="جستجو بر اساس نام یا شماره..."
+                searchMode="name"
                 options={users.map((user) => ({
                   value: user.id,
                   label: userLabel(user),

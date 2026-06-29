@@ -24,10 +24,11 @@ function getReferenceId(value: unknown) {
 }
 
 async function canReadNotification(
-    notification: { page?: unknown; isGlobal?: boolean },
+    notification: { page?: unknown; isGlobal?: boolean; isActive?: boolean },
     user: NonNullable<AuthRequest["ctx"]["user"]>,
 ) {
     if (["admin", "superAdmin"].includes(user.role)) return true;
+    if (notification.isActive === false) return false;
     if (notification.isGlobal) return true;
 
     const pageId = getReferenceId(notification.page);
@@ -170,6 +171,7 @@ export const PATCH = compose(
     }
 
     if ("closeable" in body) update.closeable = Boolean(body.closeable);
+    if ("isActive" in body) update.isActive = Boolean(body.isActive);
 
     const patch: Record<string, unknown> = { ...update };
     if (Object.keys(unset).length) patch.$unset = unset;

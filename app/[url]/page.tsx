@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { cache } from "react";
 import { connectDB } from "@/lib/data/db";
 import Notification from "@/models/notification";
+import Image from "next/image";
 import Page from "@/models/pages";
 import PageNotificationModal, {
   type PublicPageNotification,
@@ -93,9 +94,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const favicon = String(
     page.settings?.favicon || page.favicon || "/favicon.ico",
   );
-  const appleIcon = String(
-    page.settings?.appleTouchIcon || "/apple-touch-icon.png",
-  );
+  const appleIcon = String(page.settings?.appleTouchIcon || favicon);
 
   return {
     title: String(page.seo?.title || page.title || "صفحه"),
@@ -128,8 +127,66 @@ export default async function PageRoute({ params }: Props) {
 
   if (!page) return notFound();
 
+  const backgroundColor = isValidBackgroundColor(page.background?.color)
+    ? page.background.color.trim()
+    : "#ffffff";
+  const backgroundImage =
+    typeof page.background?.image === "string" &&
+    /^https?:\/\//i.test(page.background.image)
+      ? page.background.image
+      : "";
+
+  if (page.isPublished !== true) {
+    return (
+      <main className="relative isolate min-h-screen overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 -z-10 scale-105"
+          style={{
+            backgroundColor,
+            backgroundImage: backgroundImage
+              ? `url(${JSON.stringify(backgroundImage)})`
+              : undefined,
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "cover",
+          }}
+        />
+        <div className="fixed inset-0 flex items-center justify-center bg-black/45 p-5 backdrop-blur-xl">
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unpublished-page-title"
+            aria-describedby="unpublished-page-description"
+            className="w-full max-w-md rounded-2xl border border-white/70 bg-white/95 p-6 text-center shadow-2xl sm:p-8"
+            dir="rtl"
+          >
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-2xl font-black text-amber-600 ring-1 ring-amber-200">
+              !
+            </div>
+            <h1
+              id="unpublished-page-title"
+              className="text-xl font-black text-neutral-900 sm:text-2xl"
+            >
+              این صفحه غیرفعال است
+            </h1>
+            <p
+              id="unpublished-page-description"
+              className="mt-3 text-sm leading-7 text-neutral-600"
+            >
+              این صفحه در حال حاضر منتشر نشده و محتوای آن قابل مشاهده نیست.
+            </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   const rawNotifications = await Notification.find({
-    $or: [{ page: page._id }, { isGlobal: true }],
+    $and: [
+      { isActive: { $ne: false } },
+      { $or: [{ page: page._id }, { isGlobal: true }] },
+    ],
   })
     .select("title subtitle description type closeable createdAt")
     .sort({ createdAt: -1 })
@@ -149,15 +206,6 @@ export default async function PageRoute({ params }: Props) {
   const clientBlocks = (page.blocks ?? []).map(
     (block) => toClientValue(block) as Record<string, unknown>,
   );
-const backgroundColor = isValidBackgroundColor(page.background?.color)
-  ? page.background.color.trim()
-  : "#ffffff";
-  const backgroundImage =
-    typeof page.background?.image === "string" &&
-    /^https?:\/\//i.test(page.background.image)
-      ? page.background.image
-      : "";
-
   return (
     <div className="relative isolate min-h-screen w-full px-2 pb-10 pt-2">
       <div
@@ -175,9 +223,19 @@ const backgroundColor = isValidBackgroundColor(page.background?.color)
       />
       <PageNotificationModal notifications={notifications} />
       <header
-        className="mb-8 rounded-3xl border border-neutral-200 bg-neutral-50 p-6 shadow-sm"
+        className="mb-8 flex flex-col items-center justify-center  p-6 "
         dir="rtl"
       >
+        {typeof page.logo === "string" && page.logo ? (
+          <Image
+            src={page.logo}
+            alt={`لوگوی ${page.title}`}
+            width={288}
+            height={96}
+            unoptimized
+            className="mb-5 h-auto max-h-24 w-auto max-w-[min(100%,18rem)] object-contain"
+          />
+        ) : null}
         <h1 className="text-4xl font-bold text-neutral-900">{page.title}</h1>
         {page.description && (
           <p className="mt-3 text-sm leading-7 text-neutral-600">

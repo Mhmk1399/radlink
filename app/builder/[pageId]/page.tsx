@@ -14,6 +14,8 @@ type PageMetadata = {
   title: string;
   description: string;
   url: string;
+  logo: string;
+  favicon: string;
   background: {
     color: string;
     image: string;
@@ -114,6 +116,8 @@ export default function EditPageBuilder() {
           title: page.title || "صفحه جدید",
           description: page.description || "",
           url: page.url || "new-page",
+          logo: typeof page.logo === "string" ? page.logo : "",
+          favicon: typeof page.favicon === "string" ? page.favicon : "",
           background: {
             color:
               typeof page.background?.color === "string"
@@ -184,6 +188,8 @@ export default function EditPageBuilder() {
       initialTitle={pageMetadata?.title}
       initialDescription={pageMetadata?.description}
       initialUrl={pageMetadata?.url}
+      initialLogo={pageMetadata?.logo}
+      initialFavicon={pageMetadata?.favicon}
       initialBackground={pageMetadata?.background}
     />
   );

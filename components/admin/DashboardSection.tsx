@@ -13,6 +13,7 @@ import {
   type DashboardStats,
 } from "@/hook/admin/useDashboardStats";
 import { normalizeLiaraUrl } from "@/lib/fileUtils";
+import { useAccess } from "@/hook/auth/useAccess";
 
 import {
   FaUsers,
@@ -1122,8 +1123,9 @@ export default function DashboardSection({
 }: {
   navigate: (s: AdminSection) => void;
 }) {
-  const { d, isDark } = useDash();
+  const { d } = useDash();
   const { data, error, isLoading } = useDashboardStats();
+  const { can, isSuperAdmin } = useAccess();
 
   const stats = data?.stats ?? EMPTY_STATS;
   const recentUsers = data?.recentUsers ?? [];
@@ -1159,87 +1161,111 @@ export default function DashboardSection({
 
   /* Quick actions — colours come from palette */
   const quickActions = useMemo(
-    () => [
+    () =>
+      [
       {
         icon: <FaUserPlus className="h-4 w-4" />,
         label: "کاربر جدید",
         section: "users" as AdminSection,
         color: d.qaBlue,
+        component: "admin.users",
+        action: "create",
       },
       {
         icon: <FaFile className="h-4 w-4" />,
         label: "صفحه جدید",
         section: "pages" as AdminSection,
         color: d.qaGreen,
+        component: "admin.pages",
+        action: "create",
       },
       {
         icon: <FaTicket className="h-4 w-4" />,
         label: "تیکت‌ها",
         section: "tickets" as AdminSection,
         color: d.qaAmber,
+        component: "admin.tickets",
+        action: "view",
       },
       {
         icon: <FaImage className="h-4 w-4" />,
         label: "فایل‌ها",
         section: "files" as AdminSection,
         color: d.qaPurple,
+        component: "admin.files",
+        action: "view",
       },
       {
         icon: <FaQrcode className="h-4 w-4" />,
         label: "QR کد",
         section: "qrcodes" as AdminSection,
         color: d.qaPink,
+        component: "admin.qrcodes",
+        action: "view",
       },
       {
         icon: <FaBell className="h-4 w-4" />,
         label: "اعلان‌ها",
         section: "notifications" as AdminSection,
         color: d.qaRed,
+        component: "admin.notifications",
+        action: "view",
       },
-    ],
-    [d],
+      ].filter(
+        (item) =>
+          can(item.component, "view") &&
+          (item.action === "view" || can(item.component, item.action)),
+      ),
+    [can, d],
   );
 
   const miniStats = useMemo(
-    () => [
+    () =>
+      [
       {
         icon: <FaUserTie className="h-4 w-4" />,
         label: "نمایندگان",
         value: stats.agents.total,
         section: "agents" as AdminSection,
+        component: "admin.agents",
       },
       {
         icon: <FaBoxOpen className="h-4 w-4" />,
         label: "بلاک‌ها",
         value: stats.blocks.active,
         section: "blocks" as AdminSection,
+        component: "admin.blocks",
       },
       {
         icon: <FaPalette className="h-4 w-4" />,
         label: "قالب‌ها",
         value: stats.templates.active,
         section: "templates" as AdminSection,
+        component: "admin.templates",
       },
       {
         icon: <FaBoxOpen className="h-4 w-4" />,
         label: "محصولات",
         value: stats.products.total,
         section: "products" as AdminSection,
+        component: "admin.products",
       },
       {
         icon: <FaQrcode className="h-4 w-4" />,
         label: "QR کدها",
         value: stats.qrcodes.active,
         section: "qrcodes" as AdminSection,
+        component: "admin.qrcodes",
       },
       {
         icon: <FaImage className="h-4 w-4" />,
         label: "فایل‌ها",
         value: stats.files.total,
         section: "files" as AdminSection,
+        component: "admin.files",
       },
-    ],
-    [stats],
+      ].filter((item) => can(item.component, "view")),
+    [can, stats],
   );
 
   return (
@@ -1393,48 +1419,60 @@ export default function DashboardSection({
         aria-label="آمار کلیدی"
         className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4"
       >
-        <StatCard
-          icon={<FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />}
-          label="کل کاربران"
-          value={stats.users.total}
-          change={stats.users.changePercent}
-          changeLabel={`${toPersianDigits(stats.users.newLast30Days)} کاربر جدید در ۳۰ روز اخیر`}
-          loading={loading}
-          onClick={() => navigate("users")}
-        />
-        <StatCard
-          icon={<FaFile className="h-4 w-4 sm:h-5 sm:w-5" />}
-          label="صفحات منتشر شده"
-          value={stats.pages.published}
-          change={
-            stats.pages.total
-              ? Math.round((stats.pages.published / stats.pages.total) * 100)
-              : 0
-          }
-          changeLabel={`از مجموع ${toPersianDigits(stats.pages.total)} صفحه`}
-          loading={loading}
-          onClick={() => navigate("pages")}
-        />
-        <StatCard
-          icon={<FaEye className="h-4 w-4 sm:h-5 sm:w-5" />}
-          label="کل بازدید صفحات"
-          value={stats.pages.totalViews}
-          changeLabel={`${toPersianDigits(stats.pages.totalVisitors.toLocaleString())} بازدیدکننده یکتا`}
-          loading={loading}
-        />
-        <StatCard
-          icon={<FaTicket className="h-4 w-4 sm:h-5 sm:w-5" />}
-          label="تیکت‌های باز"
-          value={stats.tickets.open}
-          change={
-            stats.tickets.total
-              ? -Math.round((stats.tickets.open / stats.tickets.total) * 100)
-              : 0
-          }
-          changeLabel={`از مجموع ${toPersianDigits(stats.tickets.total)} تیکت`}
-          loading={loading}
-          onClick={() => navigate("tickets")}
-        />
+        {can("admin.users", "view") && (
+          <StatCard
+            icon={<FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />}
+            label="کل کاربران"
+            value={stats.users.total}
+            change={stats.users.changePercent}
+            changeLabel={`${toPersianDigits(stats.users.newLast30Days)} کاربر جدید در ۳۰ روز اخیر`}
+            loading={loading}
+            onClick={() => navigate("users")}
+          />
+        )}
+        {can("admin.pages", "view") && (
+          <>
+            <StatCard
+              icon={<FaFile className="h-4 w-4 sm:h-5 sm:w-5" />}
+              label="صفحات منتشر شده"
+              value={stats.pages.published}
+              change={
+                stats.pages.total
+                  ? Math.round(
+                      (stats.pages.published / stats.pages.total) * 100,
+                    )
+                  : 0
+              }
+              changeLabel={`از مجموع ${toPersianDigits(stats.pages.total)} صفحه`}
+              loading={loading}
+              onClick={() => navigate("pages")}
+            />
+            <StatCard
+              icon={<FaEye className="h-4 w-4 sm:h-5 sm:w-5" />}
+              label="کل بازدید صفحات"
+              value={stats.pages.totalViews}
+              changeLabel={`${toPersianDigits(stats.pages.totalVisitors.toLocaleString())} بازدیدکننده یکتا`}
+              loading={loading}
+            />
+          </>
+        )}
+        {can("admin.tickets", "view") && (
+          <StatCard
+            icon={<FaTicket className="h-4 w-4 sm:h-5 sm:w-5" />}
+            label="تیکت‌های باز"
+            value={stats.tickets.open}
+            change={
+              stats.tickets.total
+                ? -Math.round(
+                    (stats.tickets.open / stats.tickets.total) * 100,
+                  )
+                : 0
+            }
+            changeLabel={`از مجموع ${toPersianDigits(stats.tickets.total)} تیکت`}
+            loading={loading}
+            onClick={() => navigate("tickets")}
+          />
+        )}
       </section>
 
       {/* ═══ Mini Stats ═══ */}
@@ -1455,9 +1493,14 @@ export default function DashboardSection({
       </section>
 
       {/* ═══ Bottom Grid ═══ */}
-      <div className="grid gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-3">
+      <div
+        className={cn(
+          "grid gap-3 sm:gap-4 lg:gap-6",
+          isSuperAdmin ? "lg:grid-cols-3" : "lg:grid-cols-1",
+        )}
+      >
         {/* Quick Actions */}
-        <SectionCard
+        {quickActions.length > 0 && <SectionCard
           title="دسترسی سریع"
           icon={
             <FaArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 rotate-180" />
@@ -1474,10 +1517,10 @@ export default function DashboardSection({
               />
             ))}
           </div>
-        </SectionCard>
+        </SectionCard>}
 
         {/* Recent Users */}
-        <SectionCard
+        {isSuperAdmin && <SectionCard
           title="کاربران جدید"
           icon={<FaUsers className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
           linkText="مشاهده همه"
@@ -1499,10 +1542,10 @@ export default function DashboardSection({
               />
             ))}
           </div>
-        </SectionCard>
+        </SectionCard>}
 
         {/* Recent Tickets */}
-        <SectionCard
+        {isSuperAdmin && <SectionCard
           title="آخرین تیکت‌ها"
           icon={<FaTicket className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
           linkText="مشاهده همه"
@@ -1535,7 +1578,7 @@ export default function DashboardSection({
               );
             })}
           </div>
-        </SectionCard>
+        </SectionCard>}
       </div>
 
       <style>{`

@@ -34,6 +34,29 @@ function clonePreviewStyles(targetDocument: Document) {
     clone.setAttribute("data-phone-preview-cloned", "true");
     targetDocument.head.appendChild(clone);
   });
+
+  const scrollbarOverride = targetDocument.createElement("style");
+  scrollbarOverride.setAttribute("data-phone-preview-cloned", "true");
+  scrollbarOverride.textContent = `
+    html,
+    body,
+    #${PREVIEW_ROOT_ID},
+    #${PREVIEW_ROOT_ID} * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    #${PREVIEW_ROOT_ID}::-webkit-scrollbar,
+    #${PREVIEW_ROOT_ID} *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+    }
+  `;
+  targetDocument.head.appendChild(scrollbarOverride);
 }
 
 function buildIframeDocument() {
@@ -143,29 +166,34 @@ function PhonePreviewContent({
           backgroundSize: "cover",
         }}
       />
-      {blocks.map((block) => {
-        const config = blockRegistry[block.type as keyof typeof blockRegistry];
+      <div className="space-y-6">
+        {blocks.map((block) => {
+          const config =
+            blockRegistry[block.type as keyof typeof blockRegistry];
 
-        if (!config) {
+          if (!config) {
+            return (
+              <div
+                key={block.instanceId}
+                className="mx-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600"
+              >
+                بلاک «{block.type}» ثبت نشده است
+              </div>
+            );
+          }
+
+          const BlockComponent = config.component as React.ComponentType<{
+            block: PageBlock;
+            mode: "preview";
+          }>;
+
           return (
-            <div
-              key={block.instanceId}
-              className="mx-3 mb-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600"
-            >
-              بلاک «{block.type}» ثبت نشده است
+            <div key={block.instanceId}>
+              <BlockComponent block={block} mode="preview" />
             </div>
           );
-        }
-
-        const BlockComponent = config.component as React.ComponentType<{
-          block: PageBlock;
-          mode: "preview";
-        }>;
-
-        return (
-          <BlockComponent key={block.instanceId} block={block} mode="preview" />
-        );
-      })}
+        })}
+      </div>
     </div>
   );
 }
@@ -303,7 +331,7 @@ export default function PhonePreviewModal({
 
       {/* Scroll + center container */}
       <div
-        className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-5 overflow-y-auto p-5"
+        className="scrollbar-none relative z-10 flex min-h-screen flex-col items-center justify-center gap-5 overflow-y-auto p-5"
         style={{ scrollbarWidth: "none" }}
       >
         {/* ── Phone ── */}

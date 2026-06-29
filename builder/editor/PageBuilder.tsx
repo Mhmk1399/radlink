@@ -85,6 +85,8 @@ type SimplePageBuilderProps = {
   initialUrl?: string;
   initialCategoryId?: string;
   initialThumbnail?: string;
+  initialLogo?: string;
+  initialFavicon?: string;
   initialBackground?: {
     color?: string;
     image?: string;
@@ -194,6 +196,8 @@ type BuilderSaveSnapshotInput = {
   url: string;
   categoryId: string;
   thumbnail: string;
+  logo: string;
+  favicon: string;
   backgroundColor: string;
   backgroundImage: string;
   blocks: PageBlock[];
@@ -206,6 +210,8 @@ function serializeBuilderSaveState({
   url,
   categoryId,
   thumbnail,
+  logo,
+  favicon,
   backgroundColor,
   backgroundImage,
   blocks,
@@ -217,6 +223,8 @@ function serializeBuilderSaveState({
     url: saveMode === "page" ? url : "",
     categoryId: saveMode === "template" ? categoryId : "",
     thumbnail: saveMode === "template" ? thumbnail : "",
+    logo: saveMode === "page" ? logo : "",
+    favicon: saveMode === "page" ? favicon : "",
     background: { color: backgroundColor, image: backgroundImage },
     blocks,
   });
@@ -379,6 +387,8 @@ export default function SimplePageBuilder({
   initialUrl,
   initialCategoryId,
   initialThumbnail,
+  initialLogo,
+  initialFavicon,
   initialBackground,
   suppressSmartSuggestions = false,
 }: SimplePageBuilderProps = {}) {
@@ -421,6 +431,8 @@ export default function SimplePageBuilder({
   const [templateThumbnail, setTemplateThumbnail] = useState(
     initialThumbnail || "",
   );
+  const [pageLogo, setPageLogo] = useState(initialLogo || "");
+  const [pageFavicon, setPageFavicon] = useState(initialFavicon || "");
   const [pageBackgroundColor, setPageBackgroundColor] = useState(
     initialBackground?.color || "#ffffff",
   );
@@ -438,6 +450,8 @@ export default function SimplePageBuilder({
       url: pageUrl,
       categoryId: templateCategoryId,
       thumbnail: templateThumbnail,
+      logo: pageLogo,
+      favicon: pageFavicon,
       backgroundColor: pageBackgroundColor,
       backgroundImage: pageBackgroundImage,
       blocks,
@@ -558,6 +572,8 @@ export default function SimplePageBuilder({
         url: pageUrl,
         categoryId: templateCategoryId,
         thumbnail: templateThumbnail,
+        logo: pageLogo,
+        favicon: pageFavicon,
         backgroundColor: pageBackgroundColor,
         backgroundImage: pageBackgroundImage,
         blocks,
@@ -569,6 +585,8 @@ export default function SimplePageBuilder({
       pageUrl,
       templateCategoryId,
       templateThumbnail,
+      pageLogo,
+      pageFavicon,
       pageBackgroundColor,
       pageBackgroundImage,
       blocks,
@@ -1244,6 +1262,8 @@ export default function SimplePageBuilder({
             color: pageBackgroundColor,
             image: pageBackgroundImage,
           },
+          logo: pageLogo,
+          favicon: pageFavicon,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1287,6 +1307,8 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    pageLogo,
+    pageFavicon,
     ensureQrForCreatedPage,
     toast,
   ]);
@@ -1319,6 +1341,8 @@ export default function SimplePageBuilder({
             color: pageBackgroundColor,
             image: pageBackgroundImage,
           },
+          logo: pageLogo,
+          favicon: pageFavicon,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1348,6 +1372,8 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    pageLogo,
+    pageFavicon,
     createPageOnServer,
     toast,
   ]);
@@ -1928,6 +1954,8 @@ export default function SimplePageBuilder({
         categoryId={templateCategoryId}
         categoryOptions={categoryOptions}
         thumbnail={templateThumbnail}
+        logo={pageLogo}
+        favicon={pageFavicon}
         backgroundColor={pageBackgroundColor}
         backgroundImage={pageBackgroundImage}
         onTitleChange={setPageTitle}
@@ -1935,6 +1963,8 @@ export default function SimplePageBuilder({
         onUrlChange={setPageUrl}
         onCategoryIdChange={setTemplateCategoryId}
         onThumbnailChange={setTemplateThumbnail}
+        onLogoChange={setPageLogo}
+        onFaviconChange={setPageFavicon}
         onBackgroundColorChange={setPageBackgroundColor}
         onBackgroundImageChange={setPageBackgroundImage}
         onClose={() => {

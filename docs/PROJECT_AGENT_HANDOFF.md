@@ -1,6 +1,6 @@
 # Radlink Project Agent Handoff
 
-Last reviewed: 2026-06-28
+Last reviewed: 2026-06-29
 Workspace: `D:\Next\radlink`
 
 ## Purpose
@@ -9,11 +9,12 @@ This document is the durable context for another coding agent continuing work on
 
 ## Current Repository State
 
-- The admin, builder, access, ticket, profile, notification, QR, and user-management work described here is committed in the repository.
-- At the time this document was created, the only unrelated dirty files were:
-  - `app/page.tsx`
-  - `components/global/footer.tsx`
-- Do not revert those unrelated changes unless the user explicitly requests it.
+- The workspace currently has an intentionally dirty worktree containing both
+  user changes and the implementation work summarized in this document.
+- Do not assume a dirty file belongs to the current task, and never revert it
+  unless the user explicitly requests that operation.
+- Run `git status --short` at the beginning of each task and preserve all
+  unrelated changes.
 - Recent relevant commits:
   - `7b4001a edit ui ux`
   - `48b7732 bugs and authorize`
@@ -148,7 +149,11 @@ Full access-system documentation already exists in:
 
 - `components/admin/AdminShell.tsx`
   - Sidebar, header, responsive admin layout, current-user display, logout flow, and notifications dropdown.
-  - Sidebar visibility is permission-aware.
+  - All admin sections except the authenticated user's profile require explicit
+    `admin.<section>:view`; role minimums are no longer a visibility bypass.
+  - `superAdmin` retains the global bypass.
+  - If `/admin` resolves to an unauthorized hash/default dashboard, the shell
+    selects the first allowed section instead of mounting forbidden content.
   - Uses real notification data through SWR.
   - Listens for the `admin-profile-updated` browser event to update name/phone/avatar immediately.
 
@@ -224,7 +229,8 @@ Implemented behavior:
 - Full admin CRUD.
 - Personal/company type handling.
 - User association.
-- Four limits and price-per-landing fields.
+- Three synchronized limits (`files`, `blocks`, and `pages`) plus the existing
+  `pricePerLanding` commercial field.
 - Active/inactive power toggle with refreshed data.
 - Persian filter labels.
 
@@ -259,6 +265,11 @@ Implemented behavior:
 
 - Category CRUD using DynamicTable.
 - One category can contain multiple templates.
+- Categories have an `isActive` state with an access-gated power toggle.
+- Old categories without `isActive` are treated as active.
+- Inactive categories are excluded from template options and SmartSuggestions;
+  their templates cannot be selected through direct catalog, template, or page
+  save requests.
 - Templates populate category and block references.
 - Template active/inactive power toggle.
 - Template builder supports category selection and thumbnail upload.
@@ -295,10 +306,22 @@ Implemented behavior:
 Implemented behavior:
 
 - Page CRUD and populated owner selection.
-- Owner edit uses all users in `CustomSelect`.
+- Admin/super-admin owner edit uses all users in `CustomSelect`.
+- A normal user sees the creator as read-only and never loads `/api/users` for
+  owner options.
+- Normal-user table updates strip `owner` and `ownerId` from PATCH payloads.
+  The API also treats a repeated self owner ID as a no-op while rejecting any
+  attempted ownership change.
 - Created timestamps are system-generated, not user input.
 - Page status can be toggled between published and draft from the table.
 - Edit modal includes a publish checkbox.
+- Page rows show logo and favicon previews. An update-gated media modal uploads
+  both through the shared Liara uploader and PATCHes only those fields.
+- Builder page create/edit save state includes `logo` and `favicon`; both are
+  available in the page metadata modal with upload, preview, replacement, and
+  removal states.
+- Public landing metadata uses the saved favicon, and the saved logo renders at
+  the top of the landing header.
 - Page creation generates a non-expiring QR code using the local `qrcode` library.
 - QR records store the page, owner/creator, target URL, shortcode, image URL/data, and active state.
 - QR admin table supports CRUD visibility and active/inactive power toggle.
@@ -371,9 +394,19 @@ Implemented behavior:
 Implemented behavior:
 
 - Notification CRUD through DynamicTable.
-- User selection for targeted notifications.
-- Global/private and closeable yes/no filters use Persian labels.
-- Admin header dropdown uses real SWR-backed data.
+- Notifications target one Page or all pages through `isGlobal`.
+- Supports `info` and `danger`, title, subtitle, description, closeable state,
+  and active state.
+- Global/page-specific, closeable, type, and active filters use Persian labels.
+- Create/edit forms expose `isActive`; the table has an independent power
+  toggle with loading state and refresh.
+- Public landing pages, the AdminShell dropdown, and dashboard counts only
+  consume records where `isActive !== false`.
+- The management table passes admin-only `includeInactive=true` so inactive
+  records remain available for reactivation.
+- Existing records without `isActive` are treated as active for backward
+  compatibility.
+- Notification mutations invalidate the header and dashboard SWR caches.
 
 ### Dashboard
 
@@ -383,7 +416,13 @@ Implemented behavior:
 
 Implemented behavior:
 
-- Aggregates important counts and recent data:
+- `admin.dashboard:view` controls access to the default dashboard.
+- Cards, mini statistics, and quick actions are filtered by each target
+  component's static access.
+- Create-oriented quick actions require both target `view` and `create`.
+- The API only executes database queries for sections the user can view.
+- Personal resources are owner/resource scoped for non-admin users.
+- Aggregates permitted counts:
   - users
   - blocks
   - pages
@@ -392,7 +431,10 @@ Implemented behavior:
   - agents
   - QR codes
   - other available admin metrics
-- Uses SWR caching to avoid a database request on every render.
+- Recent users and recent tickets are queried and rendered only for
+  `superAdmin`.
+- Uses token-keyed SWR caching with a one-minute deduplication interval to avoid
+  a database request on every render.
 - Dashboard greeting listens for live profile updates.
 
 ### Profile
@@ -535,7 +577,8 @@ Known deployment issue:
 - `models/qr.ts`: generated page QR records.
 - `models/tickets.ts`: requester, assignee, status, priority, replies, attachments.
 - `models/files.ts`: uploaded file metadata and ownership.
-- `models/notification.ts`: global or user-targeted notifications.
+- `models/notification.ts`: page-targeted or global landing notifications,
+  presentation type, closeability, and active state.
 - `models/products.ts`: product data and API-backed admin feature.
 
 ## UI and Localization Rules Established
@@ -597,6 +640,14 @@ Then manually verify:
 - User agent select can be cleared.
 - User limits save as three numbers; zero means unlimited.
 - User dates do not appear in edit forms.
+- `/admin` without `admin.dashboard:view` resolves the first allowed section.
+- Dashboard cards and shortcuts never navigate to unauthorized sections.
+- A restricted user sees only dynamically allowed templates in admin and builder
+  catalogs.
+- An unauthorized `templateId` cannot be used through direct page API requests.
+- A normal user sees page owner data but cannot edit or submit ownership fields.
+- Inactive notifications remain manageable in admin but disappear from landing,
+  header dropdown, and dashboard delivery surfaces.
 
 ## 2026-06-28 Architecture Addendum
 
@@ -680,6 +731,7 @@ All persistent client uploads should use `lib/fileUtils.ts#uploadFile` and
 - Ticket attachments
 - Template thumbnails
 - Page/template backgrounds
+- Page logos and favicons
 - Generic builder image and video fields
 - Repeater/product-card media
 
@@ -740,6 +792,163 @@ This policy is applied to list and item operations for:
 Permissions determine whether a user may perform an action; ownership determines
 which records that action may target. Do not treat a granted component access as
 global data visibility.
+
+## 2026-06-29 Access and Delivery Addendum
+
+This section overrides older access, dashboard, page/template visibility, and
+notification-delivery statements when they conflict.
+
+### Static Admin Navigation
+
+`components/admin/AdminShell.tsx` no longer uses `SectionMeta.minRole` as an
+implicit permission grant. The role metadata still organizes role-oriented
+mobile navigation, but visibility requires:
+
+```text
+profile
+OR superAdmin
+OR admin.<section>:view
+```
+
+This rule is applied to the desktop sidebar and mobile dynamic island. The
+notification bell separately requires `admin.notifications:view`, so the
+dropdown does not mount or fetch when access is absent.
+
+The shell waits for the shared `/api/auth/me` SWR request before mounting section
+content. If the URL points to an unauthorized section, including the default
+dashboard, it resolves the first allowed `SECTION_META` entry and synchronizes
+the hash. Profile is the final authenticated fallback.
+
+`admin.dashboard` already exists in `lib/auth/accessCatalog.ts`; assign its
+`view` action in `components/admin/AccessesSection.tsx` when a non-super-admin
+should use the default dashboard.
+
+### Dynamic Page and Template Scope
+
+`lib/auth/resourceScope.ts` is the central server-side record-scope helper:
+
+- `getGrantedResourceIds(user, resource, action)` resolves dynamic IDs.
+- `withTemplateAccessScope` creates a template allowlist query.
+- `withPageAccessScope` creates an `owner OR explicitly granted resource` query.
+- `admin` and `superAdmin` receive global record scope.
+- `user` and `agent` receive restricted scope.
+
+Dynamic template access is an allowlist, not a deny-list. For a non-global role,
+only templates with dynamic `view` are visible or usable. A typical page-builder
+user needs:
+
+```text
+admin.dashboard:view              optional, only for dashboard entry
+admin.pages:view/create           page administration
+builder.page:create               enter page creation
+admin.templates:view              template section/list access when needed
+templates.<templateId>:view       one entry per usable template
+blocks.<blockId>:view              one entry per usable block
+```
+
+The exact access document schema stores those last two entries in
+`dynamicAccess.templates[]` and `dynamicAccess.blocks[]`.
+
+Enforcement points:
+
+- `GET /api/templates` filters the collection.
+- `GET /api/templates/[id]` filters direct reads.
+- `GET /api/builder/template-catalog` returns only allowed active templates
+  whose blocks are also allowed.
+- The builder catalog returns only categories containing an available template.
+- Page create/update validates a submitted `templateId`; manually posting an
+  unauthorized ID returns a controlled not-found/forbidden-style response.
+- Page list/item routes use owner-or-dynamic scope for `view`, `update`, and
+  `delete`.
+
+The collection's static access and the record's dynamic access serve different
+purposes: static access exposes the feature; dynamic access selects records.
+Frontend filtering is only UX. The API query scope is authoritative.
+
+```mermaid
+flowchart LR
+  Permission --> Access
+  Access --> Static[admin.templates or admin.pages]
+  Access --> Dynamic[template/page IDs and actions]
+  Static --> Section[Section or API feature available]
+  Dynamic --> Scope[resourceScope query]
+  Scope --> Collection[Filtered records]
+  Scope --> Item[Protected direct item access]
+  Collection --> Builder[Builder catalog and admin tables]
+```
+
+### Access-Aware Dashboard
+
+`app/api/admin/dashboard/route.ts` resolves the user's access once and conditionally
+creates queries. It does not run all count/aggregation queries for every user.
+
+Data rules:
+
+- Users and agents are counted only with their corresponding static `view`.
+- Templates and blocks use dynamic allowlists for restricted roles.
+- Pages use `withPageAccessScope`, including owner and explicitly granted pages.
+- Files and QR codes use owner scope outside admin/super-admin.
+- Tickets are requester-scoped outside `superAdmin`.
+- Recent users and recent tickets are never queried or returned for a
+  non-super-admin.
+- Only active notifications contribute to the notification count.
+
+`components/admin/DashboardSection.tsx` independently filters:
+
+- Main cards by target component `view`.
+- Mini stats by target component `view`.
+- Quick links by `view`, plus `create` for create-oriented shortcuts.
+- Recent-user and recent-ticket panels by `isSuperAdmin`.
+
+`hook/admin/useDashboardStats.ts` keeps the response token-specific in SWR,
+disables focus/reconnect revalidation, and deduplicates for 60 seconds.
+
+### Notification Active State
+
+`models/notification.ts` now persists:
+
+```ts
+isActive: boolean // default true
+```
+
+Delivery uses `{ isActive: { $ne: false } }`, deliberately treating old
+documents without the field as active. Do not change this to `{ isActive: true }`
+without first migrating existing records.
+
+Relevant behavior:
+
+- `POST /api/notifications` accepts `isActive`, defaulting to true.
+- `PATCH /api/notifications/[id]` can toggle `isActive`.
+- Normal notification GET requests return active records only.
+- Admin/super-admin may request `includeInactive=true` for management.
+- Non-admin direct reads cannot expose inactive notifications.
+- `app/[url]/page.tsx` filters inactive page/global notifications before passing
+  plain data to `PageNotificationModal`.
+- `components/admin/NotificationsSection.tsx` exposes a form checkbox, status
+  badge/filter, and access-gated power button.
+- Toggling refreshes the table and invalidates the AdminShell notification and
+  dashboard caches.
+- Revalidation of `"/[url]"` keeps public landing output consistent.
+
+### Authenticated Navbar CTA
+
+`components/global/navbar.tsx` reads authenticated state through
+`contexts/UserContext.tsx` and the local `auth_token` fallback. Its primary CTA
+routes authenticated users to `/admin`; unauthenticated users continue to the
+authentication route.
+
+### Latest Verification
+
+The access-aware dashboard, dynamic template/page scoping, page-owner form
+behavior, and notification active-state work were verified on 2026-06-29 with:
+
+```powershell
+npx tsc --noEmit
+npx eslint <focused changed files>
+npm run build
+```
+
+The Next.js `16.2.6` production build completed successfully.
 
 ## Recommended Starting Point for the Next Agent
 

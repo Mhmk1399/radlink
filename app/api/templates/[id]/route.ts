@@ -4,6 +4,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
 import Category from "@/models/category";
 import "@/models/blocks";
@@ -73,10 +74,11 @@ export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active")
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const query = await withTemplateAccessScope(req.ctx.user!, { _id: id });
 
-    const template = await Template.findById(id)
+    const template = await Template.findOne(query)
         .populate("category", "name")
         .populate("blocks", "name type icon data settings elements")
         .lean();
@@ -121,6 +123,18 @@ export const PATCH = compose(
 
     if ("category" in body || "categoryId" in body) {
         const nextCategory = normalizeObjectId(body.category ?? body.categoryId);
+        if (
+            nextCategory &&
+            !(await Category.exists({
+                _id: nextCategory,
+                isActive: { $ne: false },
+            }))
+        ) {
+            return NextResponse.json(
+                { message: "دسته‌بندی انتخاب‌شده غیرفعال است یا پیدا نشد." },
+                { status: 400 }
+            );
+        }
         template.category = nextCategory ? new mongoose.Types.ObjectId(nextCategory) : undefined;
     }
 

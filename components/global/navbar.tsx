@@ -129,9 +129,27 @@ function useActiveSection(ids: string[]) {
 
 export default function SmartLandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasAuthToken, setHasAuthToken] = useState(false);
   const { scrolled, hidden, atTop } = useScrollState();
   const activeSection = useActiveSection(navItems.map((i) => i.href));
   const pathName = usePathname();
+  const ctaHref = hasAuthToken ? "/admin" : "/auth";
+  const builderHref = hasAuthToken ? "/builder" : "/auth";
+
+  useEffect(() => {
+    const syncAuthToken = () => {
+      setHasAuthToken(Boolean(localStorage.getItem("auth_token")));
+    };
+
+    syncAuthToken();
+    window.addEventListener("storage", syncAuthToken);
+    window.addEventListener("focus", syncAuthToken);
+
+    return () => {
+      window.removeEventListener("storage", syncAuthToken);
+      window.removeEventListener("focus", syncAuthToken);
+    };
+  }, []);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -268,7 +286,6 @@ export default function SmartLandingNavbar() {
                     alt="logo"
                     className="object-cover h-10"
                   />
-               
                 </span>
               </Link>
 
@@ -318,7 +335,7 @@ export default function SmartLandingNavbar() {
               {/* ══ DESKTOP CTAs ══ */}
               <div className="hidden lg:flex items-center gap-2.5">
                 <Link
-                  href="/auth"
+                  href={ctaHref}
                   className={cn(
                     "inline-flex items-center justify-center rounded-full border px-4 text-[13px] font-medium text-slate-300 transition-all duration-300",
                     scrolled ? "h-9" : "h-10",
@@ -331,11 +348,11 @@ export default function SmartLandingNavbar() {
                     focus.ring,
                   )}
                 >
-                  ورود به حساب
+                  {hasAuthToken ? "ورود به پنل" : "ورود به حساب"}
                 </Link>
 
                 <Link
-                  href="/auth"
+                  href={builderHref}
                   className={cn(
                     "group inline-flex items-center justify-center gap-2 rounded-full border transition-all duration-300",
                     scrolled ? "h-9 px-4 text-[13px]" : "h-10 px-5 text-sm",
@@ -354,7 +371,7 @@ export default function SmartLandingNavbar() {
                     focus.ringLight,
                   )}
                 >
-                  <span>شروع رایگان</span>
+                  <span>{hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}</span>
                   <span
                     className={cn(
                       "rounded-full bg-white/90 transition-all duration-300",
@@ -504,7 +521,7 @@ export default function SmartLandingNavbar() {
                   {/* Mobile CTAs */}
                   <div className="grid grid-cols-2 gap-2">
                     <Link
-                      href="/auth"
+                      href={ctaHref}
                       className={cn(
                         "group inline-flex items-center justify-center gap-2 rounded-full border transition-all duration-300",
                         scrolled ? "h-9 px-4 text-[13px]" : "h-10 px-5 text-sm",
@@ -518,7 +535,9 @@ export default function SmartLandingNavbar() {
                         focus.ringLight,
                       )}
                     >
-                      <span>شروع رایگان</span>
+                      <span>
+                        {hasAuthToken ? "ورود به پنل" : "شروع رایگان"}
+                      </span>
                       <span
                         className={cn(
                           "rounded-full",
@@ -530,7 +549,7 @@ export default function SmartLandingNavbar() {
                     </Link>
 
                     <Link
-                      href="/auth"
+                      href={builderHref}
                       onClick={() => setIsOpen(false)}
                       className={cn(
                         "inline-flex h-11 items-center justify-center px-4",
@@ -546,7 +565,7 @@ export default function SmartLandingNavbar() {
                         animation.activePress,
                       )}
                     >
-                      ورود به حساب
+                      {hasAuthToken ? "  ساخت صفحه  " : "ورود به حساب"}
                     </Link>
                   </div>
                 </div>

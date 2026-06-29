@@ -4,6 +4,7 @@ import { compose } from "@/lib/auth/compose";
 import { getBuilderBlocksForRequest } from "@/lib/auth/builderBlockAccess";
 import { withAuth, withDB, withStatus } from "@/lib/auth/middlewares";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import type { AuthRequest } from "@/lib/auth/types";
 import Category from "@/models/category";
 import Template from "@/models/template";
@@ -129,10 +130,11 @@ export const GET = compose(
   );
 
   if (requestedTemplateId) {
-    const template = (await Template.findOne({
+    const templateQuery = await withTemplateAccessScope(req.ctx.user!, {
       _id: requestedTemplateId,
       isActive: true,
-    })
+    });
+    const template = (await Template.findOne(templateQuery)
       .select(
         "name description thumbnail background style category blocks builderBlocks isActive",
       )
@@ -144,6 +146,11 @@ export const GET = compose(
 
     if (
       !template ||
+      (getId(template.category) &&
+        !(await Category.exists({
+          _id: getId(template.category),
+          isActive: { $ne: false },
+        }))) ||
       !templateUsesAllowedBlocks(
         template,
         allowedBlockIds,
@@ -162,21 +169,18 @@ export const GET = compose(
     return NextResponse.json({ template });
   }
 
-  const [categories, templates] = await Promise.all([
-    Category.find()
-      .select("name description")
-      .sort({ name: 1 })
-      .lean(),
-    Template.find({ isActive: true })
-      .select(
-        "name description thumbnail background style category blocks builderBlocks isActive",
-      )
-      .populate("blocks", "name type version isActive")
-      .sort({ name: 1 })
-      .lean(),
-  ]);
+  const templateQuery = await withTemplateAccessScope(req.ctx.user!, {
+    isActive: true,
+  });
+  const templates = await Template.find(templateQuery)
+    .select(
+      "name description thumbnail background style category blocks builderBlocks isActive",
+    )
+    .populate("blocks", "name type version isActive")
+    .sort({ name: 1 })
+    .lean();
 
-  const availableTemplates = (templates as TemplateRecord[]).filter(
+  const blockAllowedTemplates = (templates as TemplateRecord[]).filter(
     (template) =>
       templateUsesAllowedBlocks(
         template,
@@ -184,6 +188,27 @@ export const GET = compose(
         allowedBlockTypes,
       ),
   );
+  const categoryIds = [
+    ...new Set(
+      blockAllowedTemplates
+        .map((template) => getId(template.category))
+        .filter(Boolean),
+    ),
+  ];
+  const categories = await Category.find({
+    _id: { $in: categoryIds },
+    isActive: { $ne: false },
+  })
+    .select("name description")
+    .sort({ name: 1 })
+    .lean();
+  const activeCategoryIds = new Set(
+    categories.map((category) => String(category._id)),
+  );
+  const availableTemplates = blockAllowedTemplates.filter((template) => {
+    const categoryId = getId(template.category);
+    return !categoryId || activeCategoryIds.has(categoryId);
+  });
 
   return NextResponse.json({
     categories: categories.map((category) =>

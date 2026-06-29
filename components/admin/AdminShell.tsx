@@ -20,7 +20,6 @@ import { animation, focus } from "@/lib/design/tokens";
 import { normalizeLiaraUrl } from "@/lib/fileUtils";
 import {
   useHashRoute,
-  filterSectionsByRole,
   groupSections,
   type AdminSection,
   SECTION_META,
@@ -49,8 +48,7 @@ import {
   FaMoon,
   FaChevronLeft,
   FaArrowRightFromBracket,
-  FaMagnifyingGlass,
-  FaUser,
+   FaUser,
   FaCircleCheck,
   FaClock,
   FaAngleLeft,
@@ -69,70 +67,70 @@ const shell = {
   dark: {
     page: "bg-[#111116]",
     sidebar: "bg-[#16161b]",
-    header: "bg-[#16161b]/95",
+    header: "bg-[#16161b]/80",
     card: "bg-[#1c1c23]",
     input: "bg-[#1e1e26]",
     dropdown: "bg-[#1c1c23]/98 backdrop-blur-2xl",
-    hover: "hover:bg-[#ffffff07]",
+    hover: "hover:bg-[#ffffff09]",
     active: "bg-[#c8a84b]/[0.08]",
     tooltip: "bg-[#2a2a34]",
-    textPrimary: "text-[#e6e3de]",
-    textSecondary: "text-[#9c9890]",
+    textPrimary: "text-[#e8e5e0]",
+    textSecondary: "text-[#a39f97]",
     textMuted: "text-[#9c9890]",
-    textDisabled: "text-[#7a766e]",
-    textAccent: "text-[#d2b660]",
-    textAccentSub: "text-[#c8a84b]/70",
-    border: "border-[#26262f]",
-    borderAccent: "border-[#c8a84b]/18",
+    textDisabled: "text-[#76726a]",
+    textAccent: "text-[#d6bb66]",
+    textAccentSub: "text-[#c8a84b]/75",
+    border: "border-[#2a2a34]",
+    borderAccent: "border-[#c8a84b]/22",
     divider: "border-[#22222a]/70",
     cardShadow: "shadow-[0_2px_10px_-3px_rgba(0,0,0,0.35)]",
     dropShadow:
-      "shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),0_2px_8px_-2px_rgba(0,0,0,0.3)]",
-    accentBadge: "bg-[#c8a84b]/[0.07] ring-1 ring-[#c8a84b]/15 text-[#d2b660]",
-    accentDot: "bg-[#d2b660]",
+      "shadow-[0_12px_40px_-10px_rgba(0,0,0,0.6),0_2px_8px_-2px_rgba(0,0,0,0.35)]",
+    accentBadge: "bg-[#c8a84b]/[0.07] ring-1 ring-[#c8a84b]/18 text-[#d6bb66]",
+    accentDot: "bg-[#d6bb66]",
     avatarBg:
-      "bg-gradient-to-br from-[#c8a84b]/18 to-[#a07830]/12 text-[#d2b660]",
-    logoBg: "bg-[#c8a84b]/[0.07] border-[#c8a84b]/15",
-    activePill: "bg-[#d2b660]",
+      "bg-gradient-to-br from-[#c8a84b]/20 to-[#a07830]/12 text-[#d6bb66] ring-1 ring-[#c8a84b]/15",
+    logoBg: "bg-[#c8a84b]/[0.08] border-[#c8a84b]/18",
+    activePill: "bg-[#d6bb66]",
     scrollbar:
-      "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.08)_transparent]",
-    unreadDot: "bg-[#c8a84b]",
+      "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent]",
+    unreadDot: "bg-[#d6bb66]",
     info: "text-[#7aabce]",
     success: "text-[#6ec99a]",
-    warning: "text-[#d2b660]",
+    warning: "text-[#d6bb66]",
     error: "text-[#e08080]",
   },
 
   light: {
     page: "bg-[#f4f1eb]",
     sidebar: "bg-[#faf8f3]",
-    header: "bg-[#faf8f3]/95",
+    header: "bg-[#faf8f3]/80",
     card: "bg-white",
     input: "bg-[#f4f1eb]",
     dropdown: "bg-white/98 backdrop-blur-2xl",
-    hover: "hover:bg-[#00000005]",
-    active: "bg-[#8a7030]/[0.05]",
+    hover: "hover:bg-[#00000007]",
+    active: "bg-[#8a7030]/[0.06]",
     tooltip: "bg-[#2c2a25]",
     textPrimary: "text-[#2a2720]",
-    textSecondary: "text-[#6a655c]",
+    textSecondary: "text-[#615c53]",
     textMuted: "text-[#6a655c]",
     textDisabled: "text-[#9a948b]",
     textAccent: "text-[#7a6428]",
-    textAccentSub: "text-[#8a7030]/60",
-    border: "border-[#e6e2da]",
-    borderAccent: "border-[#8a7030]/15",
+    textAccentSub: "text-[#8a7030]/65",
+    border: "border-[#e4e0d7]",
+    borderAccent: "border-[#8a7030]/18",
     divider: "border-[#ece8e0]/80",
     cardShadow: "shadow-[0_1px_6px_-1px_rgba(0,0,0,0.06)]",
     dropShadow:
-      "shadow-[0_8px_30px_-6px_rgba(0,0,0,0.1),0_2px_6px_-2px_rgba(0,0,0,0.06)]",
-    accentBadge: "bg-[#8a7030]/[0.06] ring-1 ring-[#8a7030]/12 text-[#7a6428]",
+      "shadow-[0_12px_36px_-8px_rgba(0,0,0,0.14),0_2px_6px_-2px_rgba(0,0,0,0.06)]",
+    accentBadge: "bg-[#8a7030]/[0.06] ring-1 ring-[#8a7030]/14 text-[#7a6428]",
     accentDot: "bg-[#8a7030]",
     avatarBg:
-      "bg-gradient-to-br from-[#c8a84b]/12 to-[#a07830]/8 text-[#7a6428]",
-    logoBg: "bg-[#c8a84b]/[0.06] border-[#c8a84b]/12",
+      "bg-gradient-to-br from-[#c8a84b]/14 to-[#a07830]/8 text-[#7a6428] ring-1 ring-[#8a7030]/10",
+    logoBg: "bg-[#c8a84b]/[0.07] border-[#c8a84b]/14",
     activePill: "bg-[#8a7030]",
     scrollbar:
-      "[scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.08)_transparent]",
+      "[scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.1)_transparent]",
     unreadDot: "bg-[#8a7030]",
     info: "text-[#3a7a9c]",
     success: "text-[#2d7a50]",
@@ -331,7 +329,7 @@ function UserAvatar({
       className={cn("relative overflow-hidden", className)}
       aria-hidden="true"
     >
-      <span className="relative z-0">{initials}</span>
+      <span className="relative z-0 select-none">{initials}</span>
       {avatarUrl && (
         <span
           className="absolute inset-0 z-10 bg-cover bg-center bg-no-repeat"
@@ -422,6 +420,7 @@ function LogoutModal({
 }) {
   const { s, isDark } = useShell();
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -453,6 +452,29 @@ function LogoutModal({
     }
   }, [open]);
 
+  // Trap focus inside the dialog (a11y)
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !cardRef.current) return;
+      const focusables = cardRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -470,8 +492,8 @@ function LogoutModal({
       {/* Scrim */}
       <div
         className={cn(
-          "absolute inset-0 backdrop-blur-sm",
-          isDark ? "bg-[#0a0a0e]/70" : "bg-[#2a2720]/30",
+          "absolute inset-0 backdrop-blur-md",
+          isDark ? "bg-[#0a0a0e]/75" : "bg-[#2a2720]/35",
         )}
         onClick={() => !isLoggingOut && onCancel()}
         aria-hidden="true"
@@ -479,12 +501,13 @@ function LogoutModal({
 
       {/* Card */}
       <div
+        ref={cardRef}
         className={cn(
           "relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border",
           s.card,
           s.border,
           s.dropShadow,
-          "motion-safe:animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+          "motion-safe:animate-[fade-up_.25s_cubic-bezier(.22,1,.36,1)_both]",
         )}
       >
         {/* ── Header ── */}
@@ -493,9 +516,9 @@ function LogoutModal({
             {/* Warning icon container */}
             <div
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
                 isDark
-                  ? "bg-red-500/10 ring-1 ring-red-500/20"
+                  ? "bg-red-500/12 ring-1 ring-red-500/20"
                   : "bg-red-50 ring-1 ring-red-200/60",
               )}
               aria-hidden="true"
@@ -522,7 +545,6 @@ function LogoutModal({
 
           {/* Close × */}
           <button
-            ref={undefined}
             onClick={() => !isLoggingOut && onCancel()}
             disabled={isLoggingOut}
             aria-label="بستن"
@@ -550,7 +572,7 @@ function LogoutModal({
             className={cn(
               "flex items-start gap-2.5 rounded-xl px-3.5 py-3 mb-4",
               isDark
-                ? "bg-red-500/[0.06] ring-1 ring-red-500/12"
+                ? "bg-red-500/[0.07] ring-1 ring-red-500/14"
                 : "bg-red-50/80 ring-1 ring-red-200/50",
             )}
           >
@@ -597,9 +619,9 @@ function LogoutModal({
             disabled={isLoggingOut}
             className={cn(
               "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3",
-              "text-sm font-semibold transition-all duration-200",
+              "text-sm font-semibold transition-all duration-200 active:scale-[0.98]",
               focus.ring,
-              "disabled:opacity-60 disabled:cursor-not-allowed",
+              "disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100",
               isDark
                 ? "bg-red-500/15 hover:bg-red-500/25 text-[#e08080] ring-1 ring-red-500/20 hover:ring-red-500/30"
                 : "bg-red-500/8 hover:bg-red-500/15 text-[#b84040] ring-1 ring-red-300/40 hover:ring-red-400/50",
@@ -648,14 +670,14 @@ function LogoutModal({
             disabled={isLoggingOut}
             className={cn(
               "flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3",
-              "text-sm font-semibold transition-all duration-200",
+              "text-sm font-semibold transition-all duration-200 active:scale-[0.98]",
               focus.ring,
-              "disabled:opacity-60 disabled:cursor-not-allowed",
+              "disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100",
               s.border,
               "border",
               s.textSecondary,
               s.hover,
-              isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
+              isDark ? "hover:text-[#e8e5e0]" : "hover:text-[#2a2720]",
             )}
           >
             <FaXmark className="h-3.5 w-3.5" aria-hidden="true" />
@@ -935,20 +957,26 @@ function NotificationDropdown({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         className={cn(
-          "relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
+          "relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95",
           s.border,
           s.hover,
           focus.ring,
-          open && s.active,
+          open && cn(s.active, s.borderAccent),
         )}
       >
-        <FaBell className={cn("h-4 w-4", s.textMuted)} aria-hidden="true" />
+        <FaBell
+          className={cn(
+            "h-4 w-4 transition-colors",
+            open ? s.textAccent : s.textMuted,
+          )}
+          aria-hidden="true"
+        />
         {unread > 0 && (
           <span
             className={cn(
               "absolute -top-1 -left-1 flex h-4 min-w-4 items-center justify-center rounded-full",
               "bg-red-500 px-1 text-[9px] font-bold text-white tabular-nums",
-              "ring-2",
+              "ring-2 motion-safe:animate-[fade-in_.2s_ease_both]",
               isDark ? "ring-[#16161b]" : "ring-[#faf8f3]",
             )}
             aria-hidden="true"
@@ -977,7 +1005,21 @@ function NotificationDropdown({
               s.divider,
             )}
           >
-            <h3 className={cn("text-sm font-bold", s.textPrimary)}>اعلانات</h3>
+            <div className="flex items-center gap-2">
+              <h3 className={cn("text-sm font-bold", s.textPrimary)}>
+                اعلانات
+              </h3>
+              {unread > 0 && (
+                <span
+                  className={cn(
+                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                    s.accentBadge,
+                  )}
+                >
+                  {unread > 9 ? "۹+" : unread}
+                </span>
+              )}
+            </div>
             {unread > 0 && (
               <button
                 onClick={markAllAsRead}
@@ -1031,14 +1073,24 @@ function NotificationDropdown({
                     }
                   }}
                   className={cn(
-                    "group flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-0",
+                    "group relative flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-0",
                     focus.ring,
                     s.divider,
                     s.hover,
                     !n.read &&
-                      (isDark ? "bg-[#ffffff03]" : "bg-[#8a7030]/[0.03]"),
+                      (isDark ? "bg-[#ffffff04]" : "bg-[#8a7030]/[0.035]"),
                   )}
                 >
+                  {/* Unread accent bar on the trailing edge (RTL = right) */}
+                  {!n.read && (
+                    <span
+                      className={cn(
+                        "absolute right-0 top-2 bottom-2 w-0.5 rounded-full",
+                        s.unreadDot,
+                      )}
+                      aria-hidden="true"
+                    />
+                  )}
                   <div
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg mt-0.5",
@@ -1151,11 +1203,11 @@ function UserDropdown({
         aria-controls={open ? panelId : undefined}
         aria-label={`حساب کاربری ${displayName}`}
         className={cn(
-          "flex items-center gap-2 rounded-xl border px-2 py-1.5 h-10 transition-all duration-200",
+          "flex items-center gap-2 rounded-xl border px-2 py-1.5 h-10 transition-all duration-200 active:scale-95",
           s.border,
           s.hover,
           focus.ring,
-          open && s.active,
+          open && cn(s.active, s.borderAccent),
         )}
       >
         <UserAvatar
@@ -1260,7 +1312,7 @@ function UserDropdown({
                   focus.ring,
                   s.textSecondary,
                   s.hover,
-                  isDark ? "hover:text-[#e6e3de]" : "hover:text-[#2a2720]",
+                  isDark ? "hover:text-[#e8e5e0]" : "hover:text-[#2a2720]",
                 )}
               >
                 <item.icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1371,14 +1423,12 @@ function DynamicIsland({
   } = useAccess();
 
   const effectiveRole = (user?.role as UserRole | undefined) ?? userRole;
-  const roleSections = filterSectionsByRole(effectiveRole as any);
   const config = ISLAND_BY_ROLE[effectiveRole];
 
-  const canShow = (key: AdminSection) =>
-    key === "dashboard" ||
-    isSuperAdmin ||
-    roleSections.some((section) => section.key === key) ||
-    (!accessLoading && !accessError && can(`admin.${key}`, "view"));
+  const canShow = (key: AdminSection) => {
+    if (key === "profile" || isSuperAdmin) return true;
+    return !accessLoading && !accessError && can(`admin.${key}`, "view");
+  };
 
   const mainItems = config.items.filter(canShow);
   const accessGranted = SECTION_META.map((i) => i.key).filter(
@@ -1422,8 +1472,8 @@ function DynamicIsland({
         <>
           <div
             className={cn(
-              "fixed inset-0 z-40 backdrop-blur-sm",
-              isDark ? "bg-[#0a0a0e]/50" : "bg-[#2a2720]/20",
+              "fixed inset-0 z-40 backdrop-blur-sm motion-safe:animate-[fade-in_.2s_ease_both]",
+              isDark ? "bg-[#0a0a0e]/55" : "bg-[#2a2720]/25",
             )}
             onClick={() => setMoreOpen(false)}
             aria-hidden="true"
@@ -1440,10 +1490,27 @@ function DynamicIsland({
               "motion-safe:animate-[fade-up_.25s_cubic-bezier(.22,1,.36,1)_both]",
             )}
           >
-            <div className={cn("px-4 py-2.5 border-b", s.divider)}>
+            <div
+              className={cn(
+                "flex items-center justify-between px-4 py-2.5 border-b",
+                s.divider,
+              )}
+            >
               <p className={cn("text-xs font-bold", s.textPrimary)}>
                 بخش‌های بیشتر
               </p>
+              <button
+                onClick={() => setMoreOpen(false)}
+                aria-label="بستن"
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
+                  focus.ring,
+                  s.hover,
+                  s.textMuted,
+                )}
+              >
+                <FaXmark className="h-3 w-3" aria-hidden="true" />
+              </button>
             </div>
             <div
               className={cn(
@@ -1466,11 +1533,15 @@ function DynamicIsland({
                       setMoreOpen(false);
                     }}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-xl py-3 px-1 transition-all min-h-[64px] justify-center",
+                      "flex flex-col items-center gap-1.5 rounded-xl py-3 px-1 transition-all min-h-[64px] justify-center active:scale-95",
                       focus.ring,
                       active
-                        ? cn(s.active, s.textAccent)
-                        : cn(s.textSecondary, s.hover),
+                        ? cn(s.active, s.textAccent, "border", s.borderAccent)
+                        : cn(
+                            s.textSecondary,
+                            s.hover,
+                            "border border-transparent",
+                          ),
                     )}
                   >
                     <IconComp className="h-5 w-5" aria-hidden="true" />
@@ -1491,8 +1562,8 @@ function DynamicIsland({
           s.sidebar,
           s.border,
           isDark
-            ? "shadow-[0_-6px_24px_-8px_rgba(0,0,0,0.4)] backdrop-blur-xl"
-            : "shadow-[0_-4px_20px_-6px_rgba(0,0,0,0.08)] backdrop-blur-xl",
+            ? "shadow-[0_-8px_28px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+            : "shadow-[0_-6px_24px_-6px_rgba(0,0,0,0.1)] backdrop-blur-xl",
         )}
       >
         {mainItems.map((key) => {
@@ -1507,7 +1578,7 @@ function DynamicIsland({
               aria-label={meta.label}
               onClick={() => navigate(key)}
               className={cn(
-                "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 min-h-[52px] justify-center transition-all duration-200",
+                "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 min-h-[52px] flex-1 justify-center transition-all duration-200",
                 focus.ring,
                 active ? s.textAccent : cn(s.textSecondary, "active:scale-95"),
               )}
@@ -1515,7 +1586,7 @@ function DynamicIsland({
               {active && (
                 <div
                   className={cn(
-                    "absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full",
+                    "absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full motion-safe:animate-[fade-in_.2s_ease_both]",
                     s.activePill,
                   )}
                   aria-hidden="true"
@@ -1543,7 +1614,7 @@ function DynamicIsland({
           aria-haspopup="menu"
           aria-expanded={moreOpen}
           className={cn(
-            "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 min-h-[52px] justify-center transition-all duration-200 active:scale-95",
+            "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 min-h-[52px] flex-1 justify-center transition-all duration-200 active:scale-95",
             focus.ring,
             moreOpen ? s.textAccent : s.textSecondary,
           )}
@@ -1557,7 +1628,13 @@ function DynamicIsland({
               aria-hidden="true"
             />
           )}
-          <FaEllipsis className="h-5 w-5" aria-hidden="true" />
+          <FaEllipsis
+            className={cn(
+              "h-5 w-5 transition-transform duration-200",
+              moreOpen && "scale-110",
+            )}
+            aria-hidden="true"
+          />
           <span className="text-[9px] font-medium">بیشتر</span>
         </button>
       </div>
@@ -1576,7 +1653,6 @@ function Sidebar({
   onToggleCollapse,
   currentSection,
   navigate,
-  userRole,
   authUser,
   onLogoutRequest,
 }: {
@@ -1586,7 +1662,6 @@ function Sidebar({
   onToggleCollapse: () => void;
   currentSection: AdminSection;
   navigate: (s: AdminSection) => void;
-  userRole: UserRole;
   authUser: AuthUser | null;
   onLogoutRequest: () => void;
 }) {
@@ -1596,7 +1671,6 @@ function Sidebar({
     isLoading: accessLoading,
     isError: accessError,
     isSuperAdmin,
-    user,
   } = useAccess();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -1613,14 +1687,24 @@ function Sidebar({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const effectiveRole = (user?.role as UserRole | undefined) ?? userRole;
-  const roleSections = filterSectionsByRole(effectiveRole as any);
+  // Lock body scroll while the mobile drawer is open
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (open && window.innerWidth < 1024) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [open]);
+
   const sections = SECTION_META.filter((item) => {
-    if (item.key === "dashboard") return true;
+    if (item.key === "profile" || isSuperAdmin) return true;
     return (
-      isSuperAdmin ||
-      roleSections.some((section) => section.key === item.key) ||
-      (!accessLoading && !accessError && can(`admin.${item.key}`, "view"))
+      !accessLoading &&
+      !accessError &&
+      can(`admin.${item.key}`, "view")
     );
   });
   const groups = groupSections(sections);
@@ -1636,8 +1720,8 @@ function Sidebar({
       {open && (
         <div
           className={cn(
-            "fixed inset-0 z-40 lg:hidden transition-opacity duration-300 backdrop-blur-sm",
-            isDark ? "bg-[#0a0a0e]/60" : "bg-[#2a2720]/25",
+            "fixed inset-0 z-40 lg:hidden backdrop-blur-sm motion-safe:animate-[fade-in_.25s_ease_both]",
+            isDark ? "bg-[#0a0a0e]/65" : "bg-[#2a2720]/30",
           )}
           onClick={onClose}
           aria-hidden="true"
@@ -1649,7 +1733,7 @@ function Sidebar({
         aria-label="ناوبری پنل"
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex flex-col w-[260px]",
-          "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "transition-[transform,width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
           open ? "translate-x-0" : "translate-x-full",
           "lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen",
           isCollapsed ? "lg:w-[76px]" : "lg:w-[260px]",
@@ -1685,6 +1769,7 @@ function Sidebar({
                 width={100}
                 height={100}
                 alt="logo"
+                className="h-8 w-8 object-contain"
               />
               <div className="text-right">
                 <p
@@ -1788,11 +1873,21 @@ function Sidebar({
                                 s.textSecondary,
                                 s.hover,
                                 isDark
-                                  ? "hover:text-[#e6e3de]"
+                                  ? "hover:text-[#e8e5e0]"
                                   : "hover:text-[#2a2720]",
                               ),
                         )}
                       >
+                        {/* Active indicator pill on the trailing edge */}
+                        {active && !collapsed && (
+                          <div
+                            className={cn(
+                              "absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-1 rounded-l-full motion-safe:animate-[fade-in_.2s_ease_both]",
+                              s.activePill,
+                            )}
+                            aria-hidden="true"
+                          />
+                        )}
                         {active && collapsed && (
                           <div
                             className={cn(
@@ -1857,7 +1952,7 @@ function Sidebar({
                 s.textMuted,
                 s.hover,
                 isDark
-                  ? "hover:text-[#d2b660] hover:border-[#c8a84b]/30 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"
+                  ? "hover:text-[#d6bb66] hover:border-[#c8a84b]/30 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"
                   : "hover:text-[#7a6428] hover:border-[#8a7030]/30 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]",
                 // positioned on the left edge (in RTL that's the border side)
                 "left-0 -translate-x-1/2",
@@ -1983,10 +2078,21 @@ function Header({
 }) {
   const { s, isDark } = useShell();
   const { toggleTheme } = useTheme();
-  const { can, isLoading: isAccessLoading } = useAccess();
+  const {
+    can,
+    isLoading: isAccessLoading,
+    isError: isAccessError,
+    isSuperAdmin,
+  } = useAccess();
   const meta = SECTION_META.find((m) => m.key === currentSection);
   const canCreatePageFromAdmin =
     !isAccessLoading && can("builder.page", "create");
+  const canViewNotifications =
+    isSuperAdmin ||
+    (!isAccessLoading && !isAccessError && can("admin.notifications", "view"));
+  const canViewDashboard =
+    isSuperAdmin ||
+    (!isAccessLoading && !isAccessError && can("admin.dashboard", "view"));
 
   return (
     <header
@@ -2003,7 +2109,7 @@ function Header({
         <button
           onClick={onMenuClick}
           className={cn(
-            "lg:hidden flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+            "lg:hidden flex h-10 w-10 items-center justify-center rounded-lg transition-colors active:scale-95",
             focus.ring,
             s.hover,
             s.textMuted,
@@ -2012,8 +2118,8 @@ function Header({
         >
           <FaBars className="h-4 w-4" aria-hidden="true" />
         </button>
-        <nav aria-label="مسیر" className="flex items-center gap-2 min-w-0">
-          {currentSection !== "dashboard" && (
+        <nav aria-label="مسیر" className="hidden lg:flex items-center gap-2 min-w-0">
+          {currentSection !== "dashboard" && canViewDashboard && (
             <>
               <button
                 onClick={() => navigate("dashboard")}
@@ -2034,7 +2140,7 @@ function Header({
           )}
           <h1
             aria-current="page"
-            className={cn("text-sm font-semibold truncate", s.textPrimary)}
+            className={cn("text-xs font-semibold truncate", s.textPrimary)}
           >
             {meta?.label ?? "داشبورد"}
           </h1>
@@ -2042,30 +2148,11 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          onClick={() =>
-            document.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
-            )
-          }
-          className={cn(
-            "sm:hidden flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
-            s.border,
-            s.hover,
-            focus.ring,
-          )}
-          aria-label="جستجو"
-        >
-          <FaMagnifyingGlass
-            className={cn("h-3.5 w-3.5", s.textMuted)}
-            aria-hidden="true"
-          />
-        </button>
-
+       
         <button
           onClick={toggleTheme}
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
+            "flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95",
             s.border,
             s.hover,
             focus.ring,
@@ -2086,7 +2173,7 @@ function Header({
           <Link
             href="/builder"
             className={cn(
-              "inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all duration-200",
+              "inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all duration-200 active:scale-95",
               s.border,
               s.hover,
               s.textAccent,
@@ -2100,7 +2187,7 @@ function Header({
           </Link>
         )}
 
-        <NotificationDropdown navigate={navigate} />
+        {canViewNotifications && <NotificationDropdown navigate={navigate} />}
         <UserDropdown
           navigate={navigate}
           authUser={authUser}
@@ -2132,6 +2219,45 @@ export default function AdminShell({
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const { s } = useShell();
   const { section, navigate } = useHashRoute();
+  const {
+    can,
+    isLoading: isAccessLoading,
+    isError: isAccessError,
+    isSuperAdmin,
+  } = useAccess();
+
+  const canViewSection = useCallback(
+    (key: AdminSection) =>
+      key === "profile" ||
+      isSuperAdmin ||
+      (!isAccessError && can(`admin.${key}`, "view")),
+    [can, isAccessError, isSuperAdmin],
+  );
+
+  const fallbackSection = useMemo(
+    () =>
+      SECTION_META.find((item) => canViewSection(item.key))?.key ?? "profile",
+    [canViewSection],
+  );
+  const resolvedSection =
+    !isAccessLoading && !canViewSection(section) ? fallbackSection : section;
+
+  useEffect(() => {
+    if (
+      isAccessLoading ||
+      isAccessError ||
+      resolvedSection === section
+    ) {
+      return;
+    }
+    navigate(resolvedSection);
+  }, [
+    isAccessError,
+    isAccessLoading,
+    navigate,
+    resolvedSection,
+    section,
+  ]);
 
   /* ── Logout modal state ── */
   const {
@@ -2253,9 +2379,8 @@ export default function AdminShell({
         onClose={() => setSidebarOpen(false)}
         collapsed={collapsed}
         onToggleCollapse={toggleCollapse}
-        currentSection={section}
+        currentSection={resolvedSection}
         navigate={navigate}
-        userRole={userRole}
         authUser={authUser}
         onLogoutRequest={requestLogout}
       />
@@ -2263,7 +2388,7 @@ export default function AdminShell({
       <div className="flex flex-1 flex-col min-w-0">
         <Header
           onMenuClick={() => setSidebarOpen((p) => !p)}
-          currentSection={section}
+          currentSection={resolvedSection}
           navigate={navigate}
           authUser={authUser}
           onLogoutRequest={requestLogout}
@@ -2276,12 +2401,13 @@ export default function AdminShell({
             s.scrollbar,
           )}
         >
-          {children({ section, navigate })}
+          {!isAccessLoading &&
+            children({ section: resolvedSection, navigate })}
         </main>
       </div>
 
       <DynamicIsland
-        currentSection={section}
+        currentSection={resolvedSection}
         navigate={navigate}
         userRole={userRole}
       />

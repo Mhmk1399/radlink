@@ -4,6 +4,7 @@ export interface ICategory extends Document {
     name: string;
     description?: string;
     templates: Types.ObjectId[];
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,6 +27,11 @@ const CategorySchema = new Schema<ICategory>(
                 ref: "Template",
             },
         ],
+        isActive: {
+            type: Boolean,
+            default: true,
+            index: true,
+        },
     },
     { timestamps: true }
 );

@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FaArrowRight, FaBell, FaFileLines } from "react-icons/fa6";
+import { useSWRConfig } from "swr";
+import {
+  FaArrowRight,
+  FaBell,
+  FaFileLines,
+  FaPowerOff,
+} from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -62,6 +68,7 @@ type NotificationRow = {
   pageLabel: string;
   isGlobal: boolean;
   closeable: boolean;
+  isActive: boolean;
   createdAt?: string;
   [key: string]: unknown;
 };
@@ -73,11 +80,14 @@ export default function NotificationsSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
+  const { mutate: mutateCache } = useSWRConfig();
   const { can } = useAccess();
   const canCreate = can("admin.notifications", "create");
   const canUpdate = can("admin.notifications", "update");
   const canDelete = can("admin.notifications", "delete");
   const [pageOptions, setPageOptions] = useState<SelectOption[]>([]);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const token =
     typeof window !== "undefined"
@@ -264,6 +274,40 @@ export default function NotificationsSection({
         ),
       },
       {
+        key: "isActive",
+        label: "وضعیت",
+        inputType: "checkbox",
+        defaultValue: true,
+        filterable: true,
+        options: [
+          { label: "فعال", value: "true" },
+          { label: "غیرفعال", value: "false" },
+        ],
+        placeholder: "نمایش اعلان برای کاربران",
+        render: (value) => (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1",
+              value
+                ? isDark
+                  ? "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20"
+                  : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                : isDark
+                  ? "bg-red-500/10 text-red-400 ring-red-500/20"
+                  : "bg-red-50 text-red-700 ring-red-200",
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                value ? "bg-emerald-500" : "bg-red-500",
+              )}
+            />
+            {value ? "فعال" : "غیرفعال"}
+          </span>
+        ),
+      },
+      {
         key: "createdAt",
         label: "تاریخ ایجاد",
         editable: false,
@@ -305,12 +349,64 @@ export default function NotificationsSection({
             pageLabel: getPageLabel(page),
             isGlobal: Boolean(notification.isGlobal),
             closeable: Boolean(notification.closeable),
+            isActive: notification.isActive !== false,
             createdAt: toText(notification.createdAt),
           };
         });
       },
     [],
   );
+
+  async function refreshNotificationCaches() {
+    await Promise.all([
+      mutateCache("/api/notifications?limit=10"),
+      mutateCache(
+        (key) =>
+          Array.isArray(key) && key[0] === "/api/admin/dashboard",
+        undefined,
+        { revalidate: true },
+      ),
+    ]);
+  }
+
+  async function toggleNotificationStatus(row: NotificationRow) {
+    if (!row._id || togglingId) return;
+
+    try {
+      setTogglingId(row._id);
+      const response = await fetch(`/api/notifications/${row._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({ isActive: !row.isActive }),
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof json?.message === "string"
+            ? json.message
+            : "تغییر وضعیت اعلان انجام نشد.",
+        );
+      }
+
+      toast.success(
+        row.isActive ? "اعلان غیرفعال شد." : "اعلان فعال شد.",
+      );
+      setRefreshToken((value) => value + 1);
+      await refreshNotificationCaches();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "تغییر وضعیت اعلان انجام نشد.",
+      );
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   return (
     <div className="space-y-5 sm:space-y-6" dir="rtl">
@@ -360,7 +456,7 @@ export default function NotificationsSection({
       </div>
 
       <DynamicTable<NotificationRow>
-        endpoint="/api/notifications?limit=100"
+        endpoint={`/api/notifications?limit=100&includeInactive=true&refresh=${refreshToken}`}
         updateMethod="PATCH"
         columns={columns}
         title="لیست اعلانات صفحات"
@@ -379,16 +475,47 @@ export default function NotificationsSection({
         canUpdate={canUpdate}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        rowActions={(row) =>
+          canUpdate ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleNotificationStatus(row);
+              }}
+              disabled={togglingId === row._id}
+              title={row.isActive ? "غیرفعال کردن اعلان" : "فعال کردن اعلان"}
+              aria-label={
+                row.isActive ? "غیرفعال کردن اعلان" : "فعال کردن اعلان"
+              }
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-50",
+                row.isActive
+                  ? "text-red-500 hover:bg-red-500/10"
+                  : "text-emerald-500 hover:bg-emerald-500/10",
+              )}
+            >
+              {togglingId === row._id ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <FaPowerOff className="h-4 w-4" />
+              )}
+            </button>
+          ) : null
+        }
         onCreate={async (item, builtInCreate) => {
           await builtInCreate(item);
+          await refreshNotificationCaches();
           toast.success("اعلان با موفقیت ساخته شد.");
         }}
         onUpdate={async (item, builtInUpdate) => {
           await builtInUpdate(item);
+          await refreshNotificationCaches();
           toast.success("اعلان با موفقیت ویرایش شد.");
         }}
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
+          await refreshNotificationCaches();
           toast.success("اعلان حذف شد.");
         }}
         emptyMessage="اعلانی پیدا نشد"
