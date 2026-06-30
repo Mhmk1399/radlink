@@ -907,6 +907,13 @@ function dateObjectToIsoString(date: DateObject) {
     : nativeDate.toISOString();
 }
 
+function getPersianDayKey(date: DateObject) {
+  const normalized = new DateObject(date).convert(persian, persian_fa);
+  return (
+    normalized.year * 10_000 + normalized.month.number * 100 + normalized.day
+  );
+}
+
 /* ── Export Utilities ── */
 
 function exportToCSV<T extends Record<string, unknown>>(
@@ -1312,6 +1319,95 @@ function FilterDropdown({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function TextFilter({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTableTheme();
+
+  return (
+    <div className="relative min-w-44">
+      <span
+        className={cn(
+          "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
+          t.textDisabled,
+        )}
+      >
+        <Icon.Search />
+      </span>
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={`فیلتر ${label}`}
+        aria-label={`فیلتر متنی ${label}`}
+        className={cn(
+          "h-9 w-full rounded-xl border pr-9 pl-8 text-xs outline-none transition",
+          value ? t.borderAccent : t.borderInput,
+          t.inputBg,
+          t.textPrimary,
+          focus.ring,
+        )}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label={`پاک کردن فیلتر ${label}`}
+          className={cn(
+            "absolute left-2 top-1/2 -translate-y-1/2 rounded p-1",
+            t.textDisabled,
+            t.hoverBg,
+          )}
+        >
+          <Icon.X />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SearchableSelectFilter({
+  label,
+  options,
+  optionLabels,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  optionLabels?: Record<string, string>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative z-30 min-w-52">
+      <CustomSelect
+        options={options.map((option) => ({
+          value: option,
+          label: optionLabels?.[option] ?? option,
+        }))}
+        value={value}
+        onChange={(nextValue) =>
+          onChange(Array.isArray(nextValue) ? (nextValue[0] ?? "") : nextValue)
+        }
+        placeholder={`فیلتر ${label}`}
+        searchPlaceholder={`جستجو در ${label}...`}
+        searchable
+        clearable
+        fullWidth
+        size="sm"
+        maxDropdownHeight={280}
+      />
     </div>
   );
 }
@@ -1887,6 +1983,19 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       sortKey: sortKey || undefined,
       sortDir: (sortDir as "asc" | "desc") || undefined,
       filters: Object.fromEntries(Object.entries(filters).filter(([, v]) => v)),
+      dateRanges: Object.fromEntries(
+        Object.entries(dateRanges)
+          .filter(([, range]) => range.from || range.to)
+          .map(([key, range]) => [
+            key,
+            {
+              from: range.from
+                ? dateObjectToIsoString(range.from)
+                : undefined,
+              to: range.to ? dateObjectToIsoString(range.to) : undefined,
+            },
+          ]),
+      ),
     };
   }, [
     serverSide,
@@ -1896,6 +2005,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     sortKey,
     sortDir,
     filters,
+    dateRanges,
   ]);
 
   const {
@@ -1969,6 +2079,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const filterOptions = useMemo(() => {
     const opts: Record<string, string[]> = {};
     filterableCols.forEach((col) => {
+      if (col.filterType === "text") {
+        opts[col.key] = [];
+        return;
+      }
       if (col.options?.length) {
         opts[col.key] = col.options.map((option) => option.value);
         return;
@@ -2005,22 +2119,38 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     if (serverSide) return data;
     let items = [...data];
     Object.entries(filters).forEach(([key, val]) => {
-      if (val)
+      if (val) {
+        const column = columns.find((item) => item.key === key);
         items = items.filter((row) => {
-          const cv = getNestedValue(row, key);
-          return cv != null && String(cv) === val;
+          const values =
+            column?.filterValues?.(row) ?? [getNestedValue(row, key)];
+          if (column?.filterType === "text") {
+            const query = val.trim().toLocaleLowerCase("fa");
+            return values.some(
+              (item) =>
+                item != null &&
+                String(item).toLocaleLowerCase("fa").includes(query),
+            );
+          }
+          return values.some(
+            (item) => item != null && String(item) === val,
+          );
         });
+      }
     });
     Object.entries(dateRanges).forEach(([key, range]) => {
       if (!range.from && !range.to) return;
       items = items.filter((row) => {
         const cd = parsePersianDate(getNestedValue(row, key));
         if (!cd) return false;
-        const ct = cd.toUnix();
+        const dayKey = getPersianDayKey(cd);
         if (range.from && range.to)
-          return ct >= range.from.toUnix() && ct <= range.to.toUnix();
-        if (range.from) return ct >= range.from.toUnix();
-        if (range.to) return ct <= range.to.toUnix();
+          return (
+            dayKey >= getPersianDayKey(range.from) &&
+            dayKey <= getPersianDayKey(range.to)
+          );
+        if (range.from) return dayKey >= getPersianDayKey(range.from);
+        if (range.to) return dayKey <= getPersianDayKey(range.to);
         return true;
       });
     });
@@ -2494,18 +2624,49 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               <Icon.Filter />
               فیلترها:
             </span>
-            {filterableCols.map((col) => (
-              <FilterDropdown
-                key={col.key}
-                label={col.label}
-                options={filterOptions[col.key] || []}
-                optionLabels={filterOptionLabels[col.key]}
-                value={filters[col.key] || ""}
-                onChange={(v) =>
-                  setFilters((prev) => ({ ...prev, [col.key]: v }))
-                }
-              />
-            ))}
+            {filterableCols.map((col) => {
+              const value = filters[col.key] || "";
+              const onChange = (nextValue: string) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  [col.key]: nextValue,
+                }));
+
+              if (col.filterType === "text") {
+                return (
+                  <TextFilter
+                    key={col.key}
+                    label={col.label}
+                    value={value}
+                    onChange={onChange}
+                  />
+                );
+              }
+
+              if (col.filterSearchable) {
+                return (
+                  <SearchableSelectFilter
+                    key={col.key}
+                    label={col.label}
+                    options={filterOptions[col.key] || []}
+                    optionLabels={filterOptionLabels[col.key]}
+                    value={value}
+                    onChange={onChange}
+                  />
+                );
+              }
+
+              return (
+                <FilterDropdown
+                  key={col.key}
+                  label={col.label}
+                  options={filterOptions[col.key] || []}
+                  optionLabels={filterOptionLabels[col.key]}
+                  value={value}
+                  onChange={onChange}
+                />
+              );
+            })}
             {dateFilterCols.map((col) => (
               <DateRangeFilter
                 key={col.key}
@@ -3373,7 +3534,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       )}
                     </label>
 
-                    {isDate ? (
+                    {col.renderFormField ? (
+                      col.renderFormField({
+                        value: fv,
+                        onChange: (value) => updateField(col.key, value),
+                        error,
+                        formData: formData as Partial<T>,
+                        mode: modalMode === "create" ? "create" : "edit",
+                      })
+                    ) : isDate ? (
                       <DatePicker
                         value={dateValue ?? undefined}
                         onChange={(date) => {
@@ -3412,7 +3581,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         )}
                       />
                     ) : col.options && inputType !== "checkbox" ? (
-                      <div className="relative z-20">
+                      <div className="relative">
                         <CustomSelect
                           id={`field-${col.key}`}
                           options={col.options.map((opt) => ({

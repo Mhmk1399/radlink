@@ -38,51 +38,89 @@ export function useToast() {
 /* ================================================================== */
 
 export function useHistory<T>(initial: T, maxSize = 30) {
-    const [past, setPast] = useState<T[]>([]);
-    const [present, setPresent] = useState<T>(initial);
-    const [future, setFuture] = useState<T[]>([]);
-    const skipRecordRef = useRef(false);
+    const limit = Math.max(1, maxSize);
+
+    const [history, setHistory] = useState<{
+        past: T[];
+        present: T;
+        future: T[];
+    }>({
+        past: [],
+        present: initial,
+        future: [],
+    });
 
     const push = useCallback(
         (newState: T) => {
-            if (skipRecordRef.current) {
-                skipRecordRef.current = false;
-                setPresent(newState);
-                return;
-            }
-            setPast((prev) => [...prev.slice(-maxSize), present]);
-            setPresent(newState);
-            setFuture([]);
+            setHistory((previousHistory) => {
+                if (Object.is(previousHistory.present, newState)) {
+                    return previousHistory;
+                }
+
+                const retainedPast =
+                    limit > 1
+                        ? previousHistory.past.slice(-(limit - 1))
+                        : [];
+
+                return {
+                    past: [...retainedPast, previousHistory.present],
+                    present: newState,
+                    future: [],
+                };
+            });
         },
-        [present, maxSize],
+        [limit],
     );
 
     const undo = useCallback(() => {
-        if (past.length === 0) return;
-        const previous = past[past.length - 1];
-        setPast((prev) => prev.slice(0, -1));
-        setFuture((prev) => [present, ...prev]);
-        skipRecordRef.current = true;
-        setPresent(previous);
-    }, [past, present]);
+        setHistory((previousHistory) => {
+            if (previousHistory.past.length === 0) {
+                return previousHistory;
+            }
+
+            const previousState =
+                previousHistory.past[previousHistory.past.length - 1];
+
+            return {
+                past: previousHistory.past.slice(0, -1),
+                present: previousState,
+                future: [
+                    previousHistory.present,
+                    ...previousHistory.future,
+                ],
+            };
+        });
+    }, []);
 
     const redo = useCallback(() => {
-        if (future.length === 0) return;
-        const next = future[0];
-        setFuture((prev) => prev.slice(1));
-        setPast((prev) => [...prev, present]);
-        skipRecordRef.current = true;
-        setPresent(next);
-    }, [future, present]);
+        setHistory((previousHistory) => {
+            if (previousHistory.future.length === 0) {
+                return previousHistory;
+            }
+
+            const nextState = previousHistory.future[0];
+
+            const retainedPast =
+                limit > 1
+                    ? previousHistory.past.slice(-(limit - 1))
+                    : [];
+
+            return {
+                past: [...retainedPast, previousHistory.present],
+                present: nextState,
+                future: previousHistory.future.slice(1),
+            };
+        });
+    }, [limit]);
 
     return {
-        state: present,
+        state: history.present,
         set: push,
         undo,
         redo,
-        canUndo: past.length > 0,
-        canRedo: future.length > 0,
-        historySize: past.length,
+        canUndo: history.past.length > 0,
+        canRedo: history.future.length > 0,
+        historySize: history.past.length,
     };
 }
 

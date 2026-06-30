@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FaArrowRight,
   FaArrowUpRightFromSquare,
@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
@@ -47,6 +48,7 @@ type FileRow = {
   pageLabel: string;
   fileType: string;
   isImage: boolean;
+  createdAt?: string;
   [key: string]: unknown;
 };
 
@@ -67,6 +69,21 @@ function getId(value: unknown) {
 
 function toText(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function formatFaDate(value: unknown) {
+  if (typeof value !== "string" || !value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString("fa-IR", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function getOwnerLabel(value: unknown, fallback = "-") {
@@ -142,6 +159,7 @@ function normalizeFile(value: unknown): FileRow | null {
     pageLabel: getPageLabel(value.page),
     fileType: meta.label,
     isImage: meta.isImage,
+    createdAt: toText(value.createdAt) || undefined,
   };
 }
 
@@ -173,6 +191,11 @@ export default function FilesSection({
   const { can } = useAccess();
   const canDeleteFiles = can("admin.files", "delete");
   const canViewFiles = can("admin.files", "view");
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    title: string;
+  } | null>(null);
+  const closePreviewImage = useCallback(() => setPreviewImage(null), []);
 
   const token =
     typeof window !== "undefined"
@@ -202,9 +225,17 @@ export default function FilesSection({
               )}
             >
               {row.isImage && row.path ? (
-                <span
-                  role="img"
-                  aria-label={row.filename}
+                <button
+                  type="button"
+                  title="پیش‌نمایش تصویر"
+                  aria-label={`پیش‌نمایش ${row.filename}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setPreviewImage({
+                      src: row.path,
+                      title: row.filename,
+                    });
+                  }}
                   className="h-full w-full bg-cover bg-center bg-no-repeat"
                   style={{ backgroundImage: `url("${row.path}")` }}
                 />
@@ -284,9 +315,24 @@ export default function FilesSection({
         editable: false,
         sortable: true,
         copyable: true,
+        filterable: true,
+        filterSearchable: true,
         render: (value) => (
           <span className={cn("text-sm font-medium", t.textMuted)}>
             {String(value || "-")}
+          </span>
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "تاریخ ایجاد",
+        editable: false,
+        sortable: true,
+        dateFilter: true,
+        hideOnMobile: true,
+        render: (value) => (
+          <span className={cn("text-sm", t.textMuted)}>
+            {formatFaDate(value)}
           </span>
         ),
       },
@@ -382,7 +428,7 @@ export default function FilesSection({
       </div>
 
       <DynamicTable<FileRow>
-        endpoint="/api/files?limit=100"
+        endpoint="/api/files"
         columns={columns}
         title="لیست فایل‌ها"
         subtitle="فایل‌های آپلودشده همراه با مشخصات آپلودکننده"
@@ -400,6 +446,7 @@ export default function FilesSection({
         canUpdate={false}
         canDelete={canDeleteFiles}
         transformResponse={transformResponse}
+        serverSide
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("فایل حذف شد.");
@@ -426,6 +473,13 @@ export default function FilesSection({
           ) : null
         }
         emptyMessage="فایلی یافت نشد."
+      />
+      <ImagePreviewModal
+        open={Boolean(previewImage)}
+        src={previewImage?.src ?? ""}
+        alt={previewImage?.title}
+        title={previewImage?.title}
+        onClose={closePreviewImage}
       />
     </div>
   );

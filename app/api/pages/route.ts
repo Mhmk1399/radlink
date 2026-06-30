@@ -93,7 +93,7 @@ import {
     withPageAccessScope,
     withTemplateAccessScope,
 } from "@/lib/auth/resourceScope";
-import { createQrForPage } from "@/lib/qrCode";
+import { buildPageTargetUrl, createQrForPage } from "@/lib/qrCode";
 import {
     checkUserQuota,
     quotaExceededResponse,
@@ -231,8 +231,19 @@ export const POST = compose(
             ? slugifyUrl(body.url)
             : slugifyUrl(title);
 
+    if (url.length < 4) {
+        return NextResponse.json(
+            { message: "آدرس صفحه باید حداقل ۴ کاراکتر باشد." },
+            { status: 400 }
+        );
+    }
+
     const description =
         typeof body.description === "string" ? body.description.trim() : "";
+    const logo = typeof body.logo === "string" ? body.logo.trim() : "";
+    const requestedSeo = isObject(body.seo) ? body.seo : {};
+    const isPublished =
+        typeof body.isPublished === "boolean" ? body.isPublished : true;
 
     const existing = await Page.findOne({ url });
 
@@ -346,14 +357,21 @@ export const POST = compose(
         owner: ownerId,
         template: templateId,
         blocks,
-        seo:
-            body.seo && typeof body.seo === "object"
-                ? body.seo
-                : {
-                      title,
-                      description,
-                      keywords: [],
-                  },
+        seo: {
+            title:
+                typeof requestedSeo.title === "string"
+                    ? requestedSeo.title.trim()
+                    : title,
+            description:
+                typeof requestedSeo.description === "string"
+                    ? requestedSeo.description.trim()
+                    : description,
+            keywords: Array.isArray(requestedSeo.keywords)
+                ? requestedSeo.keywords
+                : [],
+            canonical: buildPageTargetUrl(url, req.url),
+            ogImage: logo,
+        },
         settings:
             body.settings && typeof body.settings === "object"
                 ? body.settings
@@ -365,9 +383,10 @@ export const POST = compose(
                 ? body.styleOverride
                 : {},
         background: normalizePageBackground(body.background),
-        logo: typeof body.logo === "string" ? body.logo.trim() : "",
+        logo,
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
-        isPublished: false,
+        isPublished,
+        publishedAt: isPublished ? new Date() : undefined,
     });
 
     let qr: unknown = null;
@@ -410,6 +429,15 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isPublished = searchParams.get("isPublished");
     const mode = searchParams.get("mode");
+    const sortFields: Record<string, string> = {
+        title: "title",
+        createdAt: "createdAt",
+        updatedAt: "updatedAt",
+        viewCount: "stats.views",
+        visitorCount: "stats.visitors",
+    };
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "updatedAt";
+    const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const filters: Record<string, unknown> = {};
 
@@ -431,7 +459,7 @@ export const GET = compose(
 
     const [pages, total] = await Promise.all([
         Page.find(query)
-            .sort({ updatedAt: -1 })
+            .sort({ [sortField]: sortDirection, _id: -1 })
             .populate("owner", "firstName lastName email phoneNumber")
             .populate("template", "name thumbnail category")
             .skip((page - 1) * limit)

@@ -6,7 +6,7 @@ import {
   HiOutlineSwatch,
   HiOutlineEyeDropper,
 } from "react-icons/hi2";
-
+import { useEffect, useRef, useState } from "react";
 import { RxBorderWidth, RxCornerBottomRight, RxFontSize } from "react-icons/rx";
 
 import type {
@@ -182,6 +182,90 @@ function SectionHeader({
   );
 }
 
+type StableColorPickerProps = {
+  value: string;
+  label: string;
+  onCommit: (value: string) => void;
+};
+
+function StableColorPicker({ value, label, onCommit }: StableColorPickerProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const onCommitRef = useRef(onCommit);
+  const lastCommittedValueRef = useRef(value);
+
+  const [previewValue, setPreviewValue] = useState(value);
+
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+
+  useEffect(() => {
+    setPreviewValue(value);
+    lastCommittedValueRef.current = value;
+
+    const input = inputRef.current;
+
+    if (input && input.value !== value) {
+      input.value = value;
+    }
+  }, [value]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+
+    if (!input) return;
+
+    // Local visual preview only. No builder/history update.
+    const handleInput = () => {
+      setPreviewValue(input.value);
+    };
+
+    // Commit once after the native picker closes.
+    const handleCommit = () => {
+      const nextValue = input.value;
+
+      setPreviewValue(nextValue);
+
+      if (nextValue === lastCommittedValueRef.current) {
+        return;
+      }
+
+      lastCommittedValueRef.current = nextValue;
+      onCommitRef.current(nextValue);
+    };
+
+    input.addEventListener("input", handleInput);
+    input.addEventListener("change", handleCommit);
+    input.addEventListener("blur", handleCommit);
+
+    return () => {
+      input.removeEventListener("input", handleInput);
+      input.removeEventListener("change", handleCommit);
+      input.removeEventListener("blur", handleCommit);
+    };
+  }, []);
+
+  return (
+    <label className="relative shrink-0 cursor-pointer">
+      <span
+        className={[
+          "block h-11 w-11 rounded-xl shadow-sm transition hover:scale-105",
+          isLightColor(previewValue) ? "ring-1 ring-neutral-200" : "",
+        ].join(" ")}
+        style={{ backgroundColor: previewValue }}
+      />
+
+      <input
+        ref={inputRef}
+        type="color"
+        defaultValue={value}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        aria-label={label}
+      />
+    </label>
+  );
+}
+
 /* ================================================================== */
 /*  Main                                                               */
 /* ================================================================== */
@@ -308,24 +392,13 @@ export function DynamicStyleForm({
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <label className="relative shrink-0 cursor-pointer">
-                    <span
-                      className={[
-                        "block h-11 w-11 rounded-xl shadow-sm transition hover:scale-105",
-                        isLightColor(pickerValue)
-                          ? "ring-1 ring-neutral-200"
-                          : "",
-                      ].join(" ")}
-                      style={{ backgroundColor: pickerValue }}
-                    />
-                    <input
-                      type="color"
-                      value={pickerValue}
-                      onChange={(e) => onChange(styleKey, e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                      aria-label={styleLabels[styleKey]}
-                    />
-                  </label>
+                  <StableColorPicker
+                    value={pickerValue}
+                    label={styleLabels[styleKey]}
+                    onCommit={(newColor) => {
+                      onChange(styleKey, newColor);
+                    }}
+                  />
 
                   {/* text-base = 16px → no iOS zoom */}
                   <input

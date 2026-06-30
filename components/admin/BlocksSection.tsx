@@ -425,6 +425,7 @@ export default function BlocksSection({
           );
         }}
         transformResponse={transformResponse}
+        serverSide
         emptyMessage="بلاکی یافت نشد. ابتدا Sync بلاک‌ها را بزنید."
       />
     </div>

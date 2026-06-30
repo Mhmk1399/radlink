@@ -4,7 +4,7 @@
 "use client";
 
 import useSWR, { type SWRConfiguration, type KeyedMutator } from "swr";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ServerPaginatedResponse } from "@/types/table";
 
 /* ══════════════════════════════════════════════
@@ -18,6 +18,7 @@ export interface ServerPaginationParams {
     sortKey?: string;
     sortDir?: "asc" | "desc";
     filters?: Record<string, string>;
+    dateRanges?: Record<string, { from?: string; to?: string }>;
 }
 
 
@@ -139,7 +140,7 @@ function buildServerUrl(
 
     const url = new URL(endpoint, window.location.origin);
     url.searchParams.set("page", String(params.page));
-    url.searchParams.set("pageSize", String(params.pageSize));
+    url.searchParams.set("limit", String(params.pageSize));
 
     if (params.search) url.searchParams.set("search", params.search);
     if (params.sortKey) url.searchParams.set("sortKey", params.sortKey);
@@ -147,7 +148,18 @@ function buildServerUrl(
 
     if (params.filters) {
         Object.entries(params.filters).forEach(([key, val]) => {
-            if (val) url.searchParams.set(`filter_${key}`, val);
+            if (val) {
+                url.searchParams.set(`filter_${key}`, val);
+                // Keep compatibility with APIs that already expose direct filters.
+                url.searchParams.set(key, val);
+            }
+        });
+    }
+
+    if (params.dateRanges) {
+        Object.entries(params.dateRanges).forEach(([key, range]) => {
+            if (range.from) url.searchParams.set(`dateFrom_${key}`, range.from);
+            if (range.to) url.searchParams.set(`dateTo_${key}`, range.to);
         });
     }
 
@@ -184,10 +196,11 @@ export function useTableData<T extends Record<string, unknown>>(
     } = options;
 
     const headersRef = useRef(headers);
-    headersRef.current = headers;
+    useEffect(() => {
+        headersRef.current = headers;
+    }, [headers]);
 
-    // Store server pagination info
-    const serverInfoRef = useRef<{
+    const [serverInfo, setServerInfo] = useState<{
         total: number;
         totalPages: number;
     }>({ total: 0, totalPages: 0 });
@@ -196,7 +209,7 @@ export function useTableData<T extends Record<string, unknown>>(
         async (url: string): Promise<T[]> => {
             if (customFetcher) return customFetcher(url);
 
-            if (serverSide && transformPaginatedResponse) {
+            if (serverSide) {
                 const res = await fetch(url, {
                     headers: {
                         "Content-Type": "application/json",
@@ -213,12 +226,45 @@ export function useTableData<T extends Record<string, unknown>>(
                 }
 
                 const json = await res.json();
-                const paginated = transformPaginatedResponse(json);
+                const transformedData = transformResponse
+                    ? transformResponse(json)
+                    : Array.isArray(json)
+                        ? (json as T[])
+                        : [];
+                const rawPage =
+                    json && typeof json === "object" && !Array.isArray(json)
+                        ? (json as Record<string, unknown>)
+                        : {};
+                const pageSize =
+                    typeof rawPage.limit === "number"
+                        ? rawPage.limit
+                        : typeof rawPage.pageSize === "number"
+                            ? rawPage.pageSize
+                            : (serverPaginationParams?.pageSize ?? transformedData.length);
+                const total =
+                    typeof rawPage.total === "number"
+                        ? rawPage.total
+                        : transformedData.length;
+                const paginated = transformPaginatedResponse
+                    ? transformPaginatedResponse(json)
+                    : {
+                        data: transformedData,
+                        total,
+                        page:
+                            typeof rawPage.page === "number"
+                                ? rawPage.page
+                                : (serverPaginationParams?.page ?? 1),
+                        pageSize,
+                        totalPages: Math.max(
+                            1,
+                            Math.ceil(total / Math.max(1, pageSize)),
+                        ),
+                    };
 
-                serverInfoRef.current = {
+                setServerInfo({
                     total: paginated.total,
                     totalPages: paginated.totalPages,
-                };
+                });
 
                 return paginated.data;
             }
@@ -228,7 +274,13 @@ export function useTableData<T extends Record<string, unknown>>(
                 transformResponse,
             )(url);
         },
-        [customFetcher, transformResponse, serverSide, transformPaginatedResponse],
+        [
+            customFetcher,
+            transformResponse,
+            serverSide,
+            transformPaginatedResponse,
+            serverPaginationParams,
+        ],
     );
 
     const swrKey =
@@ -370,7 +422,7 @@ export function useTableData<T extends Record<string, unknown>>(
         create,
         update,
         remove,
-        serverTotal: serverInfoRef.current.total,
-        serverTotalPages: serverInfoRef.current.totalPages,
+        serverTotal: serverInfo.total,
+        serverTotalPages: serverInfo.totalPages,
     };
 }

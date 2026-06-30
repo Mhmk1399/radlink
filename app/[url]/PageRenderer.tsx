@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 
+const pendingPageViews = new Set<string>();
+
 type PageData = {
   title?: string;
   description?: string;
@@ -15,11 +17,52 @@ type PageData = {
 
 export default function PageRenderer({ 
   blocks, 
-  pageData 
+  pageData,
+  pageId,
 }: { 
   blocks: any[];
   pageData?: PageData;
+  pageId: string;
 }) {
+  useEffect(() => {
+    if (!pageId) return;
+
+    const storageKey = `radlink_page_viewed:${pageId}`;
+    let isNewVisitor = true;
+
+    try {
+      isNewVisitor = !localStorage.getItem(storageKey);
+    } catch {
+      // Browsers with blocked storage are treated as a new visitor.
+    }
+
+    if (pendingPageViews.has(pageId)) return;
+    pendingPageViews.add(pageId);
+
+    void fetch(`/api/pages/${encodeURIComponent(pageId)}/view`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ isNewVisitor }),
+      keepalive: true,
+    })
+      .then((response) => {
+        if (!response.ok) return;
+        try {
+          localStorage.setItem(storageKey, "1");
+        } catch {
+          // The counter still succeeds when persistent browser storage is blocked.
+        }
+      })
+      .catch(() => {
+        // A later page load can retry when the network is available.
+      })
+      .finally(() => {
+        pendingPageViews.delete(pageId);
+      });
+  }, [pageId]);
+
   useEffect(() => {
     if (!pageData) return;
 

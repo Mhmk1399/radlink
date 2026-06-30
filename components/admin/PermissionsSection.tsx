@@ -5,6 +5,7 @@ import {
   FaArrowRight,
   FaCheck,
   FaChevronDown,
+  FaCopy,
   FaMagnifyingGlass,
   FaPen,
   FaPlus,
@@ -575,6 +576,7 @@ export default function PermissionsSection({
   const [form, setForm] = useState<PermissionFormState>(() => emptyForm());
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const canDeleteTemplates = can("admin.permissions", "delete");
   const token =
@@ -642,6 +644,8 @@ export default function PermissionsSection({
         label: "نام دسترسی",
         editable: false,
         sortable: true,
+        filterable: true,
+        filterType: "text",
         render: (value) => (
           <span className={cn("text-sm font-semibold", t.textPrimary)}>
             {String(value ?? "-")}
@@ -661,6 +665,14 @@ export default function PermissionsSection({
         label: "کاربران",
         editable: false,
         hideOnMobile: true,
+        filterable: true,
+        filterSearchable: true,
+        options: users.map((user) => ({
+          value: user.id,
+          label: userLabel(user),
+        })),
+        filterValues: (row) =>
+          row.assignedToUsers.map((user) => user.id),
         render: (_value, row) => (
           <InlineChips items={row.assignedToUsers.map(userLabel)} />
         ),
@@ -718,6 +730,7 @@ export default function PermissionsSection({
         label: "تاریخ",
         editable: false,
         sortable: true,
+        dateFilter: true,
         hideOnMobile: true,
         render: (value) => (
           <span className={cn("text-xs", t.textDisabled)}>
@@ -726,7 +739,7 @@ export default function PermissionsSection({
         ),
       },
     ],
-    [t, isDark],
+    [t, isDark, users],
   );
 
   // Lock body scroll
@@ -863,6 +876,45 @@ export default function PermissionsSection({
     }
   }
 
+  async function duplicatePermission(row: PermissionRow) {
+    if (!canCreate || duplicatingId) return;
+
+    try {
+      setDuplicatingId(row._id);
+      const response = await fetch("/api/permissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({
+          name: `${row.name} (کپی)`,
+          description: row.description?.trim() ?? "",
+          accesses: row.accesses.map((access) => access.id),
+          assignedToUsers: row.assignedToUsers.map((user) => user.id),
+        }),
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          json?.message ?? "کپی کردن پرمیشن با خطا مواجه شد.",
+        );
+      }
+
+      toast.success("پرمیشن جدید از روی این ردیف ساخته شد.");
+      setRefreshToken((value) => value + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "کپی کردن پرمیشن با خطا مواجه شد.",
+      );
+    } finally {
+      setDuplicatingId(null);
+    }
+  }
+
   /* ── Shared classes ── */
   const primaryBtn = cn(
     "inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
@@ -987,8 +1039,34 @@ export default function PermissionsSection({
           toast.success("پرمیشن غیرفعال شد");
         }}
         transformResponse={transformResponse}
+        serverSide
         rowActions={(row) => (
           <>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void duplicatePermission(row);
+                }}
+                disabled={duplicatingId === row._id}
+                title="کپی و ساخت پرمیشن جدید"
+                aria-label="کپی و ساخت پرمیشن جدید"
+                className={cn(
+                  "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+                  isDark
+                    ? "text-[#c8a84b]/70 hover:bg-[#c8a84b]/10 hover:text-[#c8a84b]"
+                    : "text-[#8a7030]/70 hover:bg-[#8a7030]/8 hover:text-[#8a7030]",
+                )}
+              >
+                {duplicatingId === row._id ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <FaCopy className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                <span className="sr-only">کپی</span>
+              </button>
+            )}
             {canUpdate && (
               <button
                 type="button"

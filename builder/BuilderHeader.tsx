@@ -116,6 +116,7 @@ export function BuilderHeader({
             {/* Back to admin */}
             <button
               type="button"
+              data-tour="tour-back-admin-btn"
               onClick={onBack}
               disabled={isServerSaving}
               className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 hover:shadow-sm active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"

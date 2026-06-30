@@ -468,7 +468,7 @@ const PageSchema = new Schema<IPage>(
 
         isPublished: {
             type: Boolean,
-            default: false,
+            default: true,
             index: true,
         },
 

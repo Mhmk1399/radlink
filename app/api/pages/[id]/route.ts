@@ -82,6 +82,7 @@ import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { buildPageTargetUrl } from "@/lib/qrCode";
 import {
     hasGlobalOwnerScope,
 } from "@/lib/auth/ownership";
@@ -280,6 +281,13 @@ export const PATCH = compose(
     if (typeof body.url === "string" && body.url.trim()) {
         const nextUrl = normalizeUrl(body.url);
 
+        if (nextUrl.length < 4) {
+            return NextResponse.json(
+                { message: "آدرس صفحه باید حداقل ۴ کاراکتر باشد." },
+                { status: 400 }
+            );
+        }
+
         const existing = await Page.findOne({
             _id: { $ne: id },
             url: nextUrl,
@@ -340,10 +348,6 @@ export const PATCH = compose(
         update.template = nextTemplateId;
     }
 
-    if (isObject(body.seo)) {
-        update.seo = body.seo;
-    }
-
     if (isObject(body.settings)) {
         update.settings = body.settings;
     }
@@ -374,16 +378,18 @@ export const PATCH = compose(
     }
 
     const query = await withPageAccessScope(user, { _id: id }, "update");
+    const currentPage = await Page.findOne(query)
+        .select("owner blocks url logo seo")
+        .lean();
+
+    if (!currentPage) {
+        return NextResponse.json(
+            { message: "صفحه پیدا نشد" },
+            { status: 404 }
+        );
+    }
 
     if (body.blocks !== undefined) {
-        const currentPage = await Page.findOne(query).select("owner blocks");
-        if (!currentPage) {
-            return NextResponse.json(
-                { message: "صفحه پیدا نشد" },
-                { status: 404 }
-            );
-        }
-
         const ownerUser =
             String(currentPage.owner) === String(user._id)
                 ? user
@@ -405,6 +411,20 @@ export const PATCH = compose(
         });
         if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
     }
+
+    const currentSeo = isObject(currentPage.seo) ? currentPage.seo : {};
+    const requestedSeo = isObject(body.seo) ? body.seo : {};
+    const nextUrl =
+        typeof update.url === "string" ? update.url : String(currentPage.url);
+    const nextLogo =
+        typeof update.logo === "string" ? update.logo : String(currentPage.logo ?? "");
+
+    update.seo = {
+        ...currentSeo,
+        ...requestedSeo,
+        canonical: buildPageTargetUrl(nextUrl, req.url),
+        ogImage: nextLogo,
+    };
 
     const page = await Page.findOneAndUpdate(
         query,

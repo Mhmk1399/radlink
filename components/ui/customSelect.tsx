@@ -1002,6 +1002,7 @@ const CustomSelect = forwardRef<CustomSelectRef, CustomSelectProps>(
           dir="rtl"
           className={cn(
             "relative",
+            isOpen ? "z-[80]" : "z-0",
             fullWidth ? "w-full" : "inline-block w-auto",
             className,
           )}

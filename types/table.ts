@@ -17,6 +17,12 @@ export interface ColumnDef<T> {
     required?: boolean;
     options?: { label: string; value: string }[];
     filterable?: boolean;
+    /** Filter UI. Existing filterable columns default to an exact select. */
+    filterType?: "select" | "text";
+    /** Use the searchable CustomSelect for select filters. */
+    filterSearchable?: boolean;
+    /** Resolve one or more raw values when the displayed field is relational. */
+    filterValues?: (row: T) => unknown[];
     dateFilter?: boolean;
     /** Allow copying this cell's value */
     copyable?: boolean;
@@ -24,6 +30,14 @@ export interface ColumnDef<T> {
     defaultValue?: unknown;
     /** Hide this field in create/edit forms based on the current form values. */
     hiddenInForm?: (formData: Partial<T>) => boolean;
+    /** Render a custom create/edit control while keeping DynamicTable form state. */
+    renderFormField?: (props: {
+        value: unknown;
+        onChange: (value: unknown) => void;
+        error?: string;
+        formData: Partial<T>;
+        mode: "create" | "edit";
+    }) => ReactNode;
 }
 
 export interface DynamicTableProps<T extends object> {

@@ -366,6 +366,7 @@ export default function ProductsSection({
         canUpdate={canUpdateProducts}
         canDelete={canDeleteProducts}
         transformResponse={transformResponse}
+        serverSide
         onCreate={async (item, builtInCreate) => {
           await builtInCreate(
             buildProductPayload(

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import styled from "styled-components";
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
 import { InlineEditableText } from "@/builder/blocks/shared/InlineEditableText";
@@ -188,8 +188,14 @@ export default function StoryHighlightsBlock({
     PREFIX,
     { mobileOnly: mode === "editor" },
   );
+  const viewerElementStyle = elements.viewer?.style ?? {};
   const viewerStyle = responsiveStyleToCss(
-    elements.viewer?.style ?? {},
+    {
+      borderRadius: viewerElementStyle.borderRadius,
+      borderColor: viewerElementStyle.borderColor,
+      borderWidth: viewerElementStyle.borderWidth,
+      animation: viewerElementStyle.animation,
+    },
     PREFIX,
     { mobileOnly: mode === "editor" },
   );
@@ -452,7 +458,10 @@ export default function StoryHighlightsBlock({
           selectedElementId={selectedElementId}
           onSelectElement={onSelectElement}
         >
-          <StyledViewer $styleCss={viewerStyle}>
+          <StyledViewer
+            $styleCss={viewerStyle}
+            className="bg-black/90 backdrop-blur-sm"
+          >
             {/* Progress bars */}
             <div className="absolute top-0 left-0 right-0 flex gap-1 px-3 pt-3 z-20">
               {stories.map((s, idx) => (

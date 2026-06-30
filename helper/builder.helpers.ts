@@ -88,6 +88,4 @@ export function slugify(val: string): string {
         .toLowerCase()
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9\u0600-\u06FF-]/g, "")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-}
+  }

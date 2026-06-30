@@ -349,7 +349,7 @@ export default function TemplatesSection({
         subtitle="مشاهده و مدیریت تمپلیت‌های قابل استفاده در صفحه‌ساز"
         primaryKey="_id"
         headers={headers}
-        pageSize={10}
+        pageSize={20}
         pageSizes={[10, 20, 50]}
         searchable
         exportable
@@ -361,6 +361,7 @@ export default function TemplatesSection({
         canUpdate={false}
         canDelete={canDeleteTemplates}
         transformResponse={transformResponse}
+        serverSide
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("تمپلیت غیرفعال شد");

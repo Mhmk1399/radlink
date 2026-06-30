@@ -1045,6 +1045,7 @@ export default function AccessesSection({
         canUpdate={false}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        serverSide
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("Access حذف شد");

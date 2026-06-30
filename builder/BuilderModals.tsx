@@ -69,7 +69,7 @@ export function PageSaveResultModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[450] flex items-center justify-center p-4"
+      className="fixed inset-0 z-450 flex items-center justify-center p-4"
       dir="rtl"
       role="dialog"
       aria-modal="true"
@@ -167,7 +167,7 @@ export function ClearAllConfirmModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-500 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in duration-200"
       dir="rtl"
       role="dialog"
       aria-modal="true"
@@ -175,7 +175,7 @@ export function ClearAllConfirmModal({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="w-full max-w-[380px] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 overflow-hidden rounded-[28px] border border-red-100 bg-white shadow-[0_32px_100px_-20px_rgba(0,0,0,0.4)]">
+      <div className="w-full max-w-95 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 overflow-hidden rounded-[28px] border border-red-100 bg-white shadow-[0_32px_100px_-20px_rgba(0,0,0,0.4)]">
         <div className="p-6">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-50/50">
             <FaTrash size={22} className="text-red-500" />
@@ -267,14 +267,14 @@ export function BlockCatalogModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[300] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-300 flex items-end justify-center p-0 sm:items-center sm:p-4"
       dir="rtl"
     >
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
-      <div className="relative w-full max-h-[85vh] animate-in slide-in-from-bottom-6 duration-300 overflow-hidden rounded-t-[28px] border border-neutral-200/60 bg-white shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.15)] sm:max-w-lg sm:max-h-[600px] sm:rounded-[28px] sm:zoom-in-95 sm:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.15)]">
+      <div className="relative w-full max-h-[85vh] animate-in slide-in-from-bottom-6 duration-300 overflow-hidden rounded-t-[28px] border border-neutral-200/60 bg-white shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.15)] sm:max-w-lg sm:max-h-150 sm:rounded-[28px] sm:zoom-in-95 sm:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.15)]">
         <div className="flex justify-center pt-3 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-neutral-300" />
         </div>
@@ -388,6 +388,73 @@ export function BlockCatalogModal({
 /*  Page Meta Modal                                                    */
 /* ================================================================== */
 
+const HEX_COLOR_PICKER_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
+function normalizeColorPickerValue(value: string) {
+  return HEX_COLOR_PICKER_PATTERN.test(value) ? value : "#ffffff";
+}
+
+function StableNativeColorInput({
+  value,
+  label,
+  className,
+  onCommit,
+}: {
+  value: string;
+  label: string;
+  className: string;
+  onCommit?: (value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const onCommitRef = useRef(onCommit);
+  const normalizedValue = normalizeColorPickerValue(value);
+  const lastCommittedValueRef = useRef(normalizedValue);
+
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+
+  useEffect(() => {
+    lastCommittedValueRef.current = normalizedValue;
+
+    const input = inputRef.current;
+    if (input && input.value !== normalizedValue) {
+      input.value = normalizedValue;
+    }
+  }, [normalizedValue]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const commitColor = () => {
+      const nextValue = input.value;
+      if (nextValue === lastCommittedValueRef.current) return;
+
+      lastCommittedValueRef.current = nextValue;
+      onCommitRef.current?.(nextValue);
+    };
+
+    input.addEventListener("change", commitColor);
+    input.addEventListener("blur", commitColor);
+
+    return () => {
+      input.removeEventListener("change", commitColor);
+      input.removeEventListener("blur", commitColor);
+    };
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      type="color"
+      defaultValue={normalizedValue}
+      className={className}
+      aria-label={label}
+    />
+  );
+}
+
 function TemplateBackgroundSettings({
   color,
   image,
@@ -423,12 +490,11 @@ function TemplateBackgroundSettings({
           رنگ پس‌زمینه
         </label>
         <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : "#ffffff"}
-            onChange={(event) => onColorChange?.(event.target.value)}
+          <StableNativeColorInput
+            value={color}
+            onCommit={onColorChange}
             className="h-12 w-14 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
-            aria-label="انتخاب رنگ پس‌زمینه تمپلیت"
+            label="انتخاب رنگ پس‌زمینه تمپلیت"
           />
           <input
             type="text"
@@ -489,9 +555,7 @@ function TemplateBackgroundSettings({
               <>
                 <HiOutlineCloudArrowUp className="mb-2 h-8 w-8" />
                 <span className="text-[12px] font-bold">
-                  {image
-                    ? "تغییر تصویر پس‌زمینه"
-                    : "انتخاب تصویر پس‌زمینه"}
+                  {image ? "تغییر تصویر پس‌زمینه" : "انتخاب تصویر پس‌زمینه"}
                 </span>
                 <span className="mt-1 text-[10px] opacity-75">
                   JPG, PNG, WebP, GIF یا AVIF - حداکثر ۱۰MB
@@ -539,6 +603,7 @@ export function PageMetaModal({
   title,
   description,
   url,
+  urlError,
   pageId,
   categoryId,
   categoryOptions = [],
@@ -566,6 +631,7 @@ export function PageMetaModal({
   title: string;
   description: string;
   url: string;
+  urlError?: string | null;
   pageId: string | null;
   categoryId?: string;
   categoryOptions?: Array<{ value: string; label: string }>;
@@ -592,6 +658,7 @@ export function PageMetaModal({
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
+  const slugInputRef = useRef<HTMLInputElement>(null);
   const [isThumbnailDragging, setIsThumbnailDragging] = useState(false);
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [thumbnailUploadError, setThumbnailUploadError] = useState<
@@ -751,6 +818,20 @@ export function PageMetaModal({
     uploadingPageImage,
   ]);
 
+  useEffect(() => {
+    if (!open || mode !== "page" || !urlError) return;
+
+    const frame = requestAnimationFrame(() => {
+      slugInputRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      slugInputRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [open, mode, urlError]);
+
   if (!open) return null;
 
   return createPortal(
@@ -855,7 +936,14 @@ export function PageMetaModal({
                 <label className="mb-2 block text-[13px] font-bold text-neutral-700">
                   آدرس (slug) <span className="text-red-400">*</span>
                 </label>
-                <div className="flex items-center overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50/80 transition focus-within:border-neutral-400 focus-within:ring-4 focus-within:ring-neutral-100">
+                <div
+                  className={[
+                    "flex items-center overflow-hidden rounded-2xl border bg-neutral-50/80 transition focus-within:ring-4",
+                    urlError
+                      ? "border-red-400 bg-red-50/50 ring-4 ring-red-100 focus-within:border-red-500 focus-within:ring-red-100"
+                      : "border-neutral-200 focus-within:border-neutral-400 focus-within:ring-neutral-100",
+                  ].join(" ")}
+                >
                   <span className="shrink-0 border-l border-neutral-200 bg-neutral-100/80 px-3 py-3.5 font-mono text-[12px] text-neutral-400">
                     /ir.
                   </span>
@@ -961,14 +1049,31 @@ export function PageMetaModal({
                     </>
                   ) : null}
                   <input
+                    ref={slugInputRef}
                     type="text"
                     value={url}
                     onChange={(e) => onUrlChange(slugify(e.target.value))}
                     placeholder="my-page"
+                    minLength={4}
+                    aria-invalid={Boolean(urlError)}
+                    aria-describedby={urlError ? "page-slug-error" : undefined}
                     className="block min-w-0 max-w-full flex-1 bg-transparent px-3 py-3.5 font-mono text-[14px] text-neutral-900 outline-none placeholder:text-neutral-300 sm:text-[15px]"
                     dir="ltr"
                   />
                 </div>
+                {urlError ? (
+                  <p
+                    id="page-slug-error"
+                    role="alert"
+                    className="mt-2 text-[12px] font-bold leading-5 text-red-600"
+                  >
+                    {urlError}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-[11px] leading-5 text-neutral-400">
+                  حداقل ۴ کاراکتر؛ فقط از حروف انگلیسی a-z، اعداد 0-9 و خط تیره
+                  (-) استفاده کنید.
+                </p>
               </div>
 
               <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
@@ -1099,18 +1204,11 @@ export function PageMetaModal({
                     رنگ پس‌زمینه
                   </label>
                   <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={
-                        /^#[0-9a-fA-F]{6}$/.test(backgroundColor)
-                          ? backgroundColor
-                          : "#ffffff"
-                      }
-                      onChange={(event) =>
-                        onBackgroundColorChange?.(event.target.value)
-                      }
+                    <StableNativeColorInput
+                      value={backgroundColor}
+                      onCommit={onBackgroundColorChange}
                       className="h-12 w-14 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
-                      aria-label="انتخاب رنگ پس‌زمینه"
+                      label="انتخاب رنگ پس‌زمینه"
                     />
                     <input
                       type="text"

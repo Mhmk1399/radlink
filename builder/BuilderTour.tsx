@@ -36,7 +36,7 @@ type SpotlightRect = {
   height: number;
 };
 
-const TOUR_KEY = "builder-tour-done-v4";
+const TOUR_KEY = "builder-tour-done-v5";
 const VIEWPORT_GAP = 8;
 const SPOTLIGHT_PADDING = 8;
 const TOOLTIP_GAP = 16;
@@ -194,6 +194,14 @@ export function BuilderTour({
         icon: "💾",
       },
       {
+        target: "[data-tour='tour-back-admin-btn']",
+        placement: "bottom",
+        title: "بازگشت به ادمین",
+        content:
+          "با این دکمه می‌تونی از صفحه‌ساز خارج بشی و به پنل ادمین برگردی. اگر تغییری ذخیره نشده باشه، قبل از خروج بهت هشدار داده می‌شه.",
+        icon: "↪️",
+      },
+      {
         target: "[data-tour='tour-preview-btn']",
         placement: "bottom",
         title: "پیش‌نمایش زنده",
@@ -338,13 +346,14 @@ export function BuilderTour({
           desktopSteps[0],
           baseSteps[2],
           baseSteps[3],
+          baseSteps[4],
           desktopSteps[1],
           desktopSteps[2],
           desktopSteps[3],
           desktopSteps[4],
           desktopSteps[5],
           desktopSteps[6],
-          baseSteps[4],
+          baseSteps[5],
           ...endSteps,
         ]
       : [
@@ -352,9 +361,10 @@ export function BuilderTour({
           baseSteps[1],
           baseSteps[2],
           baseSteps[3],
+          baseSteps[4],
           mobileSteps[0],
           mobileSteps[1],
-          baseSteps[4],
+          baseSteps[5],
           ...endSteps,
         ];
   }, [hasBlocks, hasInspector, isDesktop]);

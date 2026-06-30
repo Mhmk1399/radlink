@@ -17,6 +17,7 @@ import {
   HiOutlineCheck,
 } from "react-icons/hi2";
 import { uploadFile } from "@/lib/fileUtils";
+import { LinkTypeHelp } from "./LinkTypeHelp";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -523,12 +524,13 @@ export function RepeaterField({
                         <label className="mb-1 block text-[11px] font-semibold text-neutral-500">
                           {field.label}
                         </label>
-                        <div className="relative">
-                          <HiOutlineLink
+                        <div className="flex items-center gap-2">
+                          <div className="relative min-w-0 flex-1">
+                            <HiOutlineLink
                             size={12}
                             className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400"
                           />
-                          <input
+                            <input
                             type="url"
                             value={String(fieldValue ?? "")}
                             onChange={(e) =>
@@ -541,7 +543,9 @@ export function RepeaterField({
                             className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2.5 pl-8 pr-3 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
                             dir="ltr"
                             placeholder="https://example.com"
-                          />
+                            />
+                          </div>
+                          <LinkTypeHelp />
                         </div>
                       </div>
                     );

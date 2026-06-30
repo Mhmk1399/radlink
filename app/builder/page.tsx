@@ -10,9 +10,14 @@ import {
   type BuilderAccessTarget,
 } from "@/hook/auth/builderAuthorization";
 import { SmartSuggestions } from "@/builder/SmartSuggestions";
+import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { PageBlock } from "@/types/blocks/builder.types";
 
 type BuilderMode = "page" | "template";
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 type BuilderState = {
   loading: boolean;
@@ -34,22 +39,76 @@ type BuilderState = {
   suppressSmartSuggestions?: boolean;
 };
 
-function MinimalLoadingScreen() {
+function MinimalLandingCreatorLoading() {
+  const t = useThemeTokens();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-      <div className="relative z-10 flex flex-col items-center gap-6 px-4 text-center">
-        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30" />
-        <div className="inline-flex h-10 w-10 animate-spin rounded-full border-[3px] border-slate-700 border-t-violet-500" />
-        <div>
-          <h1 className="text-xl font-semibold tracking-wide text-white sm:text-2xl">
-            ... در حال بارگذاری صفحه ساز
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
-            لطفا صبر کنید
-          </p>
+    <div
+      dir="rtl"
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "relative flex min-h-screen items-center justify-center overflow-hidden px-6 transition-colors duration-300",
+        t.pageBg,
+        t.textPrimary,
+      )}
+    >
+      <div
+        className={cn(
+          "relative w-full max-w-md rounded-3xl border p-6 transition-colors duration-300 sm:p-7",
+          t.cardBg,
+          t.borderSubtle,
+          t.cardShadow,
+        )}
+      >
+        {/* brand */}
+        <div className="mb-6 flex items-center gap-3">
+          <div
+            className={cn(
+              "relative flex h-12 w-12 items-center justify-center rounded-2xl border",
+              t.activeBg,
+              t.borderAccent,
+              t.textAccent,
+            )}
+          >
+            <div
+              className={cn(
+                "absolute inset-0 animate-pulse rounded-2xl",
+                t.selectedBg,
+              )}
+            />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="relative h-5 w-5"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M7 8h10M7 12h6M7 16h8" />
+            </svg>
+          </div>
+
+          <div>
+            <p className={cn("text-sm font-medium", t.textSecondary)}>
+              رادلینک
+            </p>
+          </div>
         </div>
+
+        {/* text */}
+        <h1
+          className={cn(
+            "text-xl font-semibold tracking-tight sm:text-2xl",
+            t.textPrimary,
+          )}
+        >
+          در حال آماده‌سازی صفحه
+        </h1>
+        <p className={cn("mt-2 text-sm leading-6", t.textMuted)}>
+          لطفاً چند لحظه صبر کنید تا محیط طراحی و پیش‌نمایش بارگذاری شود.
+        </p>
       </div>
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.15),transparent_60%)]" />
     </div>
   );
 }
@@ -58,7 +117,7 @@ const SimplePageBuilder = dynamic(
   () => import("@/builder/editor/PageBuilder"),
   {
     ssr: false,
-    loading: () => <MinimalLoadingScreen />,
+    loading: () => <MinimalLandingCreatorLoading />,
   },
 );
 
@@ -244,7 +303,7 @@ export default function BuilderPage() {
     };
   }, [router]);
 
-  if (state.loading) return <MinimalLoadingScreen />;
+  if (state.loading) return <MinimalLandingCreatorLoading />;
 
   if (state.error) {
     return (

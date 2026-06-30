@@ -171,6 +171,9 @@ Important behavior:
 - Delete actions use the table confirmation modal.
 - Filter dropdowns display Persian `label` values while retaining English/backend `value` values.
 - Boolean option mappings use values such as `"true"` and `"false"` while showing Persian text.
+- Column filters support exact dropdowns by default, `filterType: "text"` for
+  contains-based text input, and `filterSearchable: true` for a searchable
+  `CustomSelect`.
 - Checkbox fields remain checkboxes even when `options` are supplied for filter labels.
 - Nested keys such as `limits.files` are supported through `getNestedValue`.
 - Avoid rendering a `<div>` from a column renderer where DynamicTable wraps content in `<p>`; use a `<span>` root to prevent hydration errors.
@@ -247,6 +250,9 @@ Implemented behavior:
 - Static component and action selection.
 - Dynamic page/template/block selection.
 - Access duplication creates a new database document rather than mutating the source.
+- Permission duplication creates a new active Permission through `POST`,
+  copies its Access and assigned-user relationships, gives it a visible
+  `(کپی)` name suffix, and records the current operator as `grantedBy`.
 - Active/inactive toggle.
 - Permission creation/update/deactivation and user assignment.
 - Populated assigned users, granting user, and access documents.
@@ -309,6 +315,8 @@ Implemented behavior:
 - Admin/super-admin owner edit uses all users in `CustomSelect`.
 - A normal user sees the creator as read-only and never loads `/api/users` for
   owner options.
+- The Pages table uses a text-input title filter, searchable user selector for
+  creator filtering, and a Persian creation-date range filter.
 - Normal-user table updates strip `owner` and `ownerId` from PATCH payloads.
   The API also treats a repeated self owner ID as a no-op while rejecting any
   attempted ownership change.
@@ -363,6 +371,15 @@ Implemented behavior:
 - Uploader display falls back through full name, phone number, email, and owner ID.
 - Files are sorted newest first by ObjectId.
 - The table shows an image preview or file-type icon, filename, type, uploader, and storage URL.
+- Uploader is a searchable table filter and creation time supports an inclusive Persian date-range filter.
+- Clicking an image thumbnail opens `components/ui/ImagePreviewModal.tsx`; the same preview works in both table cells and DynamicTable's row-view modal.
+- `PagesSection.tsx` reuses the image preview modal for page logos and favicons.
+- DynamicTable supports per-column `renderFormField` controls; page logo and favicon edit fields use it for authenticated upload, preview, replacement, and removal instead of exposing storage URLs as text inputs.
+- Page create/update APIs derive `seo.ogImage` from the final logo and `seo.canonical` from `NEXT_PUBLIC_APP_URL` plus the normalized page URL (falling back to `APP_URL` or the request origin).
+- All 13 admin DynamicTable sections use backend pagination with a 20-row default. DynamicTable sends `page` and `limit`, reads each API's `total`, and requests subsequent records only when the user changes pages; it no longer relies on fetching the first 100 records for client-only pagination.
+- Builder URL controls use `builder/editor/form/LinkTypeHelp.tsx` in both normal content fields and repeater fields. The adjacent question-mark control opens on hover, click, or focus and documents web, internal, anchor, telephone, SMS, email, WhatsApp, Telegram, and geo link formats.
+- Public pages register every load/refresh as a view through `POST /api/pages/[id]/view`. `PageRenderer` uses a page-specific localStorage marker so `stats.visitors` increments only for a new browser/page pair, while an in-memory pending guard prevents React Strict Mode duplication. The API updates published pages atomically, and PagesSection displays and sorts both counters.
+- New pages default to `isPublished: true` in both the Page schema and POST API, with `publishedAt` set on creation. An explicit `isPublished: false` payload can still create a draft.
 - Users with view access can open the stored file in a new tab.
 - Users with delete access can delete through DynamicTable's confirmation modal.
 - The API remains ownership-aware: admins can see all files and non-admin users see their own.

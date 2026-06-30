@@ -804,6 +804,7 @@ export default function TicketsSection({
         canUpdate={false}
         canDelete={isSuperAdmin}
         transformResponse={transformResponse}
+        serverSide
         onDelete={async (item, del) => {
           await del(item);
           toast.success("تیکت حذف شد");

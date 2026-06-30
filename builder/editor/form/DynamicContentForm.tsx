@@ -24,6 +24,7 @@ import { RepeaterField } from "./RepeaterField";
 import { SelectField } from "./SelectField";
 import type { SelectFieldConfig } from "@/types/blocks/builder.types";
 import { uploadFile } from "@/lib/fileUtils";
+import { LinkTypeHelp } from "./LinkTypeHelp";
 /* ================================================================== */
 /*  Types                                                              */
 /* ================================================================== */
@@ -976,14 +977,15 @@ export function DynamicContentForm({
                 label={field.label}
                 type={getFieldTypeLabel(field.type)}
               />
-              <div className="relative">
-                {isUrlLike && (
+              <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
+                  {isUrlLike && (
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
                     <HiOutlineLink size={14} />
                   </span>
-                )}
+                  )}
                 {/* text-base = 16px → no iOS zoom */}
-                <input
+                  <input
                   type={getInputType(field.type)}
                   value={toInputValue(value)}
                   onChange={(e) => onChange(field.key, e.target.value)}
@@ -997,7 +999,9 @@ export function DynamicContentForm({
                       ? "https://example.com"
                       : "متن را وارد کن"
                   }
-                />
+                  />
+                </div>
+                {isUrlLike && <LinkTypeHelp />}
               </div>
             </FieldCard>
           );

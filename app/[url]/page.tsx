@@ -246,6 +246,7 @@ export default async function PageRoute({ params }: Props) {
 
       <section className="space-y-6 overflow-hidden">
         <PageRenderer
+          pageId={String(page._id)}
           blocks={clientBlocks}
           pageData={{
             title: page.title,

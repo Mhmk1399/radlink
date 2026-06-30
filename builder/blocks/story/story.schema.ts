@@ -56,7 +56,6 @@ export const storyHighlightsSchema: BlockSchema = {
         viewer: {
             label: "نمایشگر استوری",
             allowedStyleKeys: [
-                "backgroundColor",
                 "borderRadius",
                 "borderColor",
                 "borderWidth",

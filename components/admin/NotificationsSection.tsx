@@ -463,7 +463,7 @@ export default function NotificationsSection({
         subtitle="پیام‌ها و هشدارهای اختصاصی هر صفحه"
         primaryKey="_id"
         headers={headers}
-        pageSize={10}
+        pageSize={20}
         pageSizes={[10, 20, 50]}
         searchable
         exportable
@@ -475,6 +475,7 @@ export default function NotificationsSection({
         canUpdate={canUpdate}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        serverSide
         rowActions={(row) =>
           canUpdate ? (
             <button

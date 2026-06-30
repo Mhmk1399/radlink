@@ -184,6 +184,16 @@ function buildClientPageTargetUrl(pageUrl: unknown) {
   return `${origin}/${url.replace(/^\/+/, "")}`;
 }
 
+class PageSaveRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "PageSaveRequestError";
+    this.status = status;
+  }
+}
+
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -466,6 +476,7 @@ export default function SimplePageBuilder({
   /* ── UI state ── */
   const [isServerSaving, setIsServerSaving] = useState(false);
   const [serverSaveError, setServerSaveError] = useState<string | null>(null);
+  const [slugSaveError, setSlugSaveError] = useState<string | null>(null);
   const [pageSaveResult, setPageSaveResult] = useState<{
     status: "success" | "error";
     message: string;
@@ -1239,6 +1250,7 @@ export default function SimplePageBuilder({
     try {
       setIsServerSaving(true);
       setServerSaveError(null);
+      setSlugSaveError(null);
       const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/pages", {
         method: "POST",
@@ -1267,7 +1279,12 @@ export default function SimplePageBuilder({
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.message ?? "خطا در ساخت صفحه");
+      if (!res.ok) {
+        throw new PageSaveRequestError(
+          json?.message ?? "خطا در ساخت صفحه",
+          res.status,
+        );
+      }
       const createdPage = isRecord(json?.page)
         ? (json.page as CreatedPageResponse)
         : null;
@@ -1292,8 +1309,14 @@ export default function SimplePageBuilder({
       return createdPage;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ساخت صفحه";
-      setServerSaveError(msg);
-      setPageSaveResult({ status: "error", message: msg });
+      if (error instanceof PageSaveRequestError && error.status === 409) {
+        setServerSaveError(null);
+        setSlugSaveError(msg);
+        setPageSaveResult(null);
+      } else {
+        setServerSaveError(msg);
+        setPageSaveResult({ status: "error", message: msg });
+      }
       toast.show(msg, "error");
       return null;
     } finally {
@@ -1318,6 +1341,7 @@ export default function SimplePageBuilder({
     try {
       setIsServerSaving(true);
       setServerSaveError(null);
+      setSlugSaveError(null);
       const token = localStorage.getItem("auth_token");
       const res = await fetch(`/api/pages/${pageId}`, {
         method: "PATCH",
@@ -1346,7 +1370,12 @@ export default function SimplePageBuilder({
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.message ?? "خطا در ذخیره صفحه");
+      if (!res.ok) {
+        throw new PageSaveRequestError(
+          json?.message ?? "خطا در ذخیره صفحه",
+          res.status,
+        );
+      }
       setPageSaveResult({
         status: "success",
         message: "تغییرات صفحه با موفقیت ذخیره شد.",
@@ -1356,8 +1385,14 @@ export default function SimplePageBuilder({
       return json.page;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ذخیره صفحه";
-      setServerSaveError(msg);
-      setPageSaveResult({ status: "error", message: msg });
+      if (error instanceof PageSaveRequestError && error.status === 409) {
+        setServerSaveError(null);
+        setSlugSaveError(msg);
+        setPageSaveResult(null);
+      } else {
+        setServerSaveError(msg);
+        setPageSaveResult({ status: "error", message: msg });
+      }
       toast.show(msg, "error");
       return null;
     } finally {
@@ -1491,6 +1526,10 @@ export default function SimplePageBuilder({
         return "لطفاً آدرس صفحه را وارد کنید.";
       }
 
+      if (normalizedUrl.length < 4) {
+        return "آدرس صفحه باید حداقل ۴ کاراکتر باشد.";
+      }
+
       if (/\s/.test(normalizedUrl)) {
         return "آدرس صفحه نباید دارای فاصله باشد. به‌جای فاصله از خط تیره استفاده کنید.";
       }
@@ -1504,11 +1543,19 @@ export default function SimplePageBuilder({
   }, [blocks.length, pageTitle, pageUrl, saveMode]);
   const saveCurrentDocument = useCallback(async (): Promise<boolean> => {
     setServerSaveError(null);
+    setSlugSaveError(null);
 
     const validationError = validateBeforeServerSave();
 
     if (validationError) {
-      setServerSaveError(validationError);
+      if (
+        saveMode === "page" &&
+        pageUrl.trim().replace(/^\/+/, "").length < 4
+      ) {
+        setSlugSaveError(validationError);
+      } else {
+        setServerSaveError(validationError);
+      }
       toast.show(validationError, "error");
       return false;
     }
@@ -1533,6 +1580,7 @@ export default function SimplePageBuilder({
   }, [
     currentServerSnapshot,
     saveMode,
+    pageUrl,
     toast,
     updatePageOnServer,
     updateTemplateOnServer,
@@ -1566,7 +1614,15 @@ export default function SimplePageBuilder({
     const validationError = validateBeforeServerSave();
 
     if (validationError) {
-      setServerSaveError(validationError);
+      setServerSaveError(null);
+      if (
+        saveMode === "page" &&
+        pageUrl.trim().replace(/^\/+/, "").length < 4
+      ) {
+        setSlugSaveError(validationError);
+      } else {
+        setServerSaveError(validationError);
+      }
       setLeaveAfterMetaSave(true);
       setLeaveConfirmOpen(false);
       setPageMetaOpen(true);
@@ -1581,7 +1637,14 @@ export default function SimplePageBuilder({
     setLeaveConfirmOpen(false);
     setLeaveAfterMetaSave(false);
     router.push(ADMIN_PATH);
-  }, [router, saveCurrentDocument, toast, validateBeforeServerSave]);
+  }, [
+    pageUrl,
+    router,
+    saveCurrentDocument,
+    saveMode,
+    toast,
+    validateBeforeServerSave,
+  ]);
 
   const handleLeaveWithoutSaving = useCallback(() => {
     setLeaveConfirmOpen(false);
@@ -1950,6 +2013,7 @@ export default function SimplePageBuilder({
         title={pageTitle}
         description={pageDescription}
         url={pageUrl}
+        urlError={slugSaveError}
         pageId={saveMode === "template" ? templateId : pageId}
         categoryId={templateCategoryId}
         categoryOptions={categoryOptions}
@@ -1960,7 +2024,10 @@ export default function SimplePageBuilder({
         backgroundImage={pageBackgroundImage}
         onTitleChange={setPageTitle}
         onDescriptionChange={setPageDescription}
-        onUrlChange={setPageUrl}
+        onUrlChange={(value) => {
+          setPageUrl(value);
+          setSlugSaveError(null);
+        }}
         onCategoryIdChange={setTemplateCategoryId}
         onThumbnailChange={setTemplateThumbnail}
         onLogoChange={setPageLogo}
@@ -1971,6 +2038,7 @@ export default function SimplePageBuilder({
           setPageMetaOpen(false);
           setLeaveAfterMetaSave(false);
           setServerSaveError(null);
+          setSlugSaveError(null);
         }}
         onSave={handleMetaSave}
         isSaving={isServerSaving}

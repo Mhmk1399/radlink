@@ -371,7 +371,7 @@ export default function CategoriesSection({
         subtitle="ایجاد، مشاهده و ویرایش دسته‌بندی‌های تمپلیت"
         primaryKey="_id"
         headers={headers}
-        pageSize={10}
+        pageSize={20}
         pageSizes={[10, 20, 50]}
         searchable
         exportable
@@ -383,6 +383,7 @@ export default function CategoriesSection({
         canUpdate={canUpdate}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        serverSide
         rowActions={(row) =>
           canUpdate ? (
             <button

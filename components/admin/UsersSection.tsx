@@ -738,7 +738,7 @@ export default function UsersSection({
         primaryKey="_id"
         canUpdate={canUpdateUsers}
         headers={headers}
-        pageSize={8}
+        pageSize={20}
         pageSizes={[5, 8, 10, 20]}
         searchable
         searchDebounceMs={300}
@@ -748,6 +748,7 @@ export default function UsersSection({
         showRowNumbers
         enableCellCopy
         transformResponse={transformResponse}
+        serverSide
         emptyMessage="کاربری یافت نشد"
       />
     </div>

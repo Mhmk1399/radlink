@@ -799,7 +799,7 @@ export default function AgentsSection({
         subtitle="مدیریت اطلاعات و محدودیت‌های نمایندگان"
         primaryKey="_id"
         headers={headers}
-        pageSize={10}
+        pageSize={20}
         pageSizes={[10, 20, 50]}
         searchable
         exportable
@@ -811,6 +811,7 @@ export default function AgentsSection({
         canUpdate={false}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        serverSide
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("نماینده حذف شد");

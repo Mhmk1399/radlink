@@ -175,6 +175,8 @@ export default function QRCodesSection({
         label: "سازنده",
         editable: false,
         sortable: true,
+        filterable: true,
+        filterSearchable: true,
         hideOnMobile: true,
         render: (value) => (
           <span className={cn("text-sm", t.textMuted)}>
@@ -397,7 +399,7 @@ export default function QRCodesSection({
         subtitle="QR کدهای ساخته‌شده برای صفحات"
         primaryKey="_id"
         headers={headers}
-        pageSize={10}
+        pageSize={20}
         pageSizes={[10, 20, 50]}
         searchable
         exportable
@@ -409,6 +411,7 @@ export default function QRCodesSection({
         canUpdate={canUpdate}
         canDelete={canDelete}
         transformResponse={transformResponse}
+        serverSide
         onUpdate={async (item, builtInUpdate) => {
           await builtInUpdate(item);
           toast.success("QR کد ویرایش شد");

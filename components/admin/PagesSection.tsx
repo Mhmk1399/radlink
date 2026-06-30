@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaGlobe, FaFileAlt } from "react-icons/fa";
 import { FaImage, FaPowerOff } from "react-icons/fa6";
 import { HiOutlinePencil } from "react-icons/hi2";
@@ -15,6 +15,7 @@ import { toast } from "../ui/CustomToast";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/lib/fileUtils";
 import Image from "next/image";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -38,6 +39,8 @@ function formatFaDate(value?: string) {
 
 type AdminPageRow = Page & {
   isPublished?: boolean;
+  viewCount?: number;
+  visitorCount?: number;
 };
 
 type UserOptionSource = {
@@ -55,6 +58,104 @@ type SelectOption = {
   label: string;
   value: string;
 };
+
+function PageImageUploadField({
+  value,
+  label,
+  onChange,
+}: {
+  value: unknown;
+  label: string;
+  onChange: (value: unknown) => void;
+}) {
+  const t = useThemeTokens();
+  const [isUploading, setIsUploading] = useState(false);
+  const imageUrl = typeof value === "string" ? value : "";
+
+  async function handleFile(file?: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("فقط فایل تصویر قابل آپلود است.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const uploaded = await uploadFile(file);
+      onChange(uploaded.url);
+      toast.success("تصویر با موفقیت آپلود شد.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "آپلود تصویر انجام نشد.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <label
+        className={cn(
+          "relative flex min-h-32 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition",
+          t.inputBg,
+          t.borderInput,
+          isUploading ? "pointer-events-none opacity-70" : t.hoverBg,
+        )}
+      >
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={label}
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 100vw, 280px"
+            className="object-contain p-4"
+          />
+        ) : (
+          <span className={cn("text-xs font-bold", t.textMuted)}>
+            انتخاب و آپلود تصویر
+          </span>
+        )}
+        {isUploading && (
+          <span className="relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          disabled={isUploading}
+          onChange={(event) => {
+            void handleFile(event.target.files?.[0]);
+            event.target.value = "";
+          }}
+        />
+      </label>
+
+      <div className="flex items-center justify-between gap-3">
+        <span className={cn("text-[11px]", t.textDisabled)}>
+          {imageUrl
+            ? "برای جایگزینی، تصویر جدیدی انتخاب کنید."
+            : "PNG، JPG یا WebP تا ۵ مگابایت"}
+        </span>
+        {imageUrl && (
+          <button
+            type="button"
+            disabled={isUploading}
+            onClick={() => onChange("")}
+            className="shrink-0 text-xs font-bold text-red-500 transition hover:text-red-600 disabled:opacity-50"
+          >
+            حذف تصویر
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -81,12 +182,15 @@ function buildColumns(
   t: ReturnType<typeof useThemeTokens>,
   isDark: boolean,
   canEditOwner: boolean,
+  onPreviewImage: (src: string, title: string) => void,
 ): ColumnDef<AdminPageRow>[] {
   return [
     {
       key: "title",
       label: "عنوان صفحه",
       sortable: true,
+      filterable: true,
+      filterType: "text",
       render: (value, row) => (
         <span className="block">
           <span className={cn("block text-sm font-semibold", t.textPrimary)}>
@@ -120,14 +224,50 @@ function buildColumns(
       ),
     },
     {
+      key: "viewCount",
+      label: "بازدید",
+      editable: false,
+      sortable: true,
+      render: (value) => (
+        <span className={cn("font-mono text-sm font-bold", t.textPrimary)}>
+          {Number(value ?? 0).toLocaleString("fa-IR")}
+        </span>
+      ),
+    },
+    {
+      key: "visitorCount",
+      label: "بازدیدکننده",
+      editable: false,
+      sortable: true,
+      hideOnMobile: true,
+      render: (value) => (
+        <span className={cn("font-mono text-sm", t.textMuted)}>
+          {Number(value ?? 0).toLocaleString("fa-IR")}
+        </span>
+      ),
+    },
+    {
       key: "logo",
       label: "لوگو",
-      inputType: "url",
-      placeholder: "آدرس لوگوی صفحه",
       copyable: false,
-      render: (value) => (
-        <span className="relative inline-flex h-11 w-20 items-center justify-center overflow-hidden rounded-lg border border-black/10 ">
-          {typeof value === "string" && value ? (
+      renderFormField: ({ value, onChange }) => (
+        <PageImageUploadField
+          value={value}
+          label="لوگوی صفحه"
+          onChange={onChange}
+        />
+      ),
+      render: (value, row) =>
+        typeof value === "string" && value ? (
+          <button
+            type="button"
+            title="پیش‌نمایش لوگو"
+            onClick={(event) => {
+              event.stopPropagation();
+              onPreviewImage(value, `لوگوی ${row.title || "صفحه"}`);
+            }}
+            className="relative inline-flex h-11 w-20 items-center justify-center overflow-hidden rounded-lg border border-black/10"
+          >
             <Image
               src={value}
               alt="لوگوی صفحه"
@@ -136,22 +276,36 @@ function buildColumns(
               sizes="80px"
               className="h-full w-full object-contain p-1"
             />
-          ) : (
+          </button>
+        ) : (
+          <span className="relative inline-flex h-11 w-20 items-center justify-center overflow-hidden rounded-lg border border-black/10">
             <span className={cn("text-[10px]", t.textDisabled)}>بدون لوگو</span>
-          )}
-        </span>
-      ),
+          </span>
+        ),
     },
     {
       key: "favicon",
       label: "فاوآیکون",
-      inputType: "url",
-      placeholder: "آدرس آیکون مرورگر",
       copyable: false,
       hideOnMobile: true,
-      render: (value) => (
-        <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-black/10  ">
-          {typeof value === "string" && value ? (
+      renderFormField: ({ value, onChange }) => (
+        <PageImageUploadField
+          value={value}
+          label="فاوآیکون صفحه"
+          onChange={onChange}
+        />
+      ),
+      render: (value, row) =>
+        typeof value === "string" && value ? (
+          <button
+            type="button"
+            title="پیش‌نمایش فاوآیکون"
+            onClick={(event) => {
+              event.stopPropagation();
+              onPreviewImage(value, `فاوآیکون ${row.title || "صفحه"}`);
+            }}
+            className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-black/10"
+          >
             <Image
               src={value}
               alt="فاوآیکون صفحه"
@@ -160,11 +314,12 @@ function buildColumns(
               sizes="40px"
               className="h-full w-full object-contain p-1.5"
             />
-          ) : (
+          </button>
+        ) : (
+          <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-black/10">
             <FaGlobe className="h-4 w-4 text-slate-300" />
-          )}
-        </span>
-      ),
+          </span>
+        ),
     },
 
     {
@@ -174,6 +329,8 @@ function buildColumns(
       options: ownerOptions,
       placeholder: "سازنده صفحه را انتخاب کنید",
       label: "سازنده",
+      filterable: canEditOwner,
+      filterSearchable: true,
       hideOnMobile: true,
       render: (_: unknown, row: AdminPageRow) => {
         const ownerName = getUserLabel(row.owner as UserOptionSource);
@@ -232,10 +389,26 @@ function buildColumns(
       editable: false,
       label: "تاریخ ایجاد",
       sortable: true,
+      dateFilter: true,
       hideOnMobile: true,
       render: (value) => (
         <span className={cn("text-xs", t.textDisabled)}>
           {formatFaDate(String(value ?? ""))}
+        </span>
+      ),
+    },
+    {
+      key: "seo.canonical",
+      editable: false,
+      label: "دامنه",
+      sortable: true,
+      dateFilter: true,
+      hideOnMobile: true,
+      render: (value) => (
+        <span
+          className={cn("block max-w-[18rem] truncate text-sm", t.textMuted)}
+        >
+          {String(value ?? "—")}
         </span>
       ),
     },
@@ -251,11 +424,11 @@ export default function PagesSection({
   const { isDark } = useTheme();
   const router = useRouter();
   const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
-  const isNormalUser = user?.role === "user";
+  const canManageOwners = user?.role === "admin" || user?.role === "superAdmin";
 
-  const shouldLoadUsers = !isAccessLoading && user !== null && !isNormalUser;
+  const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
 
-  const canEditOwner = !isAccessLoading && user !== null && !isNormalUser;
+  const canEditOwner = !isAccessLoading && user !== null && canManageOwners;
   const canCreatePages = can("admin.pages", "create");
   const canUpdatePages = can("admin.pages", "update");
   const canDeletePages = can("admin.pages", "delete");
@@ -269,6 +442,14 @@ export default function PagesSection({
     "logo" | "favicon" | null
   >(null);
   const [savingBranding, setSavingBranding] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    title: string;
+  } | null>(null);
+  const openPreviewImage = useCallback((src: string, title: string) => {
+    setPreviewImage({ src, title });
+  }, []);
+  const closePreviewImage = useCallback(() => setPreviewImage(null), []);
 
   const transformResponse = useMemo(
     () => (json: unknown) => {
@@ -296,6 +477,8 @@ export default function PagesSection({
           id: pageId,
           ownerId,
           owner: owner ?? page.owner,
+          viewCount: Number(page.stats?.views ?? 0),
+          visitorCount: Number(page.stats?.visitors ?? 0),
         };
       }) as AdminPageRow[];
     },
@@ -391,8 +574,8 @@ export default function PagesSection({
 
   /* rebuild columns whenever theme or options change */
   const columns = useMemo(
-    () => buildColumns(ownerOptions, t, isDark, canEditOwner),
-    [ownerOptions, t, isDark, canEditOwner],
+    () => buildColumns(ownerOptions, t, isDark, canEditOwner, openPreviewImage),
+    [ownerOptions, t, isDark, canEditOwner, openPreviewImage],
   );
 
   async function togglePageStatus(row: AdminPageRow) {
@@ -560,7 +743,7 @@ export default function PagesSection({
         endpoint={`/api/pages?refresh=${refreshToken}`}
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
-          if (isNormalUser) {
+          if (!canManageOwners) {
             const { ownerId: _ownerId, owner: _owner, ...updatePayload } = item;
             await builtInUpdate(updatePayload as AdminPageRow);
           } else {
@@ -573,7 +756,7 @@ export default function PagesSection({
         subtitle="مشاهده، جستجو و مرور تمامی صفحات"
         primaryKey="_id"
         headers={headers}
-        pageSize={10}
+        pageSize={20}
         pageSizes={[10, 20, 50]}
         searchable
         searchDebounceMs={300}
@@ -586,6 +769,7 @@ export default function PagesSection({
         canUpdate={canUpdatePages}
         canDelete={canDeletePages}
         transformResponse={transformResponse}
+        serverSide
         rowActions={(row) => {
           const href = row.url
             ? String(row.url).startsWith("http")
@@ -839,6 +1023,13 @@ export default function PagesSection({
           </div>
         </div>
       )}
+      <ImagePreviewModal
+        open={Boolean(previewImage)}
+        src={previewImage?.src ?? ""}
+        alt={previewImage?.title}
+        title={previewImage?.title}
+        onClose={closePreviewImage}
+      />
     </div>
   );
 }

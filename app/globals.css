@@ -24,35 +24,6 @@ body {
   color: var(--foreground);
   font-family: estedad, sans-serif;
 }
-/* globals.css */
-
-/* Firefox */
-html {
-  scrollbar-width: thin;
-  scrollbar-color: #6b7280 #111827;
-}
-
-/* Chrome, Edge, Safari */
-html::-webkit-scrollbar {
-  width: 10px;
-}
-
-html::-webkit-scrollbar-track {
-  background: #111827;
-}
-
-html::-webkit-scrollbar-thumb {
-  background: #6b7280;
-  border-radius: 999px;
-  border: 2px solid #111827;
-}
-
-html::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-
-/* ─── Custom Scrollbar ─── */
 
 /* Thin scrollbar for Firefox */
 .scrollbar-thin {
@@ -71,7 +42,6 @@ html::-webkit-scrollbar-thumb:hover {
     }
   }
 }
-
 
 .sidebar-expanded {
   width: 260px;

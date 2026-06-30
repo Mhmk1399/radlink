@@ -99,14 +99,12 @@ export function createDefaultStoryHighlightsBlock(order: number): PageBlock {
             viewer: {
                 label: "نمایشگر استوری",
                 allowedStyleKeys: [
-                    "backgroundColor",
                     "borderRadius",
                     "borderColor",
                     "borderWidth",
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "rgba(6,71,137,0.92)" },
                     borderRadius: { mobile: 0 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },
