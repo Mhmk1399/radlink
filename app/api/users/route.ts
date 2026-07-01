@@ -34,10 +34,12 @@ export const GET = compose(
     const status = searchParams.get("status");
     const search = searchParams.get("search");
     const mode = searchParams.get("mode");
+    const includeDeleted =
+        searchParams.get("includeDeleted") === "true" && !mode;
 
-    const query: Record<string, unknown> = {
-        isDeleted: false,
-    };
+    const query: Record<string, unknown> = includeDeleted
+        ? {}
+        : { isDeleted: false };
 
     if (role) query.role = role;
     if (status) query.status = status;

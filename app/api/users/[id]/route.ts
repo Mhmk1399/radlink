@@ -110,6 +110,7 @@ export const PATCH = compose(
     ];
 
     const adminOnly = [
+        "phoneNumber",
         "limits",
         "status",
         "agentid",
@@ -134,6 +135,32 @@ export const PATCH = compose(
         if (!(key in body)) continue;
 
         let value = body[key];
+
+        if (key === "phoneNumber") {
+            const phoneNumber =
+                typeof value === "string" ? value.trim() : "";
+
+            if (!/^\+?\d{10,15}$/.test(phoneNumber)) {
+                return NextResponse.json(
+                    { message: "شماره موبایل معتبر نیست." },
+                    { status: 400 }
+                );
+            }
+
+            const duplicatePhone = await User.exists({
+                _id: { $ne: id },
+                phoneNumber,
+            });
+
+            if (duplicatePhone) {
+                return NextResponse.json(
+                    { message: "این شماره موبایل قبلاً ثبت شده است." },
+                    { status: 409 }
+                );
+            }
+
+            value = phoneNumber;
+        }
 
         if (key === "role") {
             if (!VALID_ROLES.includes(String(value))) {
@@ -228,7 +255,7 @@ export const PATCH = compose(
         }
 
         if (
-            ["firstName", "lastName", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
+            ["firstName", "lastName", "phoneNumber", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
                 key
             )
         ) {

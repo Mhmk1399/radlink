@@ -715,7 +715,7 @@ export default function UsersSection({
 
       {/* ── Table ──────────────────────────── */}
       <DynamicTable<UserRow>
-        endpoint="/api/users"
+        endpoint="/api/users?includeDeleted=true"
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
           await builtInUpdate(buildUserPayload(item) as UserRow);

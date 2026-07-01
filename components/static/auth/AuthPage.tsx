@@ -29,12 +29,17 @@ const authKeyframes = `
 @keyframes auth-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
 @keyframes auth-pulse-dot{0%,100%{opacity:.3}50%{opacity:1}}
 @keyframes auth-check-draw{0%{stroke-dashoffset:20}100%{stroke-dashoffset:0}}
+@keyframes auth-pop-in{0%{opacity:0;transform:scale(.85)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
 .auth-fade-in{animation:auth-fade-in .5s cubic-bezier(.22,1,.36,1) both}
 .auth-slide-left{animation:auth-slide-left .4s cubic-bezier(.22,1,.36,1) both}
 .auth-slide-right{animation:auth-slide-right .4s cubic-bezier(.22,1,.36,1) both}
 .auth-shake{animation:auth-shake .4s ease-in-out}
 .auth-pulse-dot{animation:auth-pulse-dot 1.4s ease-in-out infinite}
 .auth-check-draw{animation:auth-check-draw .4s ease-out both;stroke-dasharray:20;stroke-dashoffset:0}
+.auth-pop-in{animation:auth-pop-in .32s cubic-bezier(.34,1.56,.64,1) both}
+@media (prefers-reduced-motion: reduce){
+  .auth-fade-in,.auth-slide-left,.auth-slide-right,.auth-shake,.auth-pop-in{animation:none!important}
+}
 `;
 
 /* ══════════════════════════════════════════════
@@ -159,6 +164,18 @@ function isValidIranPhone(phone: string): boolean {
   return /^09[0-9]{9}$/.test(phone.replace(/\D/g, ""));
 }
 
+/** Normalize Persian/Arabic digits typed on a mobile keyboard to Latin digits */
+function normalizeDigits(str: string): string {
+  return str
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+}
+
+/** Keep only digits, tolerating Persian/Arabic numerals */
+function onlyDigits(str: string): string {
+  return normalizeDigits(str).replace(/\D/g, "");
+}
+
 function toFarsiDigits(str: string): string {
   return str.replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[parseInt(d)]);
 }
@@ -187,7 +204,7 @@ function resolveErrorMessage(
 }
 
 /* ══════════════════════════════════════════════
-   SHARED UI (unchanged from original)
+   SHARED UI
    ══════════════════════════════════════════════ */
 
 function LogoMark() {
@@ -260,7 +277,7 @@ function SuccessCheck() {
   return (
     <div
       className={cn(
-        "flex h-20 w-20 items-center justify-center rounded-full",
+        "flex h-20 w-20 items-center justify-center rounded-full auth-pop-in",
         "border-2",
         accentTokens.emerald.border,
         accentTokens.emerald.bg,
@@ -285,7 +302,111 @@ function SuccessCheck() {
 }
 
 /* ══════════════════════════════════════════════
-   OTP INPUT — updated length to 6 digits
+   REUSABLE TEXT FIELD
+   Handles: label, autofocus, numeric keyboard, error state
+   ══════════════════════════════════════════════ */
+
+interface FieldProps {
+  id: string;
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (val: string) => void;
+  onEnter?: () => void;
+  placeholder?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  error?: boolean;
+  /** numeric = digits-only + numeric mobile keyboard */
+  numeric?: boolean;
+  maxLength?: number;
+  dir?: "ltr" | "rtl";
+  type?: "text" | "tel" | "email";
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  hint?: string;
+}
+
+function Field({
+  id,
+  label,
+  required,
+  value,
+  onChange,
+  onEnter,
+  placeholder,
+  disabled,
+  autoFocus,
+  error,
+  numeric,
+  maxLength,
+  dir,
+  type = "text",
+  inputRef,
+  hint,
+}: FieldProps) {
+  const localRef = useRef<HTMLInputElement>(null);
+  const ref = inputRef ?? localRef;
+
+  useEffect(() => {
+    if (autoFocus) {
+      // slight delay so step-enter animation doesn't fight the focus scroll
+      const id = setTimeout(() => ref.current?.focus(), 60);
+      return () => clearTimeout(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocus]);
+
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-2 block text-xs font-medium text-slate-300"
+      >
+        {label}
+        {required && <span className="text-red-400"> *</span>}
+      </label>
+      <input
+        ref={ref}
+        id={id}
+        type={numeric ? "text" : type}
+        dir={dir ?? (numeric || type === "email" ? "ltr" : undefined)}
+        {...(numeric
+          ? {
+              inputMode: "numeric" as const,
+              pattern: "[0-9]*",
+              autoComplete: "one-time-code",
+            }
+          : {})}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        value={value}
+        onChange={(e) =>
+          onChange(numeric ? onlyDigits(e.target.value) : e.target.value)
+        }
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && onEnter) onEnter();
+        }}
+        disabled={disabled}
+        className={cn(
+          "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+          numeric && "tracking-wide",
+          animation.smooth,
+          error
+            ? "border-red-400/40 bg-red-400/4"
+            : cn(borders.light, backgrounds.surface.glass),
+          "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
+          disabled && "opacity-60 cursor-not-allowed",
+        )}
+      />
+      {hint && !error && (
+        <p className="mt-1.5 text-[11px] text-slate-500">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   OTP INPUT — 6 digits, numeric keyboard, autofocus
    ══════════════════════════════════════════════ */
 
 function OtpInput({
@@ -294,19 +415,44 @@ function OtpInput({
   length = OTP_LENGTH,
   error,
   disabled,
+  autoFocus,
 }: {
   value: string;
   onChange: (val: string) => void;
   length?: number;
   error?: boolean;
   disabled?: boolean;
+  autoFocus?: boolean;
 }) {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleChange = (index: number, char: string) => {
+  useEffect(() => {
+    if (autoFocus) {
+      const id = setTimeout(() => inputsRef.current[0]?.focus(), 120);
+      return () => clearTimeout(id);
+    }
+  }, [autoFocus]);
+
+  const handleChange = (index: number, raw: string) => {
     if (disabled) return;
-    const sanitized = char.replace(/\D/g, "");
-    if (!sanitized && char !== "") return;
+    const sanitized = onlyDigits(raw);
+
+    // Support typing/pasting multiple digits into one box
+    if (sanitized.length > 1) {
+      const arr = value.split("");
+      let cursor = index;
+      for (const ch of sanitized) {
+        if (cursor >= length) break;
+        arr[cursor] = ch;
+        cursor++;
+      }
+      const newVal = arr.join("").slice(0, length);
+      onChange(newVal);
+      inputsRef.current[Math.min(cursor, length - 1)]?.focus();
+      return;
+    }
+
+    if (!sanitized && raw !== "") return;
 
     const arr = value.split("");
     arr[index] = sanitized;
@@ -325,6 +471,7 @@ function OtpInput({
       arr[index - 1] = "";
       onChange(arr.join(""));
     }
+    // RTL layout: ArrowLeft moves to the next (visually left) box
     if (e.key === "ArrowLeft" && index < length - 1)
       inputsRef.current[index + 1]?.focus();
     if (e.key === "ArrowRight" && index > 0)
@@ -333,10 +480,7 @@ function OtpInput({
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, length);
+    const pasted = onlyDigits(e.clipboardData.getData("text")).slice(0, length);
     onChange(pasted);
     const focusIndex = Math.min(pasted.length, length - 1);
     inputsRef.current[focusIndex]?.focus();
@@ -358,11 +502,14 @@ function OtpInput({
           }}
           type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="one-time-code"
           maxLength={1}
           disabled={disabled}
           value={value[i] || ""}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
+          onFocus={(e) => e.target.select()}
           onPaste={handlePaste}
           aria-label={`رقم ${i + 1} کد تأیید`}
           className={cn(
@@ -376,11 +523,32 @@ function OtpInput({
                 : cn(borders.light, backgrounds.surface.glass),
             !disabled &&
               !error &&
-              "focus:border-yellow-400/50 focus:bg-yellow-400/8 focus:ring-2 focus:ring-yellow-400/20",
+              "focus:border-yellow-400/50 focus:bg-yellow-400/8 focus:ring-2 focus:ring-yellow-400/20 focus:scale-105",
           )}
         />
       ))}
     </div>
+  );
+}
+
+/* Small inline error line used across steps */
+function ErrorLine({ msg, center }: { msg: string; center?: boolean }) {
+  return (
+    <p
+      className={cn(
+        "flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right",
+        center && "justify-center",
+      )}
+    >
+      <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+        <path
+          fillRule="evenodd"
+          d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+          clipRule="evenodd"
+        />
+      </svg>
+      {msg}
+    </p>
   );
 }
 
@@ -411,6 +579,10 @@ export default function AuthPage() {
   const [animKey, setAnimKey] = useState(0);
 
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+
+  const phoneComplete = phone.length === 11;
+  const phoneValid = isValidIranPhone(phone);
 
   // ── Timer ──
   useEffect(() => {
@@ -433,11 +605,6 @@ export default function AuthPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
-
-  // ── Focus phone input on mount ──
-  useEffect(() => {
-    if (step === "phone") phoneInputRef.current?.focus();
-  }, [step]);
 
   const changeStep = (newStep: AuthStep) => {
     setAnimKey((k) => k + 1);
@@ -481,9 +648,6 @@ export default function AuthPage() {
 
   /* ────────────────────────────────────────────
      STEP 2: Verify OTP → POST /api/auth/verify-otp
-     Backend returns { token, user }
-     - isPhoneVerified + firstName set → existing user
-     - firstName not set              → new user, go to register
   ──────────────────────────────────────────── */
   const handleVerifyOtp = useCallback(async () => {
     if (otp.length !== OTP_LENGTH) return;
@@ -527,7 +691,6 @@ export default function AuthPage() {
 
   /* ────────────────────────────────────────────
      STEP 3: Register → PATCH /api/auth/me
-     Updates firstName + lastName on the user doc
   ──────────────────────────────────────────── */
   const handleRegister = useCallback(async () => {
     if (firstName.trim().length < 2) {
@@ -666,8 +829,31 @@ export default function AuthPage() {
             className={cn("absolute inset-x-0 top-0 h-px", gradients.primary)}
           />
 
+          {/* Step progress indicator */}
+          <div className="relative flex items-center justify-center gap-2 pt-5">
+            {(["phone", "otp", "register"] as const).map((s, i) => {
+              const order: AuthStep[] = ["phone", "otp", "register", "success"];
+              const currentIdx = order.indexOf(step);
+              const done = currentIdx > i;
+              const active = currentIdx === i;
+              return (
+                <span
+                  key={s}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    active
+                      ? "w-6 bg-yellow-400"
+                      : done
+                        ? "w-1.5 bg-emerald-400"
+                        : "w-1.5 bg-white/15",
+                  )}
+                />
+              );
+            })}
+          </div>
+
           {/* Content */}
-          <div className="relative p-7 sm:p-9" key={animKey}>
+          <div className="relative p-7 pt-5 sm:p-9 sm:pt-6" key={animKey}>
             {/* ═══ PHONE STEP ═══ */}
             {step === "phone" && (
               <div className="auth-fade-in">
@@ -684,7 +870,7 @@ export default function AuthPage() {
                         "text-slate-400",
                       )}
                     >
-                      شماره موبایل خود را وارد کنید
+                      شماره موبایل خود را وارد کنید تا کد تأیید برایتان ارسال شود
                     </p>
                   </div>
                 </div>
@@ -701,70 +887,80 @@ export default function AuthPage() {
                       <input
                         ref={phoneInputRef}
                         id="phone"
-                        type="tel"
+                        type="text"
                         dir="ltr"
                         inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="tel"
+                        autoFocus
                         placeholder="09123456789"
                         maxLength={11}
                         value={phone}
                         onChange={(e) => {
-                          setPhone(e.target.value.replace(/[^0-9]/g, ""));
+                          setPhone(onlyDigits(e.target.value).slice(0, 11));
                           setError("");
                         }}
-                        onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && phoneComplete && handleSendOtp()
+                        }
                         disabled={loading}
                         className={cn(
-                          "w-full rounded-xl border px-4 py-3.5 pr-12 text-left text-base font-medium text-white placeholder:text-slate-500 outline-none",
+                          "w-full rounded-xl border px-4 py-3.5 pr-12 text-left text-base font-medium tracking-wide text-white placeholder:text-slate-500 outline-none",
                           animation.smooth,
                           error
                             ? "border-red-400/40 bg-red-400/4"
-                            : cn(borders.light, backgrounds.surface.glass),
+                            : phoneValid
+                              ? cn(accentTokens.emerald.border, "bg-emerald-400/4")
+                              : cn(borders.light, backgrounds.surface.glass),
                           "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
                           loading && "opacity-60 cursor-not-allowed",
                         )}
                       />
-                      {/* Phone icon */}
+                      {/* Phone / valid icon */}
                       <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                        <svg
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="h-5 w-5 text-slate-500"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+                        {phoneValid ? (
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="h-5 w-5 text-emerald-400 auth-pop-in"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="h-5 w-5 text-slate-500"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
                       </div>
                     </div>
 
                     {error && (
-                      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
-                        <svg
-                          viewBox="0 0 16 16"
-                          fill="currentColor"
-                          className="h-3.5 w-3.5"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {error}
-                      </p>
+                      <div className="mt-2">
+                        <ErrorLine msg={error} />
+                      </div>
                     )}
                   </div>
 
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    disabled={loading || phone.replace(/\D/g, "").length !== 11}
+                    disabled={loading || !phoneComplete}
                     className={cn(
                       components.ctaPrimary,
                       "w-full justify-center py-3.5",
-                      (loading || phone.replace(/\D/g, "").length !== 11) &&
+                      (loading || !phoneComplete) &&
                         "pointer-events-none opacity-60",
                     )}
                   >
@@ -783,7 +979,7 @@ export default function AuthPage() {
                     type="button"
                     onClick={handleBack}
                     className={cn(
-                      "absolute right-5 top-5 flex h-9 w-9 items-center justify-center",
+                      "absolute right-5 top-2 flex h-9 w-9 items-center justify-center",
                       layout.radius.md,
                       borders.subtle,
                       backgrounds.surface.glass,
@@ -792,7 +988,7 @@ export default function AuthPage() {
                       "hover:text-white hover:bg-white/8",
                       focus.ring,
                     )}
-                    aria-label="بازگشت"
+                    aria-label="بازگشت و ویرایش شماره"
                   >
                     <svg
                       viewBox="0 0 20 20"
@@ -824,6 +1020,18 @@ export default function AuthPage() {
                       </span>{" "}
                       را وارد کنید
                     </p>
+                    {/* quick edit link */}
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className={cn(
+                        "mt-1 text-[11px] font-medium",
+                        accentTokens.amber.text,
+                        "hover:underline",
+                      )}
+                    >
+                      ویرایش شماره موبایل
+                    </button>
                   </div>
                 </div>
 
@@ -837,24 +1045,10 @@ export default function AuthPage() {
                     }}
                     error={otpError}
                     disabled={loading}
+                    autoFocus
                   />
 
-                  {error && (
-                    <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="h-3.5 w-3.5"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {error}
-                    </p>
-                  )}
+                  {error && <ErrorLine msg={error} center />}
 
                   {/* Timer & Resend */}
                   <div className="flex items-center justify-center gap-3 text-xs">
@@ -935,7 +1129,7 @@ export default function AuthPage() {
                         "text-slate-400",
                       )}
                     >
-                      لطفاً اطلاعات زیر را وارد کنید
+                      فقط نام الزامی است، بقیه موارد اختیاری‌اند
                     </p>
                   </div>
                 </div>
@@ -952,7 +1146,7 @@ export default function AuthPage() {
                     <svg
                       viewBox="0 0 20 20"
                       fill="currentColor"
-                      className="h-4 w-4 text-emerald-400"
+                      className="h-4 w-4 shrink-0 text-emerald-400"
                     >
                       <path
                         fillRule="evenodd"
@@ -971,174 +1165,81 @@ export default function AuthPage() {
                     </span>
                   </div>
 
-                  {/* First name */}
-                  <div>
-                    <label
-                      htmlFor="firstName"
-                      className="mb-2 block text-xs font-medium text-slate-300"
-                    >
-                      نام <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      id="firstName"
-                      type="text"
-                      placeholder="مثلاً: علی"
-                      value={firstName}
-                      onChange={(e) => {
-                        setFirstName(e.target.value);
-                        setError("");
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-                      disabled={loading}
-                      autoFocus
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
-                        animation.smooth,
-                        error
-                          ? "border-red-400/40 bg-red-400/4"
-                          : cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
-                        loading && "opacity-60 cursor-not-allowed",
-                      )}
-                    />
-                  </div>
+                  <Field
+                    id="firstName"
+                    label="نام"
+                    required
+                    placeholder="مثلاً: علی"
+                    value={firstName}
+                    onChange={(v) => {
+                      setFirstName(v);
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                    autoFocus
+                    error={Boolean(error && firstName.trim().length < 2)}
+                    inputRef={firstNameRef}
+                  />
 
-                  {/* Last name */}
-                  <div>
-                    <label
-                      htmlFor="lastName"
-                      className="mb-2 block text-xs font-medium text-slate-300"
-                    >
-                      نام خانوادگی
-                    </label>
-                    <input
-                      id="lastName"
-                      type="text"
-                      placeholder="مثلاً: رضایی"
-                      value={lastName}
-                      onChange={(e) => {
-                        setLastName(e.target.value);
-                        setError("");
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-                      disabled={loading}
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
-                        animation.smooth,
-                        cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
-                        loading && "opacity-60 cursor-not-allowed",
-                      )}
-                    />
-                  </div>
+                  <Field
+                    id="lastName"
+                    label="نام خانوادگی"
+                    placeholder="مثلاً: رضایی"
+                    value={lastName}
+                    onChange={(v) => {
+                      setLastName(v);
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                  />
 
-                  {/* Email */}
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="mb-2 block text-xs font-medium text-slate-300"
-                    >
-                      ایمیل
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      dir="ltr"
-                      placeholder="example@mail.com"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        setError("");
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-                      disabled={loading}
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
-                        animation.smooth,
-                        cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
-                        loading && "opacity-60 cursor-not-allowed",
-                      )}
-                    />
-                  </div>
+                  <Field
+                    id="email"
+                    label="ایمیل"
+                    type="email"
+                    dir="ltr"
+                    placeholder="example@mail.com"
+                    value={email}
+                    onChange={(v) => {
+                      setEmail(v);
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                  />
 
-                  {/* National Code */}
-                  <div>
-                    <label
-                      htmlFor="nationalCode"
-                      className="mb-2 block text-xs font-medium text-slate-300"
-                    >
-                      کد ملی
-                    </label>
-                    <input
-                      id="nationalCode"
-                      type="text"
-                      dir="ltr"
-                      inputMode="numeric"
-                      placeholder="0123456789"
-                      maxLength={10}
-                      value={nationalCode}
-                      onChange={(e) => {
-                        setNationalCode(e.target.value.replace(/\D/g, ""));
-                        setError("");
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-                      disabled={loading}
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
-                        animation.smooth,
-                        cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
-                        loading && "opacity-60 cursor-not-allowed",
-                      )}
-                    />
-                  </div>
+                  <Field
+                    id="nationalCode"
+                    label="کد ملی"
+                    numeric
+                    maxLength={10}
+                    placeholder="0123456789"
+                    value={nationalCode}
+                    onChange={(v) => {
+                      setNationalCode(v);
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                    hint="۱۰ رقم بدون خط تیره"
+                  />
 
-                  {/* Father Name */}
-                  <div>
-                    <label
-                      htmlFor="fatherName"
-                      className="mb-2 block text-xs font-medium text-slate-300"
-                    >
-                      نام پدر
-                    </label>
-                    <input
-                      id="fatherName"
-                      type="text"
-                      placeholder="مثلاً: محمد"
-                      value={fatherName}
-                      onChange={(e) => {
-                        setFatherName(e.target.value);
-                        setError("");
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-                      disabled={loading}
-                      className={cn(
-                        "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
-                        animation.smooth,
-                        cn(borders.light, backgrounds.surface.glass),
-                        "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
-                        loading && "opacity-60 cursor-not-allowed",
-                      )}
-                    />
-                  </div>
+                  <Field
+                    id="fatherName"
+                    label="نام پدر"
+                    placeholder="مثلاً: محمد"
+                    value={fatherName}
+                    onChange={(v) => {
+                      setFatherName(v);
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                  />
 
-                  {error && (
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-red-400 auth-slide-right">
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        className="h-3.5 w-3.5"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      {error}
-                    </p>
-                  )}
+                  {error && <ErrorLine msg={error} />}
 
                   <button
                     type="button"

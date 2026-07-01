@@ -402,9 +402,8 @@ function buildColumns(
       editable: false,
       label: "دامنه",
       sortable: true,
-      dateFilter: true,
-      hideOnMobile: true,
-      render: (value) => (
+ 
+       render: (value) => (
         <span
           className={cn("block max-w-[18rem] truncate text-sm", t.textMuted)}
         >
