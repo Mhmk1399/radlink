@@ -25,8 +25,6 @@ const defaultStats: UserStats = {
   total: 0,
   active: 0,
   inactive: 0,
-  blocked: 0,
-  pending: 0,
   agents: 0,
   admins: 0,
 };
@@ -272,8 +270,6 @@ export function UserProvider({
       const statusLabels: Record<UserStatus, string> = {
         active: "فعال",
         inactive: "غیرفعال",
-        blocked: "مسدود",
-        pending: "در انتظار",
       };
 
       const loadingId = toast.loading(
@@ -323,18 +319,6 @@ export function UserProvider({
       }
     },
     [mutateUsers, mutateStats],
-  );
-
-  /* ──────────────────────────────────────────
-     TOGGLE BLOCK
-     ────────────────────────────────────────── */
-  const toggleUserBlock = useCallback(
-    async (user: User): Promise<void> => {
-      const isBlocked = user.status === "blocked";
-      const newStatus: UserStatus = isBlocked ? "active" : "blocked";
-      await toggleUserStatus(user, newStatus);
-    },
-    [toggleUserStatus],
   );
 
   /* ──────────────────────────────────────────
@@ -474,7 +458,6 @@ export function UserProvider({
       updateUser,
       deleteUser,
       toggleUserStatus,
-      toggleUserBlock,
       resetUserPassword,
       verifyUserPhone,
       deleteBulk,
@@ -497,7 +480,6 @@ export function UserProvider({
       updateUser,
       deleteUser,
       toggleUserStatus,
-      toggleUserBlock,
       resetUserPassword,
       verifyUserPhone,
       deleteBulk,

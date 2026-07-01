@@ -27,6 +27,11 @@ import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { ColumnDef } from "@/types/table";
 import CustomSelect from "../ui/customSelect";
+import {
+  getIdentityInputProps,
+  sanitizeIdentityField,
+  validateIdentityField,
+} from "@/lib/validation/identityFields";
 
 type AgentType = "personal" | "company";
 
@@ -393,6 +398,7 @@ export default function AgentsSection({
   const [tableKey, setTableKey] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<AgentFormState>(() => emptyForm());
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
@@ -608,22 +614,33 @@ export default function AgentsSection({
 
   function openCreate() {
     setForm(emptyForm());
+    setFormErrors({});
     setFormOpen(true);
   }
   function openEdit(row: AgentRow) {
     setForm(formFromRow(row));
+    setFormErrors({});
     setFormOpen(true);
   }
   function closeForm() {
     if (isSaving) return;
     setFormOpen(false);
     setForm(emptyForm());
+    setFormErrors({});
   }
   function updateField<K extends keyof AgentFormState>(
     key: K,
     value: AgentFormState[K],
   ) {
-    setForm((current) => ({ ...current, [key]: value }));
+    const nextValue = sanitizeIdentityField(String(key), value) as AgentFormState[K];
+    setForm((current) => ({ ...current, [key]: nextValue }));
+    setFormErrors((current) => {
+      const next = { ...current };
+      const error = validateIdentityField(String(key), nextValue);
+      if (error) next[String(key)] = error;
+      else delete next[String(key)];
+      return next;
+    });
   }
   function updateLimit(key: keyof AgentFormState["limits"], value: string) {
     setForm((current) => ({
@@ -636,6 +653,17 @@ export default function AgentsSection({
     event.preventDefault();
     if (!form.id && !form.userId) {
       toast.error("انتخاب کاربر الزامی است");
+      return;
+    }
+    const fixedNumberError = validateIdentityField(
+      "fixedNumber",
+      form.fixedNumber,
+    );
+    if (fixedNumberError) {
+      setFormErrors((current) => ({
+        ...current,
+        fixedNumber: fixedNumberError,
+      }));
       return;
     }
     if (form.type === "company") {
@@ -1027,8 +1055,15 @@ export default function AgentsSection({
                       onChange={(event) =>
                         updateField("fixedNumber", event.target.value)
                       }
+                      {...getIdentityInputProps("fixedNumber")}
+                      aria-invalid={Boolean(formErrors.fixedNumber)}
                       className={fieldInput}
                     />
+                    {formErrors.fixedNumber && (
+                      <p className="mt-1.5 text-xs font-medium text-red-500">
+                        {formErrors.fixedNumber}
+                      </p>
+                    )}
                   </Field>
                 </div>
 

@@ -190,7 +190,7 @@ export function getAccessComponentLabel(component?: string) {
 }
 
 export function getAccessResourceLabel(resource?: AccessResource) {
-  if (resource === "templates") return "تمپلیت";
+  if (resource === "templates") return "قالب";
   if (resource === "blocks") return "بلاک";
   if (resource === "pages") return "صفحه";
   return "این آیتم";

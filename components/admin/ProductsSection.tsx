@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   FaArrowRight,
   FaArrowUpRightFromSquare,
@@ -14,6 +15,8 @@ import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { ColumnDef } from "@/types/table";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
+import { uploadFile } from "@/lib/fileUtils";
 
 type ProductRow = {
   _id: string;
@@ -21,11 +24,20 @@ type ProductRow = {
   name: string;
   description: string;
   price: number;
-  images: string[];
-  imagesText: string;
+  image: string;
+  ownerId: string;
+  pageId: string;
+  ownerLabel: string;
+  pageLabel: string;
+  source: "manual" | "builder";
   createdAt?: string;
   updatedAt?: string;
   [key: string]: unknown;
+};
+
+type SelectOption = {
+  label: string;
+  value: string;
 };
 
 function cn(...classes: (string | false | null | undefined)[]) {
@@ -37,33 +49,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function getId(value: unknown) {
+  if (typeof value === "string") return value;
   if (!isRecord(value)) return "";
   const id = value._id ?? value.id;
   return typeof id === "string" ? id : "";
+}
+
+function getRefLabel(value: unknown, kind: "owner" | "page") {
+  if (!isRecord(value)) return "";
+  if (kind === "owner") {
+    const name = [value.firstName, value.lastName]
+      .filter((part) => typeof part === "string" && part.trim())
+      .join(" ")
+      .trim();
+    return name || toText(value.phoneNumber) || toText(value.email) || getId(value);
+  }
+  return toText(value.title) || toText(value.url) || getId(value);
 }
 
 function toText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
-function normalizeImages(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(
-    value
-      .filter((image): image is string => typeof image === "string")
-      .map((image) => image.trim())
-      .filter(Boolean),
-  )];
-}
-
-function parseImageText(value: unknown) {
-  if (typeof value !== "string") return [];
-  return [...new Set(
-    value
-      .split(/[\n,]+/)
-      .map((image) => image.trim())
-      .filter(Boolean),
-  )];
+function normalizeImage(value: unknown) {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return typeof candidate === "string" ? candidate.trim() : "";
 }
 
 function normalizeProduct(value: unknown): ProductRow | null {
@@ -71,7 +81,9 @@ function normalizeProduct(value: unknown): ProductRow | null {
   const id = getId(value);
   if (!id) return null;
 
-  const images = normalizeImages(value.images);
+  const image = normalizeImage(value.image || value.images);
+  const ownerId = getId(value.owner);
+  const pageId = getId(value.page);
 
   return {
     ...value,
@@ -80,8 +92,12 @@ function normalizeProduct(value: unknown): ProductRow | null {
     name: toText(value.name) || "بدون نام",
     description: toText(value.description),
     price: Number(value.price) || 0,
-    images,
-    imagesText: images.join("\n"),
+    image,
+    ownerId,
+    pageId,
+    ownerLabel: getRefLabel(value.owner, "owner") || "-",
+    pageLabel: getRefLabel(value.page, "page") || "-",
+    source: value.source === "builder" ? "builder" : "manual",
     createdAt: toText(value.createdAt) || undefined,
     updatedAt: toText(value.updatedAt) || undefined,
   };
@@ -96,10 +112,11 @@ function buildProductPayload(
     description:
       typeof item.description === "string" ? item.description.trim() : "",
     price: Math.max(0, Number(item.price) || 0),
-    images: parseImageText(item.imagesText),
+    image: normalizeImage(item.image),
   };
 
-  delete payload.imagesText;
+  delete payload.images;
+  delete payload.imageFiles;
   return payload;
 }
 
@@ -116,6 +133,102 @@ function formatFaDate(value?: string) {
   }
 }
 
+function ProductImageUploadField({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const t = useThemeTokens();
+  const image = normalizeImage(value);
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function uploadImage(file?: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("فقط فایل تصویر قابل آپلود است.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const uploaded = await uploadFile(file);
+      onChange(uploaded.url);
+      toast.success("تصویر محصول آپلود شد.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "آپلود تصویر انجام نشد.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3 sm:col-span-2">
+      {image && (
+        <div
+          className={cn(
+            "relative aspect-video overflow-hidden rounded-xl border",
+            t.borderSubtle,
+            t.inputBg,
+          )}
+        >
+          <Image
+            src={image}
+            alt="تصویر محصول"
+            fill
+            unoptimized
+            sizes="480px"
+            className="object-contain p-2"
+          />
+          <button
+            type="button"
+            disabled={isUploading}
+            onClick={() => onChange("")}
+            className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-black/65 text-sm font-black text-white transition hover:bg-red-600 disabled:opacity-50"
+            title="حذف تصویر"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      <label
+        className={cn(
+          "flex min-h-24 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed px-4 text-center transition",
+          t.borderInput,
+          t.inputBg,
+          isUploading ? "pointer-events-none opacity-60" : t.hoverBg,
+        )}
+      >
+        <span className={cn("text-xs font-bold", t.textMuted)}>
+          {isUploading
+            ? "در حال آپلود تصویر..."
+            : image
+              ? "جایگزینی تصویر محصول"
+              : "انتخاب تصویر محصول"}
+        </span>
+        <input
+          type="file"
+          accept="image/*"
+          disabled={isUploading}
+          className="hidden"
+          onChange={(event) => {
+            void uploadImage(event.target.files?.[0]);
+            event.target.value = "";
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
 export default function ProductsSection({
   navigate,
 }: {
@@ -123,11 +236,23 @@ export default function ProductsSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const { can } = useAccess();
+  const { can, user } = useAccess();
   const canCreateProducts = can("admin.products", "create");
   const canUpdateProducts = can("admin.products", "update");
   const canDeleteProducts = can("admin.products", "delete");
   const canViewProducts = can("admin.products", "view");
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    title: string;
+  } | null>(null);
+  const openPreviewImage = useCallback((src: string, title: string) => {
+    setPreviewImage({ src, title });
+  }, []);
+  const closePreviewImage = useCallback(() => setPreviewImage(null), []);
+  const [ownerOptions, setOwnerOptions] = useState<SelectOption[]>([]);
+  const [pageOptions, setPageOptions] = useState<SelectOption[]>([
+    { label: "محصولات دستی", value: "__manual__" },
+  ]);
 
   const token =
     typeof window !== "undefined"
@@ -137,6 +262,101 @@ export default function ProductsSection({
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token],
   );
+
+  useEffect(() => {
+    if (!headers || !user) return;
+    const currentUser = user;
+    const controller = new AbortController();
+
+    async function loadPagedOptions(
+      endpoint: string,
+      arrayKey: "users" | "pages",
+      toOption: (item: Record<string, unknown>) => SelectOption | null,
+    ) {
+      const options = new Map<string, SelectOption>();
+      let page = 1;
+      let total = 0;
+
+      do {
+        const response = await fetch(
+          `${endpoint}${endpoint.includes("?") ? "&" : "?"}page=${page}&limit=100`,
+          { headers, signal: controller.signal },
+        );
+        if (!response.ok) break;
+        const json = await response.json();
+        const items = Array.isArray(json?.[arrayKey]) ? json[arrayKey] : [];
+        items.forEach((item: unknown) => {
+          if (!isRecord(item)) return;
+          const option = toOption(item);
+          if (option) options.set(option.value, option);
+        });
+        total = Number(json?.total ?? items.length);
+        page += 1;
+      } while (options.size < total && page <= 100);
+
+      return Array.from(options.values());
+    }
+
+    async function loadFilters() {
+      try {
+        const pagesPromise = loadPagedOptions(
+          "/api/pages",
+          "pages",
+          (page) => {
+            const value = getId(page);
+            if (!value) return null;
+            return {
+              value,
+              label: toText(page.title) || toText(page.url) || value,
+            };
+          },
+        );
+
+        const usersPromise =
+          currentUser.role === "admin" || currentUser.role === "superAdmin"
+            ? loadPagedOptions("/api/users", "users", (optionUser) => {
+                const value = getId(optionUser);
+                if (!value) return null;
+                return {
+                  value,
+                  label: getRefLabel(optionUser, "owner") || value,
+                };
+              })
+            : Promise.resolve(
+                [
+                  {
+                    value: String(currentUser.id ?? ""),
+                    label:
+                      [currentUser.firstName, currentUser.lastName]
+                        .filter(Boolean)
+                        .join(" ") ||
+                      currentUser.phoneNumber ||
+                      "کاربر فعلی",
+                  },
+                ].filter((option) => option.value),
+              );
+
+        const [users, pages] = await Promise.all([usersPromise, pagesPromise]);
+        if (controller.signal.aborted) return;
+        setOwnerOptions(users);
+        setPageOptions([
+          { label: "محصولات دستی", value: "__manual__" },
+          ...pages,
+        ]);
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          return;
+        }
+        console.error("Failed to load product filter options", error);
+      }
+    }
+
+    void loadFilters();
+    return () => controller.abort();
+  }, [headers, user]);
 
   const columns: ColumnDef<ProductRow>[] = useMemo(
     () => [
@@ -149,25 +369,7 @@ export default function ProductsSection({
         placeholder: "نام محصول",
         render: (value, row) => (
           <span className="flex min-w-0 items-center gap-3">
-            <span
-              className={cn(
-                "flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border",
-                t.borderSubtle,
-                t.inputBg,
-                isDark ? "text-violet-400" : "text-violet-600",
-              )}
-            >
-              {row.images[0] ? (
-                <span
-                  role="img"
-                  aria-label={row.name}
-                  className="h-full w-full bg-cover bg-center bg-no-repeat"
-                  style={{ backgroundImage: `url("${row.images[0]}")` }}
-                />
-              ) : (
-                <FaBoxOpen className="h-4 w-4" />
-              )}
-            </span>
+          
             <span className="min-w-0">
               <span
                 className={cn(
@@ -178,8 +380,8 @@ export default function ProductsSection({
                 {String(value || "بدون نام")}
               </span>
               <span className={cn("mt-0.5 block text-xs", t.textDisabled)}>
-                {row.images.length
-                  ? `${row.images.length.toLocaleString("fa-IR")} تصویر`
+                {row.image
+                  ? "دارای تصویر"
                   : "بدون تصویر"}
               </span>
             </span>
@@ -217,43 +419,65 @@ export default function ProductsSection({
         ),
       },
       {
-        key: "imagesText",
-        label: "آدرس تصاویر",
-        inputType: "textarea",
-        visible: false,
-        placeholder: "هر آدرس تصویر را در یک خط وارد کنید",
+        key: "ownerId",
+        label: "مالک محصول",
+        editable: false,
+        sortable: true,
+        filterable: true,
+        filterSearchable: true,
+        options: ownerOptions,
+        hideOnMobile: true,
+        render: (_, row) => (
+          <span className={cn("text-sm font-medium", t.textMuted)}>
+            {row.ownerLabel}
+          </span>
+        ),
       },
       {
-        key: "images",
-        label: "تصاویر",
+        key: "pageId",
+        label: "صفحه",
         editable: false,
+        sortable: true,
+        filterable: true,
+        filterSearchable: true,
+        options: pageOptions,
+        hideOnMobile: true,
+        render: (_, row) => (
+          <span className={cn("text-sm", t.textMuted)}>
+            {row.source === "builder" ? row.pageLabel : "محصول دستی"}
+          </span>
+        ),
+      },
+      {
+        key: "image",
+        label: "تصویر",
+        inputType: "textarea",
+        renderFormField: ({ value, onChange }) => (
+          <ProductImageUploadField value={value} onChange={onChange} />
+        ),
         hideOnMobile: true,
         render: (value) => {
-          const images = normalizeImages(value);
+          const image = normalizeImage(value);
           return (
-            <span className="flex max-w-[14rem] items-center gap-1.5">
-              {images.length ? (
-                images.slice(0, 3).map((image, index) => (
-                  <span
-                    key={`${image}-${index}`}
-                    role="img"
-                    aria-label={`تصویر ${index + 1}`}
-                    className={cn(
-                      "h-9 w-9 shrink-0 rounded-lg border bg-cover bg-center bg-no-repeat",
-                      t.borderSubtle,
-                    )}
-                    style={{ backgroundImage: `url("${image}")` }}
-                  />
-                ))
+            <span className="flex items-center gap-1.5">
+              {image ? (
+                <button
+                  type="button"
+                  aria-label="پیش‌نمایش تصویر محصول"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openPreviewImage(image, "تصویر محصول");
+                  }}
+                  className={cn(
+                    "h-10 w-10 shrink-0 rounded-lg border bg-cover bg-center bg-no-repeat",
+                    t.borderSubtle,
+                  )}
+                  style={{ backgroundImage: `url("${image}")` }}
+                />
               ) : (
                 <span className={cn("inline-flex items-center gap-1.5 text-xs", t.textDisabled)}>
                   <FaImage className="h-3 w-3" />
                   بدون تصویر
-                </span>
-              )}
-              {images.length > 3 && (
-                <span className={cn("text-xs font-semibold", t.textDisabled)}>
-                  +{(images.length - 3).toLocaleString("fa-IR")}
                 </span>
               )}
             </span>
@@ -274,7 +498,7 @@ export default function ProductsSection({
         ),
       },
     ],
-    [isDark, t],
+    [isDark, openPreviewImage, ownerOptions, pageOptions, t],
   );
 
   const transformResponse = useMemo(
@@ -384,12 +608,12 @@ export default function ProductsSection({
           toast.success("محصول حذف شد.");
         }}
         rowActions={(row) =>
-          row.images[0] && canViewProducts ? (
+          row.image && canViewProducts ? (
             <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                window.open(row.images[0], "_blank", "noopener,noreferrer");
+                window.open(row.image, "_blank", "noopener,noreferrer");
               }}
               title="مشاهده تصویر اصلی"
               className={cn(
@@ -405,6 +629,13 @@ export default function ProductsSection({
           ) : null
         }
         emptyMessage="محصولی یافت نشد."
+      />
+      <ImagePreviewModal
+        open={Boolean(previewImage)}
+        src={previewImage?.src ?? ""}
+        alt={previewImage?.title}
+        title={previewImage?.title}
+        onClose={closePreviewImage}
       />
     </div>
   );

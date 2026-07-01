@@ -6,7 +6,7 @@ import User from "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const VALID_STATUSES = ["active", "inactive", "blocked", "pending"];
+const VALID_STATUSES = ["active", "inactive"];
 
 // PATCH /api/users/[id]/status
 export const PATCH = compose(
@@ -20,6 +20,23 @@ export const PATCH = compose(
 
     if (!VALID_STATUSES.includes(status)) {
         return NextResponse.json({ message: "وضعیت کاربر معتبر نیست." }, { status: 400 });
+    }
+
+    const target = await User.findById(id).select("role");
+    if (!target) {
+        return NextResponse.json(
+            { message: "کاربر پیدا نشد." },
+            { status: 404 },
+        );
+    }
+    if (
+        target.role === "superAdmin" &&
+        req.ctx.user!.role !== "superAdmin"
+    ) {
+        return NextResponse.json(
+            { message: "فقط R A D می‌تواند وضعیت R A D را تغییر دهد." },
+            { status: 403 },
+        );
     }
 
     const user = await User.findByIdAndUpdate(

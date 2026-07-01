@@ -143,11 +143,11 @@ function getBuilderActionLabel({
   sourceTemplateId?: string;
 }) {
   if (saveMode === "template") {
-    return templateId ? "ویرایش تمپلیت" : "ساخت تمپلیت";
+    return templateId ? "ویرایش قالب" : "ساخت قالب";
   }
 
   if (pageId) return "ویرایش صفحه";
-  if (sourceTemplateId) return "ساخت صفحه از تمپلیت";
+  if (sourceTemplateId) return "ساخت صفحه از قالب";
   return "ساخت صفحه";
 }
 
@@ -634,7 +634,7 @@ export default function SimplePageBuilder({
     });
     const entityName = compactMetaText(
       pageTitle,
-      saveMode === "template" ? "تمپلیت بدون عنوان" : "صفحه بدون عنوان",
+      saveMode === "template" ? "قالب بدون عنوان" : "صفحه بدون عنوان",
     );
     const title = `${actionLabel}: ${entityName} | ${BUILDER_META_SUFFIX}`;
     const description = compactMetaText(
@@ -1437,12 +1437,12 @@ export default function SimplePageBuilder({
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.message ?? "خطا در ساخت تمپلیت");
+      if (!res.ok) throw new Error(json?.message ?? "خطا در ساخت قالب");
       setTemplateId(json.template?.id ?? json.template?._id ?? null);
-      toast.show("تمپلیت با موفقیت ساخته شد", "success");
+      toast.show("قالب با موفقیت ساخته شد", "success");
       return json.template;
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "خطا در ساخت تمپلیت";
+      const msg = error instanceof Error ? error.message : "خطا در ساخت قالب";
       setServerSaveError(msg);
       toast.show(msg, "error");
       return null;
@@ -1486,12 +1486,12 @@ export default function SimplePageBuilder({
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.message ?? "خطا در ذخیره تمپلیت");
-      toast.show("تمپلیت ذخیره شد", "success");
+      if (!res.ok) throw new Error(json?.message ?? "خطا در ذخیره قالب");
+      toast.show("قالب ذخیره شد", "success");
       return json.template;
     } catch (error) {
       const msg =
-        error instanceof Error ? error.message : "خطا در ذخیره تمپلیت";
+        error instanceof Error ? error.message : "خطا در ذخیره قالب";
       setServerSaveError(msg);
       toast.show(msg, "error");
       return null;

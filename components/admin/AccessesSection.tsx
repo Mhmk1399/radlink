@@ -45,6 +45,7 @@ type ResourceKind = "templates" | "blocks" | "pages";
 type AccessRow = {
   _id: string;
   id: string;
+  name: string;
   staticComponents: StaticAccessRule[];
   dynamicAccess: Record<ResourceKind, ResourceRule[]>;
   staticCount: number;
@@ -64,6 +65,7 @@ type ResourceOption = {
 
 type AccessFormState = {
   id?: string;
+  name: string;
   staticComponents: StaticAccessRule[];
   dynamicAccess: Record<ResourceKind, ResourceRule[]>;
 };
@@ -153,6 +155,7 @@ function normalizeAccessRow(value: unknown): AccessRow | null {
     ...value,
     _id: id,
     id,
+    name: typeof value.name === "string" ? value.name : "",
     staticComponents,
     dynamicAccess: { templates, blocks, pages },
     staticCount: staticComponents.length,
@@ -169,6 +172,7 @@ function normalizeAccessRow(value: unknown): AccessRow | null {
 
 function emptyForm(): AccessFormState {
   return {
+    name: "",
     staticComponents: [],
     dynamicAccess: {
       templates: [],
@@ -181,6 +185,7 @@ function emptyForm(): AccessFormState {
 function formFromRow(row: AccessRow, includeId = false): AccessFormState {
   return {
     ...(includeId ? { id: row._id } : {}),
+    name: includeId ? row.name : `${row.name || "Access"} (کپی)`,
     staticComponents: row.staticComponents.map((item) => ({
       componentName: item.componentName,
       actions: [...item.actions],
@@ -227,6 +232,7 @@ function staticLabel(componentName: string) {
 
 function toPayload(form: AccessFormState) {
   return {
+    name: form.name.trim(),
     staticComponents: form.staticComponents.map((item) => ({
       componentName: item.componentName,
       actions: item.actions,
@@ -436,6 +442,17 @@ function ActionRuleRow({
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const hasActions = actions.length > 0;
+  const allSelected = ACCESS_ACTIONS.every((action) =>
+    actions.includes(action.value),
+  );
+
+  function handleSelectAll() {
+    if (allSelected) {
+      onChange([]);
+    } else {
+      onChange(ACCESS_ACTIONS.map((action) => action.value));
+    }
+  }
 
   return (
     <div
@@ -448,6 +465,7 @@ function ActionRuleRow({
           : cn(t.borderSubtle, t.inputBg),
       )}
     >
+      {/* Label row */}
       <div className="mb-2.5 min-w-0">
         <span
           className={cn("block truncate text-sm font-semibold", t.textPrimary)}
@@ -465,7 +483,37 @@ function ActionRuleRow({
           </span>
         )}
       </div>
-      <div className="flex flex-wrap gap-1.5">
+
+      {/* Actions row with Select All */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {/* Select All button */}
+        <button
+          type="button"
+          onClick={handleSelectAll}
+          className={cn(
+            "rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all duration-200",
+            allSelected
+              ? isDark
+                ? "border-[#c8a84b]/40 bg-[#c8a84b]/20 text-[#c8a84b]"
+                : "border-[#8a7030]/40 bg-[#8a7030]/15 text-[#8a7030]"
+              : isDark
+                ? "border-[#c8a84b]/20 text-[#c8a84b]/60 hover:border-[#c8a84b]/40 hover:bg-[#c8a84b]/10 hover:text-[#c8a84b]"
+                : "border-[#8a7030]/20 text-[#8a7030]/60 hover:border-[#8a7030]/30 hover:bg-[#8a7030]/8 hover:text-[#8a7030]",
+          )}
+        >
+          {allSelected ? "حذف همه" : "همه"}
+        </button>
+
+        {/* Divider */}
+        <span
+          className={cn(
+            "h-4 w-px shrink-0 rounded-full",
+            t.borderSubtle,
+            isDark ? "bg-white/10" : "bg-black/10",
+          )}
+        />
+
+        {/* Individual action buttons */}
         {ACCESS_ACTIONS.map((action) => {
           const checked = actions.includes(action.value);
           return (
@@ -496,7 +544,125 @@ function ActionRuleRow({
     </div>
   );
 }
+function SectionBulkActions({
+  optionIds,
+  ruleStates,
+  onSelectAll,
+  onClearAll,
+  onToggleAction,
+}: {
+  optionIds: string[];
+  ruleStates: { id: string; actions: AccessActionValue[] }[];
+  onSelectAll: () => void;
+  onClearAll: () => void;
+  onToggleAction: (action: AccessActionValue) => void;
+}) {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
 
+  const actionsMap = new Map(ruleStates.map((item) => [item.id, item.actions]));
+
+  const allSelected =
+    optionIds.length > 0 &&
+    optionIds.every((id) =>
+      ACCESS_ACTIONS.every((action) =>
+        (actionsMap.get(id) ?? []).includes(action.value),
+      ),
+    );
+
+  function actionSelectedForAll(action: AccessActionValue) {
+    return (
+      optionIds.length > 0 &&
+      optionIds.every((id) => (actionsMap.get(id) ?? []).includes(action))
+    );
+  }
+
+  if (optionIds.length === 0) return null;
+
+  return (
+    <div
+      className={cn(
+        "mb-3 rounded-xl border p-3",
+        t.borderSubtle,
+        isDark ? "bg-white/[0.02]" : "bg-black/[0.015]",
+      )}
+    >
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <span className={cn("text-xs font-semibold", t.textMuted)}>
+          عملیات گروهی این بخش
+        </span>
+        <span className={cn("text-[11px]", t.textDisabled)}>
+          انتخاب سریع برای همه آیتم‌ها
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={onSelectAll}
+          className={cn(
+            "rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all duration-200",
+            allSelected
+              ? isDark
+                ? "border-[#c8a84b]/30 bg-[#c8a84b] text-[#111116]"
+                : "border-[#8a7030]/30 bg-[#8a7030] text-white"
+              : isDark
+                ? "border-[#c8a84b]/20 text-[#c8a84b]/70 hover:border-[#c8a84b]/30 hover:bg-[#c8a84b]/10 hover:text-[#c8a84b]"
+                : "border-[#8a7030]/20 text-[#8a7030]/70 hover:border-[#8a7030]/30 hover:bg-[#8a7030]/8 hover:text-[#8a7030]",
+          )}
+        >
+          انتخاب همه
+        </button>
+
+        <button
+          type="button"
+          onClick={onClearAll}
+          className={cn(
+            "rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all duration-200",
+            "border-red-500/20 text-red-400/80 hover:bg-red-500/10 hover:text-red-400",
+          )}
+        >
+          حذف همه
+        </button>
+
+        <span
+          className={cn(
+            "mx-1 h-8 w-px self-center rounded-full",
+            isDark ? "bg-white/10" : "bg-black/10",
+          )}
+        />
+
+        {ACCESS_ACTIONS.map((action) => {
+          const checked = actionSelectedForAll(action.value);
+
+          return (
+            <button
+              key={action.value}
+              type="button"
+              onClick={() => onToggleAction(action.value)}
+              className={cn(
+                "rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200",
+                checked
+                  ? isDark
+                    ? "border-[#c8a84b]/30 bg-[#c8a84b] text-[#111116]"
+                    : "border-[#8a7030]/30 bg-[#8a7030] text-white"
+                  : cn(
+                      t.borderSubtle,
+                      t.textMuted,
+                      isDark
+                        ? "hover:border-[#c8a84b]/20 hover:bg-[#c8a84b]/10 hover:text-[#c8a84b]"
+                        : "hover:border-[#8a7030]/15 hover:bg-[#8a7030]/8 hover:text-[#8a7030]",
+                    ),
+              )}
+            >
+              همه {action.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 function ResourceRulePanel({
   title,
   icon,
@@ -505,6 +671,9 @@ function ResourceRulePanel({
   emptyText,
   loading,
   onChange,
+  onSelectAll,
+  onClearAll,
+  onToggleActionForAll,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -513,6 +682,9 @@ function ResourceRulePanel({
   emptyText: string;
   loading?: boolean;
   onChange: (option: ResourceOption, actions: AccessActionValue[]) => void;
+  onSelectAll?: () => void;
+  onClearAll?: () => void;
+  onToggleActionForAll?: (action: AccessActionValue) => void;
 }) {
   const t = useThemeTokens();
   const activeCount = rules.length;
@@ -535,19 +707,34 @@ function ResourceRulePanel({
           <span className={cn("text-sm", t.textDisabled)}>{emptyText}</span>
         </div>
       ) : (
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          {options.map((option) => (
-            <ActionRuleRow
-              key={option.value}
-              label={option.label}
-              helper={option.value.slice(-10)}
-              actions={
-                rules.find((item) => item.id === option.value)?.actions ?? []
-              }
-              onChange={(acts) => onChange(option, acts)}
+        <>
+          {(onSelectAll || onClearAll || onToggleActionForAll) && (
+            <SectionBulkActions
+              optionIds={options.map((option) => option.value)}
+              ruleStates={rules.map((item) => ({
+                id: item.id,
+                actions: item.actions,
+              }))}
+              onSelectAll={onSelectAll ?? (() => {})}
+              onClearAll={onClearAll ?? (() => {})}
+              onToggleAction={onToggleActionForAll ?? (() => {})}
             />
-          ))}
-        </div>
+          )}
+
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {options.map((option) => (
+              <ActionRuleRow
+                key={option.value}
+                label={option.label}
+                helper={option.value.slice(-10)}
+                actions={
+                  rules.find((item) => item.id === option.value)?.actions ?? []
+                }
+                onChange={(acts) => onChange(option, acts)}
+              />
+            ))}
+          </div>
+        </>
       )}
     </CollapsibleSection>
   );
@@ -589,7 +776,137 @@ export default function AccessesSection({
   const canCreate = can("admin.accesses", "create");
   const canUpdate = can("admin.accesses", "update");
   const canDelete = can("admin.accesses", "delete");
+  function selectAllStaticComponents() {
+    const allActions = ACCESS_ACTIONS.map((action) => action.value);
 
+    setForm((prev) => ({
+      ...prev,
+      staticComponents: STATIC_COMPONENT_CATALOG.map((component) => ({
+        componentName: component.key,
+        actions: allActions,
+      })),
+    }));
+  }
+
+  function clearAllStaticComponents() {
+    setForm((prev) => ({
+      ...prev,
+      staticComponents: [],
+    }));
+  }
+
+  function toggleStaticActionForAll(action: AccessActionValue) {
+    setForm((prev) => {
+      const componentKeys = STATIC_COMPONENT_CATALOG.map(
+        (component) => component.key,
+      );
+
+      const allHaveAction =
+        componentKeys.length > 0 &&
+        componentKeys.every((key) => {
+          const currentActions =
+            prev.staticComponents.find((item) => item.componentName === key)
+              ?.actions ?? [];
+          return currentActions.includes(action);
+        });
+
+      const nextComponents: StaticAccessRule[] = [];
+
+      for (const key of componentKeys) {
+        const currentActions =
+          prev.staticComponents.find((item) => item.componentName === key)
+            ?.actions ?? [];
+
+        const nextActions = allHaveAction
+          ? currentActions.filter((item) => item !== action)
+          : currentActions.includes(action)
+            ? currentActions
+            : [...currentActions, action];
+
+        if (nextActions.length > 0) {
+          nextComponents.push({ componentName: key, actions: nextActions });
+        }
+      }
+
+      return {
+        ...prev,
+        staticComponents: nextComponents,
+      };
+    });
+  }
+
+  function selectAllResources(resource: ResourceKind) {
+    const allActions = ACCESS_ACTIONS.map((action) => action.value);
+
+    setForm((prev) => ({
+      ...prev,
+      dynamicAccess: {
+        ...prev.dynamicAccess,
+        [resource]: options[resource].map((option) => ({
+          id: option.value,
+          label: option.label,
+          actions: allActions,
+        })),
+      },
+    }));
+  }
+
+  function clearAllResources(resource: ResourceKind) {
+    setForm((prev) => ({
+      ...prev,
+      dynamicAccess: {
+        ...prev.dynamicAccess,
+        [resource]: [],
+      },
+    }));
+  }
+
+  function toggleResourceActionForAll(
+    resource: ResourceKind,
+    action: AccessActionValue,
+  ) {
+    setForm((prev) => {
+      const resourceOptions = options[resource];
+      const currentRules = prev.dynamicAccess[resource];
+
+      const allHaveAction =
+        resourceOptions.length > 0 &&
+        resourceOptions.every((option) => {
+          const currentActions =
+            currentRules.find((item) => item.id === option.value)?.actions ??
+            [];
+          return currentActions.includes(action);
+        });
+
+      return {
+        ...prev,
+        dynamicAccess: {
+          ...prev.dynamicAccess,
+          [resource]: resourceOptions
+            .map((option) => {
+              const currentActions =
+                currentRules.find((item) => item.id === option.value)
+                  ?.actions ?? [];
+
+              const nextActions = allHaveAction
+                ? currentActions.filter((item) => item !== action)
+                : currentActions.includes(action)
+                  ? currentActions
+                  : [...currentActions, action];
+
+              return nextActions.length > 0
+                ? {
+                    id: option.value,
+                    label: option.label,
+                    actions: nextActions,
+                  }
+                : null;
+            })
+            .filter((item): item is ResourceRule => !!item),
+        },
+      };
+    });
+  }
   const transformResponse = useMemo(
     () =>
       (json: unknown): AccessRow[] => {
@@ -609,6 +926,18 @@ export default function AccessesSection({
 
   const columns: ColumnDef<AccessRow>[] = useMemo(
     () => [
+      {
+        key: "name",
+        label: "نام Access",
+        editable: false,
+        sortable: true,
+        copyable: true,
+        render: (value) => (
+          <span className={cn("text-sm font-bold", t.textPrimary)}>
+            {String(value || "بدون نام")}
+          </span>
+        ),
+      },
       {
         key: "id",
         label: "شناسه",
@@ -637,7 +966,7 @@ export default function AccessesSection({
       },
       {
         key: "templateCount",
-        label: "تمپلیت",
+        label: "قالب",
         editable: false,
         sortable: true,
         render: (value) => (
@@ -749,7 +1078,7 @@ export default function AccessesSection({
         ]);
 
         if (!templatesRes.ok) {
-          throw new Error(templatesJson?.message ?? "خطا در دریافت تمپلیت‌ها");
+          throw new Error(templatesJson?.message ?? "خطا در دریافت قالب‌ها");
         }
         if (!blocksRes.ok) {
           throw new Error(blocksJson?.message ?? "خطا در دریافت بلاک‌ها");
@@ -841,6 +1170,10 @@ export default function AccessesSection({
   }
 
   async function saveAccess() {
+    if (!form.name.trim()) {
+      toast.error("نام Access الزامی است");
+      return;
+    }
     if (!hasRules(form)) {
       toast.error("حداقل یک قانون دسترسی انتخاب کنید");
       return;
@@ -1137,9 +1470,9 @@ export default function AccessesSection({
       {modalOpen && (
         <div
           className={cn(
-            "fixed inset-0 z-[9999] flex items-center justify-center",
+            "fixed inset-0 z-[999] flex items-center justify-center",
             isDark
-              ? "bg-[#0a0a0e]/80 backdrop-blur-md"
+              ? "bg-[#0a0a0e]/5 backdrop-blur-xs"
               : "bg-[#2a2720]/40 backdrop-blur-md",
           )}
           onClick={(e) => {
@@ -1153,7 +1486,7 @@ export default function AccessesSection({
               "h-full w-full",
               "lg:h-auto lg:max-h-[90vh] lg:w-full lg:max-w-5xl lg:rounded-2xl lg:border",
               t.modalBg,
-              t.borderSubtle,
+              t.borderAccentHover,
               t.dropdownShadow,
             )}
           >
@@ -1202,8 +1535,37 @@ export default function AccessesSection({
                 t.scrollbarWide,
               )}
             >
+              <label className="block">
+                <span
+                  className={cn(
+                    "mb-1.5 block text-xs font-semibold",
+                    t.textMuted,
+                  )}
+                >
+                  نام Access
+                </span>
+                <input
+                  type="text"
+                  value={form.name}
+                  maxLength={120}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder="مثلاً مدیریت صفحات"
+                  className={cn(
+                    "h-11 w-full rounded-xl border px-3.5 text-sm outline-none transition",
+                    t.inputBg,
+                    t.borderInput,
+                    t.textPrimary,
+                  )}
+                />
+              </label>
+
               {/* Help banner */}
-              <div
+              {/* <div
                 className={cn(
                   "flex items-start gap-3 rounded-xl border p-3",
                   isDark
@@ -1274,7 +1636,7 @@ export default function AccessesSection({
                   </code>{" "}
                   چک کنید.
                 </p>
-              </div>
+              </div> */}
 
               {/* Static components */}
               <CollapsibleSection
@@ -1284,6 +1646,19 @@ export default function AccessesSection({
                 badge={form.staticComponents.length}
                 defaultOpen={true}
               >
+                <SectionBulkActions
+                  optionIds={STATIC_COMPONENT_CATALOG.map(
+                    (component) => component.key,
+                  )}
+                  ruleStates={form.staticComponents.map((item) => ({
+                    id: item.componentName,
+                    actions: item.actions,
+                  }))}
+                  onSelectAll={selectAllStaticComponents}
+                  onClearAll={clearAllStaticComponents}
+                  onToggleAction={toggleStaticActionForAll}
+                />
+
                 <div className="grid gap-2.5 sm:grid-cols-2">
                   {STATIC_COMPONENT_CATALOG.map((component) => (
                     <ActionRuleRow
@@ -1305,18 +1680,22 @@ export default function AccessesSection({
 
               {/* Templates */}
               <ResourceRulePanel
-                title="تمپلیت‌ها"
+                title="قالب‌ها"
                 icon={<FaLayerGroup className="h-3.5 w-3.5" />}
                 options={options.templates}
                 rules={form.dynamicAccess.templates}
-                emptyText="تمپلیتی برای انتخاب وجود ندارد."
+                emptyText="قالبی برای انتخاب وجود ندارد."
                 loading={optionsLoading}
                 onChange={(option, actions) =>
                   updateResourceActions("templates", option, actions)
                 }
+                onSelectAll={() => selectAllResources("templates")}
+                onClearAll={() => clearAllResources("templates")}
+                onToggleActionForAll={(action) =>
+                  toggleResourceActionForAll("templates", action)
+                }
               />
 
-              {/* Blocks */}
               <ResourceRulePanel
                 title="بلاک‌ها"
                 icon={<FaCubes className="h-3.5 w-3.5" />}
@@ -1327,9 +1706,13 @@ export default function AccessesSection({
                 onChange={(option, actions) =>
                   updateResourceActions("blocks", option, actions)
                 }
+                onSelectAll={() => selectAllResources("blocks")}
+                onClearAll={() => clearAllResources("blocks")}
+                onToggleActionForAll={(action) =>
+                  toggleResourceActionForAll("blocks", action)
+                }
               />
 
-              {/* Pages */}
               <ResourceRulePanel
                 title="صفحات"
                 icon={<FaFile className="h-3.5 w-3.5" />}
@@ -1339,6 +1722,11 @@ export default function AccessesSection({
                 loading={optionsLoading}
                 onChange={(option, actions) =>
                   updateResourceActions("pages", option, actions)
+                }
+                onSelectAll={() => selectAllResources("pages")}
+                onClearAll={() => clearAllResources("pages")}
+                onToggleActionForAll={(action) =>
+                  toggleResourceActionForAll("pages", action)
                 }
               />
             </div>

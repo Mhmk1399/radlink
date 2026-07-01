@@ -96,7 +96,7 @@ export const POST = compose(
     } = await req.json();
 
     if (!name) {
-        return NextResponse.json({ message: "نام تمپلیت الزامی است." }, { status: 400 });
+        return NextResponse.json({ message: "نام قالب الزامی است." }, { status: 400 });
     }
 
     const blockAccessError = await assertBuilderBlockAccess(req, builderBlocks);

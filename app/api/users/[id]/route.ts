@@ -7,11 +7,20 @@ import User from "@/models/users";
 import Agent from "@/models/agent";
 import "@/models/permission";
 import mongoose from "mongoose";
+import {
+    isValidEmail,
+    isValidNationalCode,
+    isValidPhoneNumber,
+    normalizeEmail,
+    normalizeNationalCode,
+    normalizePhoneNumber,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 const VALID_ROLES = ["user", "agent", "admin", "superAdmin"];
-const VALID_STATUSES = ["active", "inactive", "blocked", "pending"];
+const VALID_STATUSES = ["active", "inactive"];
 
 function isValidObjectId(id: string): boolean {
     return mongoose.Types.ObjectId.isValid(id) && new mongoose.Types.ObjectId(id).toString() === id;
@@ -116,6 +125,7 @@ export const PATCH = compose(
         "agentid",
         "permissions",
         "isPhoneVerified",
+        "isDeleted",
     ];
 
     const allowedFields = isAdmin
@@ -137,12 +147,12 @@ export const PATCH = compose(
         let value = body[key];
 
         if (key === "phoneNumber") {
-            const phoneNumber =
-                typeof value === "string" ? value.trim() : "";
+            const rawPhoneNumber = toEnglishDigits(value).trim();
+            const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
 
-            if (!/^\+?\d{10,15}$/.test(phoneNumber)) {
+            if (!isValidPhoneNumber(rawPhoneNumber) || phoneNumber !== rawPhoneNumber) {
                 return NextResponse.json(
-                    { message: "شماره موبایل معتبر نیست." },
+                    { message: "شماره تماس باید دقیقاً ۱۱ رقم باشد." },
                     { status: 400 }
                 );
             }
@@ -162,6 +172,50 @@ export const PATCH = compose(
             value = phoneNumber;
         }
 
+        if (key === "email") {
+            const email = typeof value === "string" ? normalizeEmail(value) : "";
+            if (email && !isValidEmail(email)) {
+                return NextResponse.json(
+                    { message: "فرمت ایمیل معتبر نیست." },
+                    { status: 400 },
+                );
+            }
+            value = email;
+        }
+
+        if (key === "nationalCode") {
+            const rawNationalCode =
+                typeof value === "string" ? toEnglishDigits(value).trim() : "";
+            const nationalCode = normalizeNationalCode(rawNationalCode);
+            if (
+                rawNationalCode &&
+                (!isValidNationalCode(rawNationalCode) ||
+                    nationalCode !== rawNationalCode)
+            ) {
+                return NextResponse.json(
+                    { message: "کد ملی باید دقیقاً ۱۰ رقم باشد." },
+                    { status: 400 },
+                );
+            }
+            if (
+                nationalCode &&
+                (await User.exists({
+                    _id: { $ne: id },
+                    nationalCode,
+                }))
+            ) {
+                return NextResponse.json(
+                    {
+                        code: "NATIONAL_CODE_ALREADY_EXISTS",
+                        message: "این کد ملی قبلاً ثبت شده است.",
+                        field: "nationalCode",
+                    },
+                    { status: 409 },
+                );
+            }
+            value = nationalCode;
+        }
+
         if (key === "role") {
             if (!VALID_ROLES.includes(String(value))) {
                 return NextResponse.json(
@@ -176,6 +230,15 @@ export const PATCH = compose(
                 return NextResponse.json(
                     { message: "وضعیت کاربر معتبر نیست." },
                     { status: 400 }
+                );
+            }
+        }
+
+        if (key === "isDeleted") {
+            if (typeof value !== "boolean") {
+                return NextResponse.json(
+                    { message: "وضعیت حذف کاربر معتبر نیست." },
+                    { status: 400 },
                 );
             }
         }

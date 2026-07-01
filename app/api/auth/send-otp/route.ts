@@ -4,6 +4,11 @@ import { withDB } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import otpStore from "@/lib/auth/otp-store";
 import User from "@/models/users";
+import {
+    isValidPhoneNumber,
+    normalizePhoneNumber,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 
 // In production replace this with a real SMS provider (e.g. Kavenegar, Twilio)
 async function sendSms(phone: string, otp: string) {
@@ -11,10 +16,12 @@ async function sendSms(phone: string, otp: string) {
 }
 
 export const POST = compose(withDB())(async (req: AuthRequest) => {
-    const { phoneNumber } = await req.json();
+    const body = await req.json();
+    const rawPhoneNumber = toEnglishDigits(body.phoneNumber).trim();
+    const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
 
-    if (!phoneNumber) {
-        return NextResponse.json({ message: "شماره موبایل الزامی است." }, { status: 400 });
+    if (!isValidPhoneNumber(rawPhoneNumber) || phoneNumber !== rawPhoneNumber) {
+        return NextResponse.json({ message: "شماره تماس باید دقیقاً ۱۱ رقم باشد." }, { status: 400 });
     }
 
     // Upsert user — create if first time
@@ -23,8 +30,8 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
         user = await User.create({ phoneNumber, role: "user", status: "active" });
     }
 
-    if (user.status === "blocked") {
-        return NextResponse.json({ message: "حساب کاربری مسدود است." }, { status: 403 });
+    if (user.status === "inactive") {
+        return NextResponse.json({ message: "حساب کاربری غیرفعال است." }, { status: 403 });
     }
 
     // Rate limit: 1 OTP per 60s

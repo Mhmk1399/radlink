@@ -8,9 +8,10 @@ import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { gradients } from "@/lib/design/tokens";
 import { useTheme } from "@/contexts/ThemeContext";
-import { FaUsers, FaArrowRight } from "react-icons/fa6";
+import { FaUsers, FaArrowRight, FaPowerOff } from "react-icons/fa6";
 import type { ColumnDef } from "@/types/table";
 import DynamicTable from "../global/DynamicTable";
+import { superAdminBadgeClass } from "@/lib/userRole";
 import type { UserRole, UserStatus } from "@/types/index";
 import { toast } from "@/components/ui/CustomToast";
 
@@ -111,8 +112,8 @@ function RoleBadge({ role }: { role: UserRole }) {
       className: "bg-[#D4AF37]/10 text-[#F5D76E] border-[#D4AF37]/20",
     },
     superAdmin: {
-      label: "سوپر ادمین",
-      className: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      label: "R A D",
+      className: superAdminBadgeClass,
     },
   };
 
@@ -145,19 +146,9 @@ function StatusBadge({ status }: { status: UserStatus }) {
       className: "bg-slate-500/15 text-slate-400 border-slate-500/20",
       dot: "bg-slate-400",
     },
-    blocked: {
-      label: "مسدود",
-      className: "bg-red-500/15 text-red-400 border-red-500/20",
-      dot: "bg-red-400",
-    },
-    pending: {
-      label: "در انتظار",
-      className: "bg-amber-500/15 text-amber-400 border-amber-500/20",
-      dot: "bg-amber-400",
-    },
   };
 
-  const entry = map[status] ?? map.pending;
+  const entry = map[status] ?? map.inactive;
 
   return (
     <span
@@ -276,6 +267,50 @@ export default function UsersSection({
     [token],
   );
   const [agentOptions, setAgentOptions] = useState<SelectOption[]>([]);
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  async function toggleUserStatus(row: UserRow) {
+    if (!row._id || togglingStatusId) return;
+
+    try {
+      setTogglingStatusId(row._id);
+      const nextStatus: UserStatus =
+        row.status === "active" ? "inactive" : "active";
+      const response = await fetch(`/api/users/${row._id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof json?.message === "string"
+            ? json.message
+            : "تغییر وضعیت کاربر انجام نشد.",
+        );
+      }
+
+      toast.success(
+        nextStatus === "active"
+          ? "کاربر فعال شد."
+          : "کاربر غیرفعال شد.",
+      );
+      setRefreshToken((current) => current + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "تغییر وضعیت کاربر انجام نشد.",
+      );
+    } finally {
+      setTogglingStatusId(null);
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -472,7 +507,7 @@ export default function UsersSection({
           { label: "کاربر", value: "user" },
           { label: "نماینده", value: "agent" },
           { label: "مدیر", value: "admin" },
-          { label: "سوپر ادمین", value: "superAdmin" },
+          { label: "R A D", value: "superAdmin" },
         ],
         render: (value) => <RoleBadge role={value as UserRole} />,
         copyable: false,
@@ -486,8 +521,6 @@ export default function UsersSection({
         options: [
           { label: "فعال", value: "active" },
           { label: "غیرفعال", value: "inactive" },
-          { label: "مسدود", value: "blocked" },
-          { label: "در انتظار", value: "pending" },
         ],
         render: (value) => <StatusBadge status={value as UserStatus} />,
         copyable: false,
@@ -608,7 +641,10 @@ export default function UsersSection({
       {
         key: "isDeleted",
         label: "حذف شده",
-        editable: false,
+        inputType: "checkbox",
+        defaultValue: false,
+        hiddenInForm: (_, mode) => mode === "create",
+        placeholder: "کاربر به‌صورت حذف‌شده علامت‌گذاری شود",
         render: (value) => (
           <span
             className={cn(
@@ -715,22 +751,41 @@ export default function UsersSection({
 
       {/* ── Table ──────────────────────────── */}
       <DynamicTable<UserRow>
-        endpoint="/api/users?includeDeleted=true"
+        endpoint={`/api/users?includeDeleted=true&refresh=${refreshToken}`}
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
-          await builtInUpdate(buildUserPayload(item) as UserRow);
-          toast.success("اطلاعات کاربر ویرایش شد");
+          try {
+            await builtInUpdate(buildUserPayload(item) as UserRow);
+            toast.success("اطلاعات کاربر ویرایش شد");
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "ویرایش کاربر با خطا مواجه شد.",
+            );
+            throw error;
+          }
         }}
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("کاربر حذف شد");
         }}
         onCreate={async (item, builtInCreate) => {
-          await builtInCreate(
-            buildUserPayload(item as Partial<UserRow> & Record<string, unknown>),
-          );
-
-          toast.success("کاربر جدید ایجاد شد");
+          try {
+            await builtInCreate(
+              buildUserPayload(
+                item as Partial<UserRow> & Record<string, unknown>,
+              ),
+            );
+            toast.success("کاربر جدید ایجاد شد");
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "ایجاد کاربر با خطا مواجه شد.",
+            );
+            throw error;
+          }
         }}
         columns={columns}
         title="لیست کاربران"
@@ -750,6 +805,40 @@ export default function UsersSection({
         transformResponse={transformResponse}
         serverSide
         emptyMessage="کاربری یافت نشد"
+        rowActions={(row) =>
+          canUpdateUsers ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleUserStatus(row);
+              }}
+              disabled={togglingStatusId === row._id}
+              title={
+                row.status === "active"
+                  ? "غیرفعال کردن کاربر"
+                  : "فعال کردن کاربر"
+              }
+              aria-label={
+                row.status === "active"
+                  ? "غیرفعال کردن کاربر"
+                  : "فعال کردن کاربر"
+              }
+              className={cn(
+                "inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-50",
+                row.status === "active"
+                  ? "text-red-500 hover:bg-red-500/10"
+                  : "text-emerald-500 hover:bg-emerald-500/10",
+              )}
+            >
+              {togglingStatusId === row._id ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <FaPowerOff className="h-4 w-4" />
+              )}
+            </button>
+          ) : null
+        }
       />
     </div>
   );

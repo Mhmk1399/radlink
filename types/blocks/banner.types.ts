@@ -15,6 +15,7 @@ export type EditableStyleKey =
     | "color"
     | "backgroundColor"
     | "fontSize"
+    | "height"
     | "borderRadius"
     | "borderColor"
     | "borderWidth"
@@ -24,6 +25,7 @@ export type EditableStyleMap = {
     color?: ResponsiveValue<string>;
     backgroundColor?: ResponsiveValue<string>;
     fontSize?: ResponsiveValue<number>;
+    height?: ResponsiveValue<number>;
     borderRadius?: ResponsiveValue<number>;
     borderColor?: ResponsiveValue<string>;
     borderWidth?: ResponsiveValue<number>;
@@ -42,6 +44,7 @@ export type BannerData = {
     buttonText: string;
     buttonUrl: string;
     imageUrl: string;
+    imageLink: string;
     showButton: boolean;
     showOverlay: boolean;
 };

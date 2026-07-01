@@ -99,6 +99,8 @@ import Page from "@/models/pages";
 import Template from "@/models/template";
 import Category from "@/models/category";
 import User from "@/models/users";
+import Product from "@/models/products";
+import { syncPageProducts } from "@/lib/products/syncPageProducts";
 
 type RouteContext = {
     params: Promise<{
@@ -327,7 +329,7 @@ export const PATCH = compose(
 
         if (!selectedTemplate) {
             return NextResponse.json(
-                { message: "تمپلیت پیدا نشد یا اجازه استفاده از آن را ندارید." },
+                { message: "قالب پیدا نشد یا اجازه استفاده از آن را ندارید." },
                 { status: 404 }
             );
         }
@@ -340,7 +342,7 @@ export const PATCH = compose(
             }))
         ) {
             return NextResponse.json(
-                { message: "دسته‌بندی این تمپلیت غیرفعال است." },
+                { message: "دسته‌بندی این قالب غیرفعال است." },
                 { status: 400 }
             );
         }
@@ -445,6 +447,14 @@ export const PATCH = compose(
         );
     }
 
+    await syncPageProducts({
+        pageId: page._id,
+        ownerId:
+            (update.owner as string | undefined) ??
+            String(currentPage.owner),
+        blocks: page.blocks,
+    });
+
     revalidatePath(`/${page.url}`);
 
     return NextResponse.json({ page });
@@ -475,6 +485,8 @@ export const DELETE = compose(
             { status: 404 }
         );
     }
+
+    await Product.deleteMany({ page: page._id, source: "builder" });
 
     revalidatePath("/[url]", "page");
 

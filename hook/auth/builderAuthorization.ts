@@ -71,10 +71,10 @@ function canUseBuilder(me: MeResponse, target: BuilderAccessTarget) {
 
 function forbiddenMessage(target: BuilderAccessTarget) {
   if (target.kind === "template-create") {
-    return "شما دسترسی ساخت تمپلیت در صفحه‌ساز را ندارید.";
+    return "شما دسترسی ساخت قالب در صفحه‌ساز را ندارید.";
   }
   if (target.kind === "template-edit") {
-    return "شما دسترسی ویرایش این تمپلیت را ندارید.";
+    return "شما دسترسی ویرایش این قالب را ندارید.";
   }
   if (target.kind === "page-edit") {
     return "شما دسترسی ویرایش این صفحه را ندارید.";

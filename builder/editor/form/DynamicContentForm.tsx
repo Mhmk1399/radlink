@@ -19,6 +19,11 @@ import {
   HiOutlineFilm,
   HiOutlineBars3,
 } from "react-icons/hi2";
+import {
+  getIdentityInputProps,
+  sanitizeIdentityField,
+  validateIdentityField,
+} from "@/lib/validation/identityFields";
 import { PersianDateTimePicker } from "./PersianDateTimePicker";
 import { RepeaterField } from "./RepeaterField";
 import { SelectField } from "./SelectField";
@@ -970,6 +975,8 @@ export function DynamicContentForm({
           }
 
           /* Text / URL */
+          const identityInputProps = getIdentityInputProps(field.key);
+          const identityError = validateIdentityField(field.key, value);
           return (
             <FieldCard key={field.key}>
               <FieldHeader
@@ -988,12 +995,20 @@ export function DynamicContentForm({
                   <input
                   type={getInputType(field.type)}
                   value={toInputValue(value)}
-                  onChange={(e) => onChange(field.key, e.target.value)}
+                  onChange={(e) =>
+                    onChange(
+                      field.key,
+                      sanitizeIdentityField(field.key, e.target.value),
+                    )
+                  }
                   className={[
                     "w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100",
                     isUrlLike ? "pl-10 font-mono text-[14px]" : "",
                   ].join(" ")}
-                  dir={isUrlLike ? "ltr" : "rtl"}
+                  dir={identityInputProps.dir ?? (isUrlLike ? "ltr" : "rtl")}
+                  inputMode={identityInputProps.inputMode}
+                  maxLength={identityInputProps.maxLength}
+                  aria-invalid={Boolean(identityError)}
                   placeholder={
                     field.type === "url"
                       ? "https://example.com"
@@ -1003,6 +1018,11 @@ export function DynamicContentForm({
                 </div>
                 {isUrlLike && <LinkTypeHelp />}
               </div>
+              {identityError && (
+                <p className="mt-1.5 text-xs font-medium text-red-500">
+                  {identityError}
+                </p>
+              )}
             </FieldCard>
           );
         })}

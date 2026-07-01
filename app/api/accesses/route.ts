@@ -10,6 +10,10 @@ import "@/models/pages";
 
 const VALID_ACTIONS = new Set(["view", "create", "update", "delete", "publish"]);
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function normalizeActions(value: unknown) {
     if (!Array.isArray(value)) return [];
     return [...new Set(value.map(String).filter((action) => VALID_ACTIONS.has(action)))];
@@ -84,6 +88,26 @@ export const POST = compose(
 )(async (req: AuthRequest) => {
     const body = await req.json();
     const payload = normalizeAccessPayload(body);
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+
+    if (!name) {
+        return NextResponse.json(
+            { message: "نام Access الزامی است." },
+            { status: 400 },
+        );
+    }
+    if (name.length > 120) {
+        return NextResponse.json(
+            { message: "نام Access نمی‌تواند بیشتر از ۱۲۰ کاراکتر باشد." },
+            { status: 400 },
+        );
+    }
+    if (await Access.exists({ name })) {
+        return NextResponse.json(
+            { message: "Access دیگری با این نام وجود دارد." },
+            { status: 409 },
+        );
+    }
 
     const hasAnyAccess =
         payload.staticComponents.length > 0 ||
@@ -96,6 +120,7 @@ export const POST = compose(
     }
 
     const access = await Access.create({
+        name,
         staticComponents: payload.staticComponents,
         dynamicAccess: payload.dynamicAccess,
         isActive: typeof body.isActive === "boolean" ? body.isActive : true,
@@ -114,13 +139,18 @@ export const GET = compose(
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
+    const search = String(searchParams.get("search") ?? "").trim();
+    const query = search
+        ? { name: { $regex: escapeRegex(search), $options: "i" } }
+        : {};
 
     const [accesses, total] = await Promise.all([
         populateAccessQuery()
+            .find(query)
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        Access.countDocuments(),
+        Access.countDocuments(query),
     ]);
 
     return NextResponse.json({ accesses, total, page, limit });

@@ -4,6 +4,13 @@ import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import User from "@/models/users";
+import {
+    isValidEmail,
+    isValidNationalCode,
+    normalizeEmail,
+    normalizeNationalCode,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 
 // Returns the logged-in user + their fully resolved access map.
 // Frontend fetches this once on login and caches it — no per-component access calls needed.
@@ -62,16 +69,56 @@ export const PATCH = compose(
         );
     }
 
+    const normalizedEmail =
+        typeof email === "string" ? normalizeEmail(email) : "";
+    const normalizedNationalCode =
+        typeof nationalCode === "string"
+            ? normalizeNationalCode(toEnglishDigits(nationalCode).trim())
+            : "";
+    if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+        return NextResponse.json(
+            { message: "فرمت ایمیل معتبر نیست." },
+            { status: 400 },
+        );
+    }
+    if (
+        normalizedNationalCode &&
+        (!isValidNationalCode(toEnglishDigits(nationalCode).trim()) ||
+            normalizedNationalCode !== toEnglishDigits(nationalCode).trim())
+    ) {
+        return NextResponse.json(
+            { message: "کد ملی باید دقیقاً ۱۰ رقم باشد." },
+            { status: 400 },
+        );
+    }
+    if (
+        normalizedNationalCode &&
+        (await User.exists({
+            _id: { $ne: user._id },
+            nationalCode: normalizedNationalCode,
+        }))
+    ) {
+        return NextResponse.json(
+            { message: "این کد ملی قبلاً ثبت شده است." },
+            { status: 409 },
+        );
+    }
+
     const updateData: Record<string, unknown> = {
         firstName: firstName.trim(),
         lastName: lastName?.trim() || "",
         updatedBy: user._id,
     };
 
-    if (email !== undefined) updateData.email = email.trim() || null;
-    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl.trim() || null;
-    if (nationalCode !== undefined) updateData.nationalCode = nationalCode.trim() || null;
-    if (fatherName !== undefined) updateData.fatherName = fatherName.trim() || null;
+    if (email !== undefined) updateData.email = normalizedEmail || null;
+    if (avatarUrl !== undefined)
+        updateData.avatarUrl =
+            typeof avatarUrl === "string" ? avatarUrl.trim() || null : null;
+    if (nationalCode !== undefined)
+        updateData.nationalCode = normalizedNationalCode || null;
+    if (fatherName !== undefined)
+        updateData.fatherName =
+            typeof fatherName === "string" ? fatherName.trim() || null : null;
 
     const updatedUser = await User.findByIdAndUpdate(
         user._id,

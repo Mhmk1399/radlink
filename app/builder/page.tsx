@@ -180,7 +180,7 @@ async function fetchTemplate(templateId: string) {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(json?.message ?? "تمپلیت یافت نشد");
+  if (!res.ok) throw new Error(json?.message ?? "قالب یافت نشد");
   return (json.template ?? json) as Record<string, unknown>;
 }
 
@@ -197,7 +197,7 @@ export default function BuilderPage() {
 
     const title = "ساخت صفحه جدید | صفحه‌ساز رادلینک";
     const description =
-      "برای ساخت صفحه جدید، یک تمپلیت انتخاب کنید یا از صفحه خالی شروع کنید.";
+      "برای ساخت صفحه جدید، یک قالب انتخاب کنید یا از صفحه خالی شروع کنید.";
 
     document.title = title;
 
@@ -252,7 +252,7 @@ export default function BuilderPage() {
             error: null,
             mode,
             requiresStartChoice: mode === "page",
-            initialTitle: mode === "template" ? "تمپلیت جدید" : undefined,
+            initialTitle: mode === "template" ? "قالب جدید" : undefined,
             initialUrl: mode === "template" ? "new-template" : undefined,
           });
           return;
@@ -273,8 +273,8 @@ export default function BuilderPage() {
           initialBlocks,
           initialTitle:
             mode === "template"
-              ? String(template.name ?? "تمپلیت جدید")
-              : `صفحه جدید از ${String(template.name ?? "تمپلیت")}`,
+              ? String(template.name ?? "قالب جدید")
+              : `صفحه جدید از ${String(template.name ?? "قالب")}`,
           initialDescription: String(template.description ?? ""),
           initialUrl: "new-page",
           initialCategoryId: categoryId,
@@ -314,7 +314,7 @@ export default function BuilderPage() {
             onClick={() => router.push("/admin#templates")}
             className="mt-4 rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-700"
           >
-            بازگشت به تمپلیت ها
+            بازگشت به قالب ها
           </button>
         </div>
       </div>
@@ -348,7 +348,7 @@ export default function BuilderPage() {
             sourceTemplateId: summary.id,
             initialBlocks,
             initialTitle: `صفحه جدید از ${String(
-              template.name ?? summary.name ?? "تمپلیت",
+              template.name ?? summary.name ?? "قالب",
             )}`,
             initialDescription: String(template.description ?? ""),
             initialUrl: "new-page",

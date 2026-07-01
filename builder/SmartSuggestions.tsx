@@ -381,7 +381,7 @@ export function SmartSuggestions({
 
         if (!response.ok) {
           throw new Error(
-            json?.message ?? "دریافت دسته‌بندی‌ها و تمپلیت‌ها انجام نشد.",
+            json?.message ?? "دریافت دسته‌بندی‌ها و قالب‌ها انجام نشد.",
           );
         }
 
@@ -395,7 +395,7 @@ export function SmartSuggestions({
           setError(
             loadError instanceof Error
               ? loadError.message
-              : "دریافت دسته‌بندی‌ها و تمپلیت‌ها انجام نشد.",
+              : "دریافت دسته‌بندی‌ها و قالب‌ها انجام نشد.",
           );
         }
       } finally {
@@ -442,7 +442,7 @@ export function SmartSuggestions({
       } | null;
 
       if (!response.ok || !json?.template) {
-        throw new Error(json?.message ?? "بارگذاری تمپلیت انجام نشد.");
+        throw new Error(json?.message ?? "بارگذاری قالب انجام نشد.");
       }
 
       onSelectTemplate(json.template, template);
@@ -450,7 +450,7 @@ export function SmartSuggestions({
       setError(
         selectionError instanceof Error
           ? selectionError.message
-          : "بارگذاری تمپلیت انجام نشد.",
+          : "بارگذاری قالب انجام نشد.",
       );
     } finally {
       setSelectingTemplateId(null);
@@ -461,11 +461,11 @@ export function SmartSuggestions({
 
   const activeLabel =
     activeCategoryId === "all"
-      ? "همه تمپلیت‌ها"
+      ? "همه قالب‌ها"
       : activeCategoryId === "uncategorized"
         ? "بدون دسته‌بندی"
         : (categories.find((category) => category.id === activeCategoryId)
-            ?.name ?? "تمپلیت‌ها");
+            ?.name ?? "قالب‌ها");
 
   const categoryButtonClass = (active: boolean) =>
     [
@@ -526,7 +526,7 @@ export function SmartSuggestions({
                 صفحه جدید را چطور شروع می‌کنید؟
               </h1>
               <p className={`mt-0.5 text-xs ${t.textSecondary} sm:text-sm`}>
-                یک دسته‌بندی و تمپلیت انتخاب کنید یا صفحه را از صفر بسازید.
+                یک دسته‌بندی و قالب انتخاب کنید یا صفحه را از صفر بسازید.
               </p>
             </div>
           </div>
@@ -552,7 +552,7 @@ export function SmartSuggestions({
                 style={{ borderTopColor: t.accentBorder }}
               />
               <p className="text-sm font-semibold">
-                در حال دریافت دسته‌بندی‌ها و تمپلیت‌ها...
+                در حال دریافت دسته‌بندی‌ها و قالب‌ها...
               </p>
             </div>
           ) : error && categories.length === 0 && templates.length === 0 ? (
@@ -609,7 +609,7 @@ export function SmartSuggestions({
                     onClick={() => setActiveCategoryId("all")}
                     className={categoryButtonClass(activeCategoryId === "all")}
                   >
-                    <span className="font-bold text-sm">همه تمپلیت‌ها</span>
+                    <span className="font-bold text-sm">همه قالب‌ها</span>
                     <span
                       className={countBadgeClass(activeCategoryId === "all")}
                     >
@@ -688,7 +688,7 @@ export function SmartSuggestions({
                       {activeLabel}
                     </h2>
                     <p className={`mt-0.5 text-xs ${t.textSecondary}`}>
-                      تمام محتوا و استایل‌های تمپلیت به صفحه جدید منتقل می‌شود.
+                      تمام محتوا و استایل‌های قالب به صفحه جدید منتقل می‌شود.
                     </p>
                   </div>
                   <span
@@ -715,7 +715,7 @@ export function SmartSuggestions({
                     >
                       <HiOutlinePhoto size={30} className={t.textDisabled} />
                       <p className={`mt-3 text-sm font-bold ${t.textPrimary}`}>
-                        تمپلیتی در این دسته‌بندی وجود ندارد
+                        قالبی در این دسته‌بندی وجود ندارد
                       </p>
                       <p className={`mt-1 text-xs ${t.textMuted}`}>
                         می‌توانید دسته دیگری انتخاب کنید یا از صفحه خالی شروع
@@ -775,7 +775,7 @@ export function SmartSuggestions({
                                 className={`mt-1.5 block min-h-10 text-xs leading-5 ${t.textSecondary} line-clamp-2`}
                               >
                                 {template.description ||
-                                  "بدون توضیحات برای این تمپلیت"}
+                                  "بدون توضیحات برای این قالب"}
                               </span>
                               <span className="mt-auto pt-3">
                                 <span

@@ -267,6 +267,8 @@ sequenceDiagram
 
 `superAdmin` bypasses access checks. `admin` has global owner scope in resource ownership helpers. User and agent data is normally owner-scoped.
 
+The persisted role value remains `superAdmin`, but all user-facing role labels use the branded text `R A D`. Primary role badges use the shared gold presentation from `lib/userRole.ts`.
+
 > **Current implementation warning:** in `app/api/auth/verify-otp/route.ts`, the OTP equality and expiration checks are currently commented out. The route therefore issues a token without proving that the submitted OTP matches a live record. This is the current repository behavior, not the intended secure flow, and must be fixed before production.
 >
 > Security note: consult `docs/AUTH.md` and the latest security audit before production. Authentication enforcement must never rely only on frontend guards.
@@ -295,6 +297,7 @@ erDiagram
 
 An Access document stores:
 
+- a required, trimmed, human-readable, unique `name`;
 - static component rules, such as `admin.users` with `view`;
 - template-specific actions;
 - block-specific actions;
@@ -439,6 +442,8 @@ Provides:
 `components/admin/AccessesSection.tsx`
 
 - CRUD UI for static and dynamic Access rules;
+- requires and displays a human-readable Access name;
+- searches Access records by name;
 - loads templates, blocks, and pages for resource-specific rules;
 - supports duplicate and active-state actions.
 
@@ -502,6 +507,7 @@ Provides:
 - search, text/select/date filters, and sorting;
 - desktop table and mobile card layouts;
 - create, view, edit, and validated delete modals;
+- shared identity-field normalization and inline validation for phone, email, and national code fields;
 - custom form fields;
 - row actions;
 - export;
@@ -514,6 +520,7 @@ Provides:
 - fetches and transforms API responses;
 - stores `total` and `totalPages`;
 - exposes create, update, remove, and SWR mutation helpers.
+- preserves API mutation error messages and field metadata so forms can show server errors such as duplicate national codes.
 
 `types/table.ts`
 
@@ -645,7 +652,8 @@ sequenceDiagram
 
 `builder/editor/form/DynamicStyleForm.tsx`
 
-- renders allowed style controls for the selected element.
+- renders allowed style controls for the selected element;
+- supports responsive numeric `height` values where a block schema explicitly permits the key.
 
 `builder/editor/form/RepeaterField.tsx`
 
@@ -678,6 +686,7 @@ sequenceDiagram
 `builder/blocks/shared/responsiveStyleToCss.ts`
 
 - converts mobile/tablet/desktop style values into scoped CSS.
+- emits responsive height CSS for elements that expose the `height` style key.
 
 `builder/blocks/shared/EditablePart.tsx`
 
@@ -748,6 +757,24 @@ Each entry contains:
 16. `storyHighlights`
 17. `productCards`
 18. `bookingForm`
+
+### Current Block-Specific Extensions
+
+`builder/blocks/story/`
+
+- each story item contains optional `link` data beside its caption;
+- the caption becomes clickable only when a link exists;
+- HTTP links open in a new tab, while schemes such as `tel:` and `mailto:` remain supported;
+- navigation is suppressed in editor mode.
+
+`builder/blocks/banner/`
+
+- `imageLink` is optional and becomes active only when `imageUrl` is also present;
+- linked-image navigation is suppressed in editor mode and does not override nested interactive controls;
+- an image-backed banner derives its initial aspect ratio from the image's natural dimensions;
+- a temporary `16 / 9` ratio prevents collapse while the image loads or when metadata cannot be read;
+- responsive user-defined container height overrides automatic aspect-ratio sizing;
+- `height` is allowed only where explicitly declared by the block element schema.
 
 ### Block Synchronization
 
@@ -1172,12 +1199,24 @@ Stores:
 Contains:
 
 - personal/profile information;
-- role and status;
+- role and a two-state status: `active` or `inactive`;
+- unique 11-digit phone number and unique optional 10-digit national code;
+- optional validated email;
 - phone verification and login timestamps;
 - Permission IDs;
 - file, page, and block limits;
 - creator/updater audit references;
 - optional Agent relation.
+
+`components/admin/UsersSection.tsx`
+
+- supports create/edit user validation through `DynamicTable`;
+- exposes a power action that toggles `active` and `inactive` through `/api/users/[id]/status`;
+- allows authorized admins to edit the soft-delete `isDeleted` flag only in edit mode;
+- reloads server-paginated data after status changes;
+- prevents a normal admin from changing the status of a `R A D` account.
+
+Legacy User documents whose status is `blocked` or `pending` must be migrated to `inactive`; those values are no longer part of the model, API, frontend types, filters, profile UI, or user service.
 
 ### Agent
 
@@ -1221,6 +1260,27 @@ Quota checks are used by:
 `AdminShell.tsx` and `DashboardSection.tsx`
 
 - listen for profile update events so name, phone, and avatar update without logout/login.
+
+### Global Identity Validation
+
+`lib/validation/identityFields.ts` is the shared client/server contract:
+
+- phone numbers accept digits only and must contain exactly 11 digits;
+- national codes accept digits only and must contain exactly 10 digits;
+- Persian and Arabic numerals are normalized to English digits;
+- email addresses are trimmed, normalized, length-limited, and format-validated;
+- semantic field names are mapped to input mode, direction, maximum length, sanitization, and Persian validation messages.
+
+The contract is used by:
+
+- `DynamicTable` forms, including `UsersSection`;
+- authentication and profile forms;
+- agent fixed-number fields;
+- Builder content and repeater forms for semantic phone/email/national-code keys;
+- User, auth, and agent APIs;
+- User and Agent Mongoose schemas.
+
+`nationalCode` uses a unique partial MongoDB index. Empty values are excluded, but two users cannot own the same non-empty national code. User create/edit/profile APIs return Persian `409` responses for duplicates, and `DynamicTable` keeps the modal open while displaying the message below the national-code field.
 
 ---
 
@@ -1456,6 +1516,10 @@ To add another resource type:
 10. DynamicTable deletions use the shared confirmation modal.
 11. API errors shown to users should be Persian and action-specific.
 12. Admin tables use backend pagination with a default page size of 20.
+13. User status is strictly `active | inactive`; legacy states require migration.
+14. Non-empty User national codes are unique at both API and database levels.
+15. Access names are required and unique for all newly created or edited Access records.
+16. `superAdmin` is a technical role value; `R A D` is its user-facing label.
 
 ---
 
@@ -1472,6 +1536,18 @@ This section describes areas that should be reviewed before production changes:
 - current test coverage is not sufficient for authentication and authorization guarantees.
 
 Consult the project audit/history before deploying security-sensitive changes.
+
+### Migration Notes for the July 1, 2026 Update
+
+Before enabling automatic production index synchronization:
+
+1. Find duplicate non-empty `User.nationalCode` values and resolve ownership.
+2. Remove or unset empty-string national codes where practical.
+3. Convert legacy User statuses `blocked` and `pending` to `inactive`.
+4. Backfill a unique `Access.name` for Access documents created before the name field existed.
+5. Create and verify the unique partial `nationalCode` index and unique sparse Access-name index during a controlled deployment.
+
+Do not build these indexes blindly on a large production collection. Inspect duplicates first, create indexes with operational monitoring, and retain a rollback plan.
 
 ---
 
@@ -1541,3 +1617,22 @@ Radlink is therefore one connected content platform:
 - the Builder creates or edits Templates and Pages;
 - Pages render publicly at their unique slugs;
 - uploads, QR codes, notifications, tickets, analytics, and dashboard metrics support the page lifecycle around that core.
+
+---
+
+## 33. Implementation Update: July 1, 2026
+
+This update records the application changes completed after the previous guide revision:
+
+| Area | Implemented behavior | Primary files |
+| --- | --- | --- |
+| Identity validation | Shared phone, email, and national-code sanitization, inline errors, and server validation | `lib/validation/identityFields.ts`, `DynamicTable.tsx`, auth/profile forms, User APIs |
+| National code | Optional 10-digit value with API duplicate checks and a unique partial database index | `models/users.ts`, `/api/users`, `/api/auth/me` |
+| User lifecycle | User status reduced to `active` and `inactive`; table power toggle and editable `isDeleted` | `UsersSection.tsx`, `/api/users/[id]/status`, `models/users.ts` |
+| Role branding | User-facing `superAdmin` text replaced by the gold `R A D` badge while the persisted role remains unchanged | `lib/userRole.ts`, admin shell, dashboard, profile, user table |
+| Access naming | Required unique Access names displayed in Access management and Permission assignment | `models/access.ts`, `/api/accesses`, `AccessesSection.tsx`, `PermissionsSection.tsx` |
+| Story links | Optional per-story caption link with editor-safe navigation | `builder/blocks/story/` |
+| Banner media | Natural image-ratio sizing, responsive editable height, and optional image-only link behavior | `builder/blocks/banner/`, style types and style editors |
+| Mutation errors | API JSON messages and field metadata preserved through table mutations | `hook/table/useTableData.ts`, `DynamicTable.tsx` |
+
+The migration checklist in Section 29 is part of this update and must be completed before production index synchronization.

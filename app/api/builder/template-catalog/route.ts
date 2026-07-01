@@ -116,7 +116,7 @@ export const GET = compose(
     !mongoose.Types.ObjectId.isValid(requestedTemplateId)
   ) {
     return NextResponse.json(
-      { message: "شناسه تمپلیت معتبر نیست." },
+      { message: "شناسه قالب معتبر نیست." },
       { status: 400 },
     );
   }
@@ -160,7 +160,7 @@ export const GET = compose(
       return NextResponse.json(
         {
           message:
-            "تمپلیت پیدا نشد یا برای استفاده از بلاک‌های آن دسترسی ندارید.",
+            "قالب پیدا نشد یا برای استفاده از بلاک‌های آن دسترسی ندارید.",
         },
         { status: 404 },
       );

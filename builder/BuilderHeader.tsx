@@ -53,12 +53,12 @@ export function BuilderHeader({
 }: BuilderHeaderProps) {
   const saveButtonLabel = isServerSaving
     ? mode === "template"
-      ? "در حال ذخیره تمپلیت..."
+      ? "در حال ذخیره قالب..."
       : "در حال ذخیره صفحه..."
     : mode === "template"
       ? pageId
-        ? "ذخیره تغییرات تمپلیت"
-        : "ساخت تمپلیت"
+        ? "ذخیره تغییرات قالب"
+        : "ساخت قالب"
       : pageId
         ? "ذخیره تغییرات صفحه"
         : "ساخت صفحه";

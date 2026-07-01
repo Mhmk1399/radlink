@@ -14,6 +14,15 @@ import User, {
 } from "@/models/users";
 import Agent from "@/models/agent";
 import "@/models/permission";
+import {
+    isValidEmail,
+    isValidNationalCode,
+    isValidPhoneNumber,
+    normalizeEmail,
+    normalizeNationalCode,
+    normalizePhoneNumber,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 
 // GET /api/users
 export const GET = compose(
@@ -139,9 +148,13 @@ export const POST = compose(
 
         const body = await req.json();
 
-        const phoneNumber =
-            typeof body.phoneNumber === "string"
-                ? body.phoneNumber.trim()
+        const rawPhoneNumber = toEnglishDigits(body.phoneNumber).trim();
+        const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
+        const email =
+            typeof body.email === "string" ? normalizeEmail(body.email) : "";
+        const nationalCode =
+            typeof body.nationalCode === "string"
+                ? normalizeNationalCode(toEnglishDigits(body.nationalCode).trim())
                 : "";
         const firstName =
             typeof body.firstName === "string"
@@ -169,6 +182,34 @@ export const POST = compose(
                     message: "شماره تماس الزامی است.",
                 },
                 { status: 400 },
+            );
+        }
+        if (!isValidPhoneNumber(rawPhoneNumber) || phoneNumber !== rawPhoneNumber) {
+            return NextResponse.json(
+                { code: "INVALID_PHONE_NUMBER", message: "شماره تماس باید دقیقاً ۱۱ رقم باشد." },
+                { status: 400 },
+            );
+        }
+        if (email && !isValidEmail(email)) {
+            return NextResponse.json(
+                { code: "INVALID_EMAIL", message: "فرمت ایمیل معتبر نیست." },
+                { status: 400 },
+            );
+        }
+        if (nationalCode && !isValidNationalCode(nationalCode)) {
+            return NextResponse.json(
+                { code: "INVALID_NATIONAL_CODE", message: "کد ملی باید دقیقاً ۱۰ رقم باشد." },
+                { status: 400 },
+            );
+        }
+        if (nationalCode && (await User.exists({ nationalCode }))) {
+            return NextResponse.json(
+                {
+                    code: "NATIONAL_CODE_ALREADY_EXISTS",
+                    message: "این کد ملی قبلاً ثبت شده است.",
+                    field: "nationalCode",
+                },
+                { status: 409 },
             );
         }
 
@@ -201,8 +242,6 @@ export const POST = compose(
         const allowedStatuses: UserStatus[] = [
             "active",
             "inactive",
-            "blocked",
-            "pending",
         ];
 
         const role: UserRole = allowedRoles.includes(body.role)
@@ -252,22 +291,14 @@ export const POST = compose(
 
             phoneNumber,
 
-            email:
-                typeof body.email === "string" &&
-                    body.email.trim()
-                    ? body.email.trim().toLowerCase()
-                    : undefined,
+            email: email || undefined,
 
             avatarUrl:
                 typeof body.avatarUrl === "string"
                     ? body.avatarUrl.trim()
                     : undefined,
 
-            nationalCode:
-                typeof body.nationalCode === "string" &&
-                    body.nationalCode.trim()
-                    ? body.nationalCode.trim()
-                    : undefined,
+            nationalCode: nationalCode || undefined,
 
             fatherName:
                 typeof body.fatherName === "string"

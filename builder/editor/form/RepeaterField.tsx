@@ -16,6 +16,11 @@ import {
   HiOutlineXMark,
   HiOutlineCheck,
 } from "react-icons/hi2";
+import {
+  getIdentityInputProps,
+  sanitizeIdentityField,
+  validateIdentityField,
+} from "@/lib/validation/identityFields";
 import { uploadFile } from "@/lib/fileUtils";
 import { LinkTypeHelp } from "./LinkTypeHelp";
 
@@ -552,6 +557,11 @@ export function RepeaterField({
                   }
 
                   /* ── Text (default) ── */
+                  const identityInputProps = getIdentityInputProps(field.key);
+                  const identityError = validateIdentityField(
+                    field.key,
+                    fieldValue,
+                  );
                   return (
                     <div key={field.key}>
                       <label className="mb-1 block text-[11px] font-semibold text-neutral-500">
@@ -561,11 +571,24 @@ export function RepeaterField({
                         type="text"
                         value={String(fieldValue ?? "")}
                         onChange={(e) =>
-                          updateItemField(item.id, field.key, e.target.value)
+                          updateItemField(
+                            item.id,
+                            field.key,
+                            sanitizeIdentityField(field.key, e.target.value),
+                          )
                         }
+                        inputMode={identityInputProps.inputMode}
+                        maxLength={identityInputProps.maxLength}
+                        dir={identityInputProps.dir}
+                        aria-invalid={Boolean(identityError)}
                         className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
                         placeholder={field.label}
                       />
+                      {identityError && (
+                        <p className="mt-1.5 text-xs font-medium text-red-500">
+                          {identityError}
+                        </p>
+                      )}
                     </div>
                   );
                 })}

@@ -478,10 +478,10 @@ function TemplateBackgroundSettings({
     <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
       <div>
         <h3 className="text-[13px] font-black text-neutral-800">
-          پس‌زمینه تمپلیت
+          پس‌زمینه قالب
         </h3>
         <p className="mt-1 text-[11px] leading-5 text-neutral-400">
-          این پس‌زمینه هنگام انتخاب تمپلیت، به صفحه جدید منتقل می‌شود.
+          این پس‌زمینه هنگام انتخاب قالب، به صفحه جدید منتقل می‌شود.
         </p>
       </div>
 
@@ -494,7 +494,7 @@ function TemplateBackgroundSettings({
             value={color}
             onCommit={onColorChange}
             className="h-12 w-14 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
-            label="انتخاب رنگ پس‌زمینه تمپلیت"
+            label="انتخاب رنگ پس‌زمینه قالب"
           />
           <input
             type="text"
@@ -534,7 +534,7 @@ function TemplateBackgroundSettings({
           {image && (
             <img
               src={image}
-              alt="پیش‌نمایش تصویر پس‌زمینه تمپلیت"
+              alt="پیش‌نمایش تصویر پس‌زمینه قالب"
               className="absolute inset-0 h-full w-full object-cover"
             />
           )}
@@ -887,8 +887,8 @@ export function PageMetaModal({
             >
               {mode === "template"
                 ? pageId
-                  ? "ویرایش تمپلیت"
-                  : "ساخت تمپلیت جدید"
+                  ? "ویرایش قالب"
+                  : "ساخت قالب جدید"
                 : pageId
                   ? "ویرایش صفحه"
                   : "ساخت صفحه جدید"}
@@ -896,7 +896,7 @@ export function PageMetaModal({
 
             <p className="mt-1 truncate text-[12px] text-neutral-400">
               {mode === "template"
-                ? "اطلاعات و تنظیمات تمپلیت را تکمیل کنید"
+                ? "اطلاعات و تنظیمات قالب را تکمیل کنید"
                 : "اطلاعات و آدرس صفحه را تکمیل کنید"}
             </p>
           </div>
@@ -919,7 +919,7 @@ export function PageMetaModal({
         >
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
-              {mode === "template" ? "نام تمپلیت" : "عنوان صفحه"}{" "}
+              {mode === "template" ? "نام قالب" : "عنوان صفحه"}{" "}
               <span className="text-red-400">*</span>
             </label>
             <input
@@ -1317,7 +1317,7 @@ export function PageMetaModal({
             <>
               <div>
                 <label className="mb-2 block text-[13px] font-bold text-neutral-700">
-                  دسته بندی تمپلیت
+                  دسته بندی قالب
                 </label>
                 <select
                   value={categoryId ?? ""}
@@ -1525,12 +1525,12 @@ export function PageMetaModal({
           >
             {isSaving
               ? mode === "template"
-                ? "در حال ذخیره تمپلیت..."
+                ? "در حال ذخیره قالب..."
                 : "در حال ذخیره صفحه..."
               : mode === "template"
                 ? pageId
-                  ? "ذخیره تغییرات تمپلیت"
-                  : "ساخت تمپلیت"
+                  ? "ذخیره تغییرات قالب"
+                  : "ساخت قالب"
                 : pageId
                   ? "ذخیره تغییرات صفحه"
                   : "ساخت صفحه"}

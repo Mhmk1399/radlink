@@ -11,6 +11,7 @@ import { AuthRequest } from "@/lib/auth/types";
 import Page from "@/models/pages";
 import Block from "@/models/blocks";
 import User from "@/models/users";
+import { syncPageProducts } from "@/lib/products/syncPageProducts";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -127,6 +128,11 @@ export const PATCH = compose(
     }
 
     await page.save();
+    await syncPageProducts({
+        pageId: page._id,
+        ownerId: page.owner,
+        blocks: page.blocks,
+    });
     revalidatePath("/[url]", "page");
     return NextResponse.json({ blocks: page.blocks });
 });

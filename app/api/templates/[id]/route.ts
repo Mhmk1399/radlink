@@ -83,7 +83,7 @@ export const GET = compose(
         .populate("blocks", "name type icon data settings elements")
         .lean();
 
-    if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
+    if (!template) return NextResponse.json({ message: "قالب پیدا نشد." }, { status: 404 });
     return NextResponse.json({ template });
 });
 
@@ -97,7 +97,7 @@ export const PATCH = compose(
     const body = await req.json();
 
     const template = await Template.findById(id);
-    if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
+    if (!template) return NextResponse.json({ message: "قالب پیدا نشد." }, { status: 404 });
 
     const previousCategory = template.category ? String(template.category) : undefined;
     if (body.blocks !== undefined || body.builderBlocks !== undefined) {
@@ -158,11 +158,11 @@ export const DELETE = compose(
 )(async (_req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const template = await Template.findByIdAndUpdate(id, { isActive: false }, { new: true });
-    if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
+    if (!template) return NextResponse.json({ message: "قالب پیدا نشد." }, { status: 404 });
     if (template.category) {
         await Category.findByIdAndUpdate(template.category, {
             $pull: { templates: template._id },
         });
     }
-    return NextResponse.json({ message: "تمپلیت غیرفعال شد." });
+    return NextResponse.json({ message: "قالب غیرفعال شد." });
 });

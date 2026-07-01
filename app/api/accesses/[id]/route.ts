@@ -114,6 +114,7 @@ export const PATCH = compose(
         "staticComponents" in body ||
         "dynamicAccess" in body;
     const hasStatusPayload = typeof body.isActive === "boolean";
+    const hasNamePayload = "name" in body;
 
     if (hasStatusPayload && !hasRulePayload) {
         const access = await Access.findByIdAndUpdate(
@@ -134,6 +135,29 @@ export const PATCH = compose(
 
     if (hasStatusPayload) {
         access.set("isActive", body.isActive, { strict: false });
+    }
+
+    if (hasNamePayload) {
+        const name = typeof body.name === "string" ? body.name.trim() : "";
+        if (!name) {
+            return NextResponse.json(
+                { message: "نام Access الزامی است." },
+                { status: 400 },
+            );
+        }
+        if (name.length > 120) {
+            return NextResponse.json(
+                { message: "نام Access نمی‌تواند بیشتر از ۱۲۰ کاراکتر باشد." },
+                { status: 400 },
+            );
+        }
+        if (await Access.exists({ _id: { $ne: id }, name })) {
+            return NextResponse.json(
+                { message: "Access دیگری با این نام وجود دارد." },
+                { status: 409 },
+            );
+        }
+        access.name = name;
     }
 
     if (hasRulePayload) {

@@ -18,6 +18,7 @@ export const storyHighlightsSchema: BlockSchema = {
             fields: [
                 { key: "title", label: "عنوان", type: "text" },
                 { key: "caption", label: "کپشن", type: "textarea" },
+                { key: "link", label: "لینک کپشن", type: "url" },
                 { key: "imageUrl", label: "تصویر اصلی", type: "image" },
                 { key: "thumbnailUrl", label: "تصویر بندانگشتی", type: "image" },
                 { key: "altText", label: "متن جایگزین تصویر", type: "text" },

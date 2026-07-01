@@ -82,7 +82,7 @@ function isUserRole(value: unknown): value is UserRole {
 }
 
 function isUserStatus(value: unknown): value is UserStatus {
-  return ["active", "inactive", "blocked", "pending"].includes(String(value));
+  return ["active", "inactive"].includes(String(value));
 }
 
 function normalizeLimits(value: unknown): User["limits"] {
@@ -141,8 +141,6 @@ function computeStats(users: User[]): UserStats {
     total: users.length,
     active: users.filter((user) => user.status === "active").length,
     inactive: users.filter((user) => user.status === "inactive").length,
-    blocked: users.filter((user) => user.status === "blocked").length,
-    pending: users.filter((user) => user.status === "pending").length,
     agents: users.filter((user) => user.role === "agent").length,
     admins: users.filter((user) =>
       ["admin", "superAdmin"].includes(user.role),

@@ -27,6 +27,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
             buttonText: "مشاهده بیشتر",
             buttonUrl: "",
             imageUrl: "",
+            imageLink: "",
             showButton: true,
             showOverlay: true,
         },
@@ -38,6 +39,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                 label: "قاب اصلی",
                 allowedStyleKeys: [
                     "backgroundColor",
+                    "height",
                     "borderRadius",
                     "borderColor",
                     "borderWidth",

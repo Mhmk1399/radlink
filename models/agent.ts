@@ -54,6 +54,8 @@ const AgentSchema = new Schema<IAgent>(
         fixedNumber: {
             type: String,
             trim: true,
+            maxlength: 11,
+            match: [/^$|^\d{11}$/, "شماره تماس باید دقیقاً ۱۱ رقم باشد."],
         },
 
         pricePerLanding: {

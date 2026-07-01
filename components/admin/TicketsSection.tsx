@@ -13,6 +13,7 @@ import {
   FaCircleInfo,
   FaMessage,
 } from "react-icons/fa6";
+import { getUserRoleLabel } from "@/lib/userRole";
 import DynamicTable from "@/components/global/DynamicTable";
 import CustomSelect, { type SelectOption } from "@/components/ui/customSelect";
 import { toast } from "@/components/ui/CustomToast";
@@ -272,7 +273,10 @@ function usersToOptions(value: unknown): SelectOption[] {
       return {
         value: id,
         label,
-        description: [toText(u.phoneNumber), toText(u.role)]
+        description: [
+          toText(u.phoneNumber),
+          getUserRoleLabel(toText(u.role)),
+        ]
           .filter(Boolean)
           .join(" | "),
       };
@@ -516,7 +520,7 @@ export default function TicketsSection({
 
   async function createTicket() {
     if (isSuperAdmin) {
-      toast.error("سوپرادمین امکان ثبت تیکت ندارد.");
+      toast.error("R A D امکان ثبت تیکت ندارد.");
       return;
     }
     const title = createForm.title.trim();
@@ -786,7 +790,7 @@ export default function TicketsSection({
         title="لیست تیکت‌ها"
         subtitle={
           isSuperAdmin
-            ? "سوپرادمین همه تیکت‌ها را می‌بیند"
+            ? "R A D همه تیکت‌ها را می‌بیند"
             : "فقط تیکت‌های خودتان نمایش داده می‌شود"
         }
         primaryKey="_id"

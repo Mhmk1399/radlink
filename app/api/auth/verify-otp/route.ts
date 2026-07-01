@@ -5,11 +5,23 @@ import { AuthRequest } from "@/lib/auth/types";
 import { signToken } from "@/lib/auth/jwt";
 import otpStore from "@/lib/auth/otp-store";
 import User from "@/models/users";
+import {
+    isValidPhoneNumber,
+    normalizePhoneNumber,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 
 export const POST = compose(withDB())(async (req: AuthRequest) => {
-    const { phoneNumber, otp } = await req.json();
+    const body = await req.json();
+    const rawPhoneNumber = toEnglishDigits(body.phoneNumber).trim();
+    const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
+    const otp = body.otp;
 
-    if (!phoneNumber || !otp) {
+    if (
+        !isValidPhoneNumber(rawPhoneNumber) ||
+        phoneNumber !== rawPhoneNumber ||
+        !otp
+    ) {
         return NextResponse.json({ message: "شماره موبایل و کد تایید الزامی هستند." }, { status: 400 });
     }
 

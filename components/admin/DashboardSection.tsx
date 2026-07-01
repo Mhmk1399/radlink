@@ -36,6 +36,7 @@ import {
   FaCircle,
   FaShieldHalved,
 } from "react-icons/fa6";
+import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
 
 /* ══════════════════════════════════════════════
    SOFT PALETTE — mirrors DashboardShell
@@ -245,15 +246,8 @@ function formatNumber(n: number): string {
   return toPersianDigits(n.toLocaleString());
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  user: "کاربر",
-  agent: "نماینده",
-  admin: "مدیر",
-  superAdmin: "مدیر ارشد",
-};
-
 function getRolePersian(role?: string): string {
-  return ROLE_LABELS[role ?? ""] ?? "کاربر";
+  return getUserRoleLabel(role);
 }
 
 /* resolves role → badge classes from the palette */
@@ -265,7 +259,7 @@ function getRoleBadge(
     user: d.roleUser,
     agent: d.roleAgent,
     admin: d.roleAdmin,
-    superAdmin: d.roleSuperAdmin,
+    superAdmin: superAdminBadgeClass,
   };
   return map[role ?? "user"] ?? d.roleUser;
 }

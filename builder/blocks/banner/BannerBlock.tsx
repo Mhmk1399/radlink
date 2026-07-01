@@ -32,6 +32,7 @@ const DEFAULT_BANNER_DATA: BannerData = {
   buttonText: "مشاهده بیشتر",
   buttonUrl: "",
   imageUrl: "",
+  imageLink: "",
   showButton: true,
   showOverlay: true,
 };
@@ -41,6 +42,7 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
     label: "قاب اصلی",
     allowedStyleKeys: [
       "backgroundColor",
+      "height",
       "borderRadius",
       "borderColor",
       "borderWidth",
@@ -193,6 +195,7 @@ function mergeStyleMap(
       incoming?.backgroundColor,
     ),
     fontSize: mergeResponsiveValue(fallback.fontSize, incoming?.fontSize),
+    height: mergeResponsiveValue(fallback.height, incoming?.height),
     borderRadius: mergeResponsiveValue(
       fallback.borderRadius,
       incoming?.borderRadius,
@@ -251,6 +254,10 @@ function getBannerData(block: PageBlock): BannerData {
       typeof raw.imageUrl === "string"
         ? raw.imageUrl
         : DEFAULT_BANNER_DATA.imageUrl,
+    imageLink:
+      typeof raw.imageLink === "string"
+        ? raw.imageLink.trim()
+        : DEFAULT_BANNER_DATA.imageLink,
     showButton:
       typeof raw.showButton === "boolean"
         ? raw.showButton
@@ -287,6 +294,9 @@ export function BannerBlock({
   onUpdateContent,
 }: BannerBlockProps) {
   const data = getBannerData(block);
+  const [imageAspectRatio, setImageAspectRatio] = React.useState<
+    string | undefined
+  >(data.imageUrl ? "16 / 9" : undefined);
   const settings = (block.settings ?? {}) as Record<string, unknown>;
   const direction = settings.direction === "ltr" ? "ltr" : "rtl";
 
@@ -297,10 +307,47 @@ export function BannerBlock({
   const buttonElement = getElementWithFallback(block, "button");
 
   const backgroundStyle = data.imageUrl
-    ? { backgroundImage: `url(${data.imageUrl})` }
+    ? {
+        backgroundImage: `url(${data.imageUrl})`,
+        aspectRatio: imageAspectRatio,
+      }
     : undefined;
 
   const isEditor = mode === "editor";
+  const hasLinkedImage = Boolean(data.imageUrl && data.imageLink);
+
+  React.useEffect(() => {
+    if (!data.imageUrl) {
+      setImageAspectRatio(undefined);
+      return;
+    }
+
+    setImageAspectRatio("16 / 9");
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (!cancelled && image.naturalWidth && image.naturalHeight) {
+        setImageAspectRatio(`${image.naturalWidth} / ${image.naturalHeight}`);
+      }
+    };
+    image.onerror = () => {
+      if (!cancelled) setImageAspectRatio("16 / 9");
+    };
+    image.src = data.imageUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.imageUrl]);
+
+  function openImageLink() {
+    if (isEditor || !hasLinkedImage) return;
+    if (/^https?:\/\//i.test(data.imageLink)) {
+      window.open(data.imageLink, "_blank", "noopener,noreferrer");
+      return;
+    }
+    window.location.href = data.imageLink;
+  }
 
    
 
@@ -315,8 +362,37 @@ export function BannerBlock({
     >
       <StyledContainer
         dir={direction}
-        className="relative min-h-[320px] w-full md:min-h-[420px]"
+        className={
+          data.imageUrl
+            ? `relative w-full ${
+                hasLinkedImage && !isEditor ? "cursor-pointer" : ""
+              }`
+            : "relative min-h-[320px] w-full md:min-h-[420px]"
+        }
         style={backgroundStyle}
+        role={hasLinkedImage && !isEditor ? "link" : undefined}
+        tabIndex={hasLinkedImage && !isEditor ? 0 : undefined}
+        onClick={(event) => {
+          if (!hasLinkedImage || isEditor) return;
+          const target = event.target as HTMLElement;
+          if (
+            target.closest(
+              "a, button, input, textarea, select, [contenteditable='true']",
+            )
+          )
+            return;
+          openImageLink();
+        }}
+        onKeyDown={(event) => {
+          if (
+            hasLinkedImage &&
+            !isEditor &&
+            (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            openImageLink();
+          }
+        }}
         $styleCss={responsiveStyleToCss(
           containerElement.style,
           "banner-block",
@@ -350,7 +426,13 @@ export function BannerBlock({
         )}
 
         {/* ---------- content ---------- */}
-        <div className="relative z-[2] flex min-h-[320px] items-center md:min-h-[420px]">
+        <div
+          className={
+            data.imageUrl
+              ? "absolute inset-0 z-[2] flex items-center"
+              : "relative z-[2] flex min-h-[320px] items-center md:min-h-[420px]"
+          }
+        >
           <div className="w-full p-6 text-start md:p-10 lg:p-14">
             <div className="flex max-w-2xl flex-col items-start gap-4 md:gap-5">
               {/* title */}

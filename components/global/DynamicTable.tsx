@@ -54,6 +54,11 @@ import {
   SortDir,
 } from "@/types/table";
 import { useTheme } from "@/contexts/ThemeContext";
+import {
+  getIdentityInputProps,
+  sanitizeIdentityField,
+  validateIdentityField,
+} from "@/lib/validation/identityFields";
 import type { CSSProperties } from "react";
 type ThemeTokens = typeof themeTokens.dark | typeof themeTokens.light;
 
@@ -2297,17 +2302,25 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
+    const formMode = modalMode === "create" ? "create" : "edit";
     editableCols.forEach((col) => {
-      if (col.hiddenInForm?.(formData as Partial<T>)) return;
+      if (col.hiddenInForm?.(formData as Partial<T>, formMode)) return;
       if (col.required) {
         const v = formData[col.key];
         if (v === undefined || v === null || String(v).trim() === "")
           errors[col.key] = `${col.label} الزامی است`;
       }
+      if (!errors[col.key]) {
+        const identityError = validateIdentityField(
+          col.key,
+          formData[col.key],
+        );
+        if (identityError) errors[col.key] = identityError;
+      }
     });
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [editableCols, formData]);
+  }, [editableCols, formData, modalMode]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -2325,8 +2338,23 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           else await hookUpdate(updated, primaryKey);
         }
         closeModal();
-      } catch {
-        /* parent handles */
+      } catch (error) {
+        const mutationError = error as Error & {
+          code?: string;
+          field?: string;
+        };
+        const field =
+          mutationError.field ||
+          (mutationError.code === "NATIONAL_CODE_ALREADY_EXISTS"
+            ? "nationalCode"
+            : undefined);
+
+        if (field && editableCols.some((column) => column.key === field)) {
+          setFormErrors((current) => ({
+            ...current,
+            [field]: mutationError.message,
+          }));
+        }
       } finally {
         setSubmitting(false);
       }
@@ -2342,6 +2370,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       primaryKey,
       validateForm,
       closeModal,
+      editableCols,
     ],
   );
 
@@ -2361,10 +2390,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   }, [onDelete, selectedRow, hookRemove, primaryKey, closeModal]);
 
   const updateField = useCallback((key: string, value: unknown) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    const sanitizedValue = sanitizeIdentityField(key, value);
+    setFormData((prev) => ({ ...prev, [key]: sanitizedValue }));
     setFormErrors((prev) => {
       const next = { ...prev };
-      delete next[key];
+      const identityError = validateIdentityField(key, sanitizedValue);
+      if (identityError) next[key] = identityError;
+      else delete next[key];
       return next;
     });
   }, []);
@@ -3512,11 +3544,20 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <div className="max-h-[60vh] overflow-y-auto overflow-x-visible px-5 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {editableCols.map((col) => {
-                if (col.hiddenInForm?.(formData as Partial<T>)) return null;
+                const formMode =
+                  modalMode === "create" ? "create" : "edit";
+                if (
+                  col.hiddenInForm?.(
+                    formData as Partial<T>,
+                    formMode,
+                  )
+                )
+                  return null;
 
                 const fv = formData[col.key];
                 const error = formErrors[col.key];
                 const inputType = col.inputType || "text";
+                const identityInputProps = getIdentityInputProps(col.key);
                 const isFull = inputType === "textarea";
                 const isDate = col.dateFilter || inputType === "date";
                 const dateValue = isDate ? parsePersianDate(fv) : null;
@@ -3665,6 +3706,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           error ? `error-${col.key}` : undefined
                         }
                         aria-required={col.required}
+                        inputMode={identityInputProps.inputMode}
+                        maxLength={identityInputProps.maxLength}
+                        dir={identityInputProps.dir}
                         className={cn(
                           fieldBase,
                           "h-10 px-3 text-sm",

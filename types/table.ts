@@ -29,7 +29,10 @@ export interface ColumnDef<T> {
     /** Default value pre-filled when opening the create form */
     defaultValue?: unknown;
     /** Hide this field in create/edit forms based on the current form values. */
-    hiddenInForm?: (formData: Partial<T>) => boolean;
+    hiddenInForm?: (
+        formData: Partial<T>,
+        mode: "create" | "edit",
+    ) => boolean;
     /** Render a custom create/edit control while keeping DynamicTable form state. */
     renderFormField?: (props: {
         value: unknown;

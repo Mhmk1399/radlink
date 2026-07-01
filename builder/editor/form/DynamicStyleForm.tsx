@@ -37,7 +37,7 @@ type DynamicStyleFormProps = {
 
 type NumericStyleKey = Extract<
   EditableStyleKey,
-  "fontSize" | "borderRadius" | "borderWidth"
+  "fontSize" | "height" | "borderRadius" | "borderWidth"
 >;
 
 /* ================================================================== */
@@ -48,6 +48,7 @@ const styleLabels: Record<EditableStyleKey, string> = {
   color: "رنگ متن",
   backgroundColor: "رنگ پس‌زمینه",
   fontSize: "اندازه متن",
+  height: "ارتفاع",
   borderRadius: "گردی گوشه‌ها",
   borderColor: "رنگ بوردر",
   borderWidth: "ضخامت بوردر",
@@ -59,6 +60,7 @@ const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
   backgroundColor: <HiOutlinePaintBrush size={15} />,
   borderColor: <HiOutlineSwatch size={15} />,
   fontSize: <RxFontSize size={15} />,
+  height: <RxFontSize size={15} />,
   borderRadius: <RxCornerBottomRight size={15} />,
   borderWidth: <RxBorderWidth size={15} />,
   animation: <HiOutlineSparkles size={15} />,
@@ -81,6 +83,7 @@ const numberFieldConfig: Record<
   { min: number; max: number; step: number; unit: string }
 > = {
   fontSize: { min: 8, max: 120, step: 1, unit: "px" },
+  height: { min: 80, max: 1200, step: 10, unit: "px" },
   borderRadius: { min: 0, max: 64, step: 1, unit: "px" },
   borderWidth: { min: 0, max: 20, step: 1, unit: "px" },
 };
@@ -107,7 +110,12 @@ function isColorStyleKey(
 }
 
 function isNumericStyleKey(k: EditableStyleKey): k is NumericStyleKey {
-  return k === "fontSize" || k === "borderRadius" || k === "borderWidth";
+  return (
+    k === "fontSize" ||
+    k === "height" ||
+    k === "borderRadius" ||
+    k === "borderWidth"
+  );
 }
 
 function getNumericValue(value: string | number | undefined): number {

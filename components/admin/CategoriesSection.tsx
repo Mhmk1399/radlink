@@ -152,7 +152,7 @@ export default function CategoriesSection({
       },
       {
         key: "templateCount",
-        label: "تعداد تمپلیت",
+        label: "تعداد قالب",
         editable: false,
         sortable: true,
         render: (value) => (
@@ -178,7 +178,7 @@ export default function CategoriesSection({
       },
       {
         key: "templates",
-        label: "تمپلیت‌ها",
+        label: "قالب‌ها",
         editable: false,
         sortable: false,
         copyable: false,
@@ -340,7 +340,7 @@ export default function CategoriesSection({
                 مدیریت دسته‌بندی‌ها
               </h1>
               <p className={cn("mt-0.5 text-xs sm:text-sm", t.textMuted)}>
-                دسته‌بندی‌ها برای گروه‌بندی تمپلیت‌ها استفاده می‌شوند
+                دسته‌بندی‌ها برای گروه‌بندی قالب‌ها استفاده می‌شوند
               </p>
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function CategoriesSection({
         updateMethod="PATCH"
         columns={columns}
         title="لیست دسته‌بندی‌ها"
-        subtitle="ایجاد، مشاهده و ویرایش دسته‌بندی‌های تمپلیت"
+        subtitle="ایجاد، مشاهده و ویرایش دسته‌بندی‌های قالب"
         primaryKey="_id"
         headers={headers}
         pageSize={20}

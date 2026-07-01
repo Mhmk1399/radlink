@@ -18,6 +18,9 @@ type ContactSaveData = {
   firstName: string;
   lastName: string;
   phoneNumber: string;
+  email: string;
+  address: string;
+  url: string;
   organization: string;
   buttonText: string;
   showIcon: boolean;
@@ -27,6 +30,9 @@ const DEFAULT_DATA: ContactSaveData = {
   firstName: "علی",
   lastName: "محمدی",
   phoneNumber: "09120000000",
+  email: "",
+  address: "",
+  url: "",
   organization: "",
   buttonText: "ذخیره در مخاطبین",
   showIcon: true,
@@ -91,6 +97,10 @@ function getData(block: PageBlock): ContactSaveData {
       typeof raw.phoneNumber === "string"
         ? raw.phoneNumber
         : DEFAULT_DATA.phoneNumber,
+    email: typeof raw.email === "string" ? raw.email : DEFAULT_DATA.email,
+    address:
+      typeof raw.address === "string" ? raw.address : DEFAULT_DATA.address,
+    url: typeof raw.url === "string" ? raw.url : DEFAULT_DATA.url,
     organization:
       typeof raw.organization === "string"
         ? raw.organization
@@ -100,9 +110,7 @@ function getData(block: PageBlock): ContactSaveData {
         ? raw.buttonText
         : DEFAULT_DATA.buttonText,
     showIcon:
-      typeof raw.showIcon === "boolean"
-        ? raw.showIcon
-        : DEFAULT_DATA.showIcon,
+      typeof raw.showIcon === "boolean" ? raw.showIcon : DEFAULT_DATA.showIcon,
   };
 }
 
@@ -125,6 +133,22 @@ function normalizePhoneNumber(value: string) {
   return `${hasLeadingPlus ? "+" : ""}${digits}`;
 }
 
+function normalizeEmail(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return "";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed) ? trimmed : "";
+}
+
+function normalizeUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
 function buildVCard(data: ContactSaveData) {
   const firstName = escapeVCardValue(data.firstName.trim());
   const lastName = escapeVCardValue(data.lastName.trim());
@@ -134,6 +158,9 @@ function buildVCard(data: ContactSaveData) {
     ) || "Contact";
   const organization = escapeVCardValue(data.organization.trim());
   const phoneNumber = normalizePhoneNumber(data.phoneNumber);
+  const email = normalizeEmail(data.email);
+  const address = data.address.trim();
+  const url = normalizeUrl(data.url);
 
   const lines = [
     "BEGIN:VCARD",
@@ -143,7 +170,15 @@ function buildVCard(data: ContactSaveData) {
   ];
 
   if (organization) lines.push(`ORG;CHARSET=UTF-8:${organization}`);
-  lines.push(`TEL;TYPE=CELL,VOICE:${phoneNumber}`, "END:VCARD");
+  if (phoneNumber) lines.push(`TEL;TYPE=CELL,VOICE:${phoneNumber}`);
+  if (email) lines.push(`EMAIL;TYPE=INTERNET,HOME:${email}`);
+  if (url) lines.push(`URL:${url}`);
+  if (address)
+    lines.push(
+      `ADR;TYPE=HOME;CHARSET=UTF-8:;;${escapeVCardValue(address)};;;;`,
+    );
+
+  lines.push("END:VCARD");
 
   return lines.join("\r\n");
 }
@@ -201,11 +236,7 @@ export function ContactSaveBlock({
       selectedElementId={selectedElementId}
       onSelectElement={onSelectElement}
     >
-      <Root
-        dir={direction}
-        className="p-2"
-        $styleCss={containerCss}
-      >
+      <Root dir={direction} className="p-2" $styleCss={containerCss}>
         <EditablePart
           instanceId={block.instanceId}
           elementId="button"

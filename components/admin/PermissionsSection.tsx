@@ -14,6 +14,7 @@ import {
   FaKey,
   FaXmark,
 } from "react-icons/fa6";
+import { getUserRoleLabel } from "@/lib/userRole";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
 import { useAccess } from "@/hook/auth/useAccess";
@@ -34,6 +35,7 @@ type UserSummary = {
 type AccessSummary = {
   _id: string;
   id: string;
+  name?: string;
   staticComponents?: {
     componentName?: string;
     actions?: string[];
@@ -103,6 +105,7 @@ function normalizeAccess(value: unknown): AccessSummary | null {
   return {
     _id: id,
     id,
+    name: typeof value.name === "string" ? value.name : "",
     staticComponents: Array.isArray(value.staticComponents)
       ? value.staticComponents.filter(isRecord).map((item) => ({
           componentName:
@@ -134,6 +137,7 @@ function userLabel(user?: UserSummary | null) {
 
 function accessLabel(access?: AccessSummary | null) {
   if (!access) return "-";
+  if (access.name?.trim()) return access.name.trim();
   const firstStatic = access.staticComponents?.[0];
   if (firstStatic?.componentName) {
     const actions = firstStatic.actions?.length
@@ -1262,7 +1266,10 @@ export default function PermissionsSection({
                 options={users.map((user) => ({
                   value: user.id,
                   label: userLabel(user),
-                  sublabel: [user.role, user.phoneNumber]
+                  sublabel: [
+                    user.role ? getUserRoleLabel(user.role) : "",
+                    user.phoneNumber,
+                  ]
                     .filter(Boolean)
                     .join(" · "),
                 }))}

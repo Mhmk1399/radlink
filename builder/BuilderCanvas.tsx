@@ -281,7 +281,7 @@ export function CanvasContent({
           />
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-2xl">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-2xl">
               +
             </span>
             <h2 className="mt-4 text-base font-black text-neutral-800">

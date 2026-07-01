@@ -17,6 +17,13 @@ import {
   components,
   accentTokens,
 } from "@/lib/design/design-system";
+import {
+  isValidEmail,
+  isValidNationalCode,
+  isValidPhoneNumber,
+  normalizeNationalCode,
+  normalizePhoneNumber,
+} from "@/lib/validation/identityFields";
 
 /* ══════════════════════════════════════════════
    KEYFRAMES
@@ -60,7 +67,7 @@ interface BackendUser {
   nationalCode?: string;
   fatherName?: string;
   role: "user" | "agent" | "admin" | "superAdmin";
-  status: "active" | "inactive" | "blocked" | "pending";
+  status: "active" | "inactive";
   permissions: string[];
   limits: {
     files: number;
@@ -161,7 +168,7 @@ function formatPhone(phone: string): string {
 }
 
 function isValidIranPhone(phone: string): boolean {
-  return /^09[0-9]{9}$/.test(phone.replace(/\D/g, ""));
+  return isValidPhoneNumber(normalizePhoneNumber(phone));
 }
 
 /** Normalize Persian/Arabic digits typed on a mobile keyboard to Latin digits */
@@ -324,6 +331,7 @@ interface FieldProps {
   type?: "text" | "tel" | "email";
   inputRef?: React.RefObject<HTMLInputElement | null>;
   hint?: string;
+  errorMessage?: string;
 }
 
 function Field({
@@ -343,6 +351,7 @@ function Field({
   type = "text",
   inputRef,
   hint,
+  errorMessage,
 }: FieldProps) {
   const localRef = useRef<HTMLInputElement>(null);
   const ref = inputRef ?? localRef;
@@ -398,9 +407,13 @@ function Field({
           disabled && "opacity-60 cursor-not-allowed",
         )}
       />
-      {hint && !error && (
+      {errorMessage ? (
+        <p className="mt-1.5 text-[11px] font-medium text-red-400">
+          {errorMessage}
+        </p>
+      ) : hint && !error ? (
         <p className="mt-1.5 text-[11px] text-slate-500">{hint}</p>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -571,6 +584,9 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpError, setOtpError] = useState(false);
+  const [registerErrors, setRegisterErrors] = useState<
+    Record<string, string>
+  >({});
   const [timer, setTimer] = useState(OTP_EXPIRY);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isExistingUser, setIsExistingUser] = useState(false);
@@ -616,7 +632,7 @@ export default function AuthPage() {
      STEP 1: Send OTP → POST /api/auth/send-otp
   ──────────────────────────────────────────── */
   const handleSendOtp = useCallback(async () => {
-    const cleanPhone = phone.replace(/\D/g, "");
+    const cleanPhone = normalizePhoneNumber(phone);
 
     if (!isValidIranPhone(cleanPhone)) {
       setError("شماره موبایل معتبر نیست");
@@ -657,7 +673,7 @@ export default function AuthPage() {
     setError("");
 
     try {
-      const cleanPhone = phone.replace(/\D/g, "");
+      const cleanPhone = normalizePhoneNumber(phone);
       const { token, user } = await apiVerifyOtp(cleanPhone, otp);
 
       // Persist token — use httpOnly cookie in production via a dedicated API route
@@ -696,6 +712,16 @@ export default function AuthPage() {
     if (firstName.trim().length < 2) {
       setError("نام الزامی است (حداقل ۲ کاراکتر)");
       toast.warning("لطفاً نام خود را وارد کنید.");
+      return;
+    }
+
+    const nextErrors: Record<string, string> = {};
+    if (email.trim() && !isValidEmail(email))
+      nextErrors.email = "فرمت ایمیل معتبر نیست.";
+    if (nationalCode && !isValidNationalCode(nationalCode))
+      nextErrors.nationalCode = "کد ملی باید دقیقاً ۱۰ رقم باشد.";
+    if (Object.keys(nextErrors).length) {
+      setRegisterErrors(nextErrors);
       return;
     }
 
@@ -1200,14 +1226,27 @@ export default function AuthPage() {
                     label="ایمیل"
                     type="email"
                     dir="ltr"
+                    maxLength={254}
                     placeholder="example@mail.com"
                     value={email}
                     onChange={(v) => {
                       setEmail(v);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        const message =
+                          v.trim() && !isValidEmail(v)
+                            ? "فرمت ایمیل معتبر نیست."
+                            : "";
+                        if (message) next.email = message;
+                        else delete next.email;
+                        return next;
+                      });
                       setError("");
                     }}
                     onEnter={handleRegister}
                     disabled={loading}
+                    error={Boolean(registerErrors.email)}
+                    errorMessage={registerErrors.email}
                   />
 
                   <Field
@@ -1218,12 +1257,26 @@ export default function AuthPage() {
                     placeholder="0123456789"
                     value={nationalCode}
                     onChange={(v) => {
-                      setNationalCode(v);
+                      const normalized = normalizeNationalCode(v);
+                      setNationalCode(normalized);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        if (
+                          normalized &&
+                          !isValidNationalCode(normalized)
+                        )
+                          next.nationalCode =
+                            "کد ملی باید دقیقاً ۱۰ رقم باشد.";
+                        else delete next.nationalCode;
+                        return next;
+                      });
                       setError("");
                     }}
                     onEnter={handleRegister}
                     disabled={loading}
                     hint="۱۰ رقم بدون خط تیره"
+                    error={Boolean(registerErrors.nationalCode)}
+                    errorMessage={registerErrors.nationalCode}
                   />
 
                   <Field

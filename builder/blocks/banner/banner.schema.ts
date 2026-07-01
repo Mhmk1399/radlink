@@ -9,6 +9,7 @@ export const bannerSchema: BannerSchema = {
             label: "قاب اصلی",
             allowedStyleKeys: [
                 "backgroundColor",
+                "height",
                 "borderRadius",
                 "borderColor",
                 "borderWidth",
@@ -65,6 +66,11 @@ export const bannerSchema: BannerSchema = {
             key: "imageUrl",
             label: "تصویر پس‌زمینه",
             type: "image",
+        },
+        {
+            key: "imageLink",
+            label: "لینک تصویر",
+            type: "url",
         },
         {
             key: "showButton",

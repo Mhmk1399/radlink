@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export type AccessAction = "view" | "create" | "update" | "delete" | "publish";
 
 export interface IAccess extends Document {
+    name: string;
     isActive: boolean;
 
     // For static components (frontend hardcoded)
@@ -30,6 +31,15 @@ export interface IAccess extends Document {
 
 const AccessSchema = new Schema<IAccess>(
     {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 120,
+            unique: true,
+            sparse: true,
+            index: true,
+        },
         staticComponents: [
             {
                 componentName: { type: String, required: true },

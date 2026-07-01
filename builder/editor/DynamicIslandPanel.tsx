@@ -115,6 +115,7 @@ const STYLE_LABELS: Record<EditableStyleKey, string> = {
   color: "رنگ متن",
   backgroundColor: "پس‌زمینه",
   fontSize: "سایز فونت",
+  height: "ارتفاع",
   borderRadius: "گردی",
   borderColor: "رنگ بوردر",
   borderWidth: "ضخامت بوردر",
@@ -126,6 +127,7 @@ const NUMERIC_CONFIG: Record<
   { min: number; max: number; step: number; unit: string }
 > = {
   fontSize: { min: 8, max: 120, step: 1, unit: "px" },
+  height: { min: 80, max: 1200, step: 10, unit: "px" },
   borderRadius: { min: 0, max: 64, step: 1, unit: "px" },
   borderWidth: { min: 0, max: 20, step: 1, unit: "px" },
 };

@@ -49,10 +49,7 @@ function toClientValue(value: unknown): unknown {
 
   if (typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        toClientValue(item),
-      ]),
+      Object.entries(value).map(([key, item]) => [key, toClientValue(item)]),
     );
   }
 
@@ -137,13 +134,17 @@ export default async function PageRoute({ params }: Props) {
       : "";
 
   if (page.isPublished !== true) {
+    // Replace with your actual support phone number
+    const supportPhoneNumber = "02112345678";
+
     return (
       <main className="relative isolate min-h-screen overflow-hidden">
+        {/* Background Layer */}
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed inset-0 -z-10 scale-105"
+          className="pointer-events-none fixed inset-0 -z-10 scale-105 transition-transform duration-700"
           style={{
-            backgroundColor,
+            backgroundColor: backgroundColor || "#f3f4f6",
             backgroundImage: backgroundImage
               ? `url(${JSON.stringify(backgroundImage)})`
               : undefined,
@@ -152,30 +153,73 @@ export default async function PageRoute({ params }: Props) {
             backgroundSize: "cover",
           }}
         />
-        <div className="fixed inset-0 flex items-center justify-center bg-black/45 p-5 backdrop-blur-xl">
+
+        {/* Overlay & Content */}
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md sm:p-6">
           <section
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="unpublished-page-title"
             aria-describedby="unpublished-page-description"
-            className="w-full max-w-md rounded-2xl border border-white/70 bg-white/95 p-6 text-center shadow-2xl sm:p-8"
+            className="w-full max-w-md transform overflow-hidden rounded-3xl bg-white p-6 text-center shadow-2xl transition-all sm:p-8"
             dir="rtl"
           >
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-2xl font-black text-amber-600 ring-1 ring-amber-200">
-              !
+            {/* Icon Container */}
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 ring-8 ring-slate-50/50">
+              {/* Eye Off SVG Icon */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-8 w-8 text-slate-400"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                />
+              </svg>
             </div>
+
+            {/* Text Content */}
             <h1
               id="unpublished-page-title"
-              className="text-xl font-black text-neutral-900 sm:text-2xl"
+              className="text-2xl font-bold tracking-tight text-slate-900"
             >
-              این صفحه غیرفعال است
+              این صفحه در دسترس نیست
             </h1>
             <p
               id="unpublished-page-description"
-              className="mt-3 text-sm leading-7 text-neutral-600"
+              className="mt-3 text-sm leading-relaxed text-slate-500"
             >
-              این صفحه در حال حاضر منتشر نشده و محتوای آن قابل مشاهده نیست.
+              این صفحه در حال حاضر غیرفعال است یا هنوز منتشر نشده است. برای
+              اطلاعات بیشتر می‌توانید با پشتیبانی تماس بگییند.
             </p>
+
+            {/* Action Buttons */}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              {/* Primary Action: Call Button */}
+              <a
+                href={`tel:${supportPhoneNumber}`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-md active:scale-[0.98]"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                تماس با پشتیبانی
+              </a>
+            </div>
           </section>
         </div>
       </main>

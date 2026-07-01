@@ -87,7 +87,7 @@ export default function TemplatesSection({
     () => [
       {
         key: "name",
-        label: "نام تمپلیت",
+        label: "نام قالب",
         sortable: true,
         editable: false,
         render: (value, row) => (
@@ -250,15 +250,15 @@ export default function TemplatesSection({
       });
       const json = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(json?.message ?? "خطا در تغییر وضعیت تمپلیت");
+        throw new Error(json?.message ?? "خطا در تغییر وضعیت قالب");
       }
 
-      toast.success(nextStatus ? "تمپلیت فعال شد" : "تمپلیت غیرفعال شد");
+      toast.success(nextStatus ? "قالب فعال شد" : "قالب غیرفعال شد");
       setTableKey((key) => key + 1);
       setRefreshToken((token) => token + 1);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "خطا در تغییر وضعیت تمپلیت",
+        error instanceof Error ? error.message : "خطا در تغییر وضعیت قالب",
       );
     } finally {
       setTogglingTemplateId(null);
@@ -302,10 +302,10 @@ export default function TemplatesSection({
                   t.textPrimary,
                 )}
               >
-                مدیریت تمپلیت‌ها
+                مدیریت قالب‌ها
               </h1>
               <p className={cn("mt-0.5 text-xs sm:text-sm", t.textMuted)}>
-                تمپلیت‌ها را با صفحه‌ساز بسازید و به دسته‌بندی‌ها وصل کنید
+                قالب‌ها را با صفحه‌ساز بسازید و به دسته‌بندی‌ها وصل کنید
               </p>
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function TemplatesSection({
                 className={cn(primaryBtn, "h-11 flex-1 sm:flex-none")}
               >
                 <FaFileCirclePlus className="h-3.5 w-3.5" />
-                <span>ساخت تمپلیت</span>
+                <span>ساخت قالب</span>
               </button>
             )}
             <button
@@ -345,8 +345,8 @@ export default function TemplatesSection({
         endpoint={`/api/templates?refresh=${refreshToken}`}
         updateMethod="PATCH"
         columns={columns}
-        title="لیست تمپلیت‌ها"
-        subtitle="مشاهده و مدیریت تمپلیت‌های قابل استفاده در صفحه‌ساز"
+        title="لیست قالب‌ها"
+        subtitle="مشاهده و مدیریت قالب‌های قابل استفاده در صفحه‌ساز"
         primaryKey="_id"
         headers={headers}
         pageSize={20}
@@ -364,7 +364,7 @@ export default function TemplatesSection({
         serverSide
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
-          toast.success("تمپلیت غیرفعال شد");
+          toast.success("قالب غیرفعال شد");
         }}
         rowActions={(row) => (
           <div className="flex items-center justify-end gap-1">
@@ -404,7 +404,7 @@ export default function TemplatesSection({
                     event.stopPropagation();
                     router.push(`/builder?mode=template&templateId=${row._id}`);
                   }}
-                  title="ویرایش تمپلیت"
+                  title="ویرایش قالب"
                   className={cn(
                     "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
                     isDark
@@ -413,7 +413,7 @@ export default function TemplatesSection({
                   )}
                 >
                   <FaPenToSquare className="h-3.5 w-3.5" />
-                  <span className="sr-only">ویرایش تمپلیت</span>
+                  <span className="sr-only">ویرایش قالب</span>
                 </button>
               </>
             )}
@@ -425,7 +425,7 @@ export default function TemplatesSection({
                   event.stopPropagation();
                   router.push(`/builder?templateId=${row._id}`);
                 }}
-                title="ساخت صفحه از تمپلیت"
+                title="ساخت صفحه از قالب"
                 className={cn(
                   "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
                   isDark
@@ -434,12 +434,12 @@ export default function TemplatesSection({
                 )}
               >
                 <FaFileCirclePlus className="h-3.5 w-3.5" />
-                <span className="sr-only">ساخت صفحه از تمپلیت</span>
+                <span className="sr-only">ساخت صفحه از قالب</span>
               </button>
             )}
           </div>
         )}
-        emptyMessage="تمپلیتی یافت نشد"
+        emptyMessage="قالبی یافت نشد"
       />
     </div>
   );

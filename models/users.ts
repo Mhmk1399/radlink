@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export type UserRole = "user" | "agent" | "admin" | "superAdmin";
 
-export type UserStatus = "active" | "inactive" | "blocked" | "pending";
+export type UserStatus = "active" | "inactive";
 
 export interface IUser extends Document {
   firstName?: string;
@@ -59,6 +59,9 @@ const UserSchema = new Schema<IUser>(
       required: true,
       unique: true,
       trim: true,
+      minlength: 11,
+      maxlength: 11,
+      match: [/^\d{11}$/, "شماره تماس باید دقیقاً ۱۱ رقم باشد."],
       index: true,
     },
 
@@ -66,6 +69,8 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
       lowercase: true,
+      maxlength: 254,
+      match: [/^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/, "فرمت ایمیل معتبر نیست."],
       sparse: true,
       index: true,
     },
@@ -78,8 +83,8 @@ const UserSchema = new Schema<IUser>(
     nationalCode: {
       type: String,
       trim: true,
-      sparse: true,
-      index: true,
+      maxlength: 10,
+      match: [/^$|^\d{10}$/, "کد ملی باید دقیقاً ۱۰ رقم باشد."],
     },
 
     fatherName: {
@@ -98,7 +103,7 @@ const UserSchema = new Schema<IUser>(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "blocked", "pending"],
+      enum: ["active", "inactive"],
       default: "active",
       required: true,
       index: true,
@@ -170,7 +175,16 @@ const UserSchema = new Schema<IUser>(
     timestamps: true,
   }
 );
- 
+
+UserSchema.index(
+  { nationalCode: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      nationalCode: { $type: "string", $gt: "" },
+    },
+  },
+);
 
 
 // Useful virtual full name

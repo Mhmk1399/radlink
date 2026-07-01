@@ -58,7 +58,6 @@ export interface UserContextValue {
     updateUser: (payload: UpdateUserPayload) => Promise<User | void>;
     deleteUser: (user: User) => Promise<void>;
     toggleUserStatus: (user: User, newStatus: UserStatus) => Promise<void>;
-    toggleUserBlock: (user: User) => Promise<void>;
     resetUserPassword: (user: User) => Promise<void>;
     verifyUserPhone: (user: User) => Promise<void>;
     deleteBulk: (ids: string[]) => Promise<void>;
@@ -83,7 +82,7 @@ export interface UserProviderProps {
    ══════════════════════════════════════════════ */
 
 export type UserRole = "user" | "agent" | "admin" | "superAdmin";
-export type UserStatus = "active" | "inactive" | "blocked" | "pending";
+export type UserStatus = "active" | "inactive";
 
 export interface UserLimits {
     files: number;
@@ -152,8 +151,6 @@ export interface UserStats {
     total: number;
     active: number;
     inactive: number;
-    blocked: number;
-    pending: number;
     agents: number;
     admins: number;
 }
@@ -629,7 +626,16 @@ export interface Product extends BaseDocument {
     name: string;
     description?: string;
     price: number;
-    images: string[];
+    displayPrice?: string;
+    oldPrice?: string;
+    image?: string;
+    imageFile?: string;
+    owner: string | User;
+    page?: string | Page;
+    source: "manual" | "builder";
+    sourceBlockInstanceId?: string;
+    sourceItemId?: string;
+    productUrl?: string;
     /** Formatted price for display */
     formattedPrice?: string;
 }
@@ -918,15 +924,13 @@ export const USER_ROLE_OPTIONS: SelectOption[] = [
     { label: "کاربر", value: "user" },
     { label: "نماینده", value: "agent" },
     { label: "مدیر", value: "admin" },
-    { label: "سوپر ادمین", value: "superAdmin" },
+    { label: "R A D", value: "superAdmin" },
 ];
 
 /** User status options for dropdowns */
 export const USER_STATUS_OPTIONS: SelectOption[] = [
     { label: "فعال", value: "active" },
     { label: "غیرفعال", value: "inactive" },
-    { label: "مسدود", value: "blocked" },
-    { label: "در انتظار", value: "pending" },
 ];
 
 /** Agent type options for dropdowns */

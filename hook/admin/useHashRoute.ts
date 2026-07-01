@@ -99,7 +99,7 @@ export const SECTION_META: SectionMeta[] = [
 
     // Content
     { key: "pages", label: "صفحات", icon: "FaFile", group: "مدیریت محتوا", minRole: "agent" },
-    { key: "templates", label: "تمپلیت‌ها", icon: "FaPalette", group: "مدیریت محتوا", minRole: "admin" },
+    { key: "templates", label: "قالب‌ها", icon: "FaPalette", group: "مدیریت محتوا", minRole: "admin" },
     { key: "blocks", label: "بلاک‌ها", icon: "FaPuzzlePiece", group: "مدیریت محتوا", minRole: "admin" },
     { key: "categories", label: "دسته‌بندی‌ها", icon: "FaLayerGroup", group: "مدیریت محتوا", minRole: "admin" },
 

@@ -15,7 +15,7 @@ export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.permissions", label: "Permissionها" },
   { key: "admin.accesses", label: "Accessها" },
   { key: "admin.pages", label: "صفحات" },
-  { key: "admin.templates", label: "تمپلیت‌ها" },
+  { key: "admin.templates", label: "قالب‌ها" },
   { key: "admin.blocks", label: "بلاک‌ها" },
   { key: "admin.categories", label: "دسته‌بندی‌ها" },
   { key: "admin.files", label: "فایل‌ها" },
@@ -24,5 +24,5 @@ export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.tickets", label: "تیکت‌ها" },
   { key: "admin.notifications", label: "اعلانات" },
   { key: "builder.page", label: "ساخت صفحه از ادمین" },
-  { key: "builder.template", label: "صفحه‌ساز تمپلیت‌ها" },
+  { key: "builder.template", label: "صفحه‌ساز قالب‌ها" },
 ] as const;

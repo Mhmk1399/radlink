@@ -24,7 +24,13 @@ import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import { normalizeLiaraUrl, uploadFile } from "@/lib/fileUtils";
+import {
+  getIdentityInputProps,
+  sanitizeIdentityField,
+  validateIdentityField,
+} from "@/lib/validation/identityFields";
 import type { UserRole, UserStatus } from "@/types";
+import { superAdminBadgeClass } from "@/lib/userRole";
 
 type UserLimits = {
   files?: number;
@@ -209,14 +215,12 @@ const roleLabels: Record<UserRole, string> = {
   user: "کاربر",
   agent: "نماینده",
   admin: "مدیر",
-  superAdmin: "مدیر ارشد",
+  superAdmin: "R A D",
 };
 
 const statusLabels: Record<UserStatus, string> = {
   active: "فعال",
   inactive: "غیرفعال",
-  blocked: "مسدود",
-  pending: "در انتظار",
 };
 
 function formatFaDate(value?: string) {
@@ -249,6 +253,8 @@ function Field({
   placeholder,
   type = "text",
   required,
+  identityField,
+  error,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -257,9 +263,14 @@ function Field({
   placeholder?: string;
   type?: string;
   required?: boolean;
+  identityField?: "email" | "nationalCode";
+  error?: string;
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
+  const identityInputProps = identityField
+    ? getIdentityInputProps(identityField)
+    : {};
   return (
     <label className="block">
       <span
@@ -297,6 +308,10 @@ function Field({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          inputMode={identityInputProps.inputMode}
+          maxLength={identityInputProps.maxLength}
+          dir={identityInputProps.dir}
+          aria-invalid={Boolean(error)}
           className={cn(
             "h-full min-w-0 flex-1 bg-transparent text-sm outline-none",
             t.textPrimary,
@@ -306,6 +321,11 @@ function Field({
           )}
         />
       </span>
+      {error && (
+        <span className="mt-1.5 block text-xs font-medium text-red-500">
+          {error}
+        </span>
+      )}
     </label>
   );
 }
@@ -386,22 +406,19 @@ function LimitCard({
 
 function StatusBadge({ status }: { status: UserStatus }) {
   const active = status === "active";
-  const blocked = status === "blocked";
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
         active
           ? "bg-emerald-500/[0.08] text-emerald-400 ring-emerald-500/15"
-          : blocked
-            ? "bg-red-500/[0.08] text-red-400 ring-red-500/15"
-            : "bg-amber-500/[0.08] text-amber-400 ring-amber-500/15",
+          : "bg-slate-500/[0.08] text-slate-400 ring-slate-500/15",
       )}
     >
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",
-          active ? "bg-emerald-400" : blocked ? "bg-red-400" : "bg-amber-400",
+          active ? "bg-emerald-400" : "bg-slate-400",
         )}
       />
       {statusLabels[status] ?? status}
@@ -417,7 +434,9 @@ function RoleBadge({ role }: { role: UserRole }) {
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-        isSuperAdmin || isAdmin
+        isSuperAdmin
+          ? superAdminBadgeClass
+          : isAdmin
           ? isDark
             ? "bg-[#c8a84b]/[0.08] text-[#c8a84b] ring-[#c8a84b]/15"
             : "bg-[#8a7030]/[0.06] text-[#8a7030] ring-[#8a7030]/12"
@@ -578,6 +597,7 @@ function ProfileEditor({
   const [form, setForm] = useState<ProfileFormState>(() => formFromUser(user));
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const displayName =
     [form.firstName, form.lastName].filter(Boolean).join(" ").trim() ||
@@ -604,7 +624,15 @@ function ProfileEditor({
   ];
 
   function updateField(key: keyof ProfileFormState, value: string) {
-    setForm((current) => ({ ...current, [key]: value }));
+    const nextValue = String(sanitizeIdentityField(key, value));
+    setForm((current) => ({ ...current, [key]: nextValue }));
+    setFieldErrors((current) => {
+      const next = { ...current };
+      const validationError = validateIdentityField(key, nextValue);
+      if (validationError) next[key] = validationError;
+      else delete next[key];
+      return next;
+    });
   }
 
   async function handleAvatarFile(file: File) {
@@ -627,6 +655,20 @@ function ProfileEditor({
 
     if (form.firstName.trim().length < 2) {
       toast.error("نام باید حداقل ۲ کاراکتر باشد.");
+      return;
+    }
+
+    const identityErrors = {
+      email: validateIdentityField("email", form.email),
+      nationalCode: validateIdentityField("nationalCode", form.nationalCode),
+    };
+    const nextErrors = Object.fromEntries(
+      Object.entries(identityErrors).filter((entry): entry is [string, string] =>
+        Boolean(entry[1]),
+      ),
+    );
+    if (Object.keys(nextErrors).length) {
+      setFieldErrors(nextErrors);
       return;
     }
 
@@ -734,16 +776,20 @@ function ProfileEditor({
               icon={<FaEnvelope className="h-3.5 w-3.5" />}
               label="ایمیل"
               type="email"
+              identityField="email"
               value={form.email}
               onChange={(value) => updateField("email", value)}
               placeholder="example@email.com"
+              error={fieldErrors.email}
             />
             <Field
               icon={<FaIdCard className="h-3.5 w-3.5" />}
               label="کد ملی"
+              identityField="nationalCode"
               value={form.nationalCode}
               onChange={(value) => updateField("nationalCode", value)}
-              placeholder="کد ملی"
+              placeholder="0123456789"
+              error={fieldErrors.nationalCode}
             />
             <Field
               icon={<FaIdCard className="h-3.5 w-3.5" />}

@@ -4,7 +4,7 @@ export const contactSaveSchema: BlockSchema = {
   type: "contactSave",
   label: "ذخیره مخاطب",
   description:
-    "دکمه ساخت فایل مخاطب برای ذخیره نام، نام خانوادگی و شماره همراه در آیفون و اندروید.",
+    "دکمه ساخت فایل مخاطب برای ذخیره نام، نام خانوادگی، شماره همراه، ایمیل، آدرس و لینک در آیفون و اندروید.",
   elements: {
     container: {
       label: "قاب بلاک",
@@ -47,6 +47,21 @@ export const contactSaveSchema: BlockSchema = {
     {
       key: "phoneNumber",
       label: "شماره همراه",
+      type: "text",
+    },
+    {
+      key: "email",
+      label: "ایمیل",
+      type: "text",
+    },
+    {
+      key: "address",
+      label: "آدرس",
+      type: "text",
+    },
+    {
+      key: "url",
+      label: "لینک وب‌سایت",
       type: "text",
     },
     {

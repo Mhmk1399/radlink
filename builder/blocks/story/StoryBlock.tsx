@@ -16,6 +16,7 @@ interface StoryItem {
   id: string;
   title: string;
   caption: string;
+  link: string;
   imageUrl: string;
   thumbnailUrl: string;
   altText: string;
@@ -240,6 +241,7 @@ export default function StoryHighlightsBlock({
         id: typeof s.id === "string" ? s.id : `s-${Math.random()}`,
         title: typeof s.title === "string" ? s.title : "",
         caption: typeof s.caption === "string" ? s.caption : "",
+        link: typeof s.link === "string" ? s.link.trim() : "",
         imageUrl: typeof s.imageUrl === "string" ? s.imageUrl : "",
         thumbnailUrl: typeof s.thumbnailUrl === "string" ? s.thumbnailUrl : "",
         altText: typeof s.altText === "string" ? s.altText : "",
@@ -549,7 +551,7 @@ export default function StoryHighlightsBlock({
 
                   {/* Caption overlay at bottom */}
                   {showCaptions && (
-                    <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+                    <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
                       <EditablePart
                         instanceId={block.instanceId}
                         elementId="caption"
@@ -557,21 +559,51 @@ export default function StoryHighlightsBlock({
                         selectedElementId={selectedElementId}
                         onSelectElement={onSelectElement}
                       >
-                        <StyledCaption
-                          $styleCss={captionStyle}
-                          className="px-4 py-3"
+                        <a
+                          href={
+                            !isEditor && activeStory.link
+                              ? activeStory.link
+                              : undefined
+                          }
+                          target={
+                            !isEditor && /^https?:\/\//i.test(activeStory.link)
+                              ? "_blank"
+                              : undefined
+                          }
+                          rel={
+                            !isEditor && /^https?:\/\//i.test(activeStory.link)
+                              ? "noopener noreferrer"
+                              : undefined
+                          }
+                          onClick={(event) => {
+                            if (isEditor || !activeStory.link) {
+                              event.preventDefault();
+                            }
+                            event.stopPropagation();
+                          }}
+                          className="block no-underline"
+                          aria-label={
+                            activeStory.link
+                              ? `باز کردن لینک ${activeStory.title || "استوری"}`
+                              : undefined
+                          }
                         >
-                          <InlineEditableText
-                            value={activeStory.caption}
-                            dataKey={`stories.${activeStory.id}.caption`}
-                            instanceId={block.instanceId}
-                            mode={mode}
-                            multiline
-                            onUpdateContent={onUpdateContent}
+                          <StyledCaption
+                            $styleCss={captionStyle}
+                            className="px-4 py-3"
                           >
-                            {(text) => <>{text}</>}
-                          </InlineEditableText>
-                        </StyledCaption>
+                            <InlineEditableText
+                              value={activeStory.caption}
+                              dataKey={`stories.${activeStory.id}.caption`}
+                              instanceId={block.instanceId}
+                              mode={mode}
+                              multiline
+                              onUpdateContent={onUpdateContent}
+                            >
+                              {(text) => <>{text}</>}
+                            </InlineEditableText>
+                          </StyledCaption>
+                        </a>
                       </EditablePart>
                     </div>
                   )}

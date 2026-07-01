@@ -3,6 +3,11 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
+import {
+    isValidPhoneNumber,
+    normalizePhoneNumber,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 import User from "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -74,6 +79,25 @@ export const PATCH = compose(
     const adminOnly = ["limits", "pricePerLanding", "type"];
 
     const updates: Record<string, unknown> = {};
+
+    if ("fixedNumber" in body) {
+        const rawFixedNumber =
+            typeof body.fixedNumber === "string"
+                ? toEnglishDigits(body.fixedNumber).trim()
+                : "";
+        const fixedNumber = normalizePhoneNumber(rawFixedNumber);
+        if (
+            rawFixedNumber &&
+            (!isValidPhoneNumber(rawFixedNumber) ||
+                fixedNumber !== rawFixedNumber)
+        ) {
+            return NextResponse.json(
+                { message: "شماره تماس باید دقیقاً ۱۱ رقم باشد." },
+                { status: 400 },
+            );
+        }
+        body.fixedNumber = fixedNumber;
+    }
 
     for (const key of selfAllowed) {
         if (key in body) updates[key] = body[key];

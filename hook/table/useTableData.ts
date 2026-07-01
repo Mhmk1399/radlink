@@ -128,6 +128,31 @@ function unwrapMutationResponse<T>(json: unknown): T | null {
     return json as T;
 }
 
+async function createMutationError(
+    response: Response,
+    fallback: string,
+): Promise<Error> {
+    const payload = await response.json().catch(() => null);
+    const record =
+        payload && typeof payload === "object" && !Array.isArray(payload)
+            ? (payload as Record<string, unknown>)
+            : {};
+    const error = new Error(
+        typeof record.message === "string" && record.message.trim()
+            ? record.message
+            : `${fallback}: ${response.status}`,
+    ) as Error & {
+        status?: number;
+        code?: string;
+        field?: string;
+    };
+
+    error.status = response.status;
+    if (typeof record.code === "string") error.code = record.code;
+    if (typeof record.field === "string") error.field = record.field;
+    return error;
+}
+
 /* ══════════════════════════════════════════════
    BUILD URL WITH QUERY PARAMS
    ══════════════════════════════════════════════ */
@@ -320,9 +345,7 @@ export function useTableData<T extends Record<string, unknown>>(
             });
 
             if (!res.ok) {
-                const err = new Error(`خطا در ایجاد: ${res.status}`);
-                (err as any).status = res.status;
-                throw err;
+                throw await createMutationError(res, "خطا در ایجاد");
             }
 
             const created = unwrapMutationResponse<T>(
@@ -357,9 +380,7 @@ export function useTableData<T extends Record<string, unknown>>(
             });
 
             if (!res.ok) {
-                const err = new Error(`خطا در ویرایش: ${res.status}`);
-                (err as any).status = res.status;
-                throw err;
+                throw await createMutationError(res, "خطا در ویرایش");
             }
 
             const updated = unwrapMutationResponse<T>(
@@ -397,9 +418,7 @@ export function useTableData<T extends Record<string, unknown>>(
             });
 
             if (!res.ok) {
-                const err = new Error(`خطا در حذف: ${res.status}`);
-                (err as any).status = res.status;
-                throw err;
+                throw await createMutationError(res, "خطا در حذف");
             }
 
             await mutate(

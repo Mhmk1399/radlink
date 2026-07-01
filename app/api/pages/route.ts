@@ -28,7 +28,7 @@
 
 //     if (templateId) {
 //         template = await Template.findById(templateId).populate<{ blocks: IBlock[] }>("blocks");
-//         if (!template) return NextResponse.json({ message: "تمپلیت پیدا نشد." }, { status: 404 });
+//         if (!template) return NextResponse.json({ message: "قالب پیدا نشد." }, { status: 404 });
 
 //         // Snapshot each block — page owns its own copy
 //         blocks = template.blocks.map((b: IBlock, index: number) => ({
@@ -103,7 +103,9 @@ import Page from "@/models/pages";
 import Template from "@/models/template";
 import Category from "@/models/category";
 import User from "@/models/users";
+import Product from "@/models/products";
 import "@/models/blocks";
+import { syncPageProducts } from "@/lib/products/syncPageProducts";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -317,7 +319,7 @@ export const POST = compose(
 
         if (!template) {
             return NextResponse.json(
-                { message: "تمپلیت پیدا نشد یا اجازه استفاده از آن را ندارید." },
+                { message: "قالب پیدا نشد یا اجازه استفاده از آن را ندارید." },
                 { status: 404 }
             );
         }
@@ -330,7 +332,7 @@ export const POST = compose(
             }))
         ) {
             return NextResponse.json(
-                { message: "دسته‌بندی این تمپلیت غیرفعال است." },
+                { message: "دسته‌بندی این قالب غیرفعال است." },
                 { status: 400 }
             );
         }
@@ -389,6 +391,24 @@ export const POST = compose(
         publishedAt: isPublished ? new Date() : undefined,
     });
 
+    try {
+        await syncPageProducts({
+            pageId: page._id,
+            ownerId,
+            blocks: page.blocks,
+        });
+    } catch (error) {
+        console.error("Failed to synchronize page products", error);
+        await Product.deleteMany({ page: page._id, source: "builder" }).catch(
+            () => null
+        );
+        await Page.findByIdAndDelete(page._id).catch(() => null);
+        return NextResponse.json(
+            { message: "ذخیره محصولات صفحه با خطا مواجه شد." },
+            { status: 500 }
+        );
+    }
+
     let qr: unknown = null;
     try {
         qr = await createQrForPage({
@@ -399,6 +419,9 @@ export const POST = compose(
         });
     } catch (error) {
         console.error("Failed to create page QR code", error);
+        await Product.deleteMany({ page: page._id, source: "builder" }).catch(
+            () => null
+        );
         await Page.findByIdAndDelete(page._id).catch(() => null);
 
         return NextResponse.json(

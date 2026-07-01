@@ -57,6 +57,7 @@ import {
   FaTriangleExclamation,
   FaPlus,
 } from "react-icons/fa6";
+import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
 import Image from "next/image";
 
 /* ══════════════════════════════════════════════
@@ -227,13 +228,6 @@ function authUserFromUnknown(value: unknown): Partial<AuthUser> | null {
     role: typeof record.role === "string" ? record.role : undefined,
   };
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  user: "کاربر",
-  agent: "نماینده",
-  admin: "مدیر",
-  superAdmin: "مدیر ارشد",
-};
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
@@ -1191,7 +1185,8 @@ function UserDropdown({
 
   const displayName = getDisplayName(authUser);
   const initials = getInitials(displayName);
-  const rolePersian = ROLE_LABELS[authUser?.role ?? "user"] ?? "کاربر";
+  const rolePersian = getUserRoleLabel(authUser?.role);
+  const isSuperAdmin = authUser?.role === "superAdmin";
 
   return (
     <div ref={ref} className="relative">
@@ -1227,7 +1222,14 @@ function UserDropdown({
           >
             {displayName}
           </p>
-          <p className={cn("text-[10px] leading-none mt-0.5", s.textMuted)}>
+          <p
+            className={cn(
+              "mt-0.5 text-[10px] leading-none",
+              isSuperAdmin
+                ? `inline-flex rounded-full border px-1.5 py-0.5 font-bold ${superAdminBadgeClass}`
+                : s.textMuted,
+            )}
+          >
             {rolePersian}
           </p>
         </div>
@@ -1273,7 +1275,7 @@ function UserDropdown({
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-bold mt-1",
-                    s.accentBadge,
+                    isSuperAdmin ? superAdminBadgeClass : s.accentBadge,
                   )}
                 >
                   <FaShieldHalved className="h-2 w-2" aria-hidden="true" />
@@ -1711,7 +1713,7 @@ function Sidebar({
 
   const displayName = getDisplayName(authUser);
   const initials = getInitials(displayName);
-  const rolePersian = ROLE_LABELS[authUser?.role ?? "user"] ?? "کاربر";
+  const rolePersian = getUserRoleLabel(authUser?.role);
 
   const isCollapsed = mounted && collapsed;
 
@@ -1997,7 +1999,14 @@ function Sidebar({
                 >
                   {displayName}
                 </p>
-                <p className={cn("text-[10px] mt-1 leading-none", s.textMuted)}>
+                <p
+                  className={cn(
+                    "mt-1 text-[10px] leading-none",
+                    isSuperAdmin
+                      ? `inline-flex rounded-full border px-1.5 py-0.5 font-bold ${superAdminBadgeClass}`
+                      : s.textMuted,
+                  )}
+                >
                   {rolePersian}
                 </p>
               </div>

@@ -4,6 +4,11 @@ import { withDB, withAuth, withRole, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
 import User from "@/models/users";
+import {
+    isValidPhoneNumber,
+    normalizePhoneNumber,
+    toEnglishDigits,
+} from "@/lib/validation/identityFields";
 
 function normalizeLimits(value: unknown) {
     const limits =
@@ -27,9 +32,22 @@ export const POST = compose(
 )(async (req: AuthRequest) => {
     const body = await req.json();
     const { userId, type, postalCode, fixedNumber, pricePerLanding, companyName, ceoName, economicNumber, registrationNumber, limits } = body;
+    const rawFixedNumber =
+        typeof fixedNumber === "string" ? toEnglishDigits(fixedNumber).trim() : "";
+    const normalizedFixedNumber = normalizePhoneNumber(rawFixedNumber);
 
     if (!userId || !type) {
         return NextResponse.json({ message: "شناسه کاربر و نوع نماینده الزامی هستند." }, { status: 400 });
+    }
+    if (
+        rawFixedNumber &&
+        (!isValidPhoneNumber(rawFixedNumber) ||
+            normalizedFixedNumber !== rawFixedNumber)
+    ) {
+        return NextResponse.json(
+            { message: "شماره تماس باید دقیقاً ۱۱ رقم باشد." },
+            { status: 400 },
+        );
     }
 
     const user = await User.findById(userId);
@@ -43,7 +61,7 @@ export const POST = compose(
         user: userId,
         type,
         postalCode,
-        fixedNumber,
+        fixedNumber: normalizedFixedNumber || undefined,
         pricePerLanding: pricePerLanding ?? 0,
         companyName,
         ceoName,

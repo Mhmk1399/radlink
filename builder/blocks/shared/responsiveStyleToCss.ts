@@ -77,6 +77,7 @@ export function responsiveStyleToCss(
     const color = style.color?.mobile;
     const backgroundColor = style.backgroundColor?.mobile;
     const fontSize = toPx(style.fontSize?.mobile);
+    const height = toPx(style.height?.mobile);
     const borderRadius = toPx(style.borderRadius?.mobile);
     const borderColor = style.borderColor?.mobile;
     const borderWidth = toPx(style.borderWidth?.mobile);
@@ -84,6 +85,7 @@ export function responsiveStyleToCss(
     addCss(css, "color", color);
     addCss(css, "background-color", backgroundColor);
     addCss(css, "font-size", fontSize);
+    addCss(css, "height", height);
     addCss(css, "border-radius", borderRadius);
 
     if (borderColor || borderWidth) {
@@ -92,6 +94,17 @@ export function responsiveStyleToCss(
 
     addCss(css, "border-color", borderColor);
     addCss(css, "border-width", borderWidth);
+
+    if (style.height?.tablet !== undefined) {
+        css.push(
+            `@media (min-width: 768px) { height: ${toPx(style.height.tablet)}; }`,
+        );
+    }
+    if (style.height?.desktop !== undefined) {
+        css.push(
+            `@media (min-width: 1024px) { height: ${toPx(style.height.desktop)}; }`,
+        );
+    }
 
     css.push(animationToCss(style.animation, animationPrefix));
 
