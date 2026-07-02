@@ -16,6 +16,10 @@ import type {
   AnimationType,
   BlockElement,
 } from "@/types/blocks/builder.types";
+import {
+  ANIMATION_OPTIONS,
+  previewAnimation,
+} from "../animationOptions";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -37,7 +41,7 @@ type DynamicStyleFormProps = {
 
 type NumericStyleKey = Extract<
   EditableStyleKey,
-  "fontSize" | "height" | "borderRadius" | "borderWidth"
+  "fontSize" | "height" | "borderRadius" | "borderWidth" | "gridColumns"
 >;
 
 /* ================================================================== */
@@ -52,6 +56,7 @@ const styleLabels: Record<EditableStyleKey, string> = {
   borderRadius: "گردی گوشه‌ها",
   borderColor: "رنگ بوردر",
   borderWidth: "ضخامت بوردر",
+  gridColumns: "تعداد ستون‌های گرید",
   animation: "انیمیشن",
 };
 
@@ -63,20 +68,9 @@ const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
   height: <RxFontSize size={15} />,
   borderRadius: <RxCornerBottomRight size={15} />,
   borderWidth: <RxBorderWidth size={15} />,
+  gridColumns: <HiOutlineSwatch size={15} />,
   animation: <HiOutlineSparkles size={15} />,
 };
-
-const animationOptions: Array<{
-  label: string;
-  value: AnimationType;
-  icon: string;
-}> = [
-  { label: "بدون انیمیشن", value: "none", icon: "○" },
-  { label: "محو شدن", value: "fade", icon: "◐" },
-  { label: "اسلاید به بالا", value: "slideUp", icon: "↑" },
-  { label: "بزرگ‌نمایی", value: "scale", icon: "⊕" },
-  { label: "تپش", value: "pulse", icon: "◉" },
-];
 
 const numberFieldConfig: Record<
   NumericStyleKey,
@@ -86,6 +80,7 @@ const numberFieldConfig: Record<
   height: { min: 80, max: 1200, step: 10, unit: "px" },
   borderRadius: { min: 0, max: 64, step: 1, unit: "px" },
   borderWidth: { min: 0, max: 20, step: 1, unit: "px" },
+  gridColumns: { min: 1, max: 4, step: 1, unit: " ستون" },
 };
 
 /* ================================================================== */
@@ -114,7 +109,8 @@ function isNumericStyleKey(k: EditableStyleKey): k is NumericStyleKey {
     k === "fontSize" ||
     k === "height" ||
     k === "borderRadius" ||
-    k === "borderWidth"
+    k === "borderWidth" ||
+    k === "gridColumns"
   );
 }
 
@@ -340,13 +336,20 @@ export function DynamicStyleForm({
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {animationOptions.map((opt) => {
+                  {ANIMATION_OPTIONS.map((opt) => {
                     const active = cur === opt.value;
                     return (
                       <button
                         key={opt.value}
                         type="button"
-                        onClick={() => onChange("animation", opt.value)}
+                        onClick={(event) => {
+                          const icon =
+                            event.currentTarget.querySelector<HTMLElement>(
+                              "[data-animation-preview]",
+                            );
+                          if (icon) previewAnimation(icon, opt.value);
+                          onChange("animation", opt.value);
+                        }}
                         className={[
                           "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-right transition-all",
                           active
@@ -354,7 +357,10 @@ export function DynamicStyleForm({
                             : "border-neutral-100 bg-transparent text-neutral-500 hover:border-neutral-200 hover:bg-white hover:text-neutral-700",
                         ].join(" ")}
                       >
-                        <span className="text-[14px] leading-none">
+                        <span
+                          data-animation-preview
+                          className="text-[14px] leading-none"
+                        >
                           {opt.icon}
                         </span>
                         <span className="text-[12px]">{opt.label}</span>

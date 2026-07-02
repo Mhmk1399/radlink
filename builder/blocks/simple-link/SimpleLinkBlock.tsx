@@ -108,10 +108,40 @@ function animationToCss(animation?: AnimationType): string {
       return "animation: simple-link-fade 0.5s ease both;";
     case "slideUp":
       return "animation: simple-link-slide-up 0.5s ease both;";
+    case "slideLeft":
+      return "animation: simple-link-slide-left 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "slideRight":
+      return "animation: simple-link-slide-right 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;";
     case "scale":
       return "animation: simple-link-scale 0.4s ease both;";
     case "pulse":
       return "animation: simple-link-pulse 1.8s ease-in-out infinite;";
+    case "bounceIn":
+      return "animation: simple-link-bounce-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;";
+    case "rotateIn":
+      return "animation: simple-link-rotate-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "blurIn":
+      return "animation: simple-link-blur-in 0.65s ease both;";
+    case "slideDown":
+      return "animation: simple-link-slide-down 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "zoomOut":
+      return "animation: simple-link-zoom-out 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "flipUp":
+      return "animation: simple-link-flip-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "flipSide":
+      return "animation: simple-link-flip-side 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "swingIn":
+      return "animation: simple-link-swing-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;";
+    case "elasticIn":
+      return "animation: simple-link-elastic-in 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) both;";
+    case "riseSoft":
+      return "animation: simple-link-rise-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;";
+    case "dropSoft":
+      return "animation: simple-link-drop-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;";
+    case "focusIn":
+      return "animation: simple-link-focus-in 0.75s ease both;";
+    case "glowIn":
+      return "animation: simple-link-glow-in 0.9s ease both;";
     case "none":
     default:
       return "animation: none;";

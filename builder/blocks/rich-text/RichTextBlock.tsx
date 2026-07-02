@@ -43,6 +43,7 @@ type RichTextBlockProps = BlockComponentProps & {
 
 const RichTextRoot = styled.div`
   ${sharedBlockKeyframes(PREFIX)}
+  position: relative;
 `;
 
 const StyledContainer = styled.div<{
@@ -50,6 +51,52 @@ const StyledContainer = styled.div<{
 }>`
   ${sharedBlockKeyframes(`${PREFIX}-container`)}
   ${(props) => props.$styleCss}
+
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.05);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        circle at top right,
+        rgba(148, 163, 184, 0.05),
+        transparent 24%
+      ),
+      radial-gradient(
+        circle at bottom left,
+        rgba(226, 232, 240, 0.45),
+        transparent 30%
+      );
+  }
+`;
+
+const ContentLayer = styled.div`
+  position: relative;
+  z-index: 1;
+`;
+
+const ContentInner = styled.div`
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+`;
+
+const HeaderStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 `;
 
 const StyledTitle = styled.div<{
@@ -57,7 +104,13 @@ const StyledTitle = styled.div<{
 }>`
   ${sharedBlockKeyframes(`${PREFIX}-title`)}
   ${(props) => props.$styleCss}
+
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
 `;
+
+ 
 
 const StyledContent = styled.div<{
   $styleCss: string;
@@ -66,7 +119,14 @@ const StyledContent = styled.div<{
   ${(props) => props.$styleCss}
 
   white-space: pre-wrap;
-  line-height: 1.95;
+  line-height: 2;
+  font-weight: 400;
+  letter-spacing: -0.003em;
+  word-break: break-word;
+
+  p {
+    margin: 0;
+  }
 `;
 
 /* ================================================================== */
@@ -83,7 +143,6 @@ export function RichTextBlock({
   const mobileOnly = mode === "editor";
 
   const showTitle = Boolean(block.data.showTitle);
-
   const contentValue = String(block.data.content ?? "");
 
   const titleCss = responsiveStyleToCss(
@@ -118,51 +177,57 @@ export function RichTextBlock({
           className="flex flex-col gap-5 overflow-hidden px-5 py-6 sm:px-7 sm:py-7"
           $styleCss={containerCss}
         >
-          {showTitle && (
-            <EditablePart
-              instanceId={block.instanceId}
-              elementId="title"
-              mode={mode}
-              selectedElementId={selectedElementId}
-              onSelectElement={onSelectElement}
-            >
-              <StyledTitle
-                className="font-extrabold leading-[1.4]"
-                $styleCss={titleCss}
-              >
-                <InlineEditableText
-                  value={String(block.data.title ?? "")}
-                  dataKey="title"
-                  instanceId={block.instanceId}
-                  mode={mode}
-                  onUpdateContent={onUpdateContent}
-                >
-                  {(text) => <h2 className="m-0">{text}</h2>}
-                </InlineEditableText>
-              </StyledTitle>
-            </EditablePart>
-          )}
+          <ContentLayer>
+            <ContentInner className="flex flex-col gap-5">
+              {showTitle && (
+                <HeaderStack>
+                  <EditablePart
+                    instanceId={block.instanceId}
+                    elementId="title"
+                    mode={mode}
+                    selectedElementId={selectedElementId}
+                    onSelectElement={onSelectElement}
+                  >
+                    <StyledTitle
+                      className="font-extrabold leading-[1.4]"
+                      $styleCss={titleCss}
+                    >
+                      <InlineEditableText
+                        value={String(block.data.title ?? "")}
+                        dataKey="title"
+                        instanceId={block.instanceId}
+                        mode={mode}
+                        onUpdateContent={onUpdateContent}
+                      >
+                        {(text) => <h2 className="m-0">{text}</h2>}
+                      </InlineEditableText>
+                    </StyledTitle>
+                  </EditablePart>
+                </HeaderStack>
+              )}
 
-          <EditablePart
-            instanceId={block.instanceId}
-            elementId="content"
-            mode={mode}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          >
-            <StyledContent $styleCss={contentCss}>
-              <InlineEditableText
-                value={contentValue || "متن خود را وارد کنید"}
-                dataKey="content"
+              <EditablePart
                 instanceId={block.instanceId}
+                elementId="content"
                 mode={mode}
-                multiline
-                onUpdateContent={onUpdateContent}
+                selectedElementId={selectedElementId}
+                onSelectElement={onSelectElement}
               >
-                {(text) => <div>{text}</div>}
-              </InlineEditableText>
-            </StyledContent>
-          </EditablePart>
+                <StyledContent $styleCss={contentCss}>
+                  <InlineEditableText
+                    value={contentValue || "متن خود را وارد کنید"}
+                    dataKey="content"
+                    instanceId={block.instanceId}
+                    mode={mode}
+                    multiline
+                    onUpdateContent={onUpdateContent}
+                  >
+                    {(text) => <div>{text}</div>}
+                  </InlineEditableText>
+                </StyledContent>
+              </EditablePart>
+            </ContentInner>
+          </ContentLayer>
         </StyledContainer>
       </EditablePart>
     </RichTextRoot>

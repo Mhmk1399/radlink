@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import {
   SiTelegram,
   SiWhatsapp,
@@ -12,6 +12,7 @@ import {
   SiYoutube,
 } from "react-icons/si";
 import { FiLinkedin } from "react-icons/fi";
+import { HiOutlineLink } from "react-icons/hi2";
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
 import { InlineEditableText } from "@/builder/blocks/shared/InlineEditableText";
 import {
@@ -20,7 +21,9 @@ import {
 } from "@/builder/blocks/shared/responsiveStyleToCss";
 import type { BlockComponentProps } from "@/types/blocks/builder.types";
 
-// ─── X (Twitter) inline SVG ────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   X (Twitter) inline SVG
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const XIcon: React.FC = () => (
   <svg
@@ -35,7 +38,9 @@ const XIcon: React.FC = () => (
   </svg>
 );
 
-// ─── Iranian Messenger Image Icons ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   Iranian Messenger Image Icons
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const IranianImageIcon: React.FC<{ src: string; alt: string }> = ({
   src,
@@ -68,13 +73,13 @@ const RubikaIcon: React.FC = () => (
 const BaleIcon: React.FC = () => (
   <IranianImageIcon src="/assets/svg/Bale.svg" alt="بله" />
 );
- 
 const IgapIcon: React.FC = () => (
   <IranianImageIcon src="/assets/svg/I-GAP.svg" alt="آی‌گپ" />
 );
- 
 
-// ─── Brand Colors ───────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   Brand Colors
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const BRAND_COLORS: Record<string, string> = {
   telegramUrl: "#26A5E4",
@@ -83,12 +88,19 @@ const BRAND_COLORS: Record<string, string> = {
   signalUrl: "#3A76F0",
   discordUrl: "#5865F2",
   messengerUrl: "#0084FF",
-  xUrl: "#000000",
+  xUrl: "#14171A",
   youtubeUrl: "#FF0000",
   linkedinUrl: "#0A66C2",
+  eitaaUrl: "#E8873A",
+  soroushUrl: "#0099CC",
+  rubikaUrl: "#6B43A8",
+  baleUrl: "#43B749",
+  igapUrl: "#FF6B00",
 };
 
-// ─── Service definitions ────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   Service Definitions
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 interface ServiceDef {
   urlKey: string;
@@ -140,18 +152,15 @@ const services: ServiceDef[] = [
     label: "بله",
     Icon: BaleIcon,
   },
- 
   {
     urlKey: "igapUrl",
     showKey: "showIgap",
     label: "آی‌گپ",
     Icon: IgapIcon,
   },
- 
   {
     urlKey: "signalUrl",
     showKey: "showSignal",
-    
     label: "سیگنال",
     Icon: SiSignal,
   },
@@ -187,66 +196,257 @@ const services: ServiceDef[] = [
   },
 ];
 
-// ─── Styled Components ──────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+`;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Styled Components
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const PREFIX = "messenger-links-block";
 
 const StyledContainer = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(PREFIX)}
   ${({ $styleCss }) => $styleCss}
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.03);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(
+        ellipse at 20% 0%,
+        rgba(99, 102, 241, 0.04) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at 80% 100%,
+        rgba(59, 130, 246, 0.04) 0%,
+        transparent 60%
+      );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+`;
+
+const HeaderSection = styled.div`
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 `;
 
 const StyledTitle = styled.h2<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
   margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
   transition:
     color 0.2s ease,
     font-size 0.2s ease;
+`;
+
+const TitleDivider = styled.div`
+  width: 48px;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #6366f1, #3b82f6, #06b6d4);
+  background-size: 200% auto;
+  animation: ${shimmer} 3s linear infinite;
+  margin: 4px auto 0;
 `;
 
 const StyledDescription = styled.p<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
   margin: 0;
+  line-height: 1.7;
+  max-width: 480px;
   transition:
     color 0.2s ease,
     font-size 0.2s ease;
 `;
 
+const GridWrapper = styled.div`
+  position: relative;
+  z-index: 1;
+`;
+
+const GridItem = styled.div<{ $index: number }>`
+  min-width: 0;
+  animation: ${fadeInUp} 0.4s ease both;
+  animation-delay: ${({ $index }) => $index * 0.04}s;
+`;
+
+const GridLink = styled.a<{ $index: number }>`
+  min-width: 0;
+  animation: ${fadeInUp} 0.4s ease both;
+  animation-delay: ${({ $index }) => $index * 0.04}s;
+`;
+
 const StyledMessengerButton = styled.div<{
   $styleCss: string;
   $isEmpty: boolean;
+  $brandColor: string;
 }>`
   ${({ $styleCss }) => $styleCss}
-  transition: background-color 0.2s ease, border-color 0.2s ease,
-    transform 0.15s ease, box-shadow 0.2s ease;
-  opacity: ${({ $isEmpty }) => ($isEmpty ? 0.45 : 1)};
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease;
+  opacity: ${({ $isEmpty }) => ($isEmpty ? 0.5 : 1)};
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    background: ${({ $brandColor }) =>
+      `linear-gradient(135deg, ${$brandColor}08, ${$brandColor}15)`};
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
 
   &:hover {
-    transform: ${({ $isEmpty }) => ($isEmpty ? "none" : "translateY(-2px)")};
-    box-shadow: ${({ $isEmpty }) =>
-      $isEmpty ? "none" : "0 4px 12px rgba(0,0,0,0.08)"};
+    transform: ${({ $isEmpty }) =>
+      $isEmpty ? "none" : "translateY(-3px) scale(1.02)"};
+    box-shadow: ${({ $isEmpty, $brandColor }) =>
+      $isEmpty
+        ? "none"
+        : `0 8px 24px ${$brandColor}20, 0 2px 8px ${$brandColor}10`};
+    border-color: ${({ $isEmpty, $brandColor }) =>
+      $isEmpty ? "inherit" : `${$brandColor}40`};
+
+    &::before {
+      opacity: ${({ $isEmpty }) => ($isEmpty ? 0 : 1)};
+    }
+  }
+
+  &:active {
+    transform: ${({ $isEmpty }) =>
+      $isEmpty ? "none" : "translateY(-1px) scale(1.0)"};
   }
 `;
 
-const StyledIcon = styled.span<{ $styleCss: string; $brandColor?: string }>`
+const StyledIcon = styled.span<{
+  $styleCss: string;
+  $brandColor?: string;
+}>`
   ${({ $styleCss }) => $styleCss}
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   transition:
-    color 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-  ${({ $brandColor }) => ($brandColor ? `color: ${$brandColor};` : "")}
+    color 0.25s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease;
+  color: ${({ $brandColor }) => $brandColor || "inherit"};
+`;
+
+const IconCircle = styled.div<{ $brandColor: string }>`
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ $brandColor }) => `${$brandColor}12`};
+  transition:
+    background-color 0.25s ease,
+    transform 0.25s ease;
+  flex-shrink: 0;
+
+  ${StyledMessengerButton}:hover & {
+    background: ${({ $brandColor }) => `${$brandColor}1A`};
+    transform: scale(1.08);
+  }
 `;
 
 const StyledLabel = styled.span<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
-  transition: color 0.2s ease, font-size 0.2s ease;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+  line-height: 1.3;
+  transition:
+    color 0.2s ease,
+    font-size 0.2s ease;
 `;
 
-// ─── Component ──────────────────────────────────────────────────────────────────
+const EmptyBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+`;
+
+const EmptyStateWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  animation: ${fadeInUp} 0.4s ease both;
+`;
+
+const EmptyStateIconCircle = styled.div`
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 24px;
+`;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Component
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function MessengerLinksBlock({
   block,
@@ -288,22 +488,46 @@ export default function MessengerLinksBlock({
     typeof data.description === "string" ? data.description : "";
   const showTitle = data.showTitle !== false;
   const showDescription = data.showDescription !== false;
+  const showLabels = data.showLabels !== false;
   const openInNewTab = data.openInNewTab !== false;
+  const legacyColumns =
+    data.cardWidth === "full" ? 1 : data.cardWidth === "quarter" ? 4 : 2;
+  const configuredColumns = Number(
+    elements.container?.style?.gridColumns?.mobile ?? legacyColumns,
+  );
+  const gridColumns = Math.min(
+    4,
+    Math.max(
+      1,
+      Number.isFinite(configuredColumns) ? Math.round(configuredColumns) : 2,
+    ),
+  );
+  const gridColumnsClass = {
+    1: "grid-cols-1",
+    2: "grid-cols-2",
+    3: "grid-cols-3",
+    4: "grid-cols-4",
+  }[gridColumns];
+  const cardLayoutClass =
+    gridColumns === 4
+      ? "min-h-[88px] flex-col gap-2 px-2 py-3.5"
+      : "min-h-[68px] flex-row gap-3.5 px-4 py-3";
 
   const isEditor = mode === "editor";
+  const isBuilderPreview = mode === "preview";
 
   // Filter visible services
   const visibleServices = services.filter((s) => {
     const shouldShow = data[s.showKey] !== false;
     if (!shouldShow) return false;
-    if (isEditor) return true;
+    if (isEditor || isBuilderPreview) return true;
     const url =
       typeof data[s.urlKey] === "string" ? (data[s.urlKey] as string) : "";
     return url.length > 0;
   });
 
-  // In preview/public, if nothing visible, render nothing
-  if (!isEditor && visibleServices.length === 0) {
+  // Public pages must not render enabled services that have no destination.
+  if (mode === "public" && visibleServices.length === 0) {
     return null;
   }
 
@@ -326,79 +550,95 @@ export default function MessengerLinksBlock({
     >
       <StyledContainer
         $styleCss={containerStyle}
-        className="w-full p-5 md:p-8"
+        className="w-full p-5 sm:p-7"
         dir="rtl"
       >
-        {/* Title */}
-        {showTitle && (
-          <EditablePart
-            instanceId={block.instanceId}
-            elementId="title"
-            mode={mode}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          >
-            <StyledTitle $styleCss={titleStyle} className="text-center mb-2">
-              <InlineEditableText
-                value={title}
-                dataKey="title"
-                instanceId={block.instanceId}
-                mode={mode}
-                onUpdateContent={onUpdateContent}
-              >
-                {(text) => <>{text}</>}
-              </InlineEditableText>
-            </StyledTitle>
-          </EditablePart>
-        )}
-
-        {/* Description */}
-        {showDescription && (
-          <EditablePart
-            instanceId={block.instanceId}
-            elementId="description"
-            mode={mode}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          >
-            <StyledDescription
-              $styleCss={descriptionStyle}
-              className="text-center mb-6"
+        {/* ── Header ──────────────────────────────────────── */}
+        <HeaderSection>
+          {showTitle && (
+            <EditablePart
+              instanceId={block.instanceId}
+              elementId="title"
+              mode={mode}
+              selectedElementId={selectedElementId}
+              onSelectElement={onSelectElement}
             >
-              <InlineEditableText
-                value={description}
-                dataKey="description"
-                instanceId={block.instanceId}
-                mode={mode}
-                multiline
-                onUpdateContent={onUpdateContent}
+              <StyledTitle $styleCss={titleStyle} className="text-center">
+                <InlineEditableText
+                  value={title}
+                  dataKey="title"
+                  instanceId={block.instanceId}
+                  mode={mode}
+                  onUpdateContent={onUpdateContent}
+                >
+                  {(text) => <>{text}</>}
+                </InlineEditableText>
+              </StyledTitle>
+              <TitleDivider />
+            </EditablePart>
+          )}
+
+          {showDescription && (
+            <EditablePart
+              instanceId={block.instanceId}
+              elementId="description"
+              mode={mode}
+              selectedElementId={selectedElementId}
+              onSelectElement={onSelectElement}
+            >
+              <StyledDescription
+                $styleCss={descriptionStyle}
+                className="text-center mt-2"
               >
-                {(text) => <>{text}</>}
-              </InlineEditableText>
-            </StyledDescription>
-          </EditablePart>
-        )}
+                <InlineEditableText
+                  value={description}
+                  dataKey="description"
+                  instanceId={block.instanceId}
+                  mode={mode}
+                  multiline
+                  onUpdateContent={onUpdateContent}
+                >
+                  {(text) => <>{text}</>}
+                </InlineEditableText>
+              </StyledDescription>
+            </EditablePart>
+          )}
+        </HeaderSection>
 
-        <br />
-
-        {/* Empty state in editor */}
+        {/* ── Empty state in editor ───────────────────────── */}
         {visibleServices.length === 0 && isEditor && (
-          <p className="text-center text-sm text-gray-400 py-8">
-            هنوز لینکی برای پیام‌رسان‌ها وارد نشده است.
-          </p>
+          <EmptyStateWrapper>
+            <EmptyStateIconCircle>
+              <HiOutlineLink />
+            </EmptyStateIconCircle>
+            <p
+              className="text-sm text-slate-400 text-center leading-relaxed"
+              style={{ margin: 0 }}
+            >
+              هنوز لینکی برای پیام‌رسان‌ها وارد نشده است.
+              <br />
+              <span className="text-xs text-slate-300">
+                از تنظیمات بلاک، لینک‌ها را اضافه کنید.
+              </span>
+            </p>
+          </EmptyStateWrapper>
         )}
 
-        {/* Grid of messenger buttons */}
+        {/* ── Grid of messenger buttons ───────────────────── */}
         {visibleServices.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {visibleServices.map((service) => {
+          <GridWrapper
+            className={`grid ${gridColumnsClass} gap-2.5 sm:gap-3 ${
+              showTitle || showDescription ? "mt-6" : "mt-0"
+            }`}
+          >
+            {visibleServices.map((service, index) => {
               const url =
                 typeof data[service.urlKey] === "string"
                   ? (data[service.urlKey] as string)
                   : "";
               const isEmpty = url.length === 0;
               const ServiceIcon = service.Icon;
-              const brandColor = BRAND_COLORS[service.urlKey];
+              const brandColor = BRAND_COLORS[service.urlKey] || "#64748b";
 
               const buttonContent = (
                 <EditablePart
@@ -411,7 +651,8 @@ export default function MessengerLinksBlock({
                   <StyledMessengerButton
                     $styleCss={messengerButtonStyle}
                     $isEmpty={isEmpty}
-                    className="flex flex-col items-center justify-center gap-2 p-4 cursor-pointer"
+                    $brandColor={brandColor}
+                    className={`flex cursor-pointer items-center justify-center overflow-hidden ${cardLayoutClass}`}
                   >
                     <EditablePart
                       instanceId={block.instanceId}
@@ -420,51 +661,70 @@ export default function MessengerLinksBlock({
                       selectedElementId={selectedElementId}
                       onSelectElement={onSelectElement}
                     >
-                      <StyledIcon
-                        $styleCss={iconStyle}
-                        $brandColor={brandColor}
-                        className="w-10 h-10 flex items-center justify-center"
-                      >
-                        <ServiceIcon />
-                      </StyledIcon>
+                      <IconCircle $brandColor={brandColor}>
+                        <StyledIcon
+                          $styleCss={iconStyle}
+                          $brandColor={brandColor}
+                          className="flex items-center justify-center"
+                        >
+                          <ServiceIcon />
+                        </StyledIcon>
+                      </IconCircle>
                     </EditablePart>
 
-                    <EditablePart
-                      instanceId={block.instanceId}
-                      elementId="label"
-                      mode={mode}
-                      selectedElementId={selectedElementId}
-                      onSelectElement={onSelectElement}
-                    >
-                      <StyledLabel $styleCss={labelStyle}>
-                        {service.label}
-                      </StyledLabel>
-                    </EditablePart>
+                    {showLabels && (
+                      <EditablePart
+                        instanceId={block.instanceId}
+                        elementId="label"
+                        mode={mode}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={onSelectElement}
+                      >
+                        <StyledLabel
+                          $styleCss={labelStyle}
+                          className="block max-w-full text-center leading-tight"
+                        >
+                          {service.label}
+                        </StyledLabel>
+                      </EditablePart>
+                    )}
 
                     {isEmpty && isEditor && (
-                      <span className="text-[10px] text-gray-400 mt-0.5">
+                      <EmptyBadge
+                        className={gridColumns === 4 ? "hidden" : ""}
+                      >
+                        <HiOutlineLink style={{ fontSize: 10 }} />
                         بدون لینک
-                      </span>
+                      </EmptyBadge>
                     )}
                   </StyledMessengerButton>
                 </EditablePart>
               );
 
               if (isEditor || isEmpty) {
-                return <div key={service.urlKey}>{buttonContent}</div>;
+                return (
+                  <GridItem
+                    key={service.urlKey}
+                    $index={index}
+                    className="min-w-0"
+                  >
+                    {buttonContent}
+                  </GridItem>
+                );
               }
 
               return (
-                <a
+                <GridLink
                   key={service.urlKey}
+                  $index={index}
                   {...linkProps(url)}
-                  className="no-underline"
+                  className="min-w-0 no-underline"
                 >
                   {buttonContent}
-                </a>
+                </GridLink>
               );
             })}
-          </div>
+          </GridWrapper>
         )}
       </StyledContainer>
     </EditablePart>

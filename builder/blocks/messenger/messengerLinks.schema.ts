@@ -26,6 +26,7 @@ export const messengerLinksSchema: BlockSchema = {
 
         { key: "showTitle", label: "نمایش عنوان", type: "boolean" },
         { key: "showDescription", label: "نمایش توضیحات", type: "boolean" },
+        { key: "showLabels", label: "نمایش نام پیام‌رسان‌ها", type: "boolean" },
 
         { key: "showTelegram", label: "نمایش تلگرام", type: "boolean" },
         { key: "showWhatsapp", label: "نمایش واتساپ", type: "boolean" },
@@ -52,6 +53,7 @@ export const messengerLinksSchema: BlockSchema = {
                 "borderRadius",
                 "borderColor",
                 "borderWidth",
+                "gridColumns",
                 "animation",
             ],
         },

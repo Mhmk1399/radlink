@@ -246,6 +246,7 @@ export interface IPage extends Document {
 
     // Media
     logo?: string;
+    logoShape: "square" | "circle";
     favicon?: string;
     thumbnail?: string;
 
@@ -269,6 +270,7 @@ export interface IPage extends Document {
     };
 
     isPublished: boolean;
+    expiresAt?: Date | null;
 
     publishedAt?: Date;
 
@@ -407,6 +409,12 @@ const PageSchema = new Schema<IPage>(
             trim: true,
         },
 
+        logoShape: {
+            type: String,
+            enum: ["square", "circle"],
+            default: "square",
+        },
+
         favicon: {
             type: String,
             trim: true,
@@ -474,6 +482,11 @@ const PageSchema = new Schema<IPage>(
             index: true,
         },
 
+        expiresAt: {
+            type: Date,
+            default: null,
+        },
+
         publishedAt: {
             type: Date,
         },
@@ -483,6 +496,7 @@ const PageSchema = new Schema<IPage>(
     }
 );
 
+PageSchema.index({ isPublished: 1, expiresAt: 1 });
 
 
 

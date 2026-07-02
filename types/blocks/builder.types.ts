@@ -8,8 +8,23 @@ export type AnimationType =
     | "none"
     | "fade"
     | "slideUp"
+    | "slideLeft"
+    | "slideRight"
     | "scale"
-    | "pulse";
+    | "pulse"
+    | "bounceIn"
+    | "rotateIn"
+    | "blurIn"
+    | "slideDown"
+    | "zoomOut"
+    | "flipUp"
+    | "flipSide"
+    | "swingIn"
+    | "elasticIn"
+    | "riseSoft"
+    | "dropSoft"
+    | "focusIn"
+    | "glowIn";
 
 export type EditableStyleKey =
     | "color"
@@ -19,6 +34,7 @@ export type EditableStyleKey =
     | "borderRadius"
     | "borderColor"
     | "borderWidth"
+    | "gridColumns"
     | "animation";
 
 export type EditableStyleMap = {
@@ -29,6 +45,7 @@ export type EditableStyleMap = {
     borderRadius?: ResponsiveValue<number>;
     borderColor?: ResponsiveValue<string>;
     borderWidth?: ResponsiveValue<number>;
+    gridColumns?: ResponsiveValue<number>;
     animation?: AnimationType;
 };
 

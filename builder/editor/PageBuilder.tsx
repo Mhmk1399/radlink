@@ -69,6 +69,7 @@ import {
 } from "../BuilderModals";
 import { BuilderTour } from "../BuilderTour";
 import { useAccess } from "@/hook/auth/useAccess";
+import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 
 /* ================================================================== */
 /*  Props                                                              */
@@ -86,6 +87,7 @@ type SimplePageBuilderProps = {
   initialCategoryId?: string;
   initialThumbnail?: string;
   initialLogo?: string;
+  initialLogoShape?: "square" | "circle";
   initialFavicon?: string;
   initialBackground?: {
     color?: string;
@@ -207,6 +209,7 @@ type BuilderSaveSnapshotInput = {
   categoryId: string;
   thumbnail: string;
   logo: string;
+  logoShape: "square" | "circle";
   favicon: string;
   backgroundColor: string;
   backgroundImage: string;
@@ -221,6 +224,7 @@ function serializeBuilderSaveState({
   categoryId,
   thumbnail,
   logo,
+  logoShape,
   favicon,
   backgroundColor,
   backgroundImage,
@@ -234,6 +238,7 @@ function serializeBuilderSaveState({
     categoryId: saveMode === "template" ? categoryId : "",
     thumbnail: saveMode === "template" ? thumbnail : "",
     logo: saveMode === "page" ? logo : "",
+    logoShape: saveMode === "page" ? logoShape : "square",
     favicon: saveMode === "page" ? favicon : "",
     background: { color: backgroundColor, image: backgroundImage },
     blocks,
@@ -398,6 +403,7 @@ export default function SimplePageBuilder({
   initialCategoryId,
   initialThumbnail,
   initialLogo,
+  initialLogoShape = "square",
   initialFavicon,
   initialBackground,
   suppressSmartSuggestions = false,
@@ -442,6 +448,9 @@ export default function SimplePageBuilder({
     initialThumbnail || "",
   );
   const [pageLogo, setPageLogo] = useState(initialLogo || "");
+  const [pageLogoShape, setPageLogoShape] = useState<"square" | "circle">(
+    initialLogoShape,
+  );
   const [pageFavicon, setPageFavicon] = useState(initialFavicon || "");
   const [pageBackgroundColor, setPageBackgroundColor] = useState(
     initialBackground?.color || "#ffffff",
@@ -461,6 +470,7 @@ export default function SimplePageBuilder({
       categoryId: templateCategoryId,
       thumbnail: templateThumbnail,
       logo: pageLogo,
+      logoShape: pageLogoShape,
       favicon: pageFavicon,
       backgroundColor: pageBackgroundColor,
       backgroundImage: pageBackgroundImage,
@@ -503,7 +513,12 @@ export default function SimplePageBuilder({
 
   /* ── Toast & Onboarding ── */
   const toast = useToast();
-  const { user: authUser, isSuperAdmin } = useAccess();
+  const {
+    user: authUser,
+    isSuperAdmin,
+    can,
+    isLoading: isAccessLoading,
+  } = useAccess();
   const blockLimit =
     saveMode === "template" || isSuperAdmin || !authUser?.limits?.blocks
       ? 0
@@ -525,10 +540,27 @@ export default function SimplePageBuilder({
     () => [...blocks].sort((a, b) => a.order - b.order),
     [blocks],
   );
-  const blockIds = useMemo(
-    () => sortedBlocks.map((b) => b.instanceId),
+  const contactSaveBlock = useMemo(
+    () =>
+      sortedBlocks.find(
+        (block) =>
+          block.type === "contactSave" &&
+          block.isActive !== false &&
+          !block.hidden,
+      ) ?? null,
     [sortedBlocks],
   );
+  const canvasBlocks = useMemo(
+    () => sortedBlocks.filter((block) => block.type !== "contactSave"),
+    [sortedBlocks],
+  );
+  const blockIds = useMemo(
+    () => canvasBlocks.map((b) => b.instanceId),
+    [canvasBlocks],
+  );
+  const canViewFloatingActions =
+    !isAccessLoading &&
+    (isSuperAdmin || can("landing.floatingActions", "view"));
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.instanceId === selectedBlockId) ?? null,
     [blocks, selectedBlockId],
@@ -584,6 +616,7 @@ export default function SimplePageBuilder({
         categoryId: templateCategoryId,
         thumbnail: templateThumbnail,
         logo: pageLogo,
+        logoShape: pageLogoShape,
         favicon: pageFavicon,
         backgroundColor: pageBackgroundColor,
         backgroundImage: pageBackgroundImage,
@@ -597,6 +630,7 @@ export default function SimplePageBuilder({
       templateCategoryId,
       templateThumbnail,
       pageLogo,
+      pageLogoShape,
       pageFavicon,
       pageBackgroundColor,
       pageBackgroundImage,
@@ -1275,6 +1309,7 @@ export default function SimplePageBuilder({
             image: pageBackgroundImage,
           },
           logo: pageLogo,
+          logoShape: pageLogoShape,
           favicon: pageFavicon,
         }),
       });
@@ -1331,6 +1366,7 @@ export default function SimplePageBuilder({
     pageBackgroundColor,
     pageBackgroundImage,
     pageLogo,
+    pageLogoShape,
     pageFavicon,
     ensureQrForCreatedPage,
     toast,
@@ -1366,6 +1402,7 @@ export default function SimplePageBuilder({
             image: pageBackgroundImage,
           },
           logo: pageLogo,
+          logoShape: pageLogoShape,
           favicon: pageFavicon,
         }),
       });
@@ -1408,6 +1445,7 @@ export default function SimplePageBuilder({
     pageBackgroundColor,
     pageBackgroundImage,
     pageLogo,
+    pageLogoShape,
     pageFavicon,
     createPageOnServer,
     toast,
@@ -1939,9 +1977,11 @@ export default function SimplePageBuilder({
                 color: pageBackgroundColor,
                 image: pageBackgroundImage,
               }}
+              logo={saveMode === "page" ? pageLogo : ""}
+              logoShape={pageLogoShape}
               onApplyTemplate={applyTemplate}
               showSmartSuggestions={!suppressSmartSuggestions}
-              sortedBlocks={sortedBlocks}
+              sortedBlocks={canvasBlocks}
               availableBlockTypes={catalogBlockTypes}
               blockIds={blockIds}
               selectedBlockId={selectedBlockId}
@@ -1960,6 +2000,23 @@ export default function SimplePageBuilder({
                 toast.show("بلاک حذف شد", "success");
               }}
               onOpenCatalog={() => setCatalogOpen(true)}
+              floatingActions={
+                <LandingFloatingActions
+                  contactBlock={contactSaveBlock}
+                  pageUrl={
+                    saveMode === "page"
+                      ? buildClientPageTargetUrl(pageUrl)
+                      : undefined
+                  }
+                  mode="editor"
+                  enabled={canViewFloatingActions}
+                  onEditContact={() => {
+                    if (!contactSaveBlock) return;
+                    setSelectedBlockId(contactSaveBlock.instanceId);
+                    setSelectedElementId("button");
+                  }}
+                />
+              }
             />
 
             {/* Bottom add button */}
@@ -2019,6 +2076,7 @@ export default function SimplePageBuilder({
         categoryOptions={categoryOptions}
         thumbnail={templateThumbnail}
         logo={pageLogo}
+        logoShape={pageLogoShape}
         favicon={pageFavicon}
         backgroundColor={pageBackgroundColor}
         backgroundImage={pageBackgroundImage}
@@ -2031,6 +2089,7 @@ export default function SimplePageBuilder({
         onCategoryIdChange={setTemplateCategoryId}
         onThumbnailChange={setTemplateThumbnail}
         onLogoChange={setPageLogo}
+        onLogoShapeChange={setPageLogoShape}
         onFaviconChange={setPageFavicon}
         onBackgroundColorChange={setPageBackgroundColor}
         onBackgroundImageChange={setPageBackgroundImage}
@@ -2053,6 +2112,12 @@ export default function SimplePageBuilder({
       <PhonePreviewModal
         open={isPhonePreviewOpen}
         blocks={blocks}
+        pageUrl={
+          saveMode === "page" ? buildClientPageTargetUrl(pageUrl) : undefined
+        }
+        showFloatingActions={canViewFloatingActions}
+        logo={saveMode === "page" ? pageLogo : ""}
+        logoShape={pageLogoShape}
         background={{
           color: pageBackgroundColor,
           image: pageBackgroundImage,

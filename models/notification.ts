@@ -1,4 +1,8 @@
 import mongoose, { type Document, type Model, Schema, type Types } from "mongoose";
+import {
+    NOTIFICATION_ICON_KEYS,
+    type NotificationIconKey,
+} from "@/lib/notifications/notificationIcons";
 
 export interface INotification extends Document {
     page?: Types.ObjectId;
@@ -6,6 +10,7 @@ export interface INotification extends Document {
     subtitle?: string;
     description: string;
     type: "info" | "danger";
+    iconKey?: NotificationIconKey | "";
     closeable: boolean;
     isActive: boolean;
     createdAt: Date;
@@ -44,6 +49,12 @@ const notificationSchema = new Schema<INotification>(
             required: true,
             default: "info",
             index: true,
+        },
+        iconKey: {
+            type: String,
+            enum: ["", ...NOTIFICATION_ICON_KEYS],
+            trim: true,
+            default: "",
         },
         closeable: {
             type: Boolean,

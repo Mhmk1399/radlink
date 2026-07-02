@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
 import { InlineEditableText } from "@/builder/blocks/shared/InlineEditableText";
@@ -50,28 +50,135 @@ type SliderBlockProps = BlockComponentProps & {
 };
 
 /* ================================================================== */
+/*  Helpers — same pattern as BannerBlock                             */
+/* ================================================================== */
+
+/**
+ * Load an image and return its natural aspect ratio string e.g. "1920 / 1080".
+ * Returns null on error or if cancelled.
+ */
+function loadImageAspectRatio(
+  src: string,
+  onSuccess: (ratio: string) => void,
+  onError: () => void,
+): () => void {
+  let cancelled = false;
+  const img = new Image();
+
+  img.onload = () => {
+    if (!cancelled && img.naturalWidth && img.naturalHeight) {
+      onSuccess(`${img.naturalWidth} / ${img.naturalHeight}`);
+    }
+  };
+
+  img.onerror = () => {
+    if (!cancelled) onError();
+  };
+
+  img.src = src;
+
+  return () => {
+    cancelled = true;
+  };
+}
+
+/* ================================================================== */
+/*  Animations                                                         */
+/* ================================================================== */
+
+const fadeUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+/* ================================================================== */
 /*  Styled                                                             */
 /* ================================================================== */
 
 const SliderRoot = styled.div`
   ${sharedBlockKeyframes(PREFIX)}
+  position: relative;
 `;
 
 const StyledContainer = styled.div<{ $css: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-container`)}
   ${(p) => p.$css}
+
   position: relative;
   overflow: hidden;
-  min-height: 420px;
+  isolation: isolate;
+
+  /* When no user-defined height and no image → comfortable minimum */
+  &[data-no-image="true"] {
+    min-height: 280px;
+
+    @media (min-width: 640px) {
+      min-height: 340px;
+    }
+
+    @media (min-width: 1024px) {
+      min-height: 400px;
+    }
+  }
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-  @media (min-width: 768px) {
-    min-height: 480px;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 32px rgba(15, 23, 42, 0.14);
+
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+
+  /* Subtle top-right light orb */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        ellipse at top right,
+        rgba(255, 255, 255, 0.07),
+        transparent 30%
+      ),
+      radial-gradient(
+        ellipse at bottom left,
+        rgba(255, 255, 255, 0.04),
+        transparent 32%
+      );
+    z-index: 1;
   }
-  @media (min-width: 1024px) {
-    min-height: 540px;
+
+  /* Always-on bottom gradient for legibility */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      to top,
+      rgba(2, 6, 23, 0.55) 0%,
+      rgba(2, 6, 23, 0.18) 45%,
+      rgba(2, 6, 23, 0.05) 100%
+    );
+    z-index: 2;
   }
 `;
 
@@ -81,21 +188,99 @@ const StyledOverlay = styled.div<{ $css: string }>`
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 3;
+`;
+
+const SlideLayer = styled.div`
+  position: relative;
+  z-index: 10;
+  width: 100%;
+`;
+
+const ContentCard = styled.div`
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 26px 20px;
+  border-radius: 24px;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.32),
+    rgba(15, 23, 42, 0.2)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 14px 32px rgba(2, 6, 23, 0.2);
+  animation: ${fadeUp} 0.32s ease both;
+
+  @media (min-width: 640px) {
+    padding: 34px 30px;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 42px 38px;
+  }
+`;
+
+const ContentStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+`;
+
+const TitleDivider = styled.div`
+  width: 48px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.7),
+    rgba(255, 255, 255, 0.2)
+  );
 `;
 
 const StyledTitle = styled.div<{ $css: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-title`)}
   ${(p) => p.$css}
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  line-height: 1.22;
 `;
 
 const StyledDescription = styled.div<{ $css: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-desc`)}
   ${(p) => p.$css}
+  line-height: 1.9;
 `;
 
 const StyledButton = styled.a<{ $css: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-btn`)}
   ${(p) => p.$css}
+  font-weight: 700;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 8px 20px rgba(15, 23, 42, 0.14);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.2s ease,
+    box-shadow 0.25s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 6px 16px rgba(15, 23, 42, 0.18),
+      0 2px 6px rgba(15, 23, 42, 0.12);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 const StyledArrow = styled.button<{ $css: string }>`
@@ -104,30 +289,88 @@ const StyledArrow = styled.button<{ $css: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(2, 6, 23, 0.14);
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.25s ease,
+    background-color 0.2s ease;
+
   &:hover {
-    opacity: 0.85;
+    transform: scale(1.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 12px 24px rgba(2, 6, 23, 0.2);
   }
+
+  &:active {
+    transform: scale(0.97);
+  }
+`;
+
+const DotsShell = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 20px rgba(2, 6, 23, 0.14);
 `;
 
 const StyledDot = styled.button<{ $css: string; $active: boolean }>`
   ${sharedBlockKeyframes(`${PREFIX}-dot`)}
   ${(p) => p.$css}
-  width: ${(p) => (p.$active ? "24px" : "10px")};
+  width: ${(p) => (p.$active ? "26px" : "10px")};
   height: 10px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  opacity: ${(p) => (p.$active ? 1 : 0.55)};
+  opacity: ${(p) => (p.$active ? 1 : 0.5)};
+  box-shadow: ${(p) =>
+    p.$active ? "0 2px 8px rgba(255,255,255,0.22)" : "none"};
+  transition: all 0.28s ease;
+
   &:hover {
     opacity: 1;
   }
 `;
 
+const EmptyState = styled.div`
+  position: relative;
+  z-index: 10;
+  padding: 44px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.72);
+`;
+
+const EmptyStateIcon = styled.div`
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+`;
+
 /* ================================================================== */
-/*  Arrow SVGs                                                         */
+/*  Arrow / Placeholder icons                                          */
 /* ================================================================== */
 
 function ArrowRight() {
@@ -164,6 +407,24 @@ function ArrowLeft() {
   );
 }
 
+function SlidesPlaceholderIcon() {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M8 10h8M8 14h5" />
+    </svg>
+  );
+}
+
 /* ================================================================== */
 /*  Component                                                          */
 /* ================================================================== */
@@ -183,11 +444,34 @@ export function SliderBlock({
 
   /* ── Active slide ── */
   const [activeIndex, setActiveIndex] = useState(0);
-
   const safeIndex =
     slides.length === 0 ? 0 : Math.min(activeIndex, slides.length - 1);
-
   const activeSlide: SlideItem | undefined = slides[safeIndex];
+
+  /* ── Image aspect ratio — same pattern as BannerBlock ── */
+  const [aspectRatio, setAspectRatio] = useState<string | undefined>(
+    activeSlide?.imageUrl ? "16 / 9" : undefined,
+  );
+
+  useEffect(() => {
+    const imageUrl = activeSlide?.imageUrl;
+
+    if (!imageUrl) {
+      setAspectRatio(undefined);
+      return;
+    }
+
+    // Optimistically set 16/9 while loading
+    setAspectRatio("16 / 9");
+
+    const cancel = loadImageAspectRatio(
+      imageUrl,
+      (ratio) => setAspectRatio(ratio),
+      () => setAspectRatio("16 / 9"),
+    );
+
+    return cancel;
+  }, [activeSlide?.imageUrl]);
 
   /* ── Autoplay ── */
   useEffect(() => {
@@ -216,13 +500,8 @@ export function SliderBlock({
     [slides.length],
   );
 
-  const goPrev = useCallback(() => {
-    goTo(safeIndex - 1);
-  }, [goTo, safeIndex]);
-
-  const goNext = useCallback(() => {
-    goTo(safeIndex + 1);
-  }, [goTo, safeIndex]);
+  const goPrev = useCallback(() => goTo(safeIndex - 1), [goTo, safeIndex]);
+  const goNext = useCallback(() => goTo(safeIndex + 1), [goTo, safeIndex]);
 
   /* ── Swipe / drag ── */
   const dragState = useRef<{
@@ -234,46 +513,29 @@ export function SliderBlock({
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
-    const isEditing = Boolean(target.closest('[contenteditable="true"]'));
-
     dragState.current = {
       startX: e.clientX,
       startY: e.clientY,
       dragging: true,
-      isEditing,
+      isEditing: Boolean(target.closest('[contenteditable="true"]')),
     };
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragState.current?.dragging) return;
-
     const dx = Math.abs(e.clientX - dragState.current.startX);
     const dy = Math.abs(e.clientY - dragState.current.startY);
-
-    /* If vertical scroll is dominant, cancel drag */
-    if (dy > dx && dy > 10) {
-      dragState.current = null;
-    }
+    if (dy > dx && dy > 10) dragState.current = null;
   }, []);
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
       const state = dragState.current;
       dragState.current = null;
-
-      if (!state?.dragging) return;
-      if (state.isEditing) return;
-
+      if (!state?.dragging || state.isEditing) return;
       const dx = e.clientX - state.startX;
-
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
-
-      /* RTL: drag right = prev, drag left = next */
-      if (dx > 0) {
-        goPrev();
-      } else {
-        goNext();
-      }
+      dx > 0 ? goPrev() : goNext();
     },
     [goPrev, goNext],
   );
@@ -325,6 +587,14 @@ export function SliderBlock({
     { mobileOnly },
   );
 
+  /* ── Has the user set a custom height? ── */
+  const containerHeightStyle = block.elements.container.style?.height;
+  const hasCustomHeight = Boolean(
+    containerHeightStyle?.mobile ||
+    containerHeightStyle?.tablet ||
+    containerHeightStyle?.desktop,
+  );
+
   /* ── No slides ── */
   if (slides.length === 0) {
     return (
@@ -336,10 +606,18 @@ export function SliderBlock({
           selectedElementId={selectedElementId}
           onSelectElement={onSelectElement}
         >
-          <StyledContainer $css={containerCss}>
-            <div className="px-6 py-20 text-center text-sm font-medium text-white/60">
-              هنوز اسلایدی اضافه نشده. از بخش محتوا اسلاید اضافه کنید.
-            </div>
+          <StyledContainer $css={containerCss} data-no-image="true">
+            <EmptyState>
+              <EmptyStateIcon>
+                <SlidesPlaceholderIcon />
+              </EmptyStateIcon>
+              <div className="text-sm font-medium">
+                هنوز اسلایدی اضافه نشده.
+              </div>
+              <div className="mt-1 text-xs opacity-70">
+                از بخش محتوا اسلاید جدید اضافه کنید.
+              </div>
+            </EmptyState>
           </StyledContainer>
         </EditablePart>
       </SliderRoot>
@@ -352,6 +630,19 @@ export function SliderBlock({
   const buttonUrl = String(slide.buttonUrl ?? "").trim();
   const buttonHref = !isEditor && buttonUrl ? buttonUrl : undefined;
 
+  /*
+   * Sizing strategy — mirrors BannerBlock exactly:
+   *
+   * 1. If user set a custom height via the style editor → honour it (containerCss already includes it).
+   * 2. Else if slide has an image → use the image's natural aspect ratio.
+   * 3. Else → fall back to comfortable min-height via data-no-image attribute.
+   */
+  const containerSizeStyle: React.CSSProperties = hasCustomHeight
+    ? {} // height already in containerCss from responsiveStyleToCss
+    : hasImage && aspectRatio
+      ? { aspectRatio }
+      : {};
+
   return (
     <SliderRoot dir="rtl">
       <EditablePart
@@ -363,6 +654,7 @@ export function SliderBlock({
       >
         <StyledContainer
           $css={containerCss}
+          data-no-image={!hasImage && !hasCustomHeight ? "true" : undefined}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -375,6 +667,7 @@ export function SliderBlock({
             backgroundPosition: "center",
             touchAction: "pan-y",
             userSelect: "none",
+            ...containerSizeStyle,
           }}
         >
           {/* ── Overlay ── */}
@@ -391,96 +684,101 @@ export function SliderBlock({
           )}
 
           {/* ── Content ── */}
-          <div
-            className="relative z-10 flex w-full flex-col items-center gap-5 px-6 py-12 text-center sm:px-10 sm:py-16"
+          <SlideLayer
             key={slide.id}
+            className="w-full px-5 py-10 sm:px-10 sm:py-14"
           >
-            {/* Title */}
-            <EditablePart
-              instanceId={block.instanceId}
-              elementId="title"
-              mode={mode}
-              selectedElementId={selectedElementId}
-              onSelectElement={onSelectElement}
-            >
-              <StyledTitle
-                className="mx-auto max-w-[720px] font-extrabold leading-[1.25]"
-                $css={titleCss}
-              >
-                <InlineEditableText
-                  value={String(slide.title ?? "")}
-                  dataKey={`slides.${slide.id}.title`}
+            <ContentCard>
+              <ContentStack>
+                {/* Title */}
+                <EditablePart
                   instanceId={block.instanceId}
+                  elementId="title"
                   mode={mode}
-                  onUpdateContent={onUpdateContent}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
                 >
-                  {(text) => <h2 className="m-0">{text}</h2>}
-                </InlineEditableText>
-              </StyledTitle>
-            </EditablePart>
-
-            {/* Description */}
-            <EditablePart
-              instanceId={block.instanceId}
-              elementId="description"
-              mode={mode}
-              selectedElementId={selectedElementId}
-              onSelectElement={onSelectElement}
-            >
-              <StyledDescription
-                className="mx-auto max-w-[560px] leading-[1.9]"
-                $css={descCss}
-              >
-                <InlineEditableText
-                  value={String(slide.description ?? "")}
-                  dataKey={`slides.${slide.id}.description`}
-                  instanceId={block.instanceId}
-                  mode={mode}
-                  multiline
-                  onUpdateContent={onUpdateContent}
-                >
-                  {(text) => <p className="m-0">{text}</p>}
-                </InlineEditableText>
-              </StyledDescription>
-            </EditablePart>
-
-            {/* Button */}
-            {Boolean(data.showButton) && (
-              <EditablePart
-                instanceId={block.instanceId}
-                elementId="button"
-                mode={mode}
-                selectedElementId={selectedElementId}
-                onSelectElement={onSelectElement}
-              >
-                <StyledButton
-                  $css={btnCss}
-                  href={buttonHref}
-                  target={buttonHref ? "_blank" : undefined}
-                  rel={buttonHref ? "noopener noreferrer" : undefined}
-                  onClick={(e) => {
-                    if (isEditor) e.preventDefault();
-                  }}
-                  className="mt-2 inline-flex min-w-[160px] items-center justify-center px-7 py-3.5 text-center font-bold no-underline transition-opacity hover:opacity-90"
-                >
-                  <InlineEditableText
-                    value={String(slide.buttonText ?? "")}
-                    dataKey={`slides.${slide.id}.buttonText`}
-                    instanceId={block.instanceId}
-                    mode={mode}
-                    onUpdateContent={onUpdateContent}
+                  <StyledTitle
+                    className="mx-auto max-w-[720px]"
+                    $css={titleCss}
                   >
-                    {(text) => <span>{text}</span>}
-                  </InlineEditableText>
-                </StyledButton>
-              </EditablePart>
-            )}
-          </div>
+                    <InlineEditableText
+                      value={String(slide.title ?? "")}
+                      dataKey={`slides.${slide.id}.title`}
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      onUpdateContent={onUpdateContent}
+                    >
+                      {(text) => <h2 className="m-0">{text}</h2>}
+                    </InlineEditableText>
+                  </StyledTitle>
+                </EditablePart>
+
+                <TitleDivider />
+
+                {/* Description */}
+                <EditablePart
+                  instanceId={block.instanceId}
+                  elementId="description"
+                  mode={mode}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
+                >
+                  <StyledDescription
+                    className="mx-auto max-w-[560px]"
+                    $css={descCss}
+                  >
+                    <InlineEditableText
+                      value={String(slide.description ?? "")}
+                      dataKey={`slides.${slide.id}.description`}
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      multiline
+                      onUpdateContent={onUpdateContent}
+                    >
+                      {(text) => <p className="m-0">{text}</p>}
+                    </InlineEditableText>
+                  </StyledDescription>
+                </EditablePart>
+
+                {/* Button */}
+                {Boolean(data.showButton) && (
+                  <EditablePart
+                    instanceId={block.instanceId}
+                    elementId="button"
+                    mode={mode}
+                    selectedElementId={selectedElementId}
+                    onSelectElement={onSelectElement}
+                  >
+                    <StyledButton
+                      $css={btnCss}
+                      href={buttonHref}
+                      target={buttonHref ? "_blank" : undefined}
+                      rel={buttonHref ? "noopener noreferrer" : undefined}
+                      onClick={(e) => {
+                        if (isEditor) e.preventDefault();
+                      }}
+                      className="mt-2 inline-flex min-w-[160px] items-center justify-center px-7 py-3.5 text-center no-underline"
+                    >
+                      <InlineEditableText
+                        value={String(slide.buttonText ?? "")}
+                        dataKey={`slides.${slide.id}.buttonText`}
+                        instanceId={block.instanceId}
+                        mode={mode}
+                        onUpdateContent={onUpdateContent}
+                      >
+                        {(text) => <span>{text}</span>}
+                      </InlineEditableText>
+                    </StyledButton>
+                  </EditablePart>
+                )}
+              </ContentStack>
+            </ContentCard>
+          </SlideLayer>
 
           {/* ── Arrows ── */}
           {Boolean(data.showArrows) && slides.length > 1 && (
             <>
-              {/* Next (left side in RTL) */}
               <div className="absolute left-3 top-1/2 z-20 -translate-y-1/2 sm:left-5">
                 <EditablePart
                   instanceId={block.instanceId}
@@ -503,7 +801,6 @@ export function SliderBlock({
                 </EditablePart>
               </div>
 
-              {/* Prev (right side in RTL) */}
               <div className="absolute right-3 top-1/2 z-20 -translate-y-1/2 sm:right-5">
                 <EditablePart
                   instanceId={block.instanceId}
@@ -530,7 +827,7 @@ export function SliderBlock({
 
           {/* ── Dots ── */}
           {Boolean(data.showDots) && slides.length > 1 && (
-            <div className="absolute bottom-5 left-0 right-0 z-20 flex items-center justify-center gap-2">
+            <div className="absolute bottom-5 left-0 right-0 z-20 flex items-center justify-center">
               <EditablePart
                 instanceId={block.instanceId}
                 elementId="dot"
@@ -538,7 +835,7 @@ export function SliderBlock({
                 selectedElementId={selectedElementId}
                 onSelectElement={onSelectElement}
               >
-                <div className="flex items-center gap-2">
+                <DotsShell>
                   {slides.map((s, idx) => (
                     <StyledDot
                       key={s.id}
@@ -553,7 +850,7 @@ export function SliderBlock({
                       }}
                     />
                   ))}
-                </div>
+                </DotsShell>
               </EditablePart>
             </div>
           )}

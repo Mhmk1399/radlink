@@ -26,7 +26,11 @@ export async function POST(request: Request, context: RouteContext) {
     body.isNewVisitor === true;
 
   const page = await Page.findOneAndUpdate(
-    { _id: id, isPublished: true },
+    {
+      _id: id,
+      isPublished: true,
+      $or: [{ expiresAt: null }, { expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
+    },
     {
       $inc: {
         "stats.views": 1,

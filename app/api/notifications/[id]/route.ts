@@ -6,6 +6,7 @@ import { withAuth, withDB, withRole, withStatus } from "@/lib/auth/middlewares";
 import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
 import Page from "@/models/pages";
+import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
 import "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -168,6 +169,17 @@ export const PATCH = compose(
             );
         }
         update.type = type;
+    }
+
+    if ("iconKey" in body) {
+        const iconKey = cleanText(body.iconKey, 30);
+        if (iconKey && !isNotificationIconKey(iconKey)) {
+            return NextResponse.json(
+                { message: "آیکن انتخاب‌شده برای اعلان معتبر نیست." },
+                { status: 400 },
+            );
+        }
+        update.iconKey = iconKey;
     }
 
     if ("closeable" in body) update.closeable = Boolean(body.closeable);

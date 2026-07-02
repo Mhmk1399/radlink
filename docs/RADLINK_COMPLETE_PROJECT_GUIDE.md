@@ -923,14 +923,18 @@ sequenceDiagram
 - snapshots template blocks when needed;
 - derives canonical URL and Open Graph image;
 - creates a QR code;
-- defaults new pages to published.
+- defaults new pages to published unless an admin-supplied expiration is already in the past;
+- accepts optional `expiresAt` only from `admin` or `superAdmin`;
+- stores `logoShape` as `square` or `circle`.
 
 - GET lists pages using owner/dynamic access scope and server pagination.
 
 `app/api/pages/[id]/route.ts`
 
 - GET returns an accessible page;
-- PATCH updates metadata, branding, blocks, background, source template, owner, SEO, and publish state;
+- PATCH updates metadata, branding, logo shape, blocks, background, source template, owner, SEO, and publish state;
+- only `admin` and `superAdmin` may set or clear `expiresAt`;
+- an expired page cannot be republished until its expiration is cleared or moved into the future;
 - DELETE removes an accessible page.
 
 `app/api/pages/[id]/blocks/route.ts`
@@ -943,7 +947,7 @@ sequenceDiagram
 
 - title;
 - slug;
-- logo and favicon;
+- logo, logo shape, and favicon;
 - background color and image;
 - description;
 - template category and thumbnail in template mode.
@@ -960,10 +964,12 @@ Page slug behavior:
 
 `components/admin/PagesSection.tsx`
 
-- displays page metadata, creator, branding, publication state, views, and visitors;
+- displays page metadata, creator, branding, expiration, publication state, views, and visitors;
+- all authorized page viewers can read expiration, while only admin roles receive the editable Persian date picker;
 - normal users and agents see but cannot change owner;
 - admin/superAdmin can select a different owner;
 - logo and favicon can be previewed, uploaded, replaced, or removed;
+- logo shape can be selected as square or circular;
 - row actions open the builder or public page.
 
 ---
@@ -981,7 +987,7 @@ sequenceDiagram
     V->>R: GET /page-slug
     R->>DB: Find Page by unique URL
     R->>DB: Load active page/global notifications
-    alt unpublished
+    alt unpublished or expired
         R-->>V: Disabled-page dialog
     else published
         R->>PR: Plain block snapshots
@@ -1636,3 +1642,25 @@ This update records the application changes completed after the previous guide r
 | Mutation errors | API JSON messages and field metadata preserved through table mutations | `hook/table/useTableData.ts`, `DynamicTable.tsx` |
 
 The migration checklist in Section 29 is part of this update and must be completed before production index synchronization.
+
+---
+
+## 34. Implementation Update: July 2, 2026
+
+### Page Expiration
+
+- `models/pages.ts` stores optional indexed `expiresAt`.
+- `lib/pages/pageExpiration.ts` provides the shared parser and expiration predicate.
+- `PagesSection.tsx` displays the value to every authorized viewer and exposes the Persian calendar only to `admin` and `superAdmin`.
+- Page create and update APIs reject expiration changes from non-admin roles.
+- Expired pages are treated as unpublished by the admin table, public renderer, metadata generation, and view counter.
+- A public request for an expired published page atomically persists `isPublished: false`.
+- Public rendering uses the existing 60-second revalidation window, so a previously cached page may remain visible for at most that cache interval after its exact expiration time.
+
+### Page Logo Shape
+
+- Page data stores `logoShape: "square" | "circle"` with `square` as the default.
+- `PageMetaModal` provides a segmented square/circle control in page mode.
+- `PageBuilder` includes the shape in dirty-state snapshots and page create/update payloads.
+- Existing pages load the saved value through `app/builder/[pageId]/page.tsx`.
+- The public landing header renders the logo inside a bordered 96px square or circular frame.

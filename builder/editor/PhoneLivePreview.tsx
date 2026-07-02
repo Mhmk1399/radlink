@@ -10,6 +10,8 @@ import React, {
 import { createPortal } from "react-dom";
 import { StyleSheetManager } from "styled-components";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
+import { PageLogoPreview } from "@/builder/BuilderCanvas";
+import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import type { PageBlock } from "@/types/blocks/builder.types";
 
 type PhonePreviewModalProps = {
@@ -19,6 +21,10 @@ type PhonePreviewModalProps = {
     color?: string;
     image?: string;
   };
+  logo?: string;
+  logoShape?: "square" | "circle";
+  pageUrl?: string;
+  showFloatingActions?: boolean;
   onClose: () => void;
 };
 
@@ -137,19 +143,35 @@ function EmptyPreview() {
 function PhonePreviewContent({
   blocks,
   background,
+  logo,
+  logoShape,
+  pageUrl,
+  showFloatingActions,
 }: {
   blocks: PageBlock[];
   background?: {
     color?: string;
     image?: string;
   };
+  logo?: string;
+  logoShape?: "square" | "circle";
+  pageUrl?: string;
+  showFloatingActions?: boolean;
 }) {
   const color =
     typeof background?.color === "string" ? background.color : "#ffffff";
   const image =
     typeof background?.image === "string" ? background.image : "";
-
-  if (blocks.length === 0) return <EmptyPreview />;
+  const contactBlock =
+    blocks.find(
+      (block) =>
+        block.type === "contactSave" &&
+        block.isActive !== false &&
+        !block.hidden,
+    ) ?? null;
+  const contentBlocks = blocks.filter(
+    (block) => block.type !== "contactSave",
+  );
 
   return (
     <div className="relative isolate min-h-full">
@@ -166,8 +188,12 @@ function PhonePreviewContent({
           backgroundSize: "cover",
         }}
       />
+      <PageLogoPreview logo={logo} logoShape={logoShape} />
+      {contentBlocks.length === 0 ? (
+        <EmptyPreview />
+      ) : (
       <div className="space-y-6">
-        {blocks.map((block) => {
+        {contentBlocks.map((block) => {
           const config =
             blockRegistry[block.type as keyof typeof blockRegistry];
 
@@ -194,6 +220,13 @@ function PhonePreviewContent({
           );
         })}
       </div>
+      )}
+      <LandingFloatingActions
+        contactBlock={contactBlock}
+        pageUrl={pageUrl}
+        mode="preview"
+        enabled={showFloatingActions}
+      />
     </div>
   );
 }
@@ -220,6 +253,10 @@ export default function PhonePreviewModal({
   open,
   blocks,
   background,
+  logo,
+  logoShape,
+  pageUrl,
+  showFloatingActions = false,
   onClose,
 }: PhonePreviewModalProps) {
   const sortedBlocks = useMemo(
@@ -535,6 +572,10 @@ export default function PhonePreviewModal({
                         <PhonePreviewContent
                           blocks={sortedBlocks}
                           background={background}
+                          logo={logo}
+                          logoShape={logoShape}
+                          pageUrl={pageUrl}
+                          showFloatingActions={showFloatingActions}
                         />
                       </StyleSheetManager>,
                       previewRoot,

@@ -41,13 +41,13 @@ export function createDefaultRichTextBlock(
                 ],
                 style: {
                     backgroundColor: {
-                        mobile: "#EBF2FA",
+                        mobile: "#FFFFFF",
                     },
                     borderRadius: {
-                        mobile: 20,
+                        mobile: 24,
                     },
                     borderColor: {
-                        mobile: "#427AA1",
+                        mobile: "#E2E8F0",
                     },
                     borderWidth: {
                         mobile: 1,
@@ -65,7 +65,7 @@ export function createDefaultRichTextBlock(
                 ],
                 style: {
                     color: {
-                        mobile: "#064789",
+                        mobile: "#0F172A",
                     },
                     fontSize: {
                         mobile: 22,
@@ -85,7 +85,7 @@ export function createDefaultRichTextBlock(
                 ],
                 style: {
                     color: {
-                        mobile: "#427AA1",
+                        mobile: "#475569",
                     },
                     fontSize: {
                         mobile: 15,

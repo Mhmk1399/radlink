@@ -14,7 +14,7 @@ import type {
   PageBlock,
 } from "@/types/blocks/builder.types";
 
-type ContactSaveData = {
+export type ContactSaveData = {
   firstName: string;
   lastName: string;
   phoneNumber: string;
@@ -83,7 +83,7 @@ const IconBox = styled.span<{ $styleCss: string }>`
   ${(props) => props.$styleCss}
 `;
 
-function getData(block: PageBlock): ContactSaveData {
+export function getContactSaveData(block: PageBlock): ContactSaveData {
   const raw = block.data as Partial<ContactSaveData>;
 
   return {
@@ -183,11 +183,11 @@ function buildVCard(data: ContactSaveData) {
   return lines.join("\r\n");
 }
 
-function buildVCardHref(data: ContactSaveData) {
+export function buildVCardHref(data: ContactSaveData) {
   return `data:text/vcard;charset=utf-8,${encodeURIComponent(buildVCard(data))}`;
 }
 
-function buildFileName(data: ContactSaveData) {
+export function buildVCardFileName(data: ContactSaveData) {
   const name =
     [data.firstName, data.lastName]
       .map((part) => part.trim())
@@ -205,7 +205,7 @@ export function ContactSaveBlock({
   onSelectElement,
   onUpdateContent,
 }: BlockComponentProps) {
-  const data = getData(block);
+  const data = getContactSaveData(block);
   const isEditor = mode === "editor";
   const mobileOnly = isEditor;
   const hasPhoneNumber = Boolean(normalizePhoneNumber(data.phoneNumber));
@@ -247,7 +247,7 @@ export function ContactSaveBlock({
           <SaveButton
             dir={direction}
             href={disabled ? undefined : buildVCardHref(data)}
-            download={disabled ? undefined : buildFileName(data)}
+            download={disabled ? undefined : buildVCardFileName(data)}
             target={disabled ? undefined : "_blank"}
             rel={disabled ? undefined : "noopener noreferrer"}
             aria-disabled={disabled}

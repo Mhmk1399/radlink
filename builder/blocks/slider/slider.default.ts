@@ -50,24 +50,26 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                 label: "کادر اسلایدر",
                 allowedStyleKeys: [
                     "backgroundColor",
+                    "height",           // ← added
                     "borderRadius",
                     "borderColor",
                     "borderWidth",
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#064789" },
+                    backgroundColor: { mobile: "#0F172A" },
                     borderRadius: { mobile: 28 },
-                    borderColor: { mobile: "#427AA1" },
+                    borderColor: { mobile: "rgba(255,255,255,0.08)" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
+                    // height intentionally omitted — auto from image aspect ratio
                 },
             },
             overlay: {
                 label: "پوشش",
                 allowedStyleKeys: ["backgroundColor"],
                 style: {
-                    backgroundColor: { mobile: "rgba(6,71,137,0.45)" },
+                    backgroundColor: { mobile: "rgba(2,6,23,0.42)" },
                 },
             },
             title: {
@@ -83,7 +85,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                 label: "توضیحات",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#EBF2FA" },
+                    color: { mobile: "rgba(255,255,255,0.78)" },
                     fontSize: { mobile: 15, tablet: 17, desktop: 18 },
                 },
             },
@@ -99,12 +101,12 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    color: { mobile: "#064789" },
-                    backgroundColor: { mobile: "#EBF2FA" },
+                    color: { mobile: "#0F172A" },
+                    backgroundColor: { mobile: "#ffffff" },
                     fontSize: { mobile: 15, tablet: 16, desktop: 16 },
                     borderRadius: { mobile: 14 },
-                    borderColor: { mobile: "#EBF2FA" },
-                    borderWidth: { mobile: 1 },
+                    borderColor: { mobile: "transparent" },
+                    borderWidth: { mobile: 0 },
                     animation: "none",
                 },
             },
@@ -119,9 +121,9 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                 ],
                 style: {
                     color: { mobile: "#ffffff" },
-                    backgroundColor: { mobile: "rgba(6,71,137,0.35)" },
+                    backgroundColor: { mobile: "rgba(255,255,255,0.10)" },
                     borderRadius: { mobile: 999 },
-                    borderColor: { mobile: "rgba(235,242,250,0.2)" },
+                    borderColor: { mobile: "rgba(255,255,255,0.14)" },
                     borderWidth: { mobile: 1 },
                 },
             },
@@ -134,7 +136,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     "borderWidth",
                 ],
                 style: {
-                    backgroundColor: { mobile: "rgba(235,242,250,0.55)" },
+                    backgroundColor: { mobile: "rgba(255,255,255,0.55)" },
                     borderRadius: { mobile: 999 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import styled from "styled-components";
 
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
@@ -45,42 +46,255 @@ type ContactInfoBlockProps = BlockComponentProps & {
   block: PageBlock & { data: ContactInfoData };
 };
 
+type IconTone = "phone" | "whatsapp" | "email" | "address";
+
 /* ================================================================== */
 /*  Styled                                                             */
 /* ================================================================== */
 
-const ContactRoot = styled.div`
+const ContactRoot = styled.section`
   ${sharedBlockKeyframes(PREFIX)}
+  position: relative;
 `;
 
 const StyledContainer = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-container`)}
   ${(props) => props.$styleCss}
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 32px rgba(15, 23, 42, 0.06);
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at top right,
+        rgba(59, 130, 246, 0.05),
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at bottom left,
+        rgba(99, 102, 241, 0.04),
+        transparent 30%
+      );
+  }
+`;
+
+const ContentLayer = styled.div`
+  position: relative;
+  z-index: 1;
+`;
+
+const HeaderStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 `;
 
 const StyledTitle = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-title`)}
   ${(props) => props.$styleCss}
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+`;
+
+const TitleDivider = styled.div`
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #cbd5e1, #94a3b8, #cbd5e1);
 `;
 
 const StyledDescription = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-desc`)}
   ${(props) => props.$styleCss}
+  text-align: center;
+  line-height: 1.9;
+`;
+
+const ItemsStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 `;
 
 const StyledItem = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-item`)}
   ${(props) => props.$styleCss}
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 8px 20px rgba(15, 23, 42, 0.06),
+      0 2px 8px rgba(15, 23, 42, 0.04);
+  }
 `;
 
-const StyledButtonPrimary = styled.a<{ $styleCss: string }>`
+const ContactRow = styled.div<{ $interactive: boolean }>`
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+  cursor: ${(props) => (props.$interactive ? "pointer" : "default")};
+
+  &:hover {
+    opacity: 0.92;
+  }
+`;
+
+const IconShell = styled.span<{ $tone: IconTone }>`
+  display: inline-flex;
+  height: 44px;
+  width: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+
+  ${(props) => {
+    switch (props.$tone) {
+      case "phone":
+        return `
+          background: rgba(59, 130, 246, 0.12);
+          color: #2563EB;
+        `;
+      case "whatsapp":
+        return `
+          background: rgba(34, 197, 94, 0.12);
+          color: #16A34A;
+        `;
+      case "email":
+        return `
+          background: rgba(99, 102, 241, 0.12);
+          color: #4F46E5;
+        `;
+      case "address":
+      default:
+        return `
+          background: rgba(100, 116, 139, 0.12);
+          color: #475569;
+        `;
+    }
+  }}
+`;
+
+const ItemText = styled.div`
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ItemLabel = styled.span`
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+`;
+
+const ItemValue = styled.span`
+  font-weight: 700;
+  line-height: 1.7;
+  color: inherit;
+  word-break: break-word;
+`;
+
+const ButtonsRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    justify-content: center;
+  }
+`;
+
+const ButtonBase = styled.a<{ $styleCss: string }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0.85rem 1.35rem;
+  text-decoration: none;
+  font-weight: 700;
+  line-height: 1.2;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.25s ease;
+
+  ${(props) => props.$styleCss}
+`;
+
+const StyledButtonPrimary = styled(ButtonBase)`
   ${sharedBlockKeyframes(`${PREFIX}-btnpri`)}
-  ${(props) => props.$styleCss}
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 10px 20px rgba(15, 23, 42, 0.08);
+
+  &:hover {
+    transform: translateY(-1px);
+    opacity: 0.98;
+    box-shadow:
+      0 6px 14px rgba(15, 23, 42, 0.12),
+      0 2px 6px rgba(15, 23, 42, 0.08);
+  }
 `;
 
-const StyledButtonSecondary = styled.a<{ $styleCss: string }>`
+const StyledButtonSecondary = styled(ButtonBase)`
   ${sharedBlockKeyframes(`${PREFIX}-btnsec`)}
-  ${(props) => props.$styleCss}
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+  &:hover {
+    transform: translateY(-1px);
+    opacity: 0.96;
+    box-shadow:
+      0 6px 14px rgba(15, 23, 42, 0.08),
+      0 2px 6px rgba(15, 23, 42, 0.04);
+  }
+`;
+
+const ButtonIconWrap = styled.span<{ $variant: "primary" | "secondary" }>`
+  display: inline-flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+
+  ${(props) =>
+    props.$variant === "primary"
+      ? `
+        background: rgba(255, 255, 255, 0.14);
+      `
+      : `
+        background: rgba(15, 23, 42, 0.06);
+      `}
 `;
 
 /* ================================================================== */
@@ -158,17 +372,21 @@ function ContactItemRow({
   href,
   isEditor,
   children,
+  tone,
 }: {
   icon: React.ReactNode;
   label: string;
   href: string | undefined;
   isEditor: boolean;
   children: React.ReactNode;
+  tone: IconTone;
 }) {
   const Tag = !isEditor && href ? "a" : "div";
 
   return (
-    <Tag
+    <ContactRow
+      as={Tag}
+      $interactive={!isEditor && Boolean(href)}
       {...(!isEditor && href
         ? {
             href,
@@ -179,17 +397,14 @@ function ContactItemRow({
       onClick={
         isEditor ? (e: React.MouseEvent) => e.preventDefault() : undefined
       }
-      className="flex w-full items-center gap-3 px-4 py-3.5 no-underline transition-opacity hover:opacity-80"
-      style={{ cursor: isEditor ? "default" : href ? "pointer" : "default" }}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm">
-        {icon}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[11px] font-medium opacity-60">{label}</span>
-        <span className="truncate font-semibold">{children}</span>
-      </div>
-    </Tag>
+      <IconShell $tone={tone}>{icon}</IconShell>
+
+      <ItemText>
+        <ItemLabel>{label}</ItemLabel>
+        <ItemValue>{children}</ItemValue>
+      </ItemText>
+    </ContactRow>
   );
 }
 
@@ -208,7 +423,6 @@ export function ContactInfoBlock({
   const isEditor = mode === "editor";
   const mobileOnly = isEditor;
 
-  /* ── Styles ── */
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
@@ -245,7 +459,6 @@ export function ContactInfoBlock({
     { mobileOnly },
   );
 
-  /* ── Helpers ── */
   const phone = String(block.data.phone ?? "").trim();
   const whatsapp = String(block.data.whatsapp ?? "").trim();
   const email = String(block.data.email ?? "").trim();
@@ -272,225 +485,231 @@ export function ContactInfoBlock({
       >
         <StyledContainer
           dir="rtl"
-          className="flex flex-col gap-5 overflow-hidden px-5 py-7 sm:px-7"
+          className="px-5 py-6 sm:px-7 sm:py-8"
           $styleCss={containerCss}
         >
-          {/* ── Title ── */}
-          <EditablePart
-            instanceId={block.instanceId}
-            elementId="title"
-            mode={mode}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          >
-            <StyledTitle
-              className="text-center font-bold leading-[1.5]"
-              $styleCss={titleCss}
-            >
-              <InlineEditableText
-                value={String(block.data.title ?? "")}
-                dataKey="title"
+          <ContentLayer className="flex flex-col gap-6">
+            {/* Title */}
+            <HeaderStack>
+              <EditablePart
                 instanceId={block.instanceId}
+                elementId="title"
                 mode={mode}
-                onUpdateContent={onUpdateContent}
+                selectedElementId={selectedElementId}
+                onSelectElement={onSelectElement}
               >
-                {(text) => <h3 className="m-0">{text}</h3>}
-              </InlineEditableText>
-            </StyledTitle>
-          </EditablePart>
+                <StyledTitle $styleCss={titleCss}>
+                  <InlineEditableText
+                    value={String(block.data.title ?? "")}
+                    dataKey="title"
+                    instanceId={block.instanceId}
+                    mode={mode}
+                    onUpdateContent={onUpdateContent}
+                  >
+                    {(text) => <h3 className="m-0">{text}</h3>}
+                  </InlineEditableText>
+                </StyledTitle>
+              </EditablePart>
 
-          {/* ── Description ── */}
-          {Boolean(block.data.showDescription) && (
-            <EditablePart
-              instanceId={block.instanceId}
-              elementId="description"
-              mode={mode}
-              selectedElementId={selectedElementId}
-              onSelectElement={onSelectElement}
-            >
-              <StyledDescription
-                className="mx-auto max-w-[600px] text-center leading-[1.9]"
-                $styleCss={descCss}
+              <TitleDivider />
+            </HeaderStack>
+
+            {/* Description */}
+            {Boolean(block.data.showDescription) && (
+              <EditablePart
+                instanceId={block.instanceId}
+                elementId="description"
+                mode={mode}
+                selectedElementId={selectedElementId}
+                onSelectElement={onSelectElement}
               >
-                <InlineEditableText
-                  value={String(block.data.description ?? "")}
-                  dataKey="description"
+                <StyledDescription
+                  className="mx-auto max-w-[640px]"
+                  $styleCss={descCss}
+                >
+                  <InlineEditableText
+                    value={String(block.data.description ?? "")}
+                    dataKey="description"
+                    instanceId={block.instanceId}
+                    mode={mode}
+                    multiline
+                    onUpdateContent={onUpdateContent}
+                  >
+                    {(text) => <p className="m-0">{text}</p>}
+                  </InlineEditableText>
+                </StyledDescription>
+              </EditablePart>
+            )}
+
+            {/* Contact Items */}
+            {hasAnyItem && (
+              <EditablePart
+                instanceId={block.instanceId}
+                elementId="item"
+                mode={mode}
+                selectedElementId={selectedElementId}
+                onSelectElement={onSelectElement}
+              >
+                <ItemsStack>
+                  {Boolean(block.data.showPhone) && phone && (
+                    <StyledItem $styleCss={itemCss}>
+                      <ContactItemRow
+                        icon={<PhoneIcon />}
+                        label="تلفن"
+                        href={phoneHref}
+                        isEditor={isEditor}
+                        tone="phone"
+                      >
+                        <InlineEditableText
+                          value={String(block.data.phone ?? "")}
+                          dataKey="phone"
+                          instanceId={block.instanceId}
+                          mode={mode}
+                          onUpdateContent={onUpdateContent}
+                        >
+                          {(text) => <span dir="ltr">{text}</span>}
+                        </InlineEditableText>
+                      </ContactItemRow>
+                    </StyledItem>
+                  )}
+
+                  {Boolean(block.data.showWhatsapp) && whatsapp && (
+                    <StyledItem $styleCss={itemCss}>
+                      <ContactItemRow
+                        icon={<WhatsappIcon />}
+                        label="واتساپ"
+                        href={whatsappHref}
+                        isEditor={isEditor}
+                        tone="whatsapp"
+                      >
+                        <span dir="ltr">{whatsapp}</span>
+                      </ContactItemRow>
+                    </StyledItem>
+                  )}
+
+                  {Boolean(block.data.showEmail) && email && (
+                    <StyledItem $styleCss={itemCss}>
+                      <ContactItemRow
+                        icon={<EmailIcon />}
+                        label="ایمیل"
+                        href={emailHref}
+                        isEditor={isEditor}
+                        tone="email"
+                      >
+                        <InlineEditableText
+                          value={String(block.data.email ?? "")}
+                          dataKey="email"
+                          instanceId={block.instanceId}
+                          mode={mode}
+                          onUpdateContent={onUpdateContent}
+                        >
+                          {(text) => <span dir="ltr">{text}</span>}
+                        </InlineEditableText>
+                      </ContactItemRow>
+                    </StyledItem>
+                  )}
+
+                  {Boolean(block.data.showAddress) && address && (
+                    <StyledItem $styleCss={itemCss}>
+                      <ContactItemRow
+                        icon={<AddressIcon />}
+                        label="آدرس"
+                        href={undefined}
+                        isEditor={isEditor}
+                        tone="address"
+                      >
+                        <InlineEditableText
+                          value={String(block.data.address ?? "")}
+                          dataKey="address"
+                          instanceId={block.instanceId}
+                          mode={mode}
+                          multiline
+                          onUpdateContent={onUpdateContent}
+                        >
+                          {(text) => <span>{text}</span>}
+                        </InlineEditableText>
+                      </ContactItemRow>
+                    </StyledItem>
+                  )}
+                </ItemsStack>
+              </EditablePart>
+            )}
+
+            {/* Buttons */}
+            {Boolean(block.data.showButtons) && (
+              <ButtonsRow>
+                <EditablePart
                   instanceId={block.instanceId}
+                  elementId="buttonPrimary"
                   mode={mode}
-                  multiline
-                  onUpdateContent={onUpdateContent}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
                 >
-                  {(text) => <p className="m-0">{text}</p>}
-                </InlineEditableText>
-              </StyledDescription>
-            </EditablePart>
-          )}
-
-          {/* ── Contact Items ── */}
-          {hasAnyItem && (
-            <EditablePart
-              instanceId={block.instanceId}
-              elementId="item"
-              mode={mode}
-              selectedElementId={selectedElementId}
-              onSelectElement={onSelectElement}
-            >
-              <div className="flex flex-col gap-2.5">
-                {/* Phone */}
-                {Boolean(block.data.showPhone) && phone && (
-                  <StyledItem $styleCss={itemCss} className="overflow-hidden">
-                    <ContactItemRow
-                      icon={<PhoneIcon />}
-                      label="تلفن"
-                      href={phoneHref}
-                      isEditor={isEditor}
-                    >
-                      <InlineEditableText
-                        value={String(block.data.phone ?? "")}
-                        dataKey="phone"
-                        instanceId={block.instanceId}
-                        mode={mode}
-                        onUpdateContent={onUpdateContent}
-                      >
-                        {(text) => <span dir="ltr">{text}</span>}
-                      </InlineEditableText>
-                    </ContactItemRow>
-                  </StyledItem>
-                )}
-
-                {/* WhatsApp */}
-                {Boolean(block.data.showWhatsapp) && whatsapp && (
-                  <StyledItem $styleCss={itemCss} className="overflow-hidden">
-                    <ContactItemRow
-                      icon={<WhatsappIcon />}
-                      label="واتساپ"
-                      href={whatsappHref}
-                      isEditor={isEditor}
-                    >
-                      <span dir="ltr">{whatsapp}</span>
-                    </ContactItemRow>
-                  </StyledItem>
-                )}
-
-                {/* Email */}
-                {Boolean(block.data.showEmail) && email && (
-                  <StyledItem $styleCss={itemCss} className="overflow-hidden">
-                    <ContactItemRow
-                      icon={<EmailIcon />}
-                      label="ایمیل"
-                      href={emailHref}
-                      isEditor={isEditor}
-                    >
-                      <InlineEditableText
-                        value={String(block.data.email ?? "")}
-                        dataKey="email"
-                        instanceId={block.instanceId}
-                        mode={mode}
-                        onUpdateContent={onUpdateContent}
-                      >
-                        {(text) => <span dir="ltr">{text}</span>}
-                      </InlineEditableText>
-                    </ContactItemRow>
-                  </StyledItem>
-                )}
-
-                {/* Address */}
-                {Boolean(block.data.showAddress) && address && (
-                  <StyledItem $styleCss={itemCss} className="overflow-hidden">
-                    <ContactItemRow
-                      icon={<AddressIcon />}
-                      label="آدرس"
-                      href={undefined}
-                      isEditor={isEditor}
-                    >
-                      <InlineEditableText
-                        value={String(block.data.address ?? "")}
-                        dataKey="address"
-                        instanceId={block.instanceId}
-                        mode={mode}
-                        multiline
-                        onUpdateContent={onUpdateContent}
-                      >
-                        {(text) => <span>{text}</span>}
-                      </InlineEditableText>
-                    </ContactItemRow>
-                  </StyledItem>
-                )}
-              </div>
-            </EditablePart>
-          )}
-
-          {/* ── Buttons ── */}
-          {Boolean(block.data.showButtons) && (
-            <div className="flex flex-col items-stretch gap-2.5 pt-1 sm:flex-row sm:justify-center">
-              {/* Primary */}
-              <EditablePart
-                instanceId={block.instanceId}
-                elementId="buttonPrimary"
-                mode={mode}
-                selectedElementId={selectedElementId}
-                onSelectElement={onSelectElement}
-              >
-                <StyledButtonPrimary
-                  $styleCss={btnPriCss}
-                  href={!isEditor && phone ? `tel:${phone}` : undefined}
-                  onClick={(e) => {
-                    if (isEditor) e.preventDefault();
-                  }}
-                  className="flex min-w-[120px] items-center justify-center gap-2 px-6 py-3 text-center font-semibold no-underline transition-opacity hover:opacity-90"
-                >
-                  <PhoneIcon />
-                  <InlineEditableText
-                    value={String(block.data.primaryButtonText ?? "")}
-                    dataKey="primaryButtonText"
-                    instanceId={block.instanceId}
-                    mode={mode}
-                    onUpdateContent={onUpdateContent}
-                    
+                  <StyledButtonPrimary
+                    $styleCss={btnPriCss}
+                    href={!isEditor && phone ? `tel:${phone}` : undefined}
+                    onClick={(e) => {
+                      if (isEditor) e.preventDefault();
+                    }}
+                    className="min-w-[140px] justify-center no-underline"
                   >
-                    {(text) => <span>{text}</span>}
-                  </InlineEditableText>
-                </StyledButtonPrimary>
-              </EditablePart>
+                    <ButtonIconWrap $variant="primary">
+                      <PhoneIcon />
+                    </ButtonIconWrap>
 
-              {/* Secondary */}
-              <EditablePart
-                instanceId={block.instanceId}
-                elementId="buttonSecondary"
-                mode={mode}
-                selectedElementId={selectedElementId}
-                onSelectElement={onSelectElement}
-              >
-                <StyledButtonSecondary
-                  $styleCss={btnSecCss}
-                  href={
-                    !isEditor && whatsapp
-                      ? `https://wa.me/${whatsapp}`
-                      : undefined
-                  }
-                  target={!isEditor && whatsapp ? "_blank" : undefined}
-                  rel={
-                    !isEditor && whatsapp ? "noopener noreferrer" : undefined
-                  }
-                  onClick={(e) => {
-                    if (isEditor) e.preventDefault();
-                  }}
-                  className="flex min-w-[160px] items-center justify-center gap-2 px-6 py-3 text-center font-semibold no-underline transition-opacity hover:opacity-90"
+                    <InlineEditableText
+                      value={String(block.data.primaryButtonText ?? "")}
+                      dataKey="primaryButtonText"
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      onUpdateContent={onUpdateContent}
+                    >
+                      {(text) => <span>{text}</span>}
+                    </InlineEditableText>
+                  </StyledButtonPrimary>
+                </EditablePart>
+
+                <EditablePart
+                  instanceId={block.instanceId}
+                  elementId="buttonSecondary"
+                  mode={mode}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
                 >
-                  <WhatsappIcon />
-                  <InlineEditableText
-                    value={String(block.data.secondaryButtonText ?? "")}
-                    dataKey="secondaryButtonText"
-                    instanceId={block.instanceId}
-                    mode={mode}
-                    onUpdateContent={onUpdateContent}
+                  <StyledButtonSecondary
+                    $styleCss={btnSecCss}
+                    href={
+                      !isEditor && whatsapp
+                        ? `https://wa.me/${whatsapp}`
+                        : undefined
+                    }
+                    target={!isEditor && whatsapp ? "_blank" : undefined}
+                    rel={
+                      !isEditor && whatsapp ? "noopener noreferrer" : undefined
+                    }
+                    onClick={(e) => {
+                      if (isEditor) e.preventDefault();
+                    }}
+                    className="min-w-[160px] justify-center no-underline"
                   >
-                    {(text) => <span>{text}</span>}
-                  </InlineEditableText>
-                </StyledButtonSecondary>
-              </EditablePart>
-            </div>
-          )}
+                    <ButtonIconWrap $variant="secondary">
+                      <WhatsappIcon />
+                    </ButtonIconWrap>
+
+                    <InlineEditableText
+                      value={String(block.data.secondaryButtonText ?? "")}
+                      dataKey="secondaryButtonText"
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      onUpdateContent={onUpdateContent}
+                    >
+                      {(text) => <span>{text}</span>}
+                    </InlineEditableText>
+                  </StyledButtonSecondary>
+                </EditablePart>
+              </ButtonsRow>
+            )}
+          </ContentLayer>
         </StyledContainer>
       </EditablePart>
     </ContactRoot>

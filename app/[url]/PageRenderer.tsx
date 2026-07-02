@@ -97,7 +97,9 @@ export default function PageRenderer({
 
   return (
     <div className="space-y-6">
-      {blocks.map((b) => {
+      {blocks
+        .filter((block) => block.type !== "contactSave")
+        .map((b) => {
         const cfg = (blockRegistry as any)[b.type];
 
         if (!cfg || !cfg.component) {
@@ -116,7 +118,7 @@ export default function PageRenderer({
             <BlockComponent block={b} mode="public" />
           </div>
         );
-      })}
+        })}
     </div>
   );
 }

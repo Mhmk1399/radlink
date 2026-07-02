@@ -7,7 +7,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { FaCircleInfo, FaTriangleExclamation, FaXmark } from "react-icons/fa6";
+import { FaXmark } from "react-icons/fa6";
+import { NotificationIcon } from "@/components/notifications/NotificationIcon";
 
 export type PublicPageNotification = {
   id: string;
@@ -15,6 +16,7 @@ export type PublicPageNotification = {
   subtitle?: string;
   description: string;
   type: "info" | "danger";
+  iconKey?: string;
   closeable: boolean;
 };
 
@@ -172,11 +174,11 @@ export default function PageNotificationModal({
             <div
               className={`relative flex h-12 w-12 items-center justify-center rounded-2xl sm:h-14 sm:w-14 ${theme.iconWrap}`}
             >
-              {isDanger ? (
-                <FaTriangleExclamation className="h-5 w-5 sm:h-6 sm:w-6" />
-              ) : (
-                <FaCircleInfo className="h-5 w-5 sm:h-6 sm:w-6" />
-              )}
+              <NotificationIcon
+                iconKey={activeNotification.iconKey}
+                type={activeNotification.type}
+                className="h-5 w-5 sm:h-6 sm:w-6"
+              />
             </div>
           </div>
 

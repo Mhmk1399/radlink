@@ -55,9 +55,9 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#EBF2FA" },
-                    borderRadius: { mobile: 24 },
-                    borderColor: { mobile: "#427AA1" },
+                    backgroundColor: { mobile: "#FFFFFF" },
+                    borderRadius: { mobile: 28 },
+                    borderColor: { mobile: "#E2E8F0" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -66,7 +66,7 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                 label: "عنوان",
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
-                    color: { mobile: "#064789" },
+                    color: { mobile: "#0F172A" },
                     fontSize: { mobile: 24, tablet: 28, desktop: 34 },
                     animation: "none",
                 },
@@ -75,7 +75,7 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                 label: "توضیحات",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#427AA1" },
+                    color: { mobile: "#64748B" },
                     fontSize: { mobile: 14, tablet: 15, desktop: 16 },
                 },
             },
@@ -89,9 +89,9 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#EBF2FA" },
-                    borderRadius: { mobile: 16 },
-                    borderColor: { mobile: "#427AA1" },
+                    backgroundColor: { mobile: "#FFFFFF" },
+                    borderRadius: { mobile: 18 },
+                    borderColor: { mobile: "#E2E8F0" },
                     borderWidth: { mobile: 1 },
                     animation: "none",
                 },
@@ -100,7 +100,7 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                 label: "متن سوال",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#064789" },
+                    color: { mobile: "#0F172A" },
                     fontSize: { mobile: 15, tablet: 16, desktop: 17 },
                 },
             },
@@ -108,7 +108,7 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                 label: "متن پاسخ",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#427AA1" },
+                    color: { mobile: "#64748B" },
                     fontSize: { mobile: 14, tablet: 15, desktop: 16 },
                 },
             },
@@ -116,8 +116,8 @@ export function createDefaultFAQBlock(order: number): PageBlock {
                 label: "آیکون",
                 allowedStyleKeys: ["color", "backgroundColor", "borderRadius"],
                 style: {
-                    color: { mobile: "#064789" },
-                    backgroundColor: { mobile: "#EBF2FA" },
+                    color: { mobile: "#0F172A" },
+                    backgroundColor: { mobile: "#F8FAFC" },
                     borderRadius: { mobile: 999 },
                 },
             },

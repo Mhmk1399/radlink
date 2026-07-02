@@ -609,6 +609,7 @@ export function PageMetaModal({
   categoryOptions = [],
   thumbnail,
   logo,
+  logoShape = "square",
   favicon,
   backgroundColor = "#ffffff",
   backgroundImage = "",
@@ -618,6 +619,7 @@ export function PageMetaModal({
   onCategoryIdChange,
   onThumbnailChange,
   onLogoChange,
+  onLogoShapeChange,
   onFaviconChange,
   onBackgroundColorChange,
   onBackgroundImageChange,
@@ -637,6 +639,7 @@ export function PageMetaModal({
   categoryOptions?: Array<{ value: string; label: string }>;
   thumbnail?: string;
   logo?: string;
+  logoShape?: "square" | "circle";
   favicon?: string;
   backgroundColor?: string;
   backgroundImage?: string;
@@ -646,6 +649,7 @@ export function PageMetaModal({
   onCategoryIdChange?: (v: string) => void;
   onThumbnailChange?: (v: string) => void;
   onLogoChange?: (v: string) => void;
+  onLogoShapeChange?: (v: "square" | "circle") => void;
   onFaviconChange?: (v: string) => void;
   onBackgroundColorChange?: (v: string) => void;
   onBackgroundImageChange?: (v: string) => void;
@@ -1179,6 +1183,48 @@ export function PageMetaModal({
                       ) : null}
                     </div>
                   ))}
+                </div>
+
+                <div>
+                  <span className="mb-2 block text-[12px] font-bold text-neutral-600">
+                    شکل نمایش لوگو
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 rounded-xl bg-white p-1.5 ring-1 ring-neutral-200">
+                    {(
+                      [
+                        { value: "square", label: "مربعی" },
+                        { value: "circle", label: "دایره‌ای" },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => onLogoShapeChange?.(option.value)}
+                        className={[
+                          "flex h-10 items-center justify-center gap-2 px-3 text-xs font-bold transition",
+                          option.value === "circle"
+                            ? "rounded-full"
+                            : "rounded-lg",
+                          logoShape === option.value
+                            ? "bg-[#064789] text-white shadow-sm"
+                            : "text-neutral-500 hover:bg-neutral-100",
+                        ].join(" ")}
+                      >
+                        <span
+                          className={[
+                            "h-4 w-4 border-2",
+                            option.value === "circle"
+                              ? "rounded-full"
+                              : "rounded-[3px]",
+                            logoShape === option.value
+                              ? "border-white"
+                              : "border-neutral-400",
+                          ].join(" ")}
+                        />
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {pageImageUploadError ? (

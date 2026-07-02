@@ -5,7 +5,7 @@ import styled, { css } from "styled-components";
 
 import type {
   ResponsiveValue,
-   EditableStyleMap,
+  EditableStyleMap,
   BlockElement,
   PageBlock,
   EditorMode,
@@ -50,7 +50,7 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
     ],
     style: {
       backgroundColor: { mobile: "#0f172a" },
-      borderRadius: { mobile: 24 },
+      borderRadius: { mobile: 20 },
       borderColor: { mobile: "transparent" },
       borderWidth: { mobile: 0 },
       animation: "none",
@@ -60,7 +60,7 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
     label: "پوشش تصویر",
     allowedStyleKeys: ["backgroundColor"],
     style: {
-      backgroundColor: { mobile: "rgba(15, 23, 42, 0.45)" },
+      backgroundColor: { mobile: "rgba(15, 23, 42, 0.50)" },
     },
   },
   title: {
@@ -68,7 +68,7 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
     allowedStyleKeys: ["color", "fontSize", "animation"],
     style: {
       color: { mobile: "#ffffff" },
-      fontSize: { mobile: 28, tablet: 36, desktop: 44 },
+      fontSize: { mobile: 26, tablet: 34, desktop: 42 },
       animation: "slideUp",
     },
   },
@@ -76,8 +76,8 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
     label: "توضیحات",
     allowedStyleKeys: ["color", "fontSize"],
     style: {
-      color: { mobile: "rgba(255, 255, 255, 0.92)" },
-      fontSize: { mobile: 15, tablet: 17, desktop: 18 },
+      color: { mobile: "rgba(255, 255, 255, 0.80)" },
+      fontSize: { mobile: 14, tablet: 16, desktop: 17 },
     },
   },
   button: {
@@ -92,13 +92,13 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
       "animation",
     ],
     style: {
-      color: { mobile: "#111827" },
+      color: { mobile: "#0f172a" },
       backgroundColor: { mobile: "#ffffff" },
-      fontSize: { mobile: 15, tablet: 16, desktop: 16 },
+      fontSize: { mobile: 14, tablet: 15, desktop: 15 },
       borderRadius: { mobile: 12 },
-      borderColor: { mobile: "#ffffff" },
-      borderWidth: { mobile: 1 },
-      animation: "pulse",
+      borderColor: { mobile: "transparent" },
+      borderWidth: { mobile: 0 },
+      animation: "none",
     },
   },
 };
@@ -123,6 +123,12 @@ const StyledContainer = styled.div<{ $styleCss: string }>`
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.06);
+  transition:
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
   ${(props) => props.$styleCss}
 `;
 
@@ -131,13 +137,61 @@ const StyledOverlay = styled.div<{ $styleCss: string }>`
   position: absolute;
   inset: 0;
   ${(props) => props.$styleCss}
+
+  /* subtle bottom gradient for text readability */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.25) 0%,
+      transparent 50%
+    );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+`;
+
+const ContentWrapper = styled.div`
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  width: 100%;
+`;
+
+const ContentInner = styled.div`
+  width: 100%;
+  padding: 2rem 1.75rem;
+
+  @media (min-width: 768px) {
+    padding: 3rem 2.75rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 3.5rem 3.5rem;
+  }
+`;
+
+const ContentStack = styled.div`
+  display: flex;
+  max-width: 36rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+
+  @media (min-width: 768px) {
+    gap: 1.25rem;
+  }
 `;
 
 const StyledTitle = styled.h2<{ $styleCss: string }>`
   ${sharedAnimationStyles}
   margin: 0;
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   word-break: break-word;
   ${(props) => props.$styleCss}
 `;
@@ -145,8 +199,10 @@ const StyledTitle = styled.h2<{ $styleCss: string }>`
 const StyledDescription = styled.p<{ $styleCss: string }>`
   ${sharedAnimationStyles}
   margin: 0;
-  line-height: 1.9;
+  line-height: 1.8;
+  font-weight: 400;
   word-break: break-word;
+  max-width: 32rem;
   ${(props) => props.$styleCss}
 `;
 
@@ -156,14 +212,33 @@ const StyledButton = styled.a<{ $styleCss: string }>`
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 0.75rem 1.25rem;
+  padding: 0.625rem 1.5rem;
   text-decoration: none;
   line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.005em;
   word-break: break-word;
   cursor: pointer;
   transition:
-    transform 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
     opacity 0.2s ease;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.1),
+      0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
   ${(props) => props.$styleCss}
 `;
 
@@ -173,7 +248,7 @@ const StyledButton = styled.a<{ $styleCss: string }>`
 
 function mergeResponsiveValue<T>(
   fallback?: ResponsiveValue<T>,
-  incoming?: ResponsiveValue<T>,
+  incoming?: ResponsiveValue<T>
 ): ResponsiveValue<T> | undefined {
   if (!fallback && !incoming) return undefined;
 
@@ -186,27 +261,27 @@ function mergeResponsiveValue<T>(
 
 function mergeStyleMap(
   fallback: EditableStyleMap,
-  incoming?: EditableStyleMap,
+  incoming?: EditableStyleMap
 ): EditableStyleMap {
   return {
     color: mergeResponsiveValue(fallback.color, incoming?.color),
     backgroundColor: mergeResponsiveValue(
       fallback.backgroundColor,
-      incoming?.backgroundColor,
+      incoming?.backgroundColor
     ),
     fontSize: mergeResponsiveValue(fallback.fontSize, incoming?.fontSize),
     height: mergeResponsiveValue(fallback.height, incoming?.height),
     borderRadius: mergeResponsiveValue(
       fallback.borderRadius,
-      incoming?.borderRadius,
+      incoming?.borderRadius
     ),
     borderColor: mergeResponsiveValue(
       fallback.borderColor,
-      incoming?.borderColor,
+      incoming?.borderColor
     ),
     borderWidth: mergeResponsiveValue(
       fallback.borderWidth,
-      incoming?.borderWidth,
+      incoming?.borderWidth
     ),
     animation: incoming?.animation ?? fallback.animation,
   };
@@ -214,7 +289,7 @@ function mergeStyleMap(
 
 function getElementWithFallback(
   block: PageBlock,
-  elementId: BannerElementId,
+  elementId: BannerElementId
 ): BlockElement {
   const fallback = DEFAULT_ELEMENTS[elementId];
   const incoming = block.elements?.[elementId];
@@ -268,19 +343,6 @@ function getBannerData(block: PageBlock): BannerData {
         : DEFAULT_BANNER_DATA.showOverlay,
   };
 }
-
-type InlineEditableTextProps = {
-  value: string;
-  dataKey: keyof BannerData;
-  instanceId: string;
-  mode: EditorMode;
-  onUpdateContent?: (
-    instanceId: string,
-    key: keyof BannerData,
-    value: string,
-  ) => void;
-  children: (value: string) => React.ReactNode;
-};
 
 /* ------------------------------------------------------------------ */
 /*  BannerBlock                                                        */
@@ -349,8 +411,6 @@ export function BannerBlock({
     window.location.href = data.imageLink;
   }
 
-   
-
   return (
     <EditablePart
       instanceId={block.instanceId}
@@ -367,7 +427,7 @@ export function BannerBlock({
             ? `relative w-full ${
                 hasLinkedImage && !isEditor ? "cursor-pointer" : ""
               }`
-            : "relative min-h-[320px] w-full md:min-h-[420px]"
+            : "relative min-h-[100px] w-full "
         }
         style={backgroundStyle}
         role={hasLinkedImage && !isEditor ? "link" : undefined}
@@ -377,7 +437,7 @@ export function BannerBlock({
           const target = event.target as HTMLElement;
           if (
             target.closest(
-              "a, button, input, textarea, select, [contenteditable='true']",
+              "a, button, input, textarea, select, [contenteditable='true']"
             )
           )
             return;
@@ -398,7 +458,7 @@ export function BannerBlock({
           "banner-block",
           {
             mobileOnly: mode === "editor",
-          },
+          }
         )}
       >
         {/* ---------- overlay ---------- */}
@@ -419,22 +479,22 @@ export function BannerBlock({
               }
               $styleCss={responsiveStyleToCss(
                 overlayElement.style,
-                "banner-block",
+                "banner-block"
               )}
             />
           </EditablePart>
         )}
 
         {/* ---------- content ---------- */}
-        <div
+        <ContentWrapper
           className={
             data.imageUrl
-              ? "absolute inset-0 z-[2] flex items-center"
-              : "relative z-[2] flex min-h-[320px] items-center md:min-h-[420px]"
+              ? "absolute inset-0"
+              : "min-h-[280px] sm:min-h-[340px] md:min-h-[400px]"
           }
         >
-          <div className="w-full p-6 text-start md:p-10 lg:p-14">
-            <div className="flex max-w-2xl flex-col items-start gap-4 md:gap-5">
+          <ContentInner>
+            <ContentStack>
               {/* title */}
               <EditablePart
                 instanceId={block.instanceId}
@@ -450,7 +510,7 @@ export function BannerBlock({
                     "banner-block",
                     {
                       mobileOnly: mode === "editor",
-                    },
+                    }
                   )}
                 >
                   <InlineEditableText
@@ -480,7 +540,7 @@ export function BannerBlock({
                     "banner-block",
                     {
                       mobileOnly: mode === "editor",
-                    },
+                    }
                   )}
                 >
                   <InlineEditableText
@@ -515,7 +575,7 @@ export function BannerBlock({
                     $styleCss={responsiveStyleToCss(
                       buttonElement.style,
                       "banner-button",
-                      { mobileOnly: mode === "editor" },
+                      { mobileOnly: mode === "editor" }
                     )}
                   >
                     <InlineEditableText
@@ -530,9 +590,9 @@ export function BannerBlock({
                   </StyledButton>
                 </EditablePart>
               )}
-            </div>
-          </div>
-        </div>
+            </ContentStack>
+          </ContentInner>
+        </ContentWrapper>
       </StyledContainer>
     </EditablePart>
   );

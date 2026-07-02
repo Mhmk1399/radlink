@@ -6,6 +6,7 @@ import { withAuth, withDB, withRole, withStatus } from "@/lib/auth/middlewares";
 import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
 import Page from "@/models/pages";
+import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
 import "@/models/users";
 
 const PAGE_POPULATE_FIELDS = "title url owner isPublished";
@@ -40,6 +41,7 @@ export const POST = compose(
     const pageId = getPageId(body);
     const content = normalizeNotificationContent(body);
     const type = cleanText(body.type, 20);
+    const iconKey = cleanText(body.iconKey, 30);
 
     if (!isGlobal && !mongoose.Types.ObjectId.isValid(pageId)) {
         return NextResponse.json(
@@ -65,6 +67,12 @@ export const POST = compose(
             { status: 400 },
         );
     }
+    if (iconKey && !isNotificationIconKey(iconKey)) {
+        return NextResponse.json(
+            { message: "آیکن انتخاب‌شده برای اعلان معتبر نیست." },
+            { status: 400 },
+        );
+    }
 
     if (!isGlobal) {
         const pageExists = await Page.exists({ _id: pageId });
@@ -80,6 +88,7 @@ export const POST = compose(
         page: isGlobal ? undefined : pageId,
         ...content,
         type,
+        iconKey,
         closeable: body.closeable === undefined ? true : Boolean(body.closeable),
         isActive: body.isActive === undefined ? true : Boolean(body.isActive),
         isGlobal,

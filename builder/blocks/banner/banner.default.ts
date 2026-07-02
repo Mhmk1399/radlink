@@ -46,8 +46,8 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                     "animation",
                 ],
                 style: {
-                    backgroundColor: { mobile: "#064789" },
-                    borderRadius: { mobile: 24 },
+                    backgroundColor: { mobile: "#0f172a" },
+                    borderRadius: { mobile: 20 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },
                     animation: "none",
@@ -57,7 +57,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                 label: "پوشش تصویر",
                 allowedStyleKeys: ["backgroundColor"],
                 style: {
-                    backgroundColor: { mobile: "rgba(6, 71, 137, 0.45)" },
+                    backgroundColor: { mobile: "rgba(15, 23, 42, 0.50)" },
                 },
             },
             title: {
@@ -65,7 +65,7 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
                     color: { mobile: "#ffffff" },
-                    fontSize: { mobile: 28, tablet: 36, desktop: 44 },
+                    fontSize: { mobile: 26, tablet: 34, desktop: 42 },
                     animation: "slideUp",
                 },
             },
@@ -73,8 +73,8 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                 label: "توضیحات",
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
-                    color: { mobile: "#EBF2FA" },
-                    fontSize: { mobile: 15, tablet: 17, desktop: 18 },
+                    color: { mobile: "rgba(255, 255, 255, 0.80)" },
+                    fontSize: { mobile: 14, tablet: 16, desktop: 17 },
                 },
             },
             button: {
@@ -89,13 +89,13 @@ export function createDefaultBannerBlock(order = 0): PageBlock {
                     "animation",
                 ],
                 style: {
-                    color: { mobile: "#064789" },
-                    backgroundColor: { mobile: "#EBF2FA" },
-                    fontSize: { mobile: 15, tablet: 16, desktop: 16 },
+                    color: { mobile: "#0f172a" },
+                    backgroundColor: { mobile: "#ffffff" },
+                    fontSize: { mobile: 14, tablet: 15, desktop: 15 },
                     borderRadius: { mobile: 12 },
-                    borderColor: { mobile: "#EBF2FA" },
-                    borderWidth: { mobile: 1 },
-                    animation: "pulse",
+                    borderColor: { mobile: "transparent" },
+                    borderWidth: { mobile: 0 },
+                    animation: "none",
                 },
             },
         },

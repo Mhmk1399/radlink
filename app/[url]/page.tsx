@@ -6,10 +6,16 @@ import { connectDB } from "@/lib/data/db";
 import Notification from "@/models/notification";
 import Image from "next/image";
 import Page from "@/models/pages";
+import QR from "@/models/qr";
+import User from "@/models/users";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import PageNotificationModal, {
   type PublicPageNotification,
 } from "./PageNotificationModal";
 import PageRenderer from "./PageRenderer";
+import { isPageExpired } from "@/lib/pages/pageExpiration";
+import type { PageBlock } from "@/types/blocks/builder.types";
 
 type Props = {
   params: Promise<{ url: string }>;
@@ -87,6 +93,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: "صفحه یافت نشد",
     };
   }
+  if (page.isPublished !== true || isPageExpired(page.expiresAt)) {
+    return {
+      title: "صفحه در دسترس نیست",
+      robots: { index: false, follow: false },
+    };
+  }
 
   const favicon = String(
     page.settings?.favicon || page.favicon || "/favicon.ico",
@@ -123,6 +135,14 @@ export default async function PageRoute({ params }: Props) {
   const page = await getPublicPage(url);
 
   if (!page) return notFound();
+  const pageExpired = isPageExpired(page.expiresAt);
+
+  if (pageExpired && page.isPublished === true) {
+    await Page.updateOne(
+      { _id: page._id, isPublished: true },
+      { $set: { isPublished: false }, $unset: { publishedAt: 1 } },
+    );
+  }
 
   const backgroundColor = isValidBackgroundColor(page.background?.color)
     ? page.background.color.trim()
@@ -133,7 +153,7 @@ export default async function PageRoute({ params }: Props) {
       ? page.background.image
       : "";
 
-  if (page.isPublished !== true) {
+  if (page.isPublished !== true || pageExpired) {
     // Replace with your actual support phone number
     const supportPhoneNumber = "02112345678";
 
@@ -194,8 +214,9 @@ export default async function PageRoute({ params }: Props) {
               id="unpublished-page-description"
               className="mt-3 text-sm leading-relaxed text-slate-500"
             >
-              این صفحه در حال حاضر غیرفعال است یا هنوز منتشر نشده است. برای
-              اطلاعات بیشتر می‌توانید با پشتیبانی تماس بگییند.
+              {pageExpired
+                ? "زمان اعتبار این صفحه به پایان رسیده است. برای اطلاعات بیشتر می‌توانید با پشتیبانی تماس بگیرید."
+                : "این صفحه در حال حاضر غیرفعال است یا هنوز منتشر نشده است. برای اطلاعات بیشتر می‌توانید با پشتیبانی تماس بگیرید."}
             </p>
 
             {/* Action Buttons */}
@@ -226,15 +247,30 @@ export default async function PageRoute({ params }: Props) {
     );
   }
 
-  const rawNotifications = await Notification.find({
-    $and: [
-      { isActive: { $ne: false } },
-      { $or: [{ page: page._id }, { isGlobal: true }] },
-    ],
-  })
-    .select("title subtitle description type closeable createdAt")
-    .sort({ createdAt: -1 })
-    .lean();
+  const [rawNotifications, qr, owner] = await Promise.all([
+    Notification.find({
+      $and: [
+        { isActive: { $ne: false } },
+        { $or: [{ page: page._id }, { isGlobal: true }] },
+      ],
+    })
+      .select("title subtitle description type iconKey closeable createdAt")
+      .sort({ createdAt: -1 })
+      .lean(),
+    QR.findOne({ page: page._id, isActive: { $ne: false } })
+      .select("targetUrl imageurl")
+      .lean(),
+    User.findById(page.owner).select("role permissions").lean(),
+  ]);
+  const ownerAccess =
+    owner && owner.role !== "superAdmin"
+      ? await resolveUserAccess(String(owner._id), owner.permissions ?? [])
+      : null;
+  const showFloatingActions = Boolean(
+    owner &&
+      (owner.role === "superAdmin" ||
+        ownerAccess?.components["landing.floatingActions"]?.has("view")),
+  );
   const notifications: PublicPageNotification[] = rawNotifications
     .map((notification) => ({
       id: String(notification._id),
@@ -244,12 +280,20 @@ export default async function PageRoute({ params }: Props) {
       type: (notification.type === "danger"
         ? "danger"
         : "info") as PublicPageNotification["type"],
+      iconKey: String(notification.iconKey || ""),
       closeable: Boolean(notification.closeable),
     }))
     .filter((notification) => notification.description);
   const clientBlocks = (page.blocks ?? []).map(
     (block) => toClientValue(block) as Record<string, unknown>,
   );
+  const contactSaveBlock =
+    clientBlocks.find(
+      (block) =>
+        block.type === "contactSave" &&
+        block.isActive !== false &&
+        block.hidden !== true,
+    ) ?? null;
   return (
     <div className="relative isolate min-h-screen w-full px-2 pb-10 pt-2">
       <div
@@ -271,14 +315,20 @@ export default async function PageRoute({ params }: Props) {
         dir="rtl"
       >
         {typeof page.logo === "string" && page.logo ? (
-          <Image
-            src={page.logo}
-            alt={`لوگوی ${page.title}`}
-            width={288}
-            height={96}
-            unoptimized
-            className="mb-5 h-auto max-h-24 w-auto max-w-[min(100%,18rem)] object-contain"
-          />
+          <div
+            className={`relative mb-5 h-24 w-24 overflow-hidden border border-neutral-200 bg-white shadow-sm ${
+              page.logoShape === "circle" ? "rounded-full" : "rounded-xl"
+            }`}
+          >
+            <Image
+              src={page.logo}
+              alt={`لوگوی ${page.title}`}
+              fill
+              unoptimized
+              sizes="96px"
+              className="object-contain "
+            />
+          </div>
         ) : null}
         <h1 className="text-4xl font-bold text-neutral-900">{page.title}</h1>
         {page.description && (
@@ -309,6 +359,13 @@ export default async function PageRoute({ params }: Props) {
           }}
         />
       </section>
+      <LandingFloatingActions
+        contactBlock={contactSaveBlock as PageBlock | null}
+        pageUrl={String(qr?.targetUrl || page.url)}
+        qrImageUrl={String(qr?.imageurl || "")}
+        mode="public"
+        enabled={showFloatingActions}
+      />
     </div>
   );
 }

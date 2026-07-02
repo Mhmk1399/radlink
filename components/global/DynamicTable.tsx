@@ -178,7 +178,115 @@ const themeTokens = {
 const datePickerStyles = `
 .rmdp-container { direction: rtl !important; }
 .rmdp-wrapper {
+  position: relative !important;
+}
+.rmdp-calendar-container-mobile {
   position: fixed !important;
+  inset: 0 !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  padding: max(16px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left)) !important;
+  overflow: auto !important;
+  background: rgba(8, 8, 12, 0.64) !important;
+  backdrop-filter: blur(7px) !important;
+  -webkit-backdrop-filter: blur(7px) !important;
+  overscroll-behavior: contain !important;
+}
+.rmdp-calendar-container-mobile > div {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  max-width: 100% !important;
+  transform: none !important;
+}
+.rmdp-calendar-container-mobile .rmdp-mobile.rmdp-wrapper {
+  position: relative !important;
+  inset: auto !important;
+  left: auto !important;
+  top: auto !important;
+  width: min(100%, 360px) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  margin: auto !important;
+  transform: none !important;
+  overflow: auto !important;
+}
+.rmdp-calendar-container-mobile .rmdp-calendar {
+  width: 100% !important;
+}
+.rmdp-calendar-container-mobile .rmdp-day-picker {
+  justify-content: center !important;
+}
+.rmdp-wrapper.dt-calendar-theme-dark {
+  --dt-bg: #1e1e26;
+  --dt-border: rgba(255, 255, 255, 0.1);
+  --dt-divider: rgba(255, 255, 255, 0.08);
+  --dt-header: #e0c66f;
+  --dt-muted: #aaa69d;
+  --dt-text: #f2f0eb;
+  --dt-soft-bg: rgba(255, 255, 255, 0.06);
+  --dt-soft-border: rgba(255, 255, 255, 0.1);
+  --dt-hover-bg: rgba(201, 168, 76, 0.16);
+  --dt-hover-border: rgba(201, 168, 76, 0.35);
+  --dt-today-bg: rgba(201, 168, 76, 0.14);
+  --dt-selected-bg: #d4af37;
+  --dt-selected-text: #17130a;
+  --dt-selected-shadow: rgba(212, 175, 55, 0.35);
+  --dt-range-bg: rgba(201, 168, 76, 0.12);
+  --dt-range-edge-bg: #d4af37;
+  --dt-disabled: rgba(170, 166, 157, 0.35);
+  --dt-shadow: 0 24px 70px -18px rgba(0, 0, 0, 0.75);
+  color-scheme: dark;
+}
+.rmdp-wrapper.dt-calendar-theme-light {
+  --dt-bg: #ffffff;
+  --dt-border: rgba(44, 42, 37, 0.14);
+  --dt-divider: rgba(44, 42, 37, 0.1);
+  --dt-header: #745d25;
+  --dt-muted: #746f65;
+  --dt-text: #292720;
+  --dt-soft-bg: #f7f4ed;
+  --dt-soft-border: rgba(116, 93, 37, 0.15);
+  --dt-hover-bg: #f4ecd7;
+  --dt-hover-border: rgba(138, 112, 50, 0.32);
+  --dt-today-bg: #f5ecd2;
+  --dt-selected-bg: #8a7032;
+  --dt-selected-text: #ffffff;
+  --dt-selected-shadow: rgba(138, 112, 50, 0.25);
+  --dt-range-bg: #f6efdf;
+  --dt-range-edge-bg: #8a7032;
+  --dt-disabled: rgba(116, 111, 101, 0.38);
+  --dt-shadow: 0 24px 70px -20px rgba(35, 30, 20, 0.35);
+  color-scheme: light;
+}
+.rmdp-wrapper.dt-calendar-theme-dark .rmdp-deactive span {
+  color: rgba(170, 166, 157, 0.48) !important;
+}
+.rmdp-wrapper.dt-calendar-theme-light .rmdp-deactive span {
+  color: rgba(116, 111, 101, 0.5) !important;
+}
+@media (max-width: 420px) {
+  .rmdp-calendar-container-mobile {
+    padding: max(10px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left)) !important;
+  }
+  .rmdp-calendar-container-mobile .rmdp-mobile.rmdp-wrapper {
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 20px) !important;
+    padding: 8px !important;
+  }
 }
 .rmdp-wrapper,
 .rmdp-shadow {
@@ -304,6 +412,11 @@ const datePickerStyles = `
   font-size: 12px !important;
   font-weight: 600 !important;
   padding: 6px 16px !important;
+  color: var(--dt-header) !important;
+  background: var(--dt-soft-bg) !important;
+}
+.rmdp-action-button:hover {
+  background: var(--dt-hover-bg) !important;
 }
 .rmdp-ep-arrow, .rmdp-ep-arrow::after { display: none !important; }
 .rmdp-border-top { border-top: 1px solid var(--dt-divider) !important; }
@@ -3593,11 +3706,19 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         }}
                         calendar={persian}
                         locale={persian_fa}
-                        calendarPosition="bottom-right"
-                        fixMainPosition
+                        portal
+                        className={`rmdp-mobile dynamic-table-form-calendar ${
+                          isDark
+                            ? "dt-calendar-theme-dark"
+                            : "dt-calendar-theme-light"
+                        }`}
                         arrow={false}
                         portalTarget={portalTarget ?? undefined}
-                        zIndex={9999}
+                        zIndex={100001}
+                        mobileLabels={{
+                          OK: "تأیید",
+                          CANCEL: "لغو",
+                        }}
                         render={(value, openCalendar) => (
                           <button
                             type="button"

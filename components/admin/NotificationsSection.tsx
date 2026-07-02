@@ -9,12 +9,17 @@ import {
   FaPowerOff,
 } from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
+import { NotificationIcon } from "@/components/notifications/NotificationIcon";
 import { toast } from "@/components/ui/CustomToast";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAccess } from "@/hook/auth/useAccess";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { ColumnDef } from "@/types/table";
+import {
+  NOTIFICATION_ICON_OPTIONS,
+  resolveNotificationIconKey,
+} from "@/lib/notifications/notificationIcons";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -64,6 +69,7 @@ type NotificationRow = {
   subtitle: string;
   description: string;
   type: "info" | "danger";
+  iconKey: string;
   pageId: string;
   pageLabel: string;
   isGlobal: boolean;
@@ -211,6 +217,113 @@ export default function NotificationsSection({
         ),
       },
       {
+        key: "iconKey",
+        label: "آیکن اعلان",
+        defaultValue: "",
+        render: (value, row) => {
+          const selectedKey = resolveNotificationIconKey(value, row.type);
+          const label =
+            NOTIFICATION_ICON_OPTIONS.find(
+              (option) => option.key === selectedKey,
+            )?.label ?? "پیش‌فرض";
+
+          return (
+            <span
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-bold",
+                row.type === "danger"
+                  ? isDark
+                    ? "bg-red-500/10 text-red-400"
+                    : "bg-red-50 text-red-700"
+                  : isDark
+                    ? "bg-blue-500/10 text-blue-400"
+                    : "bg-blue-50 text-blue-700",
+              )}
+            >
+              <NotificationIcon
+                iconKey={String(value ?? "")}
+                type={row.type}
+                className="h-4 w-4"
+              />
+              {label}
+            </span>
+          );
+        },
+        renderFormField: ({ value, onChange, formData }) => {
+          const selected = typeof value === "string" ? value : "";
+          const notificationType =
+            formData.type === "danger" ? "danger" : "info";
+
+          return (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => onChange("")}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-right transition",
+                  selected === ""
+                    ? isDark
+                      ? "border-blue-400/40 bg-blue-500/10 text-blue-300"
+                      : "border-blue-300 bg-blue-50 text-blue-800"
+                    : cn(t.borderSubtle, t.inputBg, t.textMuted),
+                )}
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-current/10">
+                  <NotificationIcon
+                    type={notificationType}
+                    className="h-4 w-4"
+                  />
+                </span>
+                <span>
+                  <span className="block text-xs font-bold">انتخاب خودکار</span>
+                  <span className="mt-0.5 block text-[10px] opacity-70">
+                    متناسب با نوع اطلاعاتی یا خطر
+                  </span>
+                </span>
+              </button>
+
+              <div className="grid max-h-72 grid-cols-4 gap-2 overflow-y-auto pe-1 sm:grid-cols-5">
+                {NOTIFICATION_ICON_OPTIONS.map((option) => {
+                  const active = selected === option.key;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => onChange(option.key)}
+                      title={option.label}
+                      aria-label={`انتخاب آیکن ${option.label}`}
+                      aria-pressed={active}
+                      className={cn(
+                        "flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-center transition",
+                        active
+                          ? isDark
+                            ? "border-sky-400/50 bg-sky-500/15 text-sky-300"
+                            : "border-sky-300 bg-sky-50 text-sky-800"
+                          : cn(
+                              t.borderSubtle,
+                              t.inputBg,
+                              t.textMuted,
+                              t.hoverBg,
+                            ),
+                      )}
+                    >
+                      <NotificationIcon
+                        iconKey={option.key}
+                        type={notificationType}
+                        className="h-5 w-5"
+                      />
+                      <span className="line-clamp-1 text-[9px] font-semibold">
+                        {option.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
         key: "isGlobal",
         label: "اعلان عمومی",
         inputType: "checkbox",
@@ -345,6 +458,7 @@ export default function NotificationsSection({
             subtitle: toText(notification.subtitle),
             description: toText(notification.description),
             type: notification.type === "danger" ? "danger" : "info",
+            iconKey: toText(notification.iconKey),
             pageId: getId(page) || getId(notification.page),
             pageLabel: getPageLabel(page),
             isGlobal: Boolean(notification.isGlobal),

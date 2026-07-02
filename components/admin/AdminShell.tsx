@@ -59,6 +59,7 @@ import {
 } from "react-icons/fa6";
 import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
 import Image from "next/image";
+import { NotificationIcon } from "@/components/notifications/NotificationIcon";
 
 /* ══════════════════════════════════════════════
    SOFT PALETTE — eye-friendly, warm-tinted
@@ -727,6 +728,7 @@ interface NotifItem {
   time: string;
   read: boolean;
   type: "info" | "success" | "warning" | "error";
+  iconKey?: string;
   closeable?: boolean;
 }
 
@@ -773,6 +775,8 @@ type NotificationRecord = {
   title?: string;
   subtitle?: string;
   description?: string;
+  type?: "info" | "danger";
+  iconKey?: string;
   closeable?: boolean;
   isGlobal?: boolean;
   createdAt?: string;
@@ -890,7 +894,11 @@ function NotificationDropdown({
           message,
           time: formatRelativeFaDate(notification.createdAt),
           read: readIds.has(id),
-          type: getNotificationType(message),
+          type:
+            notification.type === "danger"
+              ? "warning"
+              : getNotificationType(message),
+          iconKey: notification.iconKey,
           closeable: Boolean(notification.closeable),
         } satisfies NotifItem;
       })
@@ -925,22 +933,6 @@ function NotificationDropdown({
       return next;
     });
   }, []);
-
-  const typeIcon: Record<string, ReactNode> = {
-    info: <FaBell className={cn("h-3.5 w-3.5", s.info)} aria-hidden="true" />,
-    success: (
-      <FaCircleCheck
-        className={cn("h-3.5 w-3.5", s.success)}
-        aria-hidden="true"
-      />
-    ),
-    warning: (
-      <FaClock className={cn("h-3.5 w-3.5", s.warning)} aria-hidden="true" />
-    ),
-    error: (
-      <FaXmark className={cn("h-3.5 w-3.5", s.error)} aria-hidden="true" />
-    ),
-  };
 
   return (
     <div ref={ref} className="relative">
@@ -1091,7 +1083,24 @@ function NotificationDropdown({
                       isDark ? "bg-[#ffffff05]" : "bg-[#00000004]",
                     )}
                   >
-                    {typeIcon[n.type]}
+                    <NotificationIcon
+                      iconKey={n.iconKey}
+                      type={
+                        n.type === "warning" || n.type === "error"
+                          ? "danger"
+                          : "info"
+                      }
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        n.type === "error"
+                          ? s.error
+                          : n.type === "warning"
+                            ? s.warning
+                            : n.type === "success"
+                              ? s.success
+                              : s.info,
+                      )}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

@@ -38,6 +38,7 @@ export const sliderSchema: BlockSchema = {
             label: "کادر اسلایدر",
             allowedStyleKeys: [
                 "backgroundColor",
+                "height",           // ← added
                 "borderRadius",
                 "borderColor",
                 "borderWidth",

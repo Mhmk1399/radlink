@@ -475,7 +475,10 @@ export interface Page extends BaseDocument {
     bgImage?: string;
     blocks: Record<string, unknown>[];
     logo?: string;
+    logoShape?: "square" | "circle";
     favicon?: string;
+    expiresAt?: string | null;
+    isPublished?: boolean;
     pageData?: Record<string, unknown>;
     extraServices?: PageExtraServices;
     subscription?: PageSubscription;
@@ -494,7 +497,9 @@ export interface CreatePagePayload {
     bgImage?: string;
     blocks?: Record<string, unknown>[];
     logo?: string;
+    logoShape?: "square" | "circle";
     favicon?: string;
+    expiresAt?: string | null;
     pageData?: Record<string, unknown>;
     extraServices?: PageExtraServices;
     subscription?: PageSubscription;

@@ -15,6 +15,7 @@ type PageMetadata = {
   description: string;
   url: string;
   logo: string;
+  logoShape: "square" | "circle";
   favicon: string;
   background: {
     color: string;
@@ -117,6 +118,7 @@ export default function EditPageBuilder() {
           description: page.description || "",
           url: page.url || "new-page",
           logo: typeof page.logo === "string" ? page.logo : "",
+          logoShape: page.logoShape === "circle" ? "circle" : "square",
           favicon: typeof page.favicon === "string" ? page.favicon : "",
           background: {
             color:
@@ -189,6 +191,7 @@ export default function EditPageBuilder() {
       initialDescription={pageMetadata?.description}
       initialUrl={pageMetadata?.url}
       initialLogo={pageMetadata?.logo}
+      initialLogoShape={pageMetadata?.logoShape}
       initialFavicon={pageMetadata?.favicon}
       initialBackground={pageMetadata?.background}
     />

@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { uploadFile } from "@/lib/fileUtils";
 import Image from "next/image";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
+import { isPageExpired } from "@/lib/pages/pageExpiration";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -182,6 +183,7 @@ function buildColumns(
   t: ReturnType<typeof useThemeTokens>,
   isDark: boolean,
   canEditOwner: boolean,
+  canEditExpiration: boolean,
   onPreviewImage: (src: string, title: string) => void,
 ): ColumnDef<AdminPageRow>[] {
   return [
@@ -321,6 +323,21 @@ function buildColumns(
           </span>
         ),
     },
+    {
+      key: "logoShape",
+      label: "شکل لوگو",
+      options: [
+        { label: "مربعی", value: "square" },
+        { label: "دایره‌ای", value: "circle" },
+      ],
+      defaultValue: "square",
+      hideOnMobile: true,
+      render: (value) => (
+        <span className={cn("text-xs font-semibold", t.textMuted)}>
+          {value === "circle" ? "دایره‌ای" : "مربعی"}
+        </span>
+      ),
+    },
 
     {
       key: "ownerId",
@@ -343,6 +360,37 @@ function buildColumns(
       },
     },
 
+    {
+      key: "expiresAt",
+      label: "تاریخ انقضا",
+      editable: canEditExpiration,
+      inputType: "date",
+      sortable: true,
+      hideOnMobile: true,
+      placeholder: "بدون تاریخ انقضا",
+      render: (value) => {
+        const expiration =
+          typeof value === "string" && value ? value : undefined;
+        const expired = isPageExpired(expiration);
+
+        return (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+              !expiration
+                ? isDark
+                  ? "bg-white/[0.04] text-slate-400 ring-white/10"
+                  : "bg-black/[0.03] text-slate-500 ring-black/5"
+                : expired
+                  ? "bg-red-500/10 text-red-500 ring-red-500/15"
+                  : "bg-amber-500/10 text-amber-500 ring-amber-500/15",
+            )}
+          >
+            {expiration ? formatFaDate(expiration) : "بدون انقضا"}
+          </span>
+        );
+      },
+    },
     {
       key: "isPublished",
       label: "وضعیت",
@@ -428,6 +476,8 @@ export default function PagesSection({
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
 
   const canEditOwner = !isAccessLoading && user !== null && canManageOwners;
+  const canEditExpiration =
+    !isAccessLoading && user !== null && canManageOwners;
   const canCreatePages = can("admin.pages", "create");
   const canUpdatePages = can("admin.pages", "update");
   const canDeletePages = can("admin.pages", "delete");
@@ -474,6 +524,8 @@ export default function PagesSection({
           ...page,
           _id: pageId,
           id: pageId,
+          isPublished:
+            page.isPublished !== false && !isPageExpired(page.expiresAt),
           ownerId,
           owner: owner ?? page.owner,
           viewCount: Number(page.stats?.views ?? 0),
@@ -573,8 +625,23 @@ export default function PagesSection({
 
   /* rebuild columns whenever theme or options change */
   const columns = useMemo(
-    () => buildColumns(ownerOptions, t, isDark, canEditOwner, openPreviewImage),
-    [ownerOptions, t, isDark, canEditOwner, openPreviewImage],
+    () =>
+      buildColumns(
+        ownerOptions,
+        t,
+        isDark,
+        canEditOwner,
+        canEditExpiration,
+        openPreviewImage,
+      ),
+    [
+      ownerOptions,
+      t,
+      isDark,
+      canEditOwner,
+      canEditExpiration,
+      openPreviewImage,
+    ],
   );
 
   async function togglePageStatus(row: AdminPageRow) {
@@ -743,7 +810,12 @@ export default function PagesSection({
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
           if (!canManageOwners) {
-            const { ownerId: _ownerId, owner: _owner, ...updatePayload } = item;
+            const {
+              ownerId: _ownerId,
+              owner: _owner,
+              expiresAt: _expiresAt,
+              ...updatePayload
+            } = item;
             await builtInUpdate(updatePayload as AdminPageRow);
           } else {
             await builtInUpdate(item);

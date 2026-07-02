@@ -38,6 +38,7 @@ import type {
 } from "@/types/blocks/builder.types";
 import { DynamicContentForm } from "./form/DynamicContentForm";
 import { DynamicStyleForm } from "./form/DynamicStyleForm";
+import { ANIMATION_OPTIONS, previewAnimation } from "./animationOptions";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -98,19 +99,6 @@ function addRecentColor(color: string) {
   }
 }
 
-const ANIMATION_OPTIONS: Array<{
-  label: string;
-  value: AnimationType;
-  desc: string;
-  icon: string;
-}> = [
-  { label: "بدون", value: "none", desc: "بدون انیمیشن", icon: "○" },
-  { label: "محو", value: "fade", desc: "ظاهر شدن تدریجی", icon: "◐" },
-  { label: "اسلاید", value: "slideUp", desc: "حرکت از پایین", icon: "↑" },
-  { label: "زوم", value: "scale", desc: "بزرگ‌نمایی", icon: "⊕" },
-  { label: "تپش", value: "pulse", desc: "پالس ملایم", icon: "◉" },
-];
-
 const STYLE_LABELS: Record<EditableStyleKey, string> = {
   color: "رنگ متن",
   backgroundColor: "پس‌زمینه",
@@ -119,6 +107,7 @@ const STYLE_LABELS: Record<EditableStyleKey, string> = {
   borderRadius: "گردی",
   borderColor: "رنگ بوردر",
   borderWidth: "ضخامت بوردر",
+  gridColumns: "تعداد ستون‌های گرید",
   animation: "انیمیشن",
 };
 
@@ -130,6 +119,7 @@ const NUMERIC_CONFIG: Record<
   height: { min: 80, max: 1200, step: 10, unit: "px" },
   borderRadius: { min: 0, max: 64, step: 1, unit: "px" },
   borderWidth: { min: 0, max: 20, step: 1, unit: "px" },
+  gridColumns: { min: 1, max: 4, step: 1, unit: " ستون" },
 };
 
 const COLOR_PRESETS = [
@@ -883,12 +873,14 @@ function DesktopToolbar({
     fontSize: <RxFontSize size={13} />,
     borderRadius: <RxCornerBottomRight size={13} />,
     borderWidth: <RxBorderWidth size={13} />,
+    gridColumns: <HiOutlineSwatch size={13} />,
   };
 
   const numericKeys: EditableStyleKey[] = [
     "fontSize",
     "borderRadius",
     "borderWidth",
+    "gridColumns",
   ];
 
   const activeColors = colorKeys.filter((k) => allowedKeys.includes(k));
@@ -987,7 +979,7 @@ function DesktopToolbar({
 
             <div
               ref={scrollRef}
-              className="flex items-center gap-0.5 overflow-x-auto scrollbar-none"
+              className="flex items-center   overflow-x-auto scrollbar-none"
             >
               {/* ▸ Content dropdown */}
               {hasContent && (
@@ -1274,7 +1266,7 @@ function DesktopToolbar({
                           <p className="mb-3 px-1 text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                             انیمیشن ورود
                           </p>
-                          <div className="space-y-1">
+                          <div className="max-h-[min(62vh,520px)] space-y-1 overflow-y-auto overscroll-contain pe-1 [scrollbar-width:thin]">
                             {ANIMATION_OPTIONS.map((opt) => {
                               const active =
                                 ((style!.animation as AnimationType) ??
@@ -1283,7 +1275,14 @@ function DesktopToolbar({
                                 <button
                                   key={opt.value}
                                   type="button"
-                                  onClick={() => fire("animation", opt.value)}
+                                  onClick={(event) => {
+                                    const icon =
+                                      event.currentTarget.querySelector<HTMLElement>(
+                                        "[data-animation-preview]",
+                                      );
+                                    if (icon) previewAnimation(icon, opt.value);
+                                    fire("animation", opt.value);
+                                  }}
                                   className={[
                                     "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-right transition-all",
                                     active
@@ -1292,6 +1291,7 @@ function DesktopToolbar({
                                   ].join(" ")}
                                 >
                                   <span
+                                    data-animation-preview
                                     className={[
                                       "flex h-7 w-7 items-center justify-center rounded-lg text-[13px] transition",
                                       active

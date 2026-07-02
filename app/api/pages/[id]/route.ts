@@ -100,6 +100,10 @@ import Template from "@/models/template";
 import Category from "@/models/category";
 import User from "@/models/users";
 import Product from "@/models/products";
+import {
+    isPageExpired,
+    parsePageExpiration,
+} from "@/lib/pages/pageExpiration";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
 
 type RouteContext = {
@@ -366,6 +370,10 @@ export const PATCH = compose(
         update.logo = body.logo.trim();
     }
 
+    if (body.logoShape === "square" || body.logoShape === "circle") {
+        update.logoShape = body.logoShape;
+    }
+
     if (typeof body.favicon === "string") {
         update.favicon = body.favicon.trim();
     }
@@ -379,9 +387,30 @@ export const PATCH = compose(
         update.publishedAt = body.isPublished ? new Date() : undefined;
     }
 
+    if ("expiresAt" in body) {
+        if (!["admin", "superAdmin"].includes(user.role)) {
+            return NextResponse.json(
+                { message: "فقط مدیر می‌تواند تاریخ انقضای صفحه را تغییر دهد." },
+                { status: 403 },
+            );
+        }
+        const expiration = parsePageExpiration(body.expiresAt);
+        if (expiration.error) {
+            return NextResponse.json(
+                { message: expiration.error },
+                { status: 400 },
+            );
+        }
+        update.expiresAt = expiration.value;
+        if (isPageExpired(expiration.value)) {
+            update.isPublished = false;
+            update.publishedAt = undefined;
+        }
+    }
+
     const query = await withPageAccessScope(user, { _id: id }, "update");
     const currentPage = await Page.findOne(query)
-        .select("owner blocks url logo seo")
+        .select("owner blocks url logo seo expiresAt")
         .lean();
 
     if (!currentPage) {
@@ -389,6 +418,23 @@ export const PATCH = compose(
             { message: "صفحه پیدا نشد" },
             { status: 404 }
         );
+    }
+
+    const effectiveExpiration =
+        "expiresAt" in update ? update.expiresAt : currentPage.expiresAt;
+    if (
+        body.isPublished === true &&
+        !("expiresAt" in body) &&
+        isPageExpired(effectiveExpiration)
+    ) {
+        return NextResponse.json(
+            { message: "ابتدا تاریخ انقضای صفحه را تغییر دهید." },
+            { status: 400 },
+        );
+    }
+    if (isPageExpired(effectiveExpiration)) {
+        update.isPublished = false;
+        update.publishedAt = undefined;
     }
 
     if (body.blocks !== undefined) {

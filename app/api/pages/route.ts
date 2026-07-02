@@ -104,6 +104,10 @@ import Template from "@/models/template";
 import Category from "@/models/category";
 import User from "@/models/users";
 import Product from "@/models/products";
+import {
+    isPageExpired,
+    parsePageExpiration,
+} from "@/lib/pages/pageExpiration";
 import "@/models/blocks";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
 
@@ -246,6 +250,24 @@ export const POST = compose(
     const requestedSeo = isObject(body.seo) ? body.seo : {};
     const isPublished =
         typeof body.isPublished === "boolean" ? body.isPublished : true;
+    const requestedExpiration = parsePageExpiration(body.expiresAt);
+    if (requestedExpiration.error) {
+        return NextResponse.json(
+            { message: requestedExpiration.error },
+            { status: 400 },
+        );
+    }
+    if (
+        body.expiresAt !== undefined &&
+        !["admin", "superAdmin"].includes(user.role)
+    ) {
+        return NextResponse.json(
+            { message: "فقط مدیر می‌تواند تاریخ انقضای صفحه را تعیین کند." },
+            { status: 403 },
+        );
+    }
+    const expiresAt = requestedExpiration.value;
+    const effectivePublished = isPublished && !isPageExpired(expiresAt);
 
     const existing = await Page.findOne({ url });
 
@@ -386,9 +408,11 @@ export const POST = compose(
                 : {},
         background: normalizePageBackground(body.background),
         logo,
+        logoShape: body.logoShape === "circle" ? "circle" : "square",
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
-        isPublished,
-        publishedAt: isPublished ? new Date() : undefined,
+        expiresAt,
+        isPublished: effectivePublished,
+        publishedAt: effectivePublished ? new Date() : undefined,
     });
 
     try {

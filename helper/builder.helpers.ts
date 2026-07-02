@@ -22,7 +22,8 @@ export function normalizeStyleValue(
     if (
         styleKey === "fontSize" ||
         styleKey === "borderRadius" ||
-        styleKey === "borderWidth"
+        styleKey === "borderWidth" ||
+        styleKey === "gridColumns"
     ) {
         const numericValue =
             typeof value === "number" ? value : Number.parseFloat(String(value));

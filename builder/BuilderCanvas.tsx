@@ -199,8 +199,37 @@ export function CanvasDropZone({
 /*  Canvas Content                                                     */
 /* ================================================================== */
 
+export function PageLogoPreview({
+  logo,
+  logoShape = "square",
+}: {
+  logo?: string;
+  logoShape?: "square" | "circle";
+}) {
+  if (!logo?.trim()) return null;
+
+  return (
+    <div className="flex justify-center px-4 pb-5 pt-6">
+      <div
+        className={[
+          "h-24 w-24 overflow-hidden border border-black/10 bg-white shadow-sm",
+          logoShape === "circle" ? "rounded-full" : "rounded-xl",
+        ].join(" ")}
+      >
+        <img
+          src={logo}
+          alt="لوگوی صفحه"
+          className="h-full w-full object-contain"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function CanvasContent({
   background,
+  logo,
+  logoShape,
   sortedBlocks,
   availableBlockTypes,
   blockIds,
@@ -215,12 +244,15 @@ export function CanvasContent({
   onDeleteBlock,
   onOpenCatalog,
   onApplyTemplate,
+  floatingActions,
   showSmartSuggestions = true,
 }: {
   background?: {
     color?: string;
     image?: string;
   };
+  logo?: string;
+  logoShape?: "square" | "circle";
   sortedBlocks: PageBlock[];
   availableBlockTypes?: string[];
   blockIds: string[];
@@ -235,6 +267,7 @@ export function CanvasContent({
   onDeleteBlock: (id: string) => void;
   onOpenCatalog: () => void;
   onApplyTemplate: (blockTypes: string[]) => void;
+  floatingActions?: React.ReactNode;
   showSmartSuggestions?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: "canvas-drop-zone" });
@@ -257,13 +290,14 @@ export function CanvasContent({
       <div
         ref={setNodeRef}
         className={[
-          "rounded-3xl border-2 transition-all duration-300",
+          "relative min-h-[420px] rounded-3xl border-2 transition-all duration-300",
           isActive
             ? "border-blue-400 bg-blue-50/50 shadow-[inset_0_0_40px_rgba(59,130,246,0.06)]"
             : "border-neutral-200/60 bg-white/80",
         ].join(" ")}
         style={backgroundStyle}
       >
+        <PageLogoPreview logo={logo} logoShape={logoShape} />
         {isActive ? (
           /* حالت drag فعال */
           <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
@@ -299,6 +333,7 @@ export function CanvasContent({
             </button>
           </div>
         )}
+        {floatingActions}
       </div>
     );
   }
@@ -309,6 +344,7 @@ export function CanvasContent({
       className="relative min-h-[420px] rounded-3xl"
       style={backgroundStyle}
     >
+      <PageLogoPreview logo={logo} logoShape={logoShape} />
       <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
         {sortedBlocks.map((block, index) => (
           <div key={block.instanceId}>
@@ -370,6 +406,7 @@ export function CanvasContent({
           </div>
         ))}
       </SortableContext>
+      {floatingActions}
     </div>
   );
 }
