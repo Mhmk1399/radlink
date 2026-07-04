@@ -20,6 +20,10 @@ import {
   sharedBlockKeyframes,
 } from "@/builder/blocks/shared/responsiveStyleToCss";
 import type { BlockComponentProps } from "@/types/blocks/builder.types";
+import {
+  buildPresetMessengerUrl,
+  getMessengerPresetForDataKey,
+} from "@/lib/messengerLinks";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    X (Twitter) inline SVG
@@ -107,6 +111,12 @@ interface ServiceDef {
   showKey: string;
   label: string;
   Icon: React.FC;
+}
+
+function resolveServiceUrl(key: string, value: unknown) {
+  const rawValue = typeof value === "string" ? value.trim() : "";
+  const preset = getMessengerPresetForDataKey(key);
+  return preset ? buildPresetMessengerUrl(rawValue, preset) : rawValue;
 }
 
 const services: ServiceDef[] = [
@@ -521,8 +531,7 @@ export default function MessengerLinksBlock({
     const shouldShow = data[s.showKey] !== false;
     if (!shouldShow) return false;
     if (isEditor || isBuilderPreview) return true;
-    const url =
-      typeof data[s.urlKey] === "string" ? (data[s.urlKey] as string) : "";
+    const url = resolveServiceUrl(s.urlKey, data[s.urlKey]);
     return url.length > 0;
   });
 
@@ -632,10 +641,10 @@ export default function MessengerLinksBlock({
             }`}
           >
             {visibleServices.map((service, index) => {
-              const url =
-                typeof data[service.urlKey] === "string"
-                  ? (data[service.urlKey] as string)
-                  : "";
+              const url = resolveServiceUrl(
+                service.urlKey,
+                data[service.urlKey],
+              );
               const isEmpty = url.length === 0;
               const ServiceIcon = service.Icon;
               const brandColor = BRAND_COLORS[service.urlKey] || "#64748b";

@@ -86,6 +86,7 @@ import { buildPageTargetUrl } from "@/lib/qrCode";
 import {
     hasGlobalOwnerScope,
 } from "@/lib/auth/ownership";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 import {
     withPageAccessScope,
     withTemplateAccessScope,
@@ -253,7 +254,7 @@ export const PATCH = compose(
 
     if (requestedOwnerId) {
         if (!isAdmin) {
-            if (String(requestedOwnerId) !== String(user._id)) {
+            if (!(await canAccessActorOwner(user, requestedOwnerId))) {
                 return NextResponse.json(
                     { message: "شما اجازه تغییر سازنده صفحه را ندارید." },
                     { status: 403 }

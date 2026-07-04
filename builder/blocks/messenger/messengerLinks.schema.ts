@@ -9,9 +9,24 @@ export const messengerLinksSchema: BlockSchema = {
         { key: "title", label: "عنوان", type: "text" },
         { key: "description", label: "توضیحات", type: "textarea" },
 
-        { key: "telegramUrl", label: "لینک تلگرام", type: "url" },
-        { key: "whatsappUrl", label: "لینک واتساپ", type: "url" },
-        { key: "instagramUrl", label: "لینک اینستاگرام", type: "url" },
+        {
+            key: "telegramUrl",
+            label: "شناسه تلگرام",
+            type: "text",
+            linkPreset: "telegram",
+        },
+        {
+            key: "whatsappUrl",
+            label: "شماره واتساپ با کد کشور",
+            type: "text",
+            linkPreset: "whatsapp",
+        },
+        {
+            key: "instagramUrl",
+            label: "شناسه اینستاگرام",
+            type: "text",
+            linkPreset: "instagram",
+        },
         { key: "eitaaUrl", label: "لینک ایتا", type: "url" },
         { key: "soroushUrl", label: "لینک سروش", type: "url" },
         { key: "rubikaUrl", label: "لینک روبیکا", type: "url" },

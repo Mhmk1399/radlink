@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { canAccessOwnedResource } from "@/lib/auth/ownership";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { deleteFileByIdentifier, FileDeletionError } from "@/lib/fileDeletion";
 import File from "@/models/files";
 import "@/models/pages";
 import "@/models/users";
@@ -24,7 +25,7 @@ export const GET = compose(
         file.owner && typeof file.owner === "object" && "_id" in file.owner
             ? String(file.owner._id)
             : String(file.owner);
-    if (!canAccessOwnedResource(req.ctx.user!, ownerId)) {
+    if (!(await canAccessActorOwner(req.ctx.user!, ownerId))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     return NextResponse.json({ file });
@@ -36,11 +37,13 @@ export const DELETE = compose(
     withStatus("active")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
-    const file = await File.findById(id);
-    if (!file) return NextResponse.json({ message: "فایل پیدا نشد." }, { status: 404 });
-    if (!canAccessOwnedResource(req.ctx.user!, file.owner)) {
-        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
+    try {
+        const result = await deleteFileByIdentifier({ fileId: id }, req.ctx.user!);
+        return NextResponse.json({ message: "فایل حذف شد.", data: result });
+    } catch (error) {
+        if (error instanceof FileDeletionError) {
+            return NextResponse.json({ message: error.message }, { status: error.status });
+        }
+        throw error;
     }
-    await file.deleteOne();
-    return NextResponse.json({ message: "فایل حذف شد." });
 });

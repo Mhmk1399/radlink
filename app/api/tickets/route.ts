@@ -6,6 +6,7 @@ import Ticket from "@/models/tickets";
 import "@/models/users";
 import "@/models/files";
 import "@/models/category";
+import { getManagedUserIds } from "@/lib/auth/agentScope";
 
 export const POST = compose(
     withDB(),
@@ -47,8 +48,13 @@ export const GET = compose(
     const status = searchParams.get("status");
     const priority = searchParams.get("priority");
 
-    const isSuperAdmin = user.role === "superAdmin";
-    const query: Record<string, unknown> = isSuperAdmin ? {} : { requester: user._id };
+    const isGlobal = user.role === "superAdmin" || user.role === "admin";
+    const managedUserIds = isGlobal
+        ? null
+        : await getManagedUserIds(user);
+    const query: Record<string, unknown> = isGlobal
+        ? {}
+        : { requester: { $in: managedUserIds ?? [user._id] } };
     if (status) query.status = status;
     if (priority) query.priority = priority;
 

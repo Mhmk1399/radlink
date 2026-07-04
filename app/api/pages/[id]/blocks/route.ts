@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
-import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
 import {
     checkUserQuota,
     quotaExceededResponse,
@@ -12,16 +11,14 @@ import Page from "@/models/pages";
 import Block from "@/models/blocks";
 import User from "@/models/users";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 async function canAccess(req: AuthRequest, ownerId: string) {
     const user = req.ctx.user;
     if (!user) return false;
-    if (["admin", "superAdmin"].includes(user.role)) return true;
-    if (String(user._id) === ownerId) return true;
-    const evaluated = await evaluateRequestAccess(req);
-    return evaluated.matched && evaluated.granted;
+    return canAccessActorOwner(user, ownerId);
 }
 
 // PATCH /api/pages/[id]/blocks

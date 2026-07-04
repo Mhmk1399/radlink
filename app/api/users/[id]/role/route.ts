@@ -18,6 +18,13 @@ export const PATCH = compose(
     const { id } = await ctx.params;
     const { role } = await req.json();
 
+    if (req.ctx.user!.role !== "superAdmin") {
+        return NextResponse.json(
+            { message: "فقط R A D اجازه تغییر نقش کاربران را دارد." },
+            { status: 403 },
+        );
+    }
+
     if (!VALID_ROLES.includes(role)) {
         return NextResponse.json({ message: "نقش کاربر معتبر نیست." }, { status: 400 });
     }

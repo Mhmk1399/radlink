@@ -253,8 +253,11 @@ export default function UsersSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const { can } = useAccess();
+  const { can, user: authUser } = useAccess();
   const canUpdateUsers = can("admin.users", "update");
+  const isNormalUser = authUser?.role === "user";
+  const canCreateUsers = !isNormalUser && can("admin.users", "create");
+  const canDeleteUsers = !isNormalUser && can("admin.users", "delete");
 
   /* ── Auth header ─────────────────────────── */
   const token =
@@ -313,7 +316,13 @@ export default function UsersSection({
   }
 
   useEffect(() => {
-    if (!token) return;
+    if (
+      !token ||
+      (authUser?.role !== "admin" && authUser?.role !== "superAdmin")
+    ) {
+      setAgentOptions([]);
+      return;
+    }
 
     let ignore = false;
 
@@ -364,7 +373,7 @@ export default function UsersSection({
     return () => {
       ignore = true;
     };
-  }, [headers, token]);
+  }, [authUser?.role, headers, token]);
 
   /* ── Transform API response → UserRow[] ── */
   const transformResponse = useMemo(
@@ -511,6 +520,8 @@ export default function UsersSection({
         ],
         render: (value) => <RoleBadge role={value as UserRole} />,
         copyable: false,
+        hiddenInForm: () =>
+          authUser?.role === "agent" || authUser?.role === "user",
       },
       {
         key: "status",
@@ -524,6 +535,7 @@ export default function UsersSection({
         ],
         render: (value) => <StatusBadge status={value as UserStatus} />,
         copyable: false,
+        hiddenInForm: () => authUser?.role === "user",
       },
       {
         key: "agentid",
@@ -533,6 +545,8 @@ export default function UsersSection({
         copyable: true,
         hideOnMobile: true,
         placeholder: "انتخاب نماینده یا بدون نماینده",
+        hiddenInForm: () =>
+          authUser?.role === "agent" || authUser?.role === "user",
         render: (value, row) => (
           <span className="text-sm text-slate-400">
             {row.agentLabel ||
@@ -565,6 +579,8 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
+        hiddenInForm: () =>
+          authUser?.role === "agent" || authUser?.role === "user",
       },
       {
         key: "limits.blocks",
@@ -572,6 +588,8 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
+        hiddenInForm: () =>
+          authUser?.role === "agent" || authUser?.role === "user",
       },
       {
         key: "limits.pages",
@@ -579,6 +597,8 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
+        hiddenInForm: () =>
+          authUser?.role === "agent" || authUser?.role === "user",
       },
       {
         key: "limits",
@@ -698,7 +718,7 @@ export default function UsersSection({
         render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
     ],
-    [agentOptions],
+    [agentOptions, authUser?.role],
   );
 
   /* ══════════════════════════════════════════
@@ -791,7 +811,9 @@ export default function UsersSection({
         title="لیست کاربران"
         subtitle="مشاهده، جستجو و مرور تمامی کاربران"
         primaryKey="_id"
+        canCreate={canCreateUsers}
         canUpdate={canUpdateUsers}
+        canDelete={canDeleteUsers}
         headers={headers}
         pageSize={20}
         pageSizes={[5, 8, 10, 20]}
@@ -806,7 +828,7 @@ export default function UsersSection({
         serverSide
         emptyMessage="کاربری یافت نشد"
         rowActions={(row) =>
-          canUpdateUsers ? (
+          canUpdateUsers && !isNormalUser ? (
             <button
               type="button"
               onClick={(event) => {

@@ -87,7 +87,7 @@ export default function NotificationsSection({
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const { mutate: mutateCache } = useSWRConfig();
-  const { can } = useAccess();
+  const { can, user } = useAccess();
   const canCreate = can("admin.notifications", "create");
   const canUpdate = can("admin.notifications", "update");
   const canDelete = can("admin.notifications", "delete");
@@ -334,6 +334,7 @@ export default function NotificationsSection({
           { label: "مخصوص یک صفحه", value: "false" },
         ],
         placeholder: "نمایش این اعلان در تمام صفحات",
+        hiddenInForm: () => user?.role === "agent",
         render: (value) => (
           <span className={cn("text-sm font-semibold", value ? t.textAccent : t.textMuted)}>
             {value ? "تمام صفحات" : "یک صفحه"}
@@ -433,7 +434,7 @@ export default function NotificationsSection({
         ),
       },
     ],
-    [isDark, pageOptions, t],
+    [isDark, pageOptions, t, user?.role],
   );
 
   const transformResponse = useMemo(

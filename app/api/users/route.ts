@@ -23,14 +23,16 @@ import {
     normalizePhoneNumber,
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
+import { getManagedUserIds } from "@/lib/auth/agentScope";
 
 // GET /api/users
 export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin"),
+    withRole("user", "agent", "admin", "superAdmin"),
 )(async (req: AuthRequest) => {
+    const requester = req.ctx.user!;
     const { searchParams } = new URL(req.url);
 
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
@@ -50,11 +52,21 @@ export const GET = compose(
         ? {}
         : { isDeleted: false };
 
+    if (requester.role === "user") {
+        query._id = requester._id;
+    } else if (requester.role === "agent") {
+        const managedUserIds = await getManagedUserIds(requester, {
+            includeSelf: false,
+        });
+        query._id = { $in: managedUserIds ?? [] };
+    }
+
     if (role) query.role = role;
     if (status) query.status = status;
 
     if (mode === "agent-options") {
         query.status = "active";
+        query.role = "user";
         query.agentid = { $exists: false };
     }
 
@@ -78,7 +90,9 @@ export const GET = compose(
         mode === "notification-options"
     ) {
         const users = await User.find(query)
-            .select("firstName lastName phoneNumber email role status")
+            .select(
+                "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
+            )
             .sort({ createdAt: -1 })
             .limit(limit)
             .lean();
@@ -131,10 +145,16 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin"),
+    withRole("agent", "admin", "superAdmin"),
 )(async (req: AuthRequest) => {
     try {
         const currentUser = req.ctx?.user;
+        if (currentUser?.role === "user") {
+            return NextResponse.json(
+                { message: "شما اجازه ساخت کاربر را ندارید." },
+                { status: 403 },
+            );
+        }
 
         if (!currentUser) {
             return NextResponse.json(
@@ -213,8 +233,25 @@ export const POST = compose(
             );
         }
 
-        const agentId =
-            typeof body.agentid === "string" ? body.agentid.trim() : "";
+        const requesterAgent =
+            currentUser.role === "agent"
+                ? await Agent.findOne({
+                    user: currentUser._id,
+                    isActive: true,
+                }).select("_id limits").lean()
+                : null;
+        if (currentUser.role === "agent" && !requesterAgent) {
+            return NextResponse.json(
+                { message: "پروفایل نمایندگی فعال برای شما پیدا نشد." },
+                { status: 403 },
+            );
+        }
+
+        const agentId = requesterAgent
+            ? String(requesterAgent._id)
+            : typeof body.agentid === "string"
+              ? body.agentid.trim()
+              : "";
         if (agentId) {
             if (!mongoose.Types.ObjectId.isValid(agentId)) {
                 return NextResponse.json(
@@ -244,15 +281,22 @@ export const POST = compose(
             "inactive",
         ];
 
-        const role: UserRole = allowedRoles.includes(body.role)
+        const role: UserRole = currentUser.role === "agent"
+            ? "user"
+            : allowedRoles.includes(body.role)
             ? body.role
             : "user";
 
-        const status: UserStatus = allowedStatuses.includes(
+        const status: UserStatus = currentUser.role === "agent"
+            ? "active"
+            : allowedStatuses.includes(
             body.status,
         )
             ? body.status
             : "active";
+        const effectiveLimits = requesterAgent
+            ? requesterAgent.limits
+            : body.limits;
 
         // Only a superAdmin should create another superAdmin.
         if (
@@ -310,22 +354,22 @@ export const POST = compose(
 
             agentid: agentId || undefined,
 
-            permissions: Array.isArray(body.permissions)
+            permissions: currentUser.role !== "agent" && Array.isArray(body.permissions)
                 ? body.permissions
                 : [],
 
             limits: {
                 files: Math.max(
                     0,
-                    Number(body.limits?.files ?? 0),
+                    Number(effectiveLimits?.files ?? 0),
                 ),
                 blocks: Math.max(
                     0,
-                    Number(body.limits?.blocks ?? 0),
+                    Number(effectiveLimits?.blocks ?? 0),
                 ),
                 pages: Math.max(
                     0,
-                    Number(body.limits?.pages ?? 0),
+                    Number(effectiveLimits?.pages ?? 0),
                 ),
             },
 

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { evaluateRequestAccess } from "@/lib/auth/enforceAccess";
 import User from "@/models/users";
 import Agent from "@/models/agent";
 import "@/models/permission";
@@ -16,6 +15,7 @@ import {
     normalizePhoneNumber,
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
+import { getManagedUserIds } from "@/lib/auth/agentScope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,8 +34,15 @@ function isSelfOrAdmin(user: AuthRequest["ctx"]["user"], targetId: string) {
 
 async function canAccessUserRequest(req: AuthRequest, targetId: string) {
     if (isSelfOrAdmin(req.ctx.user, targetId)) return true;
-    const evaluated = await evaluateRequestAccess(req);
-    return evaluated.matched && evaluated.granted;
+    if (req.ctx.user?.role === "agent") {
+        const managedUserIds = await getManagedUserIds(req.ctx.user, {
+            includeSelf: false,
+        });
+        return (managedUserIds ?? []).some(
+            (id) => String(id) === targetId,
+        );
+    }
+    return false;
 }
 
 export const GET = compose(
@@ -89,7 +96,7 @@ export const PATCH = compose(
         );
     }
 
-    const target = await User.findById(id).select("role");
+    const target = await User.findById(id).select("role agentid");
 
     if (!target) {
         return NextResponse.json(
@@ -101,6 +108,12 @@ export const PATCH = compose(
     const isAdmin = ["admin", "superAdmin"].includes(requester.role);
     const isSuperAdmin = requester.role === "superAdmin";
     const isSelf = String(requester._id) === id;
+    const isAgentManager =
+        requester.role === "agent" &&
+        !isSelf &&
+        (await getManagedUserIds(requester, { includeSelf: false }))?.some(
+            (managedId) => String(managedId) === id,
+        );
 
     if (!isSuperAdmin && target.role === "superAdmin") {
         return NextResponse.json(
@@ -130,7 +143,15 @@ export const PATCH = compose(
 
     const allowedFields = isAdmin
         ? [...selfAllowed, ...adminOnly]
-        : selfAllowed;
+        : isAgentManager
+          ? [
+              ...selfAllowed,
+              "phoneNumber",
+              "status",
+              "isDeleted",
+              "isPhoneVerified",
+            ]
+          : selfAllowed;
 
     if (isSuperAdmin) {
         allowedFields.push("role");
@@ -257,13 +278,17 @@ export const PATCH = compose(
                 );
             }
 
-            const agentExists = await Agent.exists({ _id: value });
-            if (!agentExists) {
+            const selectedAgent = await Agent.findOne({
+                _id: value,
+                isActive: true,
+            }).select("limits").lean();
+            if (!selectedAgent) {
                 return NextResponse.json(
                     { message: "نماینده انتخاب‌شده پیدا نشد." },
                     { status: 404 }
                 );
             }
+            updates.limits = selectedAgent.limits;
         }
 
         if (key === "permissions") {
@@ -383,10 +408,17 @@ export const DELETE = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
+    withRole("agent", "admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const requester = req.ctx.user!;
+
+    if (requester.role === "user") {
+        return NextResponse.json(
+            { message: "شما اجازه حذف کاربر را ندارید." },
+            { status: 403 },
+        );
+    }
 
     // superAdmin can delete anyone, admin cannot delete superAdmin
     const target = await User.findById(id);
@@ -394,6 +426,17 @@ export const DELETE = compose(
 
     if (requester.role !== "superAdmin" && target.role === "superAdmin") {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
+    }
+    if (
+        requester.role === "agent" &&
+        !(await getManagedUserIds(requester, { includeSelf: false }))?.some(
+            (managedId) => String(managedId) === id,
+        )
+    ) {
+        return NextResponse.json(
+            { message: "این کاربر زیرمجموعه نمایندگی شما نیست." },
+            { status: 403 },
+        );
     }
 
     target.isDeleted = true;

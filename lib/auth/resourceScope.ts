@@ -2,6 +2,7 @@ import type { FilterQuery } from "mongoose";
 import type { IUser } from "@/models/users";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
+import { resolveActorScope } from "@/lib/auth/agentScope";
 
 type DynamicResource = "templates" | "pages";
 type ScopedUser = Pick<IUser, "_id" | "role" | "permissions">;
@@ -36,17 +37,15 @@ export async function withTemplateAccessScope<T>(
 export async function withPageAccessScope<T>(
   user: ScopedUser,
   query: FilterQuery<T> = {},
-  action = "view",
+  _action = "view",
 ): Promise<FilterQuery<T>> {
-  const grantedIds = await getGrantedResourceIds(user, "pages", action);
-  if (grantedIds === null) return query;
+  const actorScope = await resolveActorScope(user);
+  if (actorScope.global) return query;
 
   return {
     $and: [
       query,
-      {
-        $or: [{ owner: user._id }, { _id: { $in: grantedIds } }],
-      },
+      { owner: { $in: actorScope.userIds ?? [user._id] } },
     ],
   } as FilterQuery<T>;
 }

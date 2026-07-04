@@ -9,8 +9,10 @@ import {
   FaBuilding,
   FaCheck,
   FaCubes,
+  FaEnvelope,
   FaFile,
   FaHashtag,
+  FaIdCard,
   FaLandmark,
   FaPen,
   FaPhone,
@@ -44,6 +46,10 @@ type AgentUser = {
   email?: string;
   role?: string;
   status?: string;
+  nationalCode?: string;
+  fatherName?: string;
+  avatarUrl?: string;
+  createdAt?: string;
 };
 
 type AgentLimits = {
@@ -79,6 +85,7 @@ type AgentRow = {
 type UserOption = {
   value: string;
   label: string;
+  user: AgentUser;
 };
 
 type AgentFormState = {
@@ -142,6 +149,10 @@ function normalizeUser(value: unknown): AgentUser | null {
     email: toText(value.email),
     role: toText(value.role),
     status: toText(value.status),
+    nationalCode: toText(value.nationalCode),
+    fatherName: toText(value.fatherName),
+    avatarUrl: toText(value.avatarUrl),
+    createdAt: toText(value.createdAt),
   };
 }
 function emptyForm(): AgentFormState {
@@ -412,6 +423,11 @@ export default function AgentsSection({
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token],
   );
+  const selectedUser = useMemo(
+    () =>
+      userOptions.find((option) => option.value === form.userId)?.user ?? null,
+    [form.userId, userOptions],
+  );
 
   const transformResponse = useMemo(
     () =>
@@ -590,6 +606,7 @@ export default function AgentsSection({
               return {
                 value: id,
                 label: `${userLabel(normalized, id.slice(-8))} - ${normalized?.phoneNumber ?? ""}`,
+                user: normalized ?? { _id: id },
               };
             }),
           );
@@ -1008,6 +1025,100 @@ export default function AgentsSection({
                       emptyMessage="کاربری برای انتخاب وجود ندارد"
                       noResultsMessage="کاربری با این مشخصات پیدا نشد"
                     />
+                    {selectedUser && (
+                      <div
+                        className={cn(
+                          "mt-3 rounded-xl border p-3.5",
+                          t.borderSubtle,
+                          t.inputBg,
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black",
+                              isDark
+                                ? "bg-blue-500/10 text-blue-300"
+                                : "bg-blue-50 text-blue-700",
+                            )}
+                          >
+                            {`${selectedUser.firstName?.[0] ?? ""}${selectedUser.lastName?.[0] ?? ""}` ||
+                              "U"}
+                          </div>
+                          <div className="min-w-0">
+                            <p
+                              className={cn(
+                                "truncate text-sm font-extrabold",
+                                t.textPrimary,
+                              )}
+                            >
+                              {userLabel(selectedUser, "کاربر بدون نام")}
+                            </p>
+                            <p
+                              className={cn(
+                                "mt-0.5 text-[11px]",
+                                t.textMuted,
+                              )}
+                            >
+                              {selectedUser.role || "user"} ·{" "}
+                              {selectedUser.status === "active"
+                                ? "فعال"
+                                : "غیرفعال"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          <div
+                            className={cn(
+                              "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                              t.cardBg,
+                              t.textMuted,
+                            )}
+                          >
+                            <FaPhone className="h-3 w-3 shrink-0" />
+                            <span dir="ltr">
+                              {selectedUser.phoneNumber || "-"}
+                            </span>
+                          </div>
+                          <div
+                            className={cn(
+                              "flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                              t.cardBg,
+                              t.textMuted,
+                            )}
+                          >
+                            <FaEnvelope className="h-3 w-3 shrink-0" />
+                            <span className="truncate" dir="ltr">
+                              {selectedUser.email || "-"}
+                            </span>
+                          </div>
+                          <div
+                            className={cn(
+                              "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                              t.cardBg,
+                              t.textMuted,
+                            )}
+                          >
+                            <FaIdCard className="h-3 w-3 shrink-0" />
+                            <span>
+                              کد ملی: {selectedUser.nationalCode || "-"}
+                            </span>
+                          </div>
+                          <div
+                            className={cn(
+                              "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                              t.cardBg,
+                              t.textMuted,
+                            )}
+                          >
+                            <FaUserTie className="h-3 w-3 shrink-0" />
+                            <span>
+                              نام پدر: {selectedUser.fatherName || "-"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </Field>
                 )}
 
@@ -1139,15 +1250,19 @@ export default function AgentsSection({
 
                 {/* Limits section */}
                 <div>
-                  <div className="mb-3 flex items-center gap-2">
+                  <div className="mb-3">
                     <span
                       className={cn(
                         "text-xs font-bold uppercase tracking-wider",
                         t.textDisabled,
                       )}
                     >
-                      محدودیت‌های دسترسی
+                      سقف مصرف هر کاربر نماینده
                     </span>
+                    <p className={cn("mt-1 text-[11px]", t.textMuted)}>
+                      این سه مقدار روی تک‌تک کاربران متصل به نماینده اعمال و
+                      داخل حساب همان کاربر ذخیره می‌شود.
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                     <LimitCard

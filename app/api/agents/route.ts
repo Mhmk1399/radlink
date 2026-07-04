@@ -52,6 +52,12 @@ export const POST = compose(
 
     const user = await User.findById(userId);
     if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
+    if (user.role !== "user") {
+        return NextResponse.json(
+            { message: "فقط یک کاربر عادی می‌تواند به نماینده تبدیل شود." },
+            { status: 400 },
+        );
+    }
 
     const existing = await Agent.findOne({ user: userId });
     if (existing) return NextResponse.json({ message: "برای این کاربر قبلا نماینده ساخته شده است." }, { status: 409 });
@@ -85,8 +91,9 @@ export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
+    withRole("agent", "admin", "superAdmin")
 )(async (req: AuthRequest) => {
+    const requester = req.ctx.user!;
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
@@ -94,12 +101,16 @@ export const GET = compose(
     const isActive = searchParams.get("isActive");   // filter by active state
 
     const query: Record<string, unknown> = {};
+    if (requester.role === "agent") query.user = requester._id;
     if (type) query.type = type;
     if (isActive !== null) query.isActive = isActive === "true";
 
     const [agents, total] = await Promise.all([
         Agent.find(query)
-            .populate("user", "firstName lastName phoneNumber email role status")
+            .populate(
+                "user",
+                "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
+            )
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

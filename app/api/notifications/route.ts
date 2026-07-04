@@ -7,6 +7,10 @@ import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
 import Page from "@/models/pages";
 import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
+import {
+    canAccessActorOwner,
+    withActorOwnerScope,
+} from "@/lib/auth/agentScope";
 import "@/models/users";
 
 const PAGE_POPULATE_FIELDS = "title url owner isPublished";
@@ -34,7 +38,7 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin"),
+    withRole("agent", "admin", "superAdmin"),
 )(async (req: AuthRequest) => {
     const body = (await req.json()) as Record<string, unknown>;
     const isGlobal = Boolean(body.isGlobal);
@@ -42,6 +46,12 @@ export const POST = compose(
     const content = normalizeNotificationContent(body);
     const type = cleanText(body.type, 20);
     const iconKey = cleanText(body.iconKey, 30);
+    if (req.ctx.user!.role === "agent" && isGlobal) {
+        return NextResponse.json(
+            { message: "نماینده فقط می‌تواند برای صفحات مجموعه خودش اعلان بسازد." },
+            { status: 403 },
+        );
+    }
 
     if (!isGlobal && !mongoose.Types.ObjectId.isValid(pageId)) {
         return NextResponse.json(
@@ -75,11 +85,17 @@ export const POST = compose(
     }
 
     if (!isGlobal) {
-        const pageExists = await Page.exists({ _id: pageId });
-        if (!pageExists) {
+        const page = await Page.findById(pageId).select("owner").lean();
+        if (!page) {
             return NextResponse.json(
                 { message: "صفحه انتخاب‌شده پیدا نشد." },
                 { status: 404 },
+            );
+        }
+        if (!(await canAccessActorOwner(req.ctx.user!, page.owner))) {
+            return NextResponse.json(
+                { message: "این صفحه متعلق به مجموعه شما نیست." },
+                { status: 403 },
             );
         }
     }
@@ -127,12 +143,17 @@ export const GET = compose(
     }
 
     if (!isAdmin) {
-        const ownedPageIds = await Page.find({ owner: user._id }).distinct("_id");
+        const ownedPageQuery = await withActorOwnerScope(user);
+        const ownedPageIds = await Page.find(ownedPageQuery).distinct("_id");
         conditions.push({
-            $or: [
-                { page: { $in: ownedPageIds } },
-                { isGlobal: true },
-            ],
+            ...(user.role === "agent"
+                ? { page: { $in: ownedPageIds } }
+                : {
+                    $or: [
+                        { page: { $in: ownedPageIds } },
+                        { isGlobal: true },
+                    ],
+                }),
         });
     }
 

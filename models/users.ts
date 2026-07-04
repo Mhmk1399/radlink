@@ -176,6 +176,8 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
+UserSchema.index({ agentid: 1, isDeleted: 1 });
+
 UserSchema.index(
   { nationalCode: 1 },
   {

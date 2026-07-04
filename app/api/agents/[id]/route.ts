@@ -35,7 +35,10 @@ export const GET = compose(
     const user = req.ctx.user!;
 
     const agent = await Agent.findById(id)
-        .populate("user", "firstName lastName phoneNumber email role status")
+        .populate(
+            "user",
+            "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
+        )
         .lean();
 
     if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
@@ -116,9 +119,13 @@ export const PATCH = compose(
         .populate("user", "firstName lastName phoneNumber email role status");
 
     if (isAdmin && "limits" in body) {
-        await User.findByIdAndUpdate(agent.user, {
-            limits: normalizeLimits(body.limits),
-        });
+        await User.updateMany(
+            {
+                agentid: agent._id,
+                isDeleted: false,
+            },
+            { $set: { limits: normalizeLimits(body.limits) } },
+        );
     }
 
     return NextResponse.json({ agent: updated });
@@ -142,6 +149,10 @@ export const DELETE = compose(
         User.updateOne(
             { _id: agent.user, role: "agent" },
             { $set: { role: "user" } }
+        ),
+        User.updateMany(
+            { agentid: agent._id, _id: { $ne: agent.user } },
+            { $unset: { agentid: "" } },
         ),
     ]);
 

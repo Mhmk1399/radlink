@@ -2,6 +2,7 @@
 
 import {
   ContentFieldType,
+  MessengerLinkPreset,
   RepeaterFieldConfig,
 } from "@/types/blocks/builder.types";
 import { useCallback, useRef, useState } from "react";
@@ -30,6 +31,10 @@ import { SelectField } from "./SelectField";
 import type { SelectFieldConfig } from "@/types/blocks/builder.types";
 import { uploadFile } from "@/lib/fileUtils";
 import { LinkTypeHelp } from "./LinkTypeHelp";
+import {
+  getMessengerPresetConfig,
+  normalizeMessengerIdentifier,
+} from "@/lib/messengerLinks";
 /* ================================================================== */
 /*  Types                                                              */
 /* ================================================================== */
@@ -38,6 +43,7 @@ export type DynamicContentField = {
   key: string;
   label: string;
   type: ContentFieldType;
+  linkPreset?: MessengerLinkPreset;
 };
 
 type DynamicContentFormProps = {
@@ -970,6 +976,51 @@ export function DynamicContentForm({
                   className="w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base leading-7 text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
                   placeholder="متن این بخش را وارد کن"
                 />
+              </FieldCard>
+            );
+          }
+
+          if (field.linkPreset) {
+            const preset = field.linkPreset;
+            const presetConfig = getMessengerPresetConfig(preset);
+            const identifier = normalizeMessengerIdentifier(value, preset);
+
+            return (
+              <FieldCard key={field.key}>
+                <FieldHeader
+                  icon={<HiOutlineLink size={14} />}
+                  label={field.label}
+                  type="شناسه"
+                />
+                <div
+                  className="flex min-w-0 items-stretch overflow-hidden rounded-xl border border-neutral-200 bg-white transition focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-100"
+                  dir="ltr"
+                >
+                  <span className="flex shrink-0 select-none items-center border-r border-neutral-200 bg-neutral-100 px-2.5 font-mono text-[12px] font-semibold text-neutral-500">
+                    {presetConfig.prefix}
+                  </span>
+                  <input
+                    type="text"
+                    value={identifier}
+                    onChange={(event) =>
+                      onChange(
+                        field.key,
+                        normalizeMessengerIdentifier(event.target.value, preset),
+                      )
+                    }
+                    inputMode={preset === "whatsapp" ? "tel" : "text"}
+                    maxLength={preset === "whatsapp" ? 15 : 30}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="min-w-0 flex-1 bg-white px-3 py-2.5 font-mono text-base text-neutral-800 outline-none placeholder:text-neutral-400"
+                    placeholder={presetConfig.placeholder}
+                    aria-label={field.label}
+                  />
+                </div>
+                <p className="mt-1.5 text-[10px] leading-5 text-neutral-400">
+                  فقط شناسه را وارد کنید؛ بخش ابتدایی لینک ثابت است.
+                </p>
               </FieldCard>
             );
           }

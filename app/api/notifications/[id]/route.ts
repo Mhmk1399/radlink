@@ -7,6 +7,7 @@ import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
 import Page from "@/models/pages";
 import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 import "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -34,7 +35,10 @@ async function canReadNotification(
 
     const pageId = getReferenceId(notification.page);
     if (pageId) {
-        return Boolean(await Page.exists({ _id: pageId, owner: user._id }));
+        const page = await Page.findById(pageId).select("owner").lean();
+        return Boolean(
+            page && (await canAccessActorOwner(user, page.owner)),
+        );
     }
 
     return false;
@@ -79,9 +83,10 @@ export const PATCH = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin"),
+    withRole("agent", "admin", "superAdmin"),
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const user = req.ctx.user!;
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return NextResponse.json(
             { message: "شناسه اعلان معتبر نیست." },
@@ -102,6 +107,12 @@ export const PATCH = compose(
 
     const isGlobal =
         "isGlobal" in body ? Boolean(body.isGlobal) : Boolean(current.isGlobal);
+    if (user.role === "agent" && isGlobal) {
+        return NextResponse.json(
+            { message: "نماینده اجازه مدیریت اعلان عمومی را ندارد." },
+            { status: 403 },
+        );
+    }
     const update: Record<string, unknown> = { isGlobal };
     const unset: Record<string, string> = {};
 
@@ -123,11 +134,17 @@ export const PATCH = compose(
             );
         }
 
-        const pageExists = await Page.exists({ _id: pageId });
-        if (!pageExists) {
+        const page = await Page.findById(pageId).select("owner").lean();
+        if (!page) {
             return NextResponse.json(
                 { message: "صفحه انتخاب‌شده پیدا نشد." },
                 { status: 404 },
+            );
+        }
+        if (!(await canAccessActorOwner(user, page.owner))) {
+            return NextResponse.json(
+                { message: "این صفحه متعلق به مجموعه شما نیست." },
+                { status: 403 },
             );
         }
 
@@ -204,8 +221,8 @@ export const DELETE = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin"),
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+    withRole("agent", "admin", "superAdmin"),
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return NextResponse.json(
@@ -214,13 +231,32 @@ export const DELETE = compose(
         );
     }
 
-    const notification = await Notification.findByIdAndDelete(id);
-    if (!notification) {
+    const current = await Notification.findById(id)
+        .select("page isGlobal")
+        .lean();
+    if (!current) {
         return NextResponse.json(
             { message: "اعلان پیدا نشد." },
             { status: 404 },
         );
     }
+    if (req.ctx.user!.role === "agent") {
+        if (current.isGlobal) {
+            return NextResponse.json(
+                { message: "نماینده اجازه حذف اعلان عمومی را ندارد." },
+                { status: 403 },
+            );
+        }
+        const page = await Page.findById(current.page).select("owner").lean();
+        if (!page || !(await canAccessActorOwner(req.ctx.user!, page.owner))) {
+            return NextResponse.json(
+                { message: "این اعلان متعلق به مجموعه شما نیست." },
+                { status: 403 },
+            );
+        }
+    }
+
+    await Notification.findByIdAndDelete(id);
 
     revalidatePath("/[url]", "page");
 

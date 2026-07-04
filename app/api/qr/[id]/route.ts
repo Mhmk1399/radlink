@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { canAccessOwnedResource } from "@/lib/auth/ownership";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 import { deleteLiaraObject } from "@/lib/liaraStorage";
 import File from "@/models/files";
 import QR from "@/models/qr";
@@ -22,7 +22,7 @@ export const GET = compose(
         | { owner?: unknown }
         | null;
     if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
-    if (!canAccessOwnedResource(req.ctx.user!, qr.owner)) {
+    if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     return NextResponse.json({ qr });
@@ -38,7 +38,7 @@ export const PATCH = compose(
 
     const qr = await QR.findById(id);
     if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
-    if (!canAccessOwnedResource(req.ctx.user!, qr.owner)) {
+    if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -59,7 +59,7 @@ export const DELETE = compose(
     const { id } = await ctx.params;
     const qr = await QR.findById(id);
     if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
-    if (!canAccessOwnedResource(req.ctx.user!, qr.owner)) {
+    if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     const file = qr.file

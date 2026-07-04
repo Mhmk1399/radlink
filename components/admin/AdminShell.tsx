@@ -48,18 +48,18 @@ import {
   FaMoon,
   FaChevronLeft,
   FaArrowRightFromBracket,
-   FaUser,
-  FaCircleCheck,
-  FaClock,
+  FaUser,
   FaAngleLeft,
   FaAngleRight,
   FaEllipsis,
   FaTriangleExclamation,
   FaPlus,
+  FaX,
 } from "react-icons/fa6";
 import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
 import Image from "next/image";
 import { NotificationIcon } from "@/components/notifications/NotificationIcon";
+import { createPortal } from "react-dom";
 
 /* ══════════════════════════════════════════════
    SOFT PALETTE — eye-friendly, warm-tinted
@@ -312,26 +312,114 @@ function UserAvatar({
   user,
   initials,
   className,
+  interactive = true,
 }: {
   user: AuthUser | null;
   initials: string;
   className: string;
+  interactive?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
   const avatarUrl = normalizeLiaraUrl(user?.avatarUrl ?? "");
 
-  return (
-    <div
-      className={cn("relative overflow-hidden", className)}
-      aria-hidden="true"
-    >
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  const modal =
+    isOpen && avatarUrl
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="نمایش تصویر پروفایل"
+            onClick={() => setIsOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+              aria-label="بستن تصویر"
+            >
+              <FaX className="size-6" />
+            </button>
+
+            <img
+              src={avatarUrl}
+              alt="تصویر پروفایل کاربر"
+              className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>,
+          document.body,
+        )
+      : null;
+
+  const content = (
+    <>
       <span className="relative z-0 select-none">{initials}</span>
+
       {avatarUrl && (
         <span
           className="absolute inset-0 z-10 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url("${avatarUrl}")` }}
+          aria-hidden="true"
         />
       )}
-    </div>
+    </>
+  );
+
+  if (!interactive) {
+    return (
+      <span
+        className={cn("relative overflow-hidden", className)}
+        aria-hidden="true"
+      >
+        {content}
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className={cn(
+          "relative overflow-hidden",
+          avatarUrl &&
+            "cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+          className,
+        )}
+        onClick={() => {
+          if (avatarUrl) {
+            setIsOpen(true);
+          }
+        }}
+        aria-label={
+          avatarUrl ? "نمایش تصویر پروفایل" : "تصویر پروفایل موجود نیست"
+        }
+        disabled={!avatarUrl}
+      >
+        {content}
+      </button>
+
+      {modal}
+    </>
   );
 }
 
@@ -1217,6 +1305,7 @@ function UserDropdown({
         <UserAvatar
           user={authUser}
           initials={initials}
+          interactive={false}
           className={cn(
             "flex h-7 w-7 items-center justify-center rounded-lg font-bold text-xs",
             s.avatarBg,
@@ -1712,11 +1801,7 @@ function Sidebar({
 
   const sections = SECTION_META.filter((item) => {
     if (item.key === "profile" || isSuperAdmin) return true;
-    return (
-      !accessLoading &&
-      !accessError &&
-      can(`admin.${item.key}`, "view")
-    );
+    return !accessLoading && !accessError && can(`admin.${item.key}`, "view");
   });
   const groups = groupSections(sections);
 
@@ -1994,6 +2079,7 @@ function Sidebar({
               <UserAvatar
                 user={authUser}
                 initials={initials}
+                interactive={false}
                 className={cn(
                   "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold text-[11px]",
                   s.avatarBg,
@@ -2051,6 +2137,7 @@ function Sidebar({
                 <UserAvatar
                   user={authUser}
                   initials={initials}
+                  interactive={false}
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-lg font-bold text-[11px]",
                     s.avatarBg,
@@ -2136,7 +2223,10 @@ function Header({
         >
           <FaBars className="h-4 w-4" aria-hidden="true" />
         </button>
-        <nav aria-label="مسیر" className="hidden lg:flex items-center gap-2 min-w-0">
+        <nav
+          aria-label="مسیر"
+          className="hidden lg:flex items-center gap-2 min-w-0"
+        >
           {currentSection !== "dashboard" && canViewDashboard && (
             <>
               <button
@@ -2166,7 +2256,6 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
-       
         <button
           onClick={toggleTheme}
           className={cn(
@@ -2261,21 +2350,11 @@ export default function AdminShell({
     !isAccessLoading && !canViewSection(section) ? fallbackSection : section;
 
   useEffect(() => {
-    if (
-      isAccessLoading ||
-      isAccessError ||
-      resolvedSection === section
-    ) {
+    if (isAccessLoading || isAccessError || resolvedSection === section) {
       return;
     }
     navigate(resolvedSection);
-  }, [
-    isAccessError,
-    isAccessLoading,
-    navigate,
-    resolvedSection,
-    section,
-  ]);
+  }, [isAccessError, isAccessLoading, navigate, resolvedSection, section]);
 
   /* ── Logout modal state ── */
   const {
@@ -2419,8 +2498,7 @@ export default function AdminShell({
             s.scrollbar,
           )}
         >
-          {!isAccessLoading &&
-            children({ section: resolvedSection, navigate })}
+          {!isAccessLoading && children({ section: resolvedSection, navigate })}
         </main>
       </div>
 

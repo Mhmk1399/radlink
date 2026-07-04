@@ -7,14 +7,9 @@ import Ticket from "@/models/tickets";
 import "@/models/users";
 import "@/models/files";
 import "@/models/category";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function canAccess(user: AuthRequest["ctx"]["user"], requesterId: string) {
-    if (!user) return false;
-    if (user.role === "superAdmin") return true;
-    return String(user._id) === requesterId;
-}
 
 function isObjectId(value: unknown) {
     return typeof value === "string" && mongoose.Types.ObjectId.isValid(value);
@@ -57,7 +52,7 @@ export const GET = compose(
     const ticket = await populateTicketById(id).lean() as { requester?: unknown } | null;
 
     if (!ticket) return NextResponse.json({ message: "تیکت پیدا نشد." }, { status: 404 });
-    if (!canAccess(req.ctx.user, getRefId(ticket.requester))) {
+    if (!(await canAccessActorOwner(req.ctx.user!, getRefId(ticket.requester)))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -75,37 +70,46 @@ export const PATCH = compose(
 
     const ticket = await Ticket.findById(id).lean() as Record<string, unknown> | null;
     if (!ticket) return NextResponse.json({ message: "تیکت پیدا نشد." }, { status: 404 });
-    if (!canAccess(user, getRefId(ticket.requester))) {
+    if (!(await canAccessActorOwner(user, getRefId(ticket.requester)))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
-    const isSuperAdmin = user.role === "superAdmin";
+    const isStaff = ["agent", "admin", "superAdmin"].includes(user.role);
     const $set: Record<string, unknown> = {};
     const $unset: Record<string, unknown> = {};
     const update: Record<string, unknown> = {};
 
-    if (isSuperAdmin && "title" in body) $set.title = String(body.title ?? "").trim();
-    if (isSuperAdmin && "description" in body) $set.description = String(body.description ?? "").trim();
+    if (isStaff && "title" in body) $set.title = String(body.title ?? "").trim();
+    if (isStaff && "description" in body) $set.description = String(body.description ?? "").trim();
 
-    if (isSuperAdmin && ["open", "in_progress", "closed"].includes(String(body.status))) {
+    if (isStaff && ["open", "in_progress", "closed"].includes(String(body.status))) {
         $set.status = body.status;
     }
 
-    if (isSuperAdmin && ["low", "medium", "high"].includes(String(body.priority))) {
+    if (isStaff && ["low", "medium", "high"].includes(String(body.priority))) {
         $set.priority = body.priority;
     }
 
     const assigneeId = body.assigneeId ?? body.assignee;
-    if (isSuperAdmin && (assigneeId === null || assigneeId === "")) {
+    if (isStaff && (assigneeId === null || assigneeId === "")) {
         $unset.assignee = "";
-    } else if (isSuperAdmin && isObjectId(assigneeId)) {
+    } else if (isStaff && isObjectId(assigneeId)) {
+        if (
+            user.role === "agent" &&
+            !(await canAccessActorOwner(user, assigneeId))
+        ) {
+            return NextResponse.json(
+                { message: "مسئول انتخاب‌شده در مجموعه شما نیست." },
+                { status: 403 },
+            );
+        }
         $set.assignee = assigneeId;
     }
 
     const categoryId = body.categoryId ?? body.category;
-    if (isSuperAdmin && (categoryId === null || categoryId === "")) {
+    if (isStaff && (categoryId === null || categoryId === "")) {
         $unset.category = "";
-    } else if (isSuperAdmin && isObjectId(categoryId)) {
+    } else if (isStaff && isObjectId(categoryId)) {
         $set.category = categoryId;
     }
 
@@ -126,13 +130,13 @@ export const PATCH = compose(
             replies: {
                 author: user._id,
                 message: replyMessage,
-                isStaff: isSuperAdmin,
+                isStaff,
                 attachments: replyAttachments,
                 createdAt: new Date(),
             },
         };
         $set.lastReplyAt = new Date();
-        if (isSuperAdmin && ticket.status === "open" && !("status" in $set)) {
+        if (isStaff && ticket.status === "open" && !("status" in $set)) {
             $set.status = "in_progress";
         }
     }

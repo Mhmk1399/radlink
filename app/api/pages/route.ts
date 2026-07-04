@@ -110,6 +110,7 @@ import {
 } from "@/lib/pages/pageExpiration";
 import "@/models/blocks";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -296,7 +297,7 @@ export const POST = compose(
     let ownerId: mongoose.Types.ObjectId | string = user._id;
     let ownerUser = user;
     if (requestedOwnerId && requestedOwnerId !== String(user._id)) {
-        if (!["admin", "superAdmin"].includes(user.role)) {
+        if (!(await canAccessActorOwner(user, requestedOwnerId))) {
             return NextResponse.json(
                 { message: "شما اجازه تغییر سازنده صفحه را ندارید." },
                 { status: 403 }

@@ -4,7 +4,7 @@ import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Product from "@/models/products";
 import mongoose from "mongoose";
-import { canAccessOwnedResource } from "@/lib/auth/ownership";
+import { canAccessActorOwner } from "@/lib/auth/agentScope";
 import "@/models/users";
 import "@/models/pages";
 import "@/models/files";
@@ -56,7 +56,7 @@ export const GET = compose(
         .populate("imageFile", "filename path mimeType size")
         .lean();
     if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
-    if (!canAccessOwnedResource(req.ctx.user!, getOwnerId(product.owner))) {
+    if (!(await canAccessActorOwner(req.ctx.user!, getOwnerId(product.owner)))) {
         return NextResponse.json(
             { message: "شما اجازه مشاهده این محصول را ندارید." },
             { status: 403 },
@@ -69,13 +69,23 @@ export const PATCH = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
+    withRole("agent", "admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     if (invalidProductId(id)) {
         return NextResponse.json({ message: "شناسه محصول معتبر نیست." }, { status: 400 });
     }
     const body = await req.json();
+    const current = await Product.findById(id).select("owner").lean();
+    if (!current) {
+        return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
+    }
+    if (!(await canAccessActorOwner(req.ctx.user!, current.owner))) {
+        return NextResponse.json(
+            { message: "شما اجازه ویرایش این محصول را ندارید." },
+            { status: 403 },
+        );
+    }
 
     const updates: Record<string, unknown> = {};
 
@@ -119,11 +129,21 @@ export const DELETE = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+    withRole("agent", "admin", "superAdmin")
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     if (invalidProductId(id)) {
         return NextResponse.json({ message: "شناسه محصول معتبر نیست." }, { status: 400 });
+    }
+    const current = await Product.findById(id).select("owner").lean();
+    if (!current) {
+        return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
+    }
+    if (!(await canAccessActorOwner(req.ctx.user!, current.owner))) {
+        return NextResponse.json(
+            { message: "شما اجازه حذف این محصول را ندارید." },
+            { status: 403 },
+        );
     }
     const product = await Product.findByIdAndDelete(id);
     if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });

@@ -1664,3 +1664,157 @@ The migration checklist in Section 29 is part of this update and must be complet
 - `PageBuilder` includes the shape in dirty-state snapshots and page create/update payloads.
 - Existing pages load the saved value through `app/builder/[pageId]/page.tsx`.
 - The public landing header renders the logo inside a bordered 96px square or circular frame.
+
+---
+
+## 35. Implementation Update: July 4, 2026
+
+### Agent Ownership and Tenant Scope
+
+Agents are Users with `role: "agent"` plus an active `Agent` document. The
+relationship between an Agent and its managed Users is stored in
+`User.agentid`. This field references the Agent document, not the Agent's User
+ID.
+
+`lib/auth/agentScope.ts` is the central source of truth for resolving data
+visibility:
+
+- `resolveActorScope(user)` returns a global scope for `admin` and
+  `superAdmin`;
+- a normal `user` receives only its own User ID;
+- an `agent` receives its own User ID plus the IDs of active Users whose
+  `agentid` points to the Agent document;
+- `withActorOwnerScope(user, query, ownerField)` adds the resolved owner scope
+  to a database query;
+- `canAccessActorOwner(user, ownerId)` validates access to one owned resource;
+- `getManagedUserIds(user, { includeSelf })` resolves the User IDs available to
+  user-management and selector flows.
+
+All new owner-aware APIs should use this helper instead of duplicating role and
+ownership conditions.
+
+```mermaid
+flowchart TD
+    SA[superAdmin / admin] -->|global scope| All[All application data]
+    AU[Agent User] --> AD[Agent document]
+    AD -->|User.agentid| U1[Managed User A]
+    AD -->|User.agentid| U2[Managed User B]
+    AU -->|own resources| AR[Agent-owned resources]
+    U1 --> R1[Pages, Files, QR, Products, Tickets]
+    U2 --> R2[Pages, Files, QR, Products, Tickets]
+    AU -->|resolved actor scope| AR
+    AU -->|resolved actor scope| R1
+    AU -->|resolved actor scope| R2
+    U3[Normal User] -->|self scope only| R3[Own resources]
+```
+
+### Agent Visibility Matrix
+
+| Actor | User list | Owned resources | Tickets | Sensitive user fields |
+| --- | --- | --- | --- | --- |
+| `superAdmin` / `admin` | All permitted Users | Global | All permitted tickets | Controlled by existing access rules |
+| `agent` | Assigned Users only; own account is excluded from the table | Own resources and assigned Users' resources | Own and assigned Users' tickets | Cannot change role, permissions, representative, or limits |
+| `user` | Own identity only where supported | Own resources only | Own tickets only | Self-service fields only |
+
+Dynamic Page grants cannot be used by an Agent to cross its ownership boundary.
+An Agent may access only Pages owned by itself or one of its managed Users,
+even when an unrelated Page appears in a dynamic Access document.
+
+### Agent Creation and Assignment
+
+The Agent lifecycle is coordinated by the Agent and User APIs:
+
+1. `POST /api/agents` accepts an existing normal User, creates the Agent
+   document, promotes that User to `role: "agent"`, sets `User.agentid`, and
+   copies the Agent limits into `User.limits`.
+2. Assigning a User to an Agent through `PATCH /api/users/[id]` stores the
+   selected Agent ID in `User.agentid` and copies the Agent limits into that
+   User.
+3. A User created by an Agent is forced to `role: "user"`,
+   `status: "active"`, an empty permissions list, the current Agent ID, and the
+   current Agent limits. Client input cannot override these fields.
+4. Deleting an Agent clears `agentid` from related Users and demotes the
+   Agent's linked User so stale Agent authority is not retained.
+
+`components/admin/AgentsSection.tsx` keeps the complete selected User option
+and displays an identity summary containing name, phone, email, national code,
+father name, role, and status before creation. This helps administrators verify
+the exact User being promoted.
+
+### Per-User Agent Limits
+
+`Agent.limits.files`, `Agent.limits.blocks`, and `Agent.limits.pages` are
+per-User defaults and caps. They are not a shared aggregate quota for the
+Agent's whole customer group.
+
+For example, Agent limits of ten files, ten blocks, and ten pages allow each
+managed User to consume up to those values independently. Existing global
+quota enforcement continues to read the copied values from `User.limits`.
+
+When Agent limits are changed through `PATCH /api/agents/[id]`, the API updates
+the linked Agent User and every active User with that `agentid`. Assigning a
+User to another Agent also replaces its limits with the destination Agent's
+current values.
+
+### Agent-Aware APIs
+
+The following resource families now apply the resolved Agent scope:
+
+- Users: list, create, detail, update, delete, and status toggle;
+- Pages: list, detail, block operations, and owner assignment;
+- Files: list and detail;
+- QR codes: list, create, and detail;
+- Products: list, create, detail, update, and delete;
+- Tickets: list, detail, assignment, replies, status, and priority;
+- Notifications: list and page-scoped create/update/delete;
+- Dashboard: scoped counts and resource summaries;
+- Agents: an Agent may read its own Agent record, while creation remains an
+  admin operation.
+
+Agents are treated as ticket staff for their managed Users and may reply,
+change status or priority, and assign within their allowed scope. Ticket
+deletion remains restricted to `superAdmin`.
+
+Agents cannot create global Notifications. Their notification operations must
+target Pages inside their resolved ownership scope.
+
+### Agent-Aware Admin UI
+
+- `UsersSection.tsx` shows only assigned Users to an Agent and hides role,
+  representative, and limit controls from Agent edit forms.
+- `PagesSection.tsx` loads only managed User options for Agent owner selectors;
+  the API remains the final authorization boundary.
+- `TicketsSection.tsx` allows `admin`, `superAdmin`, and `agent` staff actions,
+  while preserving normal User chat/create behavior and superAdmin-only
+  deletion.
+- `NotificationsSection.tsx` hides the global-notification option from Agents.
+
+### Database and Migration Notes
+
+`models/users.ts` defines the compound index:
+
+```ts
+UserSchema.index({ agentid: 1, isDeleted: 1 });
+```
+
+This supports the common managed-User lookup. Production deployment should
+create this index through the normal controlled index rollout process.
+
+Existing Users may already have `agentid` but retain old or inconsistent
+`limits`. Re-saving each Agent through the Agent update API synchronizes its
+current limits. For a large dataset, use a one-time batched backfill instead of
+issuing unbounded parallel updates.
+
+Before backfilling, verify that every `User.agentid` references an existing
+Agent document. Orphaned references must be cleared or mapped manually.
+
+### Verification
+
+The July 4 Agent-scope implementation was verified with:
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+Both commands completed successfully with Next.js `16.2.6`.

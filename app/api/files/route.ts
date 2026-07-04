@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { withOwnerScope } from "@/lib/auth/ownership";
+import { withActorOwnerScope } from "@/lib/auth/agentScope";
 import File from "@/models/files";
 import User from "@/models/users";
 import "@/models/pages";
@@ -39,7 +39,8 @@ export const GET = compose(
     const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
 
-    const query: Record<string, unknown> = withOwnerScope(user);
+    const query: Record<string, unknown> =
+        await withActorOwnerScope(user);
     const search = searchParams.get("search")?.trim();
     const kind = searchParams.get("filter_kind");
     const ownerLabel = searchParams.get("filter_ownerLabel")?.trim();

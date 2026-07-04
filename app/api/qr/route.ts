@@ -3,9 +3,9 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import {
-    canAccessOwnedResource,
-    withOwnerScope,
-} from "@/lib/auth/ownership";
+    canAccessActorOwner,
+    withActorOwnerScope,
+} from "@/lib/auth/agentScope";
 import { createQrForPage } from "@/lib/qrCode";
 import QR from "@/models/qr";
 import Page from "@/models/pages";
@@ -27,7 +27,7 @@ export const POST = compose(
     const page = await Page.findById(pageId);
     if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
 
-    if (!canAccessOwnedResource(user, page.owner)) {
+    if (!(await canAccessActorOwner(user, page.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -52,7 +52,8 @@ export const GET = compose(
     const limit    = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isActive = searchParams.get("isActive");
 
-    const query: Record<string, unknown> = withOwnerScope(user);
+    const query: Record<string, unknown> =
+        await withActorOwnerScope(user);
     if (isActive !== null) query.isActive = isActive === "true";
 
     const [qrs, total] = await Promise.all([

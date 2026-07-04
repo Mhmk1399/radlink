@@ -95,6 +95,8 @@ export type SelectFieldConfig = {
     }>;
 };
 
+export type MessengerLinkPreset = "telegram" | "instagram" | "whatsapp";
+
 // اضافه کن — تایپ فیلد repeater
 export type RepeaterFieldConfig = {
     key: string;
@@ -115,6 +117,7 @@ export type ContentField =
         key: string;
         label: string;
         type: Exclude<ContentFieldType, "repeater" | "select">;
+        linkPreset?: MessengerLinkPreset;
     }
     | RepeaterFieldConfig
     | SelectFieldConfig;

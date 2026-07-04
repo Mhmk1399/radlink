@@ -312,7 +312,11 @@ export default function TicketsSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const { isSuperAdmin } = useAccess();
+  const { isSuperAdmin, user: authUser } = useAccess();
+  const canManageTickets =
+    isSuperAdmin ||
+    authUser?.role === "admin" ||
+    authUser?.role === "agent";
 
   const [tableKey, setTableKey] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -491,7 +495,7 @@ export default function TicketsSection({
   );
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (!canManageTickets) return;
     let cancelled = false;
     async function loadUsers() {
       try {
@@ -507,7 +511,7 @@ export default function TicketsSection({
     return () => {
       cancelled = true;
     };
-  }, [headers, isSuperAdmin]);
+  }, [canManageTickets, headers]);
 
   function refreshTable() {
     setTableKey((v) => v + 1);
@@ -519,7 +523,7 @@ export default function TicketsSection({
   }
 
   async function createTicket() {
-    if (isSuperAdmin) {
+    if (canManageTickets) {
       toast.error("R A D امکان ثبت تیکت ندارد.");
       return;
     }
@@ -606,7 +610,7 @@ export default function TicketsSection({
     }
     if (
       !hasConversationPayload &&
-      !isSuperAdmin
+      !canManageTickets
     ) {
       toast.error("متن پیام یا فایل پیوست را وارد کنید.");
       return;
@@ -617,7 +621,7 @@ export default function TicketsSection({
         replyMessage: form.replyMessage,
         replyAttachments: uploadedAttachments.map((f) => f.id),
       };
-      if (isSuperAdmin) {
+      if (canManageTickets) {
         payload.title = form.title;
         payload.description = form.description;
         payload.status = form.status;
@@ -746,7 +750,7 @@ export default function TicketsSection({
                 مدیریت تیکت‌ها
               </h1>
               <p className={cn("mt-0.5 text-xs sm:text-sm", t.textMuted)}>
-                {isSuperAdmin
+                {canManageTickets
                   ? "مشاهده، پاسخ‌دهی و مدیریت تمامی تیکت‌ها"
                   : "مشاهده و پیگیری تیکت‌های شما"}
               </p>
@@ -754,7 +758,7 @@ export default function TicketsSection({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {!isSuperAdmin && (
+            {!canManageTickets && (
               <button
                 type="button"
                 onClick={openCreateTicket}
@@ -789,7 +793,7 @@ export default function TicketsSection({
         columns={columns}
         title="لیست تیکت‌ها"
         subtitle={
-          isSuperAdmin
+          canManageTickets
             ? "R A D همه تیکت‌ها را می‌بیند"
             : "فقط تیکت‌های خودتان نمایش داده می‌شود"
         }
@@ -821,7 +825,7 @@ export default function TicketsSection({
               e.stopPropagation();
               void openTicket(row);
             }}
-            title={isSuperAdmin ? "مشاهده و پاسخ" : "مشاهده"}
+            title={canManageTickets ? "مشاهده و پاسخ" : "مشاهده"}
             className={cn(
               "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
               isDark
@@ -829,13 +833,13 @@ export default function TicketsSection({
                 : "text-blue-600/70 hover:bg-blue-500/8 hover:text-blue-600",
             )}
           >
-            {isSuperAdmin ? (
+            {canManageTickets ? (
               <FaReply className="h-3.5 w-3.5" />
             ) : (
               <FaReply className="h-3.5 w-3.5" />
             )}
             <span className="sr-only">
-              {isSuperAdmin ? "مشاهده و پاسخ" : "مشاهده"}
+              {canManageTickets ? "مشاهده و پاسخ" : "مشاهده"}
             </span>
           </button>
         )}
@@ -845,7 +849,7 @@ export default function TicketsSection({
       {/* ══════════════════════════════════════════════
           CREATE MODAL — Full screen on mobile
           ══════════════════════════════════════════════ */}
-      {createModalOpen && !isSuperAdmin && (
+      {createModalOpen && !canManageTickets && (
         <div
           className={cn(
             "fixed inset-0 z-[9999] flex items-center justify-center",
@@ -1477,7 +1481,7 @@ export default function TicketsSection({
                     t.scrollbarWide,
                   )}
                 >
-                  {isSuperAdmin && (
+                  {canManageTickets && (
                     <>
                       <div>
                         <label className={fieldLabel}>موضوع</label>
@@ -1511,7 +1515,7 @@ export default function TicketsSection({
                     label="وضعیت"
                     options={statusOptions}
                     value={form.status}
-                    disabled={!isSuperAdmin || saving}
+                    disabled={!canManageTickets || saving}
                     onChange={(v) =>
                       setForm((p) =>
                         p ? { ...p, status: String(v) as TicketStatus } : p,
@@ -1523,7 +1527,7 @@ export default function TicketsSection({
                     label="اولویت"
                     options={priorityOptions}
                     value={form.priority}
-                    disabled={!isSuperAdmin || saving}
+                    disabled={!canManageTickets || saving}
                     onChange={(v) =>
                       setForm((p) =>
                         p ? { ...p, priority: String(v) as TicketPriority } : p,
@@ -1547,7 +1551,7 @@ export default function TicketsSection({
                     label="مسئول رسیدگی"
                     options={assigneeOptions}
                     value={form.assigneeId}
-                    disabled={!isSuperAdmin || saving}
+                    disabled={!canManageTickets || saving}
                     searchable
                     clearable
                     onChange={(v) =>
@@ -1611,7 +1615,7 @@ export default function TicketsSection({
                     </div>
                   </div>
 
-                  {isSuperAdmin && (
+                  {canManageTickets && (
                     <button
                       type="button"
                       onClick={saveTicket}

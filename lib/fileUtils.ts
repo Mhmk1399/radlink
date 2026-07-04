@@ -94,21 +94,54 @@ export function getCloudFrontUrls(keys: string[]): string[] {
 }
 
 /**
- * Extract file key from Liara Object Storage URL
- * @param url - Liara Object Storage URL
- * @returns File key
+ * Extract file key from a Liara Object Storage URL. Handles both the raw
+ * `*.storage.*.liara.*` domain and a configured custom/CDN base domain
+ * (LIARA_PUBLIC_URL / NEXT_PUBLIC_LIARA_PUBLIC_URL / NEXT_PUBLIC_STORAGE_URL),
+ * since uploaded file URLs are built against whichever base was configured
+ * at upload time.
+ * @param url - Stored file URL
+ * @returns File key, or "" if the URL doesn't belong to Object Storage
  */
 export function extractKeyFromUrl(url: string): string {
-  try {
-    const parsedUrl = new URL(normalizeLiaraUrl(url));
-    if (!parsedUrl.hostname.includes(".storage.") || !parsedUrl.hostname.includes(".liara.")) {
-      return "";
-    }
+  if (!url) return "";
 
-    return decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
   } catch {
-    return '';
+    return "";
   }
+
+  const configuredBases = [
+    process.env.LIARA_PUBLIC_URL,
+    process.env.NEXT_PUBLIC_LIARA_PUBLIC_URL,
+    process.env.NEXT_PUBLIC_STORAGE_URL,
+  ].filter((value): value is string => Boolean(value?.trim()));
+
+  for (const rawBase of configuredBases) {
+    try {
+      const base = new URL(rawBase.replace(/\/+$/, ""));
+      if (base.hostname !== parsedUrl.hostname) continue;
+
+      const basePath = base.pathname.replace(/\/+$/, "");
+      const keyPath =
+        basePath && parsedUrl.pathname.startsWith(basePath)
+          ? parsedUrl.pathname.slice(basePath.length)
+          : parsedUrl.pathname;
+
+      return decodeURIComponent(keyPath.replace(/^\/+/, ""));
+    } catch {
+      // Malformed configured base — ignore and try the next candidate.
+    }
+  }
+
+  const isRawLiaraStorageUrl =
+    parsedUrl.hostname.includes(".storage.") &&
+    parsedUrl.hostname.includes(".liara.");
+
+  if (!isRawLiaraStorageUrl) return "";
+
+  return decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
 }
 
 /**
@@ -172,6 +205,49 @@ export async function uploadFile(file: File): Promise<LiaraFileInfo> {
     type: String(data?.type ?? file.type),
     uploadedAt: String(data?.uploadedAt ?? new Date().toISOString()),
   };
+}
+
+/**
+ * Delete a previously uploaded file — removes both the Object Storage
+ * object and its database record. Identify the file by fileId (preferred)
+ * or by its stored URL when the fileId isn't known on the client.
+ * @param identifier - fileId and/or url of the file to delete
+ */
+export async function deleteFile(identifier: {
+  fileId?: string;
+  url?: string;
+}): Promise<void> {
+  const token =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("auth_token")
+      : null;
+
+  if (!token) {
+    throw new Error("برای حذف فایل ابتدا وارد حساب کاربری شوید.");
+  }
+
+  const fileId = identifier.fileId?.trim();
+  const url = identifier.url?.trim();
+
+  if (!fileId && !url) {
+    throw new Error("شناسه یا آدرس فایل نامعتبر است.");
+  }
+
+  const response = await fetch("/api/uploads/delete", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ fileId, url }),
+  });
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok || !result?.success) {
+    throw new Error(
+      result?.message || result?.error || "حذف فایل با خطا مواجه شد.",
+    );
+  }
 }
 
 /**

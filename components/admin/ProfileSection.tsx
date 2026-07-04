@@ -23,7 +23,7 @@ import { toast } from "@/components/ui/CustomToast";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
-import { normalizeLiaraUrl, uploadFile } from "@/lib/fileUtils";
+import { deleteFile, normalizeLiaraUrl, uploadFile } from "@/lib/fileUtils";
 import {
   getIdentityInputProps,
   sanitizeIdentityField,
@@ -199,7 +199,9 @@ function publishProfileUpdate(user: ProfileUser) {
   );
 }
 
-async function uploadAvatar(file: File): Promise<string> {
+async function uploadAvatar(
+  file: File,
+): Promise<{ url: string; fileId: string }> {
   if (!file.type.startsWith("image/")) {
     throw new Error("فقط فایل تصویر قابل آپلود است.");
   }
@@ -208,7 +210,8 @@ async function uploadAvatar(file: File): Promise<string> {
     throw new Error("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
   }
 
-  return (await uploadFile(file)).url;
+  const uploaded = await uploadFile(file);
+  return { url: uploaded.url, fileId: uploaded.fileId };
 }
 
 const roleLabels: Record<UserRole, string> = {
@@ -456,6 +459,7 @@ function AvatarUploadField({
   displayName,
   fallback,
   uploading,
+  deleting,
   onFile,
   onRemove,
 }: {
@@ -463,6 +467,7 @@ function AvatarUploadField({
   displayName: string;
   fallback: string;
   uploading: boolean;
+  deleting: boolean;
   onFile: (file: File) => void;
   onRemove: () => void;
 }) {
@@ -534,7 +539,7 @@ function AvatarUploadField({
                 type="file"
                 accept="image/*"
                 className="sr-only"
-                disabled={uploading}
+                disabled={uploading || deleting}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = "";
@@ -545,7 +550,7 @@ function AvatarUploadField({
                 htmlFor={inputId}
                 className={cn(
                   "inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3.5 text-sm font-bold transition-all duration-200",
-                  uploading && "pointer-events-none opacity-60",
+                  (uploading || deleting) && "pointer-events-none opacity-60",
                   isDark
                     ? "bg-[#c8a84b] text-[#111116] hover:bg-[#d2b660]"
                     : "bg-[#8a7030] text-white hover:bg-[#7a6428]",
@@ -560,7 +565,7 @@ function AvatarUploadField({
               {value && (
                 <button
                   type="button"
-                  disabled={uploading}
+                  disabled={uploading || deleting}
                   onClick={onRemove}
                   className={cn(
                     "inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
@@ -569,8 +574,12 @@ function AvatarUploadField({
                     t.hoverBg,
                   )}
                 >
-                  <FaTrashCan className="h-3 w-3" />
-                  حذف
+                  {deleting ? (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <FaTrashCan className="h-3 w-3" />
+                  )}
+                  {deleting ? "در حال حذف..." : "حذف"}
                 </button>
               )}
             </div>
@@ -597,6 +606,10 @@ function ProfileEditor({
   const [form, setForm] = useState<ProfileFormState>(() => formFromUser(user));
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [deletingAvatar, setDeletingAvatar] = useState(false);
+  // fileId of the avatar uploaded during this editing session (unknown for
+  // the avatar the user already had, since it predates this tracking).
+  const [avatarFileId, setAvatarFileId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const displayName =
@@ -636,17 +649,54 @@ function ProfileEditor({
   }
 
   async function handleAvatarFile(file: File) {
+    const previousUrl = form.avatarUrl.trim();
+    const previousFileId = avatarFileId;
+
     try {
       setUploadingAvatar(true);
-      const url = await uploadAvatar(file);
-      updateField("avatarUrl", url);
+      const uploaded = await uploadAvatar(file);
+      updateField("avatarUrl", uploaded.url);
+      setAvatarFileId(uploaded.fileId);
       toast.success("تصویر آپلود شد. برای ثبت نهایی، تغییرات را ذخیره کنید.");
+
+      // Best-effort cleanup of the replaced avatar so Object Storage doesn't
+      // accumulate orphaned files; failures here shouldn't block the new avatar.
+      if (previousUrl && previousUrl !== uploaded.url) {
+        deleteFile(
+          previousFileId ? { fileId: previousFileId } : { url: previousUrl },
+        ).catch(() => {
+          console.warn("حذف تصویر قبلی از Object Storage با خطا مواجه شد.");
+        });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "آپلود تصویر با خطا مواجه شد.",
       );
     } finally {
       setUploadingAvatar(false);
+    }
+  }
+
+  async function handleAvatarRemove() {
+    const currentUrl = form.avatarUrl.trim();
+    if (!currentUrl || deletingAvatar) return;
+
+    const currentFileId = avatarFileId;
+
+    try {
+      setDeletingAvatar(true);
+      await deleteFile(
+        currentFileId ? { fileId: currentFileId } : { url: currentUrl },
+      );
+      updateField("avatarUrl", "");
+      setAvatarFileId(null);
+      toast.success("تصویر با موفقیت حذف شد. برای ثبت نهایی، تغییرات را ذخیره کنید.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "حذف تصویر با خطا مواجه شد.",
+      );
+    } finally {
+      setDeletingAvatar(false);
     }
   }
 
@@ -725,7 +775,7 @@ function ProfileEditor({
           {/* Desktop save button */}
           <button
             type="submit"
-            disabled={saving || uploadingAvatar}
+            disabled={saving || uploadingAvatar || deletingAvatar}
             className={cn(
               "hidden h-10 items-center gap-2 rounded-xl px-5 text-sm font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex",
               isDark
@@ -754,8 +804,9 @@ function ProfileEditor({
                 lastName: form.lastName,
               })}
               uploading={uploadingAvatar}
+              deleting={deletingAvatar}
               onFile={(file) => void handleAvatarFile(file)}
-              onRemove={() => updateField("avatarUrl", "")}
+              onRemove={() => void handleAvatarRemove()}
             />
             <Field
               icon={<FaUser className="h-3.5 w-3.5" />}
@@ -811,7 +862,7 @@ function ProfileEditor({
         >
           <button
             type="submit"
-            disabled={saving || uploadingAvatar}
+            disabled={saving || uploadingAvatar || deletingAvatar}
             className={cn(
               "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
               isDark

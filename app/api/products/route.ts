@@ -4,7 +4,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Product from "@/models/products";
-import { withOwnerScope } from "@/lib/auth/ownership";
+import { withActorOwnerScope } from "@/lib/auth/agentScope";
 import "@/models/users";
 import "@/models/pages";
 import "@/models/files";
@@ -29,7 +29,7 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
+    withRole("agent", "admin", "superAdmin")
 )(async (req: AuthRequest) => {
     const body = await req.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -66,7 +66,8 @@ export const GET = compose(
     const { searchParams } = new URL(req.url);
     const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const query: Record<string, unknown> = withOwnerScope(req.ctx.user!);
+    const query: Record<string, unknown> =
+        await withActorOwnerScope(req.ctx.user!);
     const ownerId = searchParams.get("ownerId");
     const pageId = searchParams.get("pageId");
     if (ownerId && mongoose.Types.ObjectId.isValid(ownerId)) {

@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withAuth, withDB, withStatus } from "@/lib/auth/middlewares";
-import { hasGlobalOwnerScope, withOwnerScope } from "@/lib/auth/ownership";
-import {
-  withPageAccessScope,
-  withTemplateAccessScope,
-} from "@/lib/auth/resourceScope";
+import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
+import { getManagedUserIds } from "@/lib/auth/agentScope";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import type { AuthRequest } from "@/lib/auth/types";
 import User from "@/models/users";
@@ -51,11 +48,40 @@ export const GET = compose(
 
   const last30Days = getDateDaysAgo(30);
   const previous30Days = getDateDaysAgo(60);
-  const activeUserQuery = { isDeleted: { $ne: true } };
-  const ownerQuery = withOwnerScope(user);
-  const ticketQuery = isSuperAdmin ? {} : { requester: user._id };
-  const pageQuery = await withPageAccessScope(user);
-  const templateQuery = await withTemplateAccessScope(user);
+  const managedUserIds = hasGlobalScope ? null : await getManagedUserIds(user);
+  const scopedUserIds = managedUserIds ?? [user._id];
+  const activeUserQuery: Record<string, unknown> = {
+    isDeleted: { $ne: true },
+    ...(!hasGlobalScope
+      ? {
+          _id: {
+            $in:
+              user.role === "agent"
+                ? scopedUserIds.filter(
+                    (id) => String(id) !== String(user._id),
+                  )
+                : scopedUserIds,
+          },
+        }
+      : {}),
+  };
+  const ownerQuery = hasGlobalScope
+    ? {}
+    : { owner: { $in: scopedUserIds } };
+  const ticketQuery = hasGlobalScope
+    ? {}
+    : { requester: { $in: scopedUserIds } };
+  const agentQuery = hasGlobalScope ? {} : { user: user._id };
+  const pageQuery = ownerQuery;
+  const grantedTemplateIds = hasGlobalScope
+    ? null
+    : Object.entries(access.templates)
+        .filter(([, actions]) => actions.has("view"))
+        .map(([id]) => id);
+  const templateQuery =
+    grantedTemplateIds === null
+      ? {}
+      : { _id: { $in: grantedTemplateIds } };
   const grantedBlockIds = hasGlobalScope
     ? null
     : Object.entries(access.blocks)
@@ -74,6 +100,23 @@ export const GET = compose(
   const canProducts = canView("admin.products");
   const canFiles = canView("admin.files");
   const canNotifications = canView("admin.notifications");
+  const notificationPageIds =
+    canNotifications && !hasGlobalScope
+      ? await Page.distinct("_id", pageQuery)
+      : [];
+  const notificationQuery = hasGlobalScope
+    ? { isActive: { $ne: false } }
+    : {
+        isActive: { $ne: false },
+        ...(user.role === "agent"
+          ? { page: { $in: notificationPageIds } }
+          : {
+              $or: [
+                { isGlobal: true },
+                { page: { $in: notificationPageIds } },
+              ],
+            }),
+      };
 
   const [
     totalUsers,
@@ -116,8 +159,10 @@ export const GET = compose(
           createdAt: { $gte: previous30Days, $lt: last30Days },
         })
       : 0,
-    canAgents ? Agent.countDocuments() : 0,
-    canAgents ? Agent.countDocuments({ isActive: true }) : 0,
+    canAgents ? Agent.countDocuments(agentQuery) : 0,
+    canAgents
+      ? Agent.countDocuments({ ...agentQuery, isActive: true })
+      : 0,
     canBlocks ? Block.countDocuments(blockQuery) : 0,
     canBlocks ? Block.countDocuments({ ...blockQuery, isActive: true }) : 0,
     canPages ? Page.countDocuments(pageQuery) : 0,
@@ -138,10 +183,10 @@ export const GET = compose(
     canQrcodes
       ? QR.countDocuments({ ...ownerQuery, isActive: true })
       : 0,
-    canProducts ? Product.countDocuments() : 0,
+    canProducts ? Product.countDocuments(ownerQuery) : 0,
     canFiles ? FileModel.countDocuments(ownerQuery) : 0,
     canNotifications
-      ? Notification.countDocuments({ isActive: { $ne: false } })
+      ? Notification.countDocuments(notificationQuery)
       : 0,
     canPages
       ? Page.aggregate([

@@ -471,7 +471,10 @@ export default function PagesSection({
   const { isDark } = useTheme();
   const router = useRouter();
   const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
-  const canManageOwners = user?.role === "admin" || user?.role === "superAdmin";
+  const canManageOwners =
+    user?.role === "agent" ||
+    user?.role === "admin" ||
+    user?.role === "superAdmin";
 
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
 
