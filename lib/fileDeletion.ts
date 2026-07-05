@@ -24,6 +24,10 @@ type StorageErrorLike = {
   Code?: string;
 };
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function isMissingObjectError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const { name, code, Code } = error as StorageErrorLike;
@@ -109,9 +113,20 @@ export async function deleteFileByIdentifier(
     );
   }
 
-  const file = fileId
+  let file = fileId
     ? await File.findById(fileId)
     : await File.findOne({ path: url });
+
+  if (!file && url) {
+    const requestedKey = extractKeyFromUrl(url);
+    if (requestedKey) {
+      file = await File.findOne({
+        path: {
+          $regex: `/${escapeRegex(requestedKey)}(?:\\?.*)?$`,
+        },
+      });
+    }
+  }
 
   if (!file) {
     throw new FileDeletionError("فایل پیدا نشد.", 404, "FILE_NOT_FOUND");

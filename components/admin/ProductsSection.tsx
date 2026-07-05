@@ -16,7 +16,7 @@ import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { ColumnDef } from "@/types/table";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
-import { uploadFile } from "@/lib/fileUtils";
+import { deleteFile, uploadFile } from "@/lib/fileUtils";
 
 type ProductRow = {
   _id: string;
@@ -135,14 +135,18 @@ function formatFaDate(value?: string) {
 
 function ProductImageUploadField({
   value,
+  originalValue,
   onChange,
 }: {
   value: unknown;
+  originalValue?: unknown;
   onChange: (value: unknown) => void;
 }) {
   const t = useThemeTokens();
   const image = normalizeImage(value);
+  const originalImage = normalizeImage(originalValue);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function uploadImage(file?: File) {
     if (!file) return;
@@ -157,8 +161,14 @@ function ProductImageUploadField({
 
     try {
       setIsUploading(true);
+      const previousImage = image;
       const uploaded = await uploadFile(file);
       onChange(uploaded.url);
+      if (previousImage && previousImage !== originalImage) {
+        deleteFile({ url: previousImage }).catch(() => {
+          console.warn("Temporary product image cleanup failed.");
+        });
+      }
       toast.success("تصویر محصول آپلود شد.");
     } catch (error) {
       toast.error(
@@ -166,6 +176,23 @@ function ProductImageUploadField({
       );
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function removeImage() {
+    if (!image || isDeleting) return;
+    try {
+      setIsDeleting(true);
+      if (image !== originalImage) {
+        await deleteFile({ url: image });
+      }
+      onChange("");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "حذف تصویر انجام نشد.",
+      );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -189,8 +216,8 @@ function ProductImageUploadField({
           />
           <button
             type="button"
-            disabled={isUploading}
-            onClick={() => onChange("")}
+            disabled={isUploading || isDeleting}
+            onClick={() => void removeImage()}
             className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-black/65 text-sm font-black text-white transition hover:bg-red-600 disabled:opacity-50"
             title="حذف تصویر"
           >
@@ -217,7 +244,7 @@ function ProductImageUploadField({
         <input
           type="file"
           accept="image/*"
-          disabled={isUploading}
+          disabled={isUploading || isDeleting}
           className="hidden"
           onChange={(event) => {
             void uploadImage(event.target.files?.[0]);
@@ -452,8 +479,12 @@ export default function ProductsSection({
         key: "image",
         label: "تصویر",
         inputType: "textarea",
-        renderFormField: ({ value, onChange }) => (
-          <ProductImageUploadField value={value} onChange={onChange} />
+        renderFormField: ({ value, originalValue, onChange }) => (
+          <ProductImageUploadField
+            value={value}
+            originalValue={originalValue}
+            onChange={onChange}
+          />
         ),
         hideOnMobile: true,
         render: (value) => {
@@ -518,6 +549,23 @@ export default function ProductsSection({
     [],
   );
 
+  async function cleanupDiscardedProductImage(
+    item: Partial<ProductRow>,
+    original: ProductRow | null,
+  ) {
+    const pendingImage = normalizeImage(item.image);
+    const originalImage = normalizeImage(original?.image);
+    if (!pendingImage || pendingImage === originalImage) return;
+
+    try {
+      await deleteFile({ url: pendingImage });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "حذف تصویر انجام نشد.",
+      );
+    }
+  }
+
   return (
     <div className="space-y-5 sm:space-y-6" dir="rtl">
       <div
@@ -573,6 +621,7 @@ export default function ProductsSection({
       <DynamicTable<ProductRow>
         endpoint="/api/products?limit=100"
         updateMethod="PATCH"
+        onFormDiscard={cleanupDiscardedProductImage}
         columns={columns}
         title="لیست محصولات"
         subtitle="محصولات ثبت‌شده و اطلاعات قیمت و تصاویر"

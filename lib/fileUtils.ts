@@ -17,6 +17,14 @@ export interface LiaraFileInfo {
   uploadedAt?: string;
 }
 
+export type UploadFileKind = "upload" | "ticket";
+export const FILE_UPLOADED_EVENT = "radlink:file-uploaded";
+
+export type FileUploadedEventDetail = {
+  fileId: string;
+  url: string;
+};
+
 /**
  * Generate Liara Object Storage URL from file key (no expiration - permanent URLs)
  * @param key - The file key
@@ -149,7 +157,10 @@ export function extractKeyFromUrl(url: string): string {
  * @param file - File object to upload
  * @returns Promise with upload response
  */
-export async function uploadFile(file: File): Promise<LiaraFileInfo> {
+export async function uploadFile(
+  file: File,
+  options?: { kind?: UploadFileKind },
+): Promise<LiaraFileInfo> {
   const token =
     typeof window !== "undefined"
       ? window.localStorage.getItem("auth_token")
@@ -161,6 +172,9 @@ export async function uploadFile(file: File): Promise<LiaraFileInfo> {
 
   const formData = new FormData();
   formData.append("file", file);
+  if (options?.kind) {
+    formData.append("kind", options.kind);
+  }
 
   const response = await fetch("/api/uploads", {
     method: "POST",
@@ -188,7 +202,7 @@ export async function uploadFile(file: File): Promise<LiaraFileInfo> {
     throw new Error("اطلاعات فایل ذخیره‌شده از سرور دریافت نشد.");
   }
 
-  return {
+  const uploadedFileInfo: LiaraFileInfo = {
     key: String(data?.key ?? ""),
     url,
     fileId,
@@ -205,6 +219,16 @@ export async function uploadFile(file: File): Promise<LiaraFileInfo> {
     type: String(data?.type ?? file.type),
     uploadedAt: String(data?.uploadedAt ?? new Date().toISOString()),
   };
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent<FileUploadedEventDetail>(FILE_UPLOADED_EVENT, {
+        detail: { fileId, url },
+      }),
+    );
+  }
+
+  return uploadedFileInfo;
 }
 
 /**

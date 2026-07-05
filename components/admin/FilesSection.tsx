@@ -18,6 +18,7 @@ import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { ColumnDef } from "@/types/table";
+import { deleteFile } from "@/lib/fileUtils";
 
 type UserRef = {
   _id?: string;
@@ -43,7 +44,7 @@ type FileRow = {
   owner?: UserRef | string;
   ownerId: string;
   ownerLabel: string;
-  kind: "upload" | "qr";
+  kind: "upload" | "qr" | "ticket";
   page?: PageRef | string;
   pageLabel: string;
   fileType: string;
@@ -154,7 +155,12 @@ function normalizeFile(value: unknown): FileRow | null {
     owner: value.owner as UserRef | string | undefined,
     ownerId,
     ownerLabel: getOwnerLabel(value.owner, ownerId || "-"),
-    kind: value.kind === "qr" ? "qr" : "upload",
+    kind:
+      value.kind === "qr"
+        ? "qr"
+        : value.kind === "ticket"
+          ? "ticket"
+          : "upload",
     page: value.page as PageRef | string | undefined,
     pageLabel: getPageLabel(value.page),
     fileType: meta.label,
@@ -195,6 +201,7 @@ export default function FilesSection({
     src: string;
     title: string;
   } | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
   const closePreviewImage = useCallback(() => setPreviewImage(null), []);
 
   const token =
@@ -289,11 +296,16 @@ export default function FilesSection({
         filterable: true,
         options: [
           { label: "آپلود کاربر", value: "upload" },
+          { label: "فایل تیکت", value: "ticket" },
           { label: "کد QR", value: "qr" },
         ],
         render: (value) => (
           <span className={cn("text-sm font-semibold", t.textMuted)}>
-            {value === "qr" ? "کد QR" : "آپلود کاربر"}
+            {value === "qr"
+              ? "کد QR"
+              : value === "ticket"
+                ? "فایل تیکت"
+                : "آپلود کاربر"}
           </span>
         ),
       },
@@ -428,7 +440,7 @@ export default function FilesSection({
       </div>
 
       <DynamicTable<FileRow>
-        endpoint="/api/files"
+        endpoint={`/api/files?refresh=${refreshToken}`}
         columns={columns}
         title="لیست فایل‌ها"
         subtitle="فایل‌های آپلودشده همراه با مشخصات آپلودکننده"
@@ -447,8 +459,9 @@ export default function FilesSection({
         canDelete={canDeleteFiles}
         transformResponse={transformResponse}
         serverSide
-        onDelete={async (item, builtInDelete) => {
-          await builtInDelete(item);
+        onDelete={async (item) => {
+          await deleteFile({ fileId: item._id });
+          setRefreshToken((value) => value + 1);
           toast.success("فایل حذف شد.");
         }}
         rowActions={(row) =>

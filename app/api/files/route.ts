@@ -56,7 +56,9 @@ export const GET = compose(
         ];
     }
 
-    if (kind === "upload" || kind === "qr") query.kind = kind;
+    if (kind === "upload" || kind === "qr" || kind === "ticket") {
+        query.kind = kind;
+    }
 
     if (ownerLabel) {
         const pattern = escapeRegex(ownerLabel);

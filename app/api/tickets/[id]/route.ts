@@ -4,10 +4,11 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Ticket from "@/models/tickets";
+import File from "@/models/files";
 import "@/models/users";
-import "@/models/files";
 import "@/models/category";
 import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { deleteFileByIdentifier } from "@/lib/fileDeletion";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -148,6 +149,13 @@ export const PATCH = compose(
         await Ticket.updateOne({ _id: id }, update, { strict: false });
     }
 
+    if (replyAttachments.length > 0) {
+        await File.updateMany(
+            { _id: { $in: replyAttachments } },
+            { $set: { kind: "ticket" } },
+        );
+    }
+
     const updatedTicket = await populateTicketById(id).lean();
     return NextResponse.json({ ticket: updatedTicket });
 });
@@ -157,9 +165,23 @@ export const DELETE = compose(
     withAuth(),
     withStatus("active"),
     withRole("superAdmin")
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const ticket = await Ticket.findByIdAndDelete(id);
     if (!ticket) return NextResponse.json({ message: "تیکت پیدا نشد." }, { status: 404 });
+
+    const attachmentIds = new Set<string>([
+        ...(ticket.attachments ?? []).map((fileId: unknown) => String(fileId)),
+        ...(ticket.replies ?? []).flatMap(
+            (reply: { attachments?: unknown[] }) =>
+                (reply.attachments ?? []).map((fileId) => String(fileId)),
+        ),
+    ]);
+    await Promise.allSettled(
+        [...attachmentIds].map((fileId) =>
+            deleteFileByIdentifier({ fileId }, req.ctx.user!),
+        ),
+    );
+
     return NextResponse.json({ message: "تیکت حذف شد." });
 });

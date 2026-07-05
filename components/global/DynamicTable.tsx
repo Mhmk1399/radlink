@@ -2003,6 +2003,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   onCreate,
   onUpdate,
   onDelete,
+  onFormDiscard,
   canCreate: requestedCanCreate = true,
   canUpdate: requestedCanUpdate = true,
   canDelete: requestedCanDelete = true,
@@ -2405,13 +2406,29 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     setSelectedRow(row);
     setModalMode("delete");
   }, []);
-  const closeModal = useCallback(() => {
+  const resetModal = useCallback(() => {
     setModalMode(null);
     setSelectedRow(null);
     setFormData({});
     setFormErrors({});
     setSubmitting(false);
   }, []);
+  const closeModal = useCallback(() => {
+    const mode =
+      modalMode === "create" || modalMode === "edit" ? modalMode : null;
+    const discardedData = formData as Partial<T>;
+    const original = selectedRow;
+
+    resetModal();
+
+    if (mode && onFormDiscard) {
+      void Promise.resolve(
+        onFormDiscard(discardedData, original, mode),
+      ).catch((error) => {
+        console.error("Discarded form upload cleanup failed:", error);
+      });
+    }
+  }, [formData, modalMode, onFormDiscard, resetModal, selectedRow]);
 
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
@@ -2447,10 +2464,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         } else if (modalMode === "edit" && selectedRow) {
           const updated = { ...selectedRow, ...formData } as T;
           if (onUpdate)
-            await onUpdate(updated, (item) => hookUpdate(item, primaryKey));
+            await onUpdate(
+              updated,
+              (item) => hookUpdate(item, primaryKey),
+              selectedRow,
+            );
           else await hookUpdate(updated, primaryKey);
         }
-        closeModal();
+        resetModal();
       } catch (error) {
         const mutationError = error as Error & {
           code?: string;
@@ -2482,7 +2503,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       hookUpdate,
       primaryKey,
       validateForm,
-      closeModal,
+      resetModal,
       editableCols,
     ],
   );
@@ -2494,13 +2515,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       if (onDelete)
         await onDelete(selectedRow, (item) => hookRemove(item, primaryKey));
       else await hookRemove(selectedRow, primaryKey);
-      closeModal();
+      resetModal();
     } catch {
       /* parent handles */
     } finally {
       setSubmitting(false);
     }
-  }, [onDelete, selectedRow, hookRemove, primaryKey, closeModal]);
+  }, [onDelete, selectedRow, hookRemove, primaryKey, resetModal]);
 
   const updateField = useCallback((key: string, value: unknown) => {
     const sanitizedValue = sanitizeIdentityField(key, value);
@@ -3691,6 +3712,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     {col.renderFormField ? (
                       col.renderFormField({
                         value: fv,
+                        originalValue: selectedRow
+                          ? getNestedValue(selectedRow, col.key)
+                          : undefined,
                         onChange: (value) => updateField(col.key, value),
                         error,
                         formData: formData as Partial<T>,

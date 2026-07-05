@@ -3,8 +3,8 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Ticket from "@/models/tickets";
+import File from "@/models/files";
 import "@/models/users";
-import "@/models/files";
 import "@/models/category";
 import { getManagedUserIds } from "@/lib/auth/agentScope";
 
@@ -32,6 +32,13 @@ export const POST = compose(
         attachments: attachments ?? [],
         requester: user._id,
     });
+
+    if (ticket.attachments.length > 0) {
+        await File.updateMany(
+            { _id: { $in: ticket.attachments } },
+            { $set: { kind: "ticket" } },
+        );
+    }
 
     return NextResponse.json({ ticket }, { status: 201 });
 });

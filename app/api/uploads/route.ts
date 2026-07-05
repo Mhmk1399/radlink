@@ -60,6 +60,7 @@ export const POST = compose(
 
         const formData = await req.formData();
         const file = formData.get("file") as File;
+        const kind = formData.get("kind") === "ticket" ? "ticket" : "upload";
 
         if (!file) {
             return jsonError("فایلی برای آپلود ارسال نشده است.", 400);
@@ -138,7 +139,7 @@ export const POST = compose(
                 owner: req.ctx.user!._id,
                 mimeType: file.type,
                 size: file.size,
-                kind: "upload",
+                kind,
             });
         } catch (error) {
             await deleteLiaraObject(key).catch(() => null);

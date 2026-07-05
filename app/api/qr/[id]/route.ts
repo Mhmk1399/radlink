@@ -3,8 +3,8 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { canAccessActorOwner } from "@/lib/auth/agentScope";
-import { deleteLiaraObject } from "@/lib/liaraStorage";
-import File from "@/models/files";
+import { deleteFileByIdentifier } from "@/lib/fileDeletion";
+import "@/models/files";
 import QR from "@/models/qr";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -62,23 +62,17 @@ export const DELETE = compose(
     if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
-    const file = qr.file
-        ? await File.findById(qr.file).select("path").lean()
-        : null;
+    const fileId = qr.file ? String(qr.file) : "";
 
     await qr.deleteOne();
 
-    if (file) {
-        await File.findByIdAndDelete(file._id).catch(() => null);
-
-        try {
-            const key = decodeURIComponent(
-                new URL(file.path).pathname.replace(/^\/+/, "")
-            );
-            if (key) await deleteLiaraObject(key);
-        } catch {
-            // Legacy QR URLs may not map to a Liara object key.
-        }
+    if (fileId) {
+        await deleteFileByIdentifier(
+            { fileId },
+            req.ctx.user!,
+        ).catch((error) => {
+            console.error("QR image cleanup failed:", error);
+        });
     }
 
     return NextResponse.json({ message: "کد QR حذف شد." });

@@ -21,7 +21,7 @@ import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
-import { uploadFile } from "@/lib/fileUtils";
+import { deleteFile, uploadFile } from "@/lib/fileUtils";
 import type { ColumnDef } from "@/types/table";
 
 /* ── types ── */
@@ -564,16 +564,43 @@ export default function TicketsSection({
     }
     try {
       setUploadingAttachment(true);
-      const result = await uploadFile(file);
+      const result = await uploadFile(file, { kind: "ticket" });
       const uploaded = normalizeUploadedFile(result);
-      if (!uploaded)
+      if (!uploaded) {
+        await deleteFile({ fileId: result.fileId }).catch(() => null);
         throw new Error("شناسه فایل آپلود شده از سرور دریافت نشد.");
+      }
       setUploadedAttachments((prev) => [...prev, uploaded]);
       toast.success("فایل به پیام پیوست شد");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "خطا در آپلود فایل");
     } finally {
       setUploadingAttachment(false);
+    }
+  }
+
+  async function removeUploadedAttachment(file: UploadedTicketFile) {
+    try {
+      await deleteFile({ fileId: file.id });
+      setUploadedAttachments((current) =>
+        current.filter((item) => item.id !== file.id),
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "حذف فایل انجام نشد.",
+      );
+    }
+  }
+
+  function closeTicketModal() {
+    const pendingAttachments = [...uploadedAttachments];
+    setModalOpen(false);
+    setUploadedAttachments([]);
+
+    for (const file of pendingAttachments) {
+      deleteFile({ fileId: file.id }).catch(() => {
+        console.warn("Discarded ticket attachment cleanup failed.");
+      });
     }
   }
 
@@ -1053,7 +1080,7 @@ export default function TicketsSection({
               </div>
               <button
                 type="button"
-                onClick={() => setModalOpen(false)}
+                onClick={closeTicketModal}
                 className={closeBtn}
               >
                 <FaXmark className="h-4 w-4" />
@@ -1326,11 +1353,7 @@ export default function TicketsSection({
                           </span>
                           <button
                             type="button"
-                            onClick={() =>
-                              setUploadedAttachments((p) =>
-                                p.filter((i) => i.id !== file.id),
-                              )
-                            }
+                            onClick={() => void removeUploadedAttachment(file)}
                             className={cn(
                               "rounded p-0.5 transition-colors",
                               isDark

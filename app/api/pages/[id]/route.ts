@@ -106,6 +106,7 @@ import {
     parsePageExpiration,
 } from "@/lib/pages/pageExpiration";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
+import { deleteFileByIdentifier } from "@/lib/fileDeletion";
 
 type RouteContext = {
     params: Promise<{
@@ -411,7 +412,7 @@ export const PATCH = compose(
 
     const query = await withPageAccessScope(user, { _id: id }, "update");
     const currentPage = await Page.findOne(query)
-        .select("owner blocks url logo seo expiresAt")
+        .select("owner blocks url logo favicon seo expiresAt")
         .lean();
 
     if (!currentPage) {
@@ -502,6 +503,24 @@ export const PATCH = compose(
         blocks: page.blocks,
     });
 
+    const replacedImageUrls = [
+        typeof update.logo === "string" &&
+        String(currentPage.logo ?? "") &&
+        update.logo !== String(currentPage.logo ?? "")
+            ? String(currentPage.logo)
+            : "",
+        typeof update.favicon === "string" &&
+        String(currentPage.favicon ?? "") &&
+        update.favicon !== String(currentPage.favicon ?? "")
+            ? String(currentPage.favicon)
+            : "",
+    ].filter(Boolean);
+    await Promise.allSettled(
+        [...new Set(replacedImageUrls)].map((url) =>
+            deleteFileByIdentifier({ url }, user),
+        ),
+    );
+
     revalidatePath(`/${page.url}`);
 
     return NextResponse.json({ page });
@@ -533,7 +552,35 @@ export const DELETE = compose(
         );
     }
 
+    const builderProducts = await Product.find({
+        page: page._id,
+        source: "builder",
+    })
+        .select("image imageFile")
+        .lean();
+
     await Product.deleteMany({ page: page._id, source: "builder" });
+
+    const fileIdentifiers = [
+        page.logo ? { url: String(page.logo) } : null,
+        page.favicon ? { url: String(page.favicon) } : null,
+        ...builderProducts.map((product) =>
+            product.imageFile
+                ? { fileId: String(product.imageFile) }
+                : product.image
+                  ? { url: String(product.image) }
+                  : null,
+        ),
+    ].filter(
+        (identifier): identifier is { fileId: string } | { url: string } =>
+            Boolean(identifier),
+    );
+
+    await Promise.allSettled(
+        fileIdentifiers.map((identifier) =>
+            deleteFileByIdentifier(identifier, user),
+        ),
+    );
 
     revalidatePath("/[url]", "page");
 

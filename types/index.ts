@@ -535,6 +535,7 @@ export type PaginatedPagesResponse = PaginatedResponse<Page> & {
 export interface FileDoc extends BaseDocument {
     filename: string;
     path: string;
+    kind: "upload" | "qr" | "ticket";
     ownerId: string;
     owner?: User;
     /** Derived from filename or path */
@@ -551,12 +552,14 @@ export interface UploadFilePayload {
     file: File | Blob;
     ownerId: string;
     filename?: string;
+    kind?: "upload" | "ticket";
 }
 
 export interface FileFilters extends ListFilters {
     ownerId?: string;
     extension?: string;
     mimeType?: string;
+    kind?: "upload" | "qr" | "ticket";
 }
 
 export interface FileStats {

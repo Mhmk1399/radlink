@@ -13,7 +13,7 @@ import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "../ui/CustomToast";
 import { useRouter } from "next/navigation";
-import { uploadFile } from "@/lib/fileUtils";
+import { deleteFile, uploadFile } from "@/lib/fileUtils";
 import Image from "next/image";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 import { isPageExpired } from "@/lib/pages/pageExpiration";
@@ -62,16 +62,21 @@ type SelectOption = {
 
 function PageImageUploadField({
   value,
+  originalValue,
   label,
   onChange,
 }: {
   value: unknown;
+  originalValue?: unknown;
   label: string;
   onChange: (value: unknown) => void;
 }) {
   const t = useThemeTokens();
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const imageUrl = typeof value === "string" ? value : "";
+  const originalImageUrl =
+    typeof originalValue === "string" ? originalValue : "";
 
   async function handleFile(file?: File) {
     if (!file) return;
@@ -86,8 +91,14 @@ function PageImageUploadField({
 
     try {
       setIsUploading(true);
+      const previousUrl = imageUrl;
       const uploaded = await uploadFile(file);
       onChange(uploaded.url);
+      if (previousUrl && previousUrl !== originalImageUrl) {
+        deleteFile({ url: previousUrl }).catch(() => {
+          console.warn("Temporary page image cleanup failed.");
+        });
+      }
       toast.success("تصویر با موفقیت آپلود شد.");
     } catch (error) {
       toast.error(
@@ -95,6 +106,23 @@ function PageImageUploadField({
       );
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function handleRemove() {
+    if (!imageUrl || isDeleting) return;
+    try {
+      setIsDeleting(true);
+      if (imageUrl !== originalImageUrl) {
+        await deleteFile({ url: imageUrl });
+      }
+      onChange("");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "حذف تصویر انجام نشد.",
+      );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -129,7 +157,7 @@ function PageImageUploadField({
           type="file"
           accept="image/*"
           className="hidden"
-          disabled={isUploading}
+          disabled={isUploading || isDeleting}
           onChange={(event) => {
             void handleFile(event.target.files?.[0]);
             event.target.value = "";
@@ -146,8 +174,8 @@ function PageImageUploadField({
         {imageUrl && (
           <button
             type="button"
-            disabled={isUploading}
-            onClick={() => onChange("")}
+            disabled={isUploading || isDeleting}
+            onClick={() => void handleRemove()}
             className="shrink-0 text-xs font-bold text-red-500 transition hover:text-red-600 disabled:opacity-50"
           >
             حذف تصویر
@@ -252,9 +280,10 @@ function buildColumns(
       key: "logo",
       label: "لوگو",
       copyable: false,
-      renderFormField: ({ value, onChange }) => (
+      renderFormField: ({ value, originalValue, onChange }) => (
         <PageImageUploadField
           value={value}
+          originalValue={originalValue}
           label="لوگوی صفحه"
           onChange={onChange}
         />
@@ -290,9 +319,10 @@ function buildColumns(
       label: "فاوآیکون",
       copyable: false,
       hideOnMobile: true,
-      renderFormField: ({ value, onChange }) => (
+      renderFormField: ({ value, originalValue, onChange }) => (
         <PageImageUploadField
           value={value}
+          originalValue={originalValue}
           label="فاوآیکون صفحه"
           onChange={onChange}
         />
@@ -705,17 +735,65 @@ export default function PagesSection({
       return;
     }
 
+    const currentUrl = kind === "logo" ? brandingLogo : brandingFavicon;
+    const originalUrl =
+      typeof brandingPage?.[kind] === "string" ? brandingPage[kind] : "";
+
     try {
       setUploadingBranding(kind);
       const uploaded = await uploadFile(file);
       if (kind === "logo") setBrandingLogo(uploaded.url);
       else setBrandingFavicon(uploaded.url);
+      if (currentUrl && currentUrl !== originalUrl) {
+        deleteFile({ url: currentUrl }).catch(() => {
+          console.warn("Temporary branding image cleanup failed.");
+        });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "آپلود تصویر انجام نشد.",
       );
     } finally {
       setUploadingBranding(null);
+    }
+  }
+
+  async function removeBrandingImage(kind: "logo" | "favicon") {
+    const currentUrl = kind === "logo" ? brandingLogo : brandingFavicon;
+    const originalUrl =
+      typeof brandingPage?.[kind] === "string" ? brandingPage[kind] : "";
+    if (!currentUrl) return;
+
+    try {
+      if (currentUrl !== originalUrl) {
+        await deleteFile({ url: currentUrl });
+      }
+      if (kind === "logo") setBrandingLogo("");
+      else setBrandingFavicon("");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "حذف تصویر انجام نشد.",
+      );
+    }
+  }
+
+  function closeBrandingModal() {
+    const originalLogo =
+      typeof brandingPage?.logo === "string" ? brandingPage.logo : "";
+    const originalFavicon =
+      typeof brandingPage?.favicon === "string" ? brandingPage.favicon : "";
+    const pendingUrls = [
+      brandingLogo && brandingLogo !== originalLogo ? brandingLogo : "",
+      brandingFavicon && brandingFavicon !== originalFavicon
+        ? brandingFavicon
+        : "",
+    ].filter(Boolean);
+
+    setBrandingPage(null);
+    for (const url of new Set(pendingUrls)) {
+      deleteFile({ url }).catch(() => {
+        console.warn("Discarded branding image cleanup failed.");
+      });
     }
   }
 
@@ -750,6 +828,31 @@ export default function PagesSection({
       );
     } finally {
       setSavingBranding(false);
+    }
+  }
+
+  async function cleanupDiscardedPageImages(
+    item: Partial<AdminPageRow>,
+    original: AdminPageRow | null,
+  ) {
+    const originalLogo =
+      typeof original?.logo === "string" ? original.logo : "";
+    const originalFavicon =
+      typeof original?.favicon === "string" ? original.favicon : "";
+    const pendingUrls = [
+      typeof item.logo === "string" && item.logo !== originalLogo
+        ? item.logo
+        : "",
+      typeof item.favicon === "string" && item.favicon !== originalFavicon
+        ? item.favicon
+        : "",
+    ].filter(Boolean);
+
+    const results = await Promise.allSettled(
+      [...new Set(pendingUrls)].map((url) => deleteFile({ url })),
+    );
+    if (results.some((result) => result.status === "rejected")) {
+      toast.error("حذف برخی تصاویر لغوشده انجام نشد.");
     }
   }
 
@@ -811,6 +914,7 @@ export default function PagesSection({
       <DynamicTable<AdminPageRow>
         endpoint={`/api/pages?refresh=${refreshToken}`}
         updateMethod="PATCH"
+        onFormDiscard={cleanupDiscardedPageImages}
         onUpdate={async (item, builtInUpdate) => {
           if (!canManageOwners) {
             const {
@@ -969,7 +1073,7 @@ export default function PagesSection({
               !savingBranding &&
               !uploadingBranding
             ) {
-              setBrandingPage(null);
+              closeBrandingModal();
             }
           }}
         >
@@ -1056,11 +1160,7 @@ export default function PagesSection({
                   {item.value && (
                     <button
                       type="button"
-                      onClick={() =>
-                        item.kind === "logo"
-                          ? setBrandingLogo("")
-                          : setBrandingFavicon("")
-                      }
+                      onClick={() => void removeBrandingImage(item.kind)}
                       disabled={Boolean(uploadingBranding)}
                       className="mt-2 text-xs font-bold text-red-500 disabled:opacity-50"
                     >
@@ -1074,7 +1174,7 @@ export default function PagesSection({
             <div className={cn("flex gap-3 border-t p-4", t.divider)}>
               <button
                 type="button"
-                onClick={() => setBrandingPage(null)}
+                onClick={closeBrandingModal}
                 disabled={savingBranding || Boolean(uploadingBranding)}
                 className={cn(
                   "flex-1 rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50",

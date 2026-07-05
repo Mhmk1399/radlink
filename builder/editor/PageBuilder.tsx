@@ -70,6 +70,12 @@ import {
 import { BuilderTour } from "../BuilderTour";
 import { useAccess } from "@/hook/auth/useAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
+import {
+  deleteFile,
+  extractKeyFromUrl,
+  FILE_UPLOADED_EVENT,
+  type FileUploadedEventDetail,
+} from "@/lib/fileUtils";
 
 /* ================================================================== */
 /*  Props                                                              */
@@ -243,6 +249,32 @@ function serializeBuilderSaveState({
     background: { color: backgroundColor, image: backgroundImage },
     blocks,
   });
+}
+
+function collectStorageUrls(snapshot: string) {
+  const urls = new Set<string>();
+
+  function visit(value: unknown) {
+    if (typeof value === "string") {
+      if (extractKeyFromUrl(value)) urls.add(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value && typeof value === "object") {
+      Object.values(value).forEach(visit);
+    }
+  }
+
+  try {
+    visit(JSON.parse(snapshot));
+  } catch {
+    return urls;
+  }
+
+  return urls;
 }
 
 type LeaveBuilderConfirmModalProps = {
@@ -510,6 +542,9 @@ export default function SimplePageBuilder({
   const [isScrolled, setIsScrolled] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingBuilderUploads = useRef(
+    new Map<string, FileUploadedEventDetail>(),
+  );
 
   /* ── Toast & Onboarding ── */
   const toast = useToast();
@@ -519,6 +554,19 @@ export default function SimplePageBuilder({
     can,
     isLoading: isAccessLoading,
   } = useAccess();
+
+  useEffect(() => {
+    const trackBuilderUpload = (event: Event) => {
+      const detail = (event as CustomEvent<FileUploadedEventDetail>).detail;
+      if (!detail?.fileId || !detail.url) return;
+      pendingBuilderUploads.current.set(detail.url, detail);
+    };
+
+    window.addEventListener(FILE_UPLOADED_EVENT, trackBuilderUpload);
+    return () => {
+      window.removeEventListener(FILE_UPLOADED_EVENT, trackBuilderUpload);
+    };
+  }, []);
   const blockLimit =
     saveMode === "template" || isSuperAdmin || !authUser?.limits?.blocks
       ? 0
@@ -1579,6 +1627,55 @@ export default function SimplePageBuilder({
 
     return null;
   }, [blocks.length, pageTitle, pageUrl, saveMode]);
+
+  const reconcileBuilderFiles = useCallback(
+    async (previousSnapshot: string, savedSnapshot: string) => {
+      const previousUrls = collectStorageUrls(previousSnapshot);
+      const savedUrls = collectStorageUrls(savedSnapshot);
+
+      for (const url of previousUrls) {
+        if (savedUrls.has(url)) continue;
+        await deleteFile({ url }).catch((error) => {
+          console.warn("Removed builder asset cleanup failed:", error);
+        });
+      }
+
+      for (const [url, upload] of pendingBuilderUploads.current) {
+        if (savedUrls.has(url)) {
+          pendingBuilderUploads.current.delete(url);
+          continue;
+        }
+
+        await deleteFile({ fileId: upload.fileId })
+          .then(() => {
+            pendingBuilderUploads.current.delete(url);
+          })
+          .catch((error) => {
+            console.warn("Unused builder upload cleanup failed:", error);
+          });
+      }
+    },
+    [],
+  );
+
+  const cleanupUnusedBuilderUploads = useCallback(
+    async (draftSnapshot: string) => {
+      const draftUrls = collectStorageUrls(draftSnapshot);
+
+      for (const [url, upload] of pendingBuilderUploads.current) {
+        if (draftUrls.has(url)) continue;
+        await deleteFile({ fileId: upload.fileId })
+          .then(() => {
+            pendingBuilderUploads.current.delete(url);
+          })
+          .catch((error) => {
+            console.warn("Discarded builder upload cleanup failed:", error);
+          });
+      }
+    },
+    [],
+  );
+
   const saveCurrentDocument = useCallback(async (): Promise<boolean> => {
     setServerSaveError(null);
     setSlugSaveError(null);
@@ -1611,12 +1708,18 @@ export default function SimplePageBuilder({
       return false;
     }
 
+    await reconcileBuilderFiles(
+      lastServerSavedSnapshot,
+      snapshotBeingSaved,
+    );
     setLastServerSavedSnapshot(snapshotBeingSaved);
     setJustSaved(true);
 
     return true;
   }, [
     currentServerSnapshot,
+    lastServerSavedSnapshot,
+    reconcileBuilderFiles,
     saveMode,
     pageUrl,
     toast,
@@ -1684,11 +1787,12 @@ export default function SimplePageBuilder({
     validateBeforeServerSave,
   ]);
 
-  const handleLeaveWithoutSaving = useCallback(() => {
+  const handleLeaveWithoutSaving = useCallback(async () => {
+    await cleanupUnusedBuilderUploads(currentServerSnapshot);
     setLeaveConfirmOpen(false);
     setLeaveAfterMetaSave(false);
     router.push(ADMIN_PATH);
-  }, [router]);
+  }, [cleanupUnusedBuilderUploads, currentServerSnapshot, router]);
   /* ════════════════════════════════════════════ */
   /*  DnD Handlers                                */
   /* ════════════════════════════════════════════ */

@@ -36,6 +36,7 @@ export interface ColumnDef<T> {
     /** Render a custom create/edit control while keeping DynamicTable form state. */
     renderFormField?: (props: {
         value: unknown;
+        originalValue?: unknown;
         onChange: (value: unknown) => void;
         error?: string;
         formData: Partial<T>;
@@ -56,10 +57,16 @@ export interface DynamicTableProps<T extends object> {
     onUpdate?: (
         item: T,
         builtInUpdate: (item: T) => Promise<T | void>,
+        original: T,
     ) => Promise<void> | void;
     onDelete?: (
         item: T,
         builtInRemove: (item: T) => Promise<void>,
+    ) => Promise<void> | void;
+    onFormDiscard?: (
+        item: Partial<T>,
+        original: T | null,
+        mode: "create" | "edit",
     ) => Promise<void> | void;
 
     canCreate?: boolean;

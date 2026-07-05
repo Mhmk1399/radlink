@@ -5,9 +5,9 @@ import { AuthRequest } from "@/lib/auth/types";
 import Product from "@/models/products";
 import mongoose from "mongoose";
 import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { deleteFileByIdentifier } from "@/lib/fileDeletion";
 import "@/models/users";
 import "@/models/pages";
-import "@/models/files";
 import File from "@/models/files";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -76,7 +76,9 @@ export const PATCH = compose(
         return NextResponse.json({ message: "شناسه محصول معتبر نیست." }, { status: 400 });
     }
     const body = await req.json();
-    const current = await Product.findById(id).select("owner").lean();
+    const current = await Product.findById(id)
+        .select("owner image imageFile")
+        .lean();
     if (!current) {
         return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
     }
@@ -122,6 +124,25 @@ export const PATCH = compose(
         { new: true, runValidators: true },
     );
     if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
+
+    if (
+        "image" in updates &&
+        normalizeImage(current.image) !== normalizeImage(updates.image)
+    ) {
+        const identifier = current.imageFile
+            ? { fileId: String(current.imageFile) }
+            : current.image
+              ? { url: String(current.image) }
+              : null;
+        if (identifier) {
+            await deleteFileByIdentifier(identifier, req.ctx.user!).catch(
+                (error) => {
+                    console.error("Previous product image cleanup failed:", error);
+                },
+            );
+        }
+    }
+
     return NextResponse.json({ product });
 });
 
@@ -135,7 +156,9 @@ export const DELETE = compose(
     if (invalidProductId(id)) {
         return NextResponse.json({ message: "شناسه محصول معتبر نیست." }, { status: 400 });
     }
-    const current = await Product.findById(id).select("owner").lean();
+    const current = await Product.findById(id)
+        .select("owner image imageFile")
+        .lean();
     if (!current) {
         return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
     }
@@ -147,5 +170,18 @@ export const DELETE = compose(
     }
     const product = await Product.findByIdAndDelete(id);
     if (!product) return NextResponse.json({ message: "محصول پیدا نشد." }, { status: 404 });
+    const identifier = current.imageFile
+        ? { fileId: String(current.imageFile) }
+        : current.image
+          ? { url: String(current.image) }
+          : null;
+    if (identifier) {
+        await deleteFileByIdentifier(identifier, req.ctx.user!).catch(
+            (error) => {
+                console.error("Deleted product image cleanup failed:", error);
+            },
+        );
+    }
+
     return NextResponse.json({ message: "محصول حذف شد." });
 });
