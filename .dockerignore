@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env*
+!.env.example
+node_modules
+.next
+out
+build
+coverage
+*.log
+*.pem
+.DS_Store
+README.md
+docs/
+graphify-out/
+public/uploads/
