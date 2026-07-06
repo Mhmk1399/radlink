@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import {
   cn,
   backgrounds,
   gradients,
   borders,
-  shadows,
   typography,
   layout,
   animation,
@@ -17,7 +17,9 @@ import {
 } from "@/lib/design/design-system";
 
 /* ──────────────────────────────────────────────
-   SHARED BG
+   SHARED BG — static, one orb, desktop only.
+   (Animated blur-3xl orbs re-run the GPU filter
+   every frame — main source of scroll lag.)
    ────────────────────────────────────────────── */
 
 function SectionBackground() {
@@ -31,16 +33,8 @@ function SectionBackground() {
       />
       <div
         className={cn(
-          "absolute right-0 top-1/3 h-64 w-64 rounded-full blur-3xl",
+          "absolute right-0 top-1/3 hidden h-56 w-56 rounded-full blur-2xl lg:block",
           backgrounds.glow.skyOrb,
-          animation.classes.floatSlow,
-        )}
-      />
-      <div
-        className={cn(
-          "absolute bottom-0 left-0 h-64 w-64 rounded-full blur-3xl",
-          backgrounds.glow.blueOrb,
-          animation.classes.floatMedium,
         )}
       />
       <div className={cn("absolute inset-0", backgrounds.grid.lines)} />
@@ -243,16 +237,15 @@ function AudienceCardComponent({
         "hover:shadow-[0_30px_60px_-25px]",
       )}
     >
+      {/* Corner glow — smaller blur, opacity-only */}
       <div
         className={cn(
-          "pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full blur-3xl",
+          "pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl",
           tokens.glow,
           "opacity-0 group-hover:opacity-100",
           animation.opacity,
         )}
       />
-
-   
 
       <div
         className={cn(
@@ -286,18 +279,12 @@ function AudienceCardComponent({
         {item.description}
       </p>
 
-      <div
-        className={cn(
-          "mt-5 flex items-center gap-2",
-          typography.link,
-          animation.base,
-        )}
-      >
+      <div className={cn("mt-5 flex items-center gap-2", typography.link)}>
         <span>مناسب برای این گروه</span>
         <ArrowIcon
           className={cn(
             "-scale-x-100",
-            animation.transform,
+            "transition-transform duration-200",
             "group-hover:-translate-x-1",
           )}
         />
@@ -329,41 +316,34 @@ function StepCard({
         className={cn(
           animation.classes.fadeUp,
           "group relative flex h-full w-full flex-col overflow-hidden",
-          // همه کارت‌ها هم‌ارتفاع
           "min-h-55",
-          // Shape
           "rounded-3xl border p-6 sm:p-7",
-          // Colors
           borders.subtle,
           backgrounds.surface.card,
-          // Transitions
-          "transition-all duration-300",
-          "hover:border-white/12 hover:-translate-y-1",
+          "transition-[border-color,transform,box-shadow] duration-300",
+          "hover:-translate-y-1 hover:border-white/12",
           "hover:shadow-[0_24px_50px_-20px_rgba(0,0,0,0.6)]",
         )}
         style={{ animationDelay: `${index * 0.12 + 0.15}s` }}
       >
-        {/* Corner glow */}
+        {/* Corner glow — smaller blur, opacity-only */}
         <div
           className={cn(
-            "pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl",
+            "pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl",
             t.glow,
             "opacity-0 group-hover:opacity-100",
             animation.opacity,
           )}
         />
 
-      
-
         {/* ── Header row: Number + Icon ── */}
         <div className="relative flex items-center justify-between">
-          {/* Step number badge */}
           <div
             className={cn(
               "flex h-10 w-10 items-center justify-center rounded-2xl border",
               t.border,
               t.bg,
-              "transition-all duration-300 group-hover:scale-105",
+              "transition-transform duration-300 group-hover:scale-105",
             )}
           >
             <span className={cn("text-base font-black", t.text)}>
@@ -371,7 +351,6 @@ function StepCard({
             </span>
           </div>
 
-          {/* Icon */}
           <div
             className={cn(
               "flex h-12 w-12 items-center justify-center rounded-2xl border p-0.5",
@@ -379,7 +358,7 @@ function StepCard({
               t.gradient,
               borders.light,
               "shadow-lg",
-              "transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl",
+              "transition-transform duration-300 group-hover:scale-105",
             )}
           >
             <div
@@ -394,34 +373,28 @@ function StepCard({
         </div>
 
         {/* ── Title ── */}
-        <h3 className={cn("mt-5 text-lg font-bold text-white sm:text-xl")}>
+        <h3 className="mt-5 text-lg font-bold text-white sm:text-xl">
           {step.title}
         </h3>
 
-        {/* ── Description — flex-1 برای هم‌ارتفاعی ── */}
-        <p
-          className={cn(
-            "mt-2.5 flex-1 text-[13px] leading-6 text-slate-300/80 sm:text-sm sm:leading-7",
-          )}
-        >
+        {/* ── Description ── */}
+        <p className="mt-2.5 flex-1 text-[13px] leading-6 text-slate-300/80 sm:text-sm sm:leading-7">
           {step.text}
         </p>
 
         {/* ── Bottom indicator ── */}
         <div className="mt-5 flex items-center gap-2">
-          {/* Progress dots */}
+          {/* Progress dots — the old runtime-built shadow class
+              (t.dot.replace("bg-","shadow-")) never compiled in
+              Tailwind; a static ring renders the same halo */}
           <div className="flex items-center gap-1.5">
             {steps.map((_, di) => (
               <div
                 key={di}
                 className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
+                  "h-1.5 rounded-full",
                   di === index
-                    ? cn(
-                        "w-5",
-                        t.dot,
-                        `shadow-[0_0_6px] ${t.dot.replace("bg-", "shadow-")}`,
-                      )
+                    ? cn("w-5", t.dot, "ring-2 ring-white/10")
                     : di < index
                       ? "w-1.5 bg-white/20"
                       : "w-1.5 bg-white/8",
@@ -430,31 +403,23 @@ function StepCard({
             ))}
           </div>
 
-          {/* Step label */}
           <span
-            className={cn(
-              "mr-auto text-[10px] font-medium",
-              t.text,
-              "opacity-60",
-            )}
+            className={cn("mr-auto text-[10px] font-medium opacity-60", t.text)}
           >
             مرحله {stepNum} از {toPersian(steps.length)}
           </span>
         </div>
       </article>
 
-      {/* ── Connector — خط اتصال بین کارت‌ها ── */}
+      {/* ── Connectors —
+          the old `from-${step.color}-400/30` classes were built at
+          runtime, so Tailwind never generated them and the gradient
+          lines were invisible; replaced with static classes ── */}
       {!isLast && (
         <>
           {/* Mobile: vertical */}
           <div className="flex flex-col items-center py-2 lg:hidden">
-            <div
-              className={cn(
-                "h-6 w-px bg-linear-to-b",
-                `from-${step.color}-400/30`,
-                "to-transparent",
-              )}
-            />
+            <div className="h-6 w-px bg-linear-to-b from-white/20 to-transparent" />
             <div
               className={cn(
                 "flex h-6 w-6 items-center justify-center rounded-full border",
@@ -474,23 +439,12 @@ function StepCard({
                 />
               </svg>
             </div>
-            <div
-              className={cn(
-                "h-6 w-px bg-linear-to-b from-transparent",
-                `to-${steps[index + 1].color}-400/30`,
-              )}
-            />
+            <div className="h-6 w-px bg-linear-to-b from-transparent to-white/20" />
           </div>
 
           {/* Desktop: horizontal — positioned between cards */}
-          <div className="pointer-events-none absolute left-0 top-1/2 hidden -translate-x-full -translate-y-1/2 lg:flex items-center px-1">
-            <div
-              className={cn(
-                "h-px w-4 bg-linear-to-r",
-                `from-${step.color}-400/25`,
-                "to-transparent",
-              )}
-            />
+          <div className="pointer-events-none absolute left-0 top-1/2 hidden -translate-x-full -translate-y-1/2 items-center px-1 lg:flex">
+            <div className="h-px w-4 bg-linear-to-r from-white/15 to-transparent" />
             <div
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded-full border",
@@ -501,7 +455,7 @@ function StepCard({
               <svg
                 viewBox="0 0 16 16"
                 fill="currentColor"
-                className="h-3 w-3 text-slate-500 -scale-x-100"
+                className="h-3 w-3 -scale-x-100 text-slate-500"
               >
                 <path
                   fillRule="evenodd"
@@ -510,12 +464,7 @@ function StepCard({
                 />
               </svg>
             </div>
-            <div
-              className={cn(
-                "h-px w-4 bg-linear-to-l from-transparent",
-                `to-${steps[index + 1]?.color || step.color}-400/25`,
-              )}
-            />
+            <div className="h-px w-4 bg-linear-to-l from-transparent to-white/15" />
           </div>
         </>
       )}
@@ -535,7 +484,11 @@ export function TargetAudienceSection() {
       <section
         id="use-cases"
         dir="rtl"
-        className={cn("relative overflow-hidden", layout.section)}
+        className={cn(
+          "relative overflow-hidden",
+          layout.section,
+          "[content-visibility:auto] [contain-intrinsic-size:auto_1000px]",
+        )}
       >
         <SectionBackground />
 
@@ -612,7 +565,11 @@ export function HowItWorksSection() {
       <section
         id="how-it-works"
         dir="rtl"
-        className={cn("relative overflow-hidden", layout.section)}
+        className={cn(
+          "relative overflow-hidden",
+          layout.section,
+          "[content-visibility:auto] [contain-intrinsic-size:auto_1100px]",
+        )}
       >
         <SectionBackground />
 
@@ -669,15 +626,13 @@ export function HowItWorksSection() {
           {/* ── Steps timeline ── */}
           <div className="mx-auto mt-12 max-w-5xl sm:mt-14 lg:mt-16">
             {/* Desktop: top progress bar */}
-            <div className="hidden lg:block mb-8">
+            <div className="mb-8 hidden lg:block">
               <div className="relative mx-auto max-w-2xl">
-                {/* Track */}
                 <div className="h-1 rounded-full bg-white/6" />
-
-                {/* Filled */}
                 <div className="absolute inset-y-0 right-0 w-full rounded-full bg-linear-to-l from-sky-400/30 via-cyan-400/20 to-emerald-400/30" />
 
-                {/* Dots */}
+                {/* Dots — static ring instead of the broken
+                    runtime-built shadow class */}
                 <div className="absolute inset-y-0 right-0 flex w-full items-center justify-between">
                   {steps.map((step, i) => {
                     const t = accentTokens[step.color];
@@ -690,10 +645,8 @@ export function HowItWorksSection() {
                           className={cn(
                             "flex h-8 w-8 items-center justify-center rounded-full border-2",
                             t.border,
-                            t.bg,
                             "bg-[#060e1b]",
-                            `shadow-[0_0_12px] ${t.dot.replace("bg-", "shadow-")}`,
-                            "transition-all duration-300",
+                            "ring-4 ring-white/5",
                           )}
                         >
                           <span className={cn("text-xs font-bold", t.text)}>
@@ -702,9 +655,8 @@ export function HowItWorksSection() {
                         </div>
                         <span
                           className={cn(
-                            "mt-2 text-[10px] font-medium",
+                            "mt-2 text-[10px] font-medium opacity-50",
                             t.text,
-                            "opacity-50",
                           )}
                         >
                           {step.title}
@@ -744,7 +696,6 @@ export function HowItWorksSection() {
                 backgrounds.surface.glassMedium,
               )}
             >
-              {/* Completion badge */}
               <div
                 className={cn(
                   "flex h-12 w-12 items-center justify-center rounded-2xl border",
@@ -774,18 +725,17 @@ export function HowItWorksSection() {
                 </p>
               </div>
 
-              <a
+              <Link
                 href="/auth"
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold",
-                  "border",
+                  "inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-bold",
                   accentTokens.emerald.border,
                   accentTokens.emerald.bg,
                   accentTokens.emerald.text,
-                  "transition-all duration-200",
+                  "transition-[filter,transform] duration-200",
                   "hover:brightness-125",
                   "active:scale-[0.96]",
-                 )}
+                )}
               >
                 <span>ساخت حساب رایگان</span>
                 <svg
@@ -799,7 +749,7 @@ export function HowItWorksSection() {
                     clipRule="evenodd"
                   />
                 </svg>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

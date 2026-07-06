@@ -6,7 +6,7 @@ import {
   backgrounds,
   gradients,
   borders,
-   typography,
+  typography,
   layout,
   animation,
   focus,
@@ -18,16 +18,25 @@ import {
 } from "@/lib/design/design-system";
 
 /* ══════════════════════════════════════════════
-   KEYFRAMES
+   KEYFRAMES — trimmed to only what's used,
+   transform/opacity only, reduced-motion aware.
+   (blocks-morph animated border-radius and
+   blocks-card-glow animated box-shadow — both
+   trigger paint every frame; they were unused
+   and are now removed.)
    ══════════════════════════════════════════════ */
 
 const blocksKeyframes = `
-@keyframes blocks-morph{0%{border-radius:16px}50%{border-radius:20px}100%{border-radius:16px}}
-@keyframes blocks-slide-in{0%{opacity:0;transform:translateY(16px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes blocks-phone-float{0%,100%{transform:translateY(0) rotate(0deg)}33%{transform:translateY(-10px) rotate(.5deg)}66%{transform:translateY(-6px) rotate(-.5deg)}}
-@keyframes blocks-card-glow{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}50%{box-shadow:0 0 20px -4px var(--glow-color)}}
-.blocks-slide-in{animation:blocks-slide-in .5s cubic-bezier(.22,1,.36,1) both}
-.blocks-phone-float{animation:blocks-phone-float 8s ease-in-out infinite}
+@keyframes blocks-slide-in{0%{opacity:0;transform:translateY(12px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes blocks-phone-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.blocks-slide-in{animation:blocks-slide-in .4s cubic-bezier(.22,1,.36,1) both}
+.blocks-phone-float{animation:blocks-phone-float 8s ease-in-out infinite;will-change:transform}
+@media (prefers-reduced-motion: reduce){
+  .blocks-slide-in,.blocks-phone-float{animation:none}
+}
+@media (max-width: 1023px){
+  .blocks-phone-float{animation:none}
+}
 `;
 
 /* ══════════════════════════════════════════════
@@ -245,12 +254,12 @@ const blockItems: BlockItem[] = [
 ];
 
 /* ══════════════════════════════════════════════
-   SECTION BG
+   SECTION BG — static, one orb, desktop only
    ══════════════════════════════════════════════ */
 
 function SectionBackground() {
   return (
-    <div className="pointer-events-none absolute inset-0"> 
+    <div className="pointer-events-none absolute inset-0">
       <div
         className={cn(
           "absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
@@ -259,16 +268,8 @@ function SectionBackground() {
       />
       <div
         className={cn(
-          "absolute right-0 top-1/3 h-64 w-64 rounded-full blur-3xl",
+          "absolute right-0 top-1/3 hidden h-56 w-56 rounded-full blur-2xl lg:block",
           backgrounds.glow.skyOrb,
-          animation.classes.floatSlow,
-        )}
-      />
-      <div
-        className={cn(
-          "absolute bottom-0 left-0 h-64 w-64 rounded-full blur-3xl",
-          backgrounds.glow.blueOrb,
-          animation.classes.floatMedium,
         )}
       />
       <div className={cn("absolute inset-0", backgrounds.grid.lines)} />
@@ -283,11 +284,20 @@ function SectionBackground() {
 }
 
 /* ══════════════════════════════════════════════
-   PHONE MOCKUP
+   PHONE MOCKUP — now mirrors the filtered list,
+   so the highlighted row always matches the
+   card the visitor selected.
    ══════════════════════════════════════════════ */
 
-function PhoneMockup({ activeBlock }: { activeBlock: number }) {
-  const preview = blockItems.slice(0, 5);
+function PhoneMockup({
+  blocks,
+  activeBlock,
+}: {
+  blocks: BlockItem[];
+  activeBlock: number;
+}) {
+  const preview = blocks.slice(0, 5);
+  const activeIndex = preview.length > 0 ? activeBlock % preview.length : -1;
 
   return (
     <div className="relative mx-auto w-60 sm:w-65 md:w-67.5 lg:w-70">
@@ -337,12 +347,12 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
           <div className="space-y-1.5 p-3 pt-2">
             {preview.map((block, i) => {
               const t = accentTokens[block.color];
-              const isActive = i === activeBlock % preview.length;
+              const isActive = i === activeIndex;
               return (
                 <div
-                  key={block.title} 
+                  key={block.title}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-all duration-300",
+                    "flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors duration-300",
                     isActive
                       ? cn(t.border, t.bg, "shadow-md")
                       : "border-white/5 bg-white/2",
@@ -350,10 +360,10 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
                 >
                   <div
                     className={cn(
-                      "flex flex-col gap-0.5 transition-opacity",
+                      "flex flex-col gap-0.5 transition-opacity duration-300",
                       isActive ? "opacity-70" : "opacity-20",
                     )}
-                  > 
+                  >
                     {[0, 1].map((r) => (
                       <div key={r} className="flex gap-0.5">
                         <div className="h-0.5 w-0.5 rounded-full bg-slate-400" />
@@ -363,17 +373,15 @@ function PhoneMockup({ activeBlock }: { activeBlock: number }) {
                   </div>
                   <div
                     className={cn(
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded",
-                      isActive
-                        ? cn(t.bg, t.text)
-                        : "bg-white/4 text-slate-500",
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors duration-300",
+                      isActive ? cn(t.bg, t.text) : "bg-white/4 text-slate-500",
                     )}
                   >
                     <div className="scale-[0.6]">{block.icon}</div>
                   </div>
                   <span
                     className={cn(
-                      "text-[10px] font-medium",
+                      "text-[10px] font-medium transition-colors duration-300",
                       isActive ? "text-white" : "text-slate-400",
                     )}
                   >
@@ -435,22 +443,19 @@ function BlockCard({
       onClick={onActivate}
       onMouseEnter={onActivate}
       onFocus={onActivate}
+      aria-pressed={isActive}
       className={cn(
         "blocks-slide-in group relative flex items-center gap-3 overflow-hidden text-right",
-        // Padding ریسپانسیو
         "p-3 sm:p-3.5 md:p-4",
-        // Shape
-        "rounded-xl sm:rounded-2xl border",
-        // Transitions
-        "transition-all duration-300 touch-manipulation",
+        "rounded-xl border sm:rounded-2xl",
+        "touch-manipulation transition-colors duration-200",
         focus.ring,
         "active:scale-[0.98]",
-        // Active vs default
         isActive
           ? cn(
               t.border,
               "bg-linear-to-r from-white/6 to-white/2",
-              "shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]", 
+              "shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]",
             )
           : cn(
               borders.subtle,
@@ -460,7 +465,7 @@ function BlockCard({
       )}
       style={{ animationDelay: `${Math.min(index * 0.03 + 0.1, 0.5)}s` }}
     >
-      {/* Glow */}
+      {/* Glow — opacity-only toggle */}
       <div
         className={cn(
           "pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl transition-opacity duration-500",
@@ -481,7 +486,8 @@ function BlockCard({
       {/* Icon */}
       <div
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all duration-300",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
+          "transition-[color,background-color,border-color,transform] duration-300",
           isActive
             ? cn(t.border, t.bg, t.text, "scale-105")
             : "border-white/8 bg-white/3 text-slate-500 group-hover:text-slate-300",
@@ -512,17 +518,14 @@ function BlockCard({
         </p>
       </div>
 
-      {/* Active dot */}
+      {/* Active dot — the old runtime shadow class
+          (t.dot.replace("bg-","shadow-")) never compiled in
+          Tailwind; a static ring gives the same halo */}
       <div
         className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-300",
-          isActive
-            ? cn(
-                t.dot,
-                `shadow-[0_0_8px] ${t.dot.replace("bg-", "shadow-")}`,
-                "scale-100",
-              )
-            : "scale-0",
+          "h-1.5 w-1.5 shrink-0 rounded-full transition-transform duration-300",
+          t.dot,
+          isActive ? "scale-100 ring-4 ring-white/10" : "scale-0",
         )}
       />
     </button>
@@ -542,13 +545,42 @@ const categories = [
 ];
 
 /* ══════════════════════════════════════════════
+   IN-VIEW HOOK — pauses work when off-screen
+   ══════════════════════════════════════════════ */
+
+function useInView<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, inView };
+}
+
+/* ══════════════════════════════════════════════
    MAIN SECTION
    ══════════════════════════════════════════════ */
+
+const AUTO_CYCLE_MS = 3000;
+const INTERACTION_PAUSE_MS = 8000;
 
 export function BlocksSection() {
   const [activeBlock, setActiveBlock] = useState(0);
   const [activeCategory, setActiveCategory] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [userPaused, setUserPaused] = useState(false);
+  const pauseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const { ref: sectionRef, inView } = useInView<HTMLElement>();
 
   const filteredBlocks =
     activeCategory === 0
@@ -557,13 +589,38 @@ export function BlocksSection() {
           categories[activeCategory].filter?.includes(b.color),
         );
 
-  // Auto-cycle active block
+  /* User interaction wins over the auto-cycle: activating a
+     card pauses cycling for a while so the selection doesn't
+     jump away from under the visitor's cursor. */
+  const activateBlock = (index: number) => {
+    setActiveBlock(index);
+    setUserPaused(true);
+    clearTimeout(pauseTimer.current);
+    pauseTimer.current = setTimeout(
+      () => setUserPaused(false),
+      INTERACTION_PAUSE_MS,
+    );
+  };
+
+  useEffect(() => () => clearTimeout(pauseTimer.current), []);
+
+  /* Auto-cycle: only while the section is on screen, only when
+     the user isn't interacting, never for reduced-motion users.
+     The old version ticked every 3s forever — re-rendering all
+     12 cards + the phone even when the section wasn't visible. */
   useEffect(() => {
+    if (!inView || userPaused) return;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+
     const id = setInterval(() => {
       setActiveBlock((prev) => (prev + 1) % filteredBlocks.length);
-    }, 3000);
+    }, AUTO_CYCLE_MS);
     return () => clearInterval(id);
-  }, [filteredBlocks.length]);
+  }, [inView, userPaused, filteredBlocks.length]);
 
   return (
     <>
@@ -573,7 +630,12 @@ export function BlocksSection() {
       <section
         id="blocks"
         dir="rtl"
-        className={cn("relative overflow-hidden", layout.section)}
+        ref={sectionRef}
+        className={cn(
+          "relative overflow-hidden",
+          layout.section,
+          "[content-visibility:auto] [contain-intrinsic-size:auto_1400px]",
+        )}
       >
         <SectionBackground />
 
@@ -633,9 +695,10 @@ export function BlocksSection() {
             )}
           >
             <div
-              ref={scrollRef}
+              role="tablist"
+              aria-label="دسته‌بندی بلوک‌ها"
               className={cn(
-                "flex items-center gap-1 overflow-x-auto rounded-full border p-1 scrollbar-none",
+                "flex max-w-full items-center gap-1 overflow-x-auto rounded-full border p-1 scrollbar-none",
                 borders.subtle,
                 backgrounds.surface.glassMedium,
               )}
@@ -643,19 +706,23 @@ export function BlocksSection() {
               {categories.map((cat, i) => (
                 <button
                   key={cat.label}
+                  role="tab"
+                  aria-selected={i === activeCategory}
                   onClick={() => {
                     setActiveCategory(i);
                     setActiveBlock(0);
                   }}
                   className={cn(
-                    "whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 touch-manipulation",
+                    "whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium",
+                    "touch-manipulation transition-colors duration-200",
+                    focus.ring,
                     i === activeCategory
                       ? cn(
                           accentTokens.sky.bg,
                           accentTokens.sky.border,
                           "border text-sky-200",
                         )
-                      : "text-slate-400 hover:text-white hover:bg-white/4",
+                      : "text-slate-400 hover:bg-white/4 hover:text-white",
                   )}
                 >
                   {cat.label}
@@ -665,14 +732,9 @@ export function BlocksSection() {
           </div>
 
           {/* ── Content: Grid + Phone ── */}
-          <div
-            className={cn(
-              "mt-10 flex flex-col items-center gap-8 sm:mt-12 lg:mt-14 lg:flex-row lg:items-start lg:gap-10",
-            )}
-          >
+          <div className="mt-10 flex flex-col items-center gap-8 sm:mt-12 lg:mt-14 lg:flex-row lg:items-start lg:gap-10">
             {/* Block cards */}
-            <div className="w-full flex-1 order-2 lg:order-1">
-              {/* Grid ریسپانسیو: 1 col mobile → 2 col tablet → 2 col desktop */}
+            <div className="order-2 w-full flex-1 lg:order-1">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
                 {filteredBlocks.map((block, i) => (
                   <BlockCard
@@ -680,7 +742,7 @@ export function BlocksSection() {
                     block={block}
                     index={i}
                     isActive={i === activeBlock}
-                    onActivate={() => setActiveBlock(i)}
+                    onActivate={() => activateBlock(i)}
                   />
                 ))}
               </div>
@@ -717,16 +779,17 @@ export function BlocksSection() {
               </div>
             </div>
 
-            {/* Phone mockup */}
+            {/* Phone mockup — float only on lg (disabled in the
+                keyframe CSS for mobile + reduced motion) */}
             <div
               className={cn(
                 animation.classes.fadeUp,
                 animDelay(3),
-                "shrink-0 order-1 lg:sticky lg:top-28 lg:order-2",
+                "order-1 shrink-0 lg:sticky lg:top-28 lg:order-2",
                 "blocks-phone-float",
               )}
             >
-              <PhoneMockup activeBlock={activeBlock} />
+              <PhoneMockup blocks={filteredBlocks} activeBlock={activeBlock} />
             </div>
           </div>
         </div>

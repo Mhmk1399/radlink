@@ -415,6 +415,8 @@ function DashboardMockup() {
    DASHBOARD SECTION
    ────────────────────────────────────────────── */
 
+
+   
 export function DashboardSection() {
   return (
     <>

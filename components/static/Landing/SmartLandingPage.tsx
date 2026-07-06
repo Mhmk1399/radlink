@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   cn,
   backgrounds,
@@ -153,7 +153,13 @@ const problemItems: ProblemItem[] = [
    2 ─ SHARED COMPONENTS
    ────────────────────────────────────────────── */
 
-/** Hero-style background — reused across sections */
+/**
+ * Section background — perf-tuned.
+ * blur-3xl layers are the #1 lag source on this page:
+ * every animated blurred orb forces expensive GPU filter
+ * repaints. So: fewer orbs, NO animation on blurred
+ * elements, and orbs only render on lg+ screens.
+ */
 function SectionBackground({
   variant = "default",
 }: {
@@ -161,26 +167,18 @@ function SectionBackground({
 }) {
   return (
     <div className="pointer-events-none absolute inset-0">
-      {/* Large center glow */}
+      {/* Large center glow — static */}
       <div
         className={cn(
           "absolute left-1/2 top-0 h-150 w-200 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl",
           backgrounds.glow.hero,
         )}
       />
-      {/* Side orbs */}
+      {/* Single static side orb, desktop only */}
       <div
         className={cn(
-          "absolute right-0 top-1/3 h-64 w-64 rounded-full blur-3xl",
+          "absolute right-0 top-1/3 hidden h-56 w-56 rounded-full blur-2xl lg:block",
           backgrounds.glow.skyOrb,
-          animation.classes.floatSlow,
-        )}
-      />
-      <div
-        className={cn(
-          "absolute bottom-0 left-0 h-64 w-64 rounded-full blur-3xl",
-          backgrounds.glow.blueOrb,
-          animation.classes.floatMedium,
         )}
       />
       {/* Grid pattern */}
@@ -216,23 +214,68 @@ function ArrowIcon({ className }: { className?: string }) {
 }
 
 /* ──────────────────────────────────────────────
-   3 ─ ANIMATED COUNTER HOOK
+   3 ─ HOOKS: in-view trigger + rAF counter
    ────────────────────────────────────────────── */
 
-function useCounter(end: number, duration = 2000) {
-  const [count, setCount] = useState(0);
+/** Fires once when the element scrolls into view. */
+function useInViewOnce<T extends HTMLElement>(threshold = 0.35) {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
   useEffect(() => {
-    let start = 0;
-    const step = Math.ceil(end / (duration / 16));
-    const id = setInterval(() => {
-      start += step;
-      if (start >= end) {
-        setCount(end);
-        clearInterval(id);
-      } else setCount(start);
-    }, 16);
-    return () => clearInterval(id);
-  }, [end, duration]);
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return { ref, inView };
+}
+
+/**
+ * Counter on requestAnimationFrame with ease-out —
+ * replaces the old setInterval(16ms) version that
+ * forced ~60 React re-renders/sec even off-screen.
+ * Only runs once `start` is true, jumps straight to
+ * the final value for reduced-motion users.
+ */
+function useCounter(end: number, duration = 1600, start = false) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!start) return;
+
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setCount(end);
+      return;
+    }
+
+    let raf = 0;
+    const t0 = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - t0) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setCount(Math.round(end * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [end, duration, start]);
+
   return count;
 }
 
@@ -241,17 +284,18 @@ function useCounter(end: number, duration = 2000) {
    ────────────────────────────────────────────── */
 
 function PhoneMockup() {
-  const visitors = useCounter(2847, 2200);
-  const clicks = useCounter(1463, 2400);
+  const { ref, inView } = useInViewOnce<HTMLDivElement>(0.4);
+  const visitors = useCounter(2847, 1600, inView);
+  const clicks = useCounter(1463, 1800, inView);
 
   return (
-    <div className="relative mx-auto w-65 sm:w-70 lg:w-75">
-      {/* Outer glow */}
+    <div ref={ref} className="relative mx-auto w-65 sm:w-70 lg:w-75">
+      {/* Outer glow — static (the old pulse animated a blur-2xl
+          layer every frame, one of the main lag sources) */}
       <div
         className={cn(
           "absolute -inset-6 rounded-[3rem] blur-2xl",
           "bg-linear-to-b from-sky-400/20 via-blue-500/10 to-transparent",
-          "s-pulse-glow",
         )}
       />
 
@@ -289,7 +333,7 @@ function PhoneMockup() {
             </div>
 
             {/* Link items */}
-            {["وب‌سایت اصلی", "اینستاگرام", "تماس با ما"].map((t, i) => (
+            {["وب‌سایت اصلی", "اینستاگرام", "تماس با ما"].map((t) => (
               <div
                 key={t}
                 className={cn(
@@ -297,20 +341,19 @@ function PhoneMockup() {
                   layout.radius.md,
                   borders.subtle,
                   backgrounds.surface.glass,
-                  animation.base,
+                  "transition-colors duration-200",
                   borders.hoverSky,
                   "hover:bg-white/[0.07]",
                 )}
-                style={{ animationDelay: `${0.8 + i * 0.15}s` }}
               >
                 <span className="text-xs font-medium text-slate-200">{t}</span>
                 <svg
                   viewBox="0 0 20 20"
                   fill="currentColor"
                   className={cn(
-                    "h-3.5 w-3.5 text-slate-500 -scale-x-100",
-                    animation.transform,
-                    "group-hover:text-sky-400 group-hover:-translate-x-0.5",
+                    "h-3.5 w-3.5 -scale-x-100 text-slate-500",
+                    "transition-transform duration-200",
+                    "group-hover:-translate-x-0.5 group-hover:text-sky-400",
                   )}
                 >
                   <path
@@ -322,7 +365,7 @@ function PhoneMockup() {
               </div>
             ))}
 
-            {/* Stats bar */}
+            {/* Stats bar — no infinite pulse; the count-up IS the animation */}
             <div className={cn(layout.grid.stats, "pt-1")}>
               {[
                 {
@@ -334,7 +377,6 @@ function PhoneMockup() {
                   value: clicks,
                   label: "کلیک",
                   color: accentTokens.cyan.text,
-                  delay: "1.5s",
                 },
               ].map((stat) => (
                 <div
@@ -350,11 +392,8 @@ function PhoneMockup() {
                     className={cn(
                       typography.counter,
                       stat.color,
-                      "anim-count-pulse",
+                      "tabular-nums",
                     )}
-                    style={
-                      stat.delay ? { animationDelay: stat.delay } : undefined
-                    }
                   >
                     {toPersian(stat.value)}
                   </p>
@@ -383,6 +422,7 @@ function ProblemCard({ item, index }: { item: ProblemItem; index: number }) {
 
   return (
     <article
+      style={{ animationDelay: `${index * 90}ms` }}
       className={cn(
         animation.classes.fadeUp,
         "group relative overflow-hidden p-6 sm:p-8",
@@ -395,10 +435,10 @@ function ProblemCard({ item, index }: { item: ProblemItem; index: number }) {
         shadows.cardHover,
       )}
     >
-      {/* Hover glow */}
+      {/* Hover glow — smaller blur radius, opacity-only transition */}
       <div
         className={cn(
-          "pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl",
+          "pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl",
           tokens.glow,
           "opacity-0 group-hover:opacity-100",
           animation.opacity,
@@ -411,7 +451,7 @@ function ProblemCard({ item, index }: { item: ProblemItem; index: number }) {
           "absolute inset-x-8 top-0 h-px bg-linear-to-r",
           tokens.gradient,
           "opacity-0 group-hover:opacity-60",
-          animation.smooth,
+          animation.opacity,
         )}
       />
 
@@ -484,8 +524,9 @@ export function HeroSection() {
                 components.badge.sky,
               )}
             >
+              {/* motion-safe: the ping stops for reduced-motion users */}
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 motion-safe:animate-ping" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-300" />
               </span>
               <span className={cn(typography.badge, "text-sky-200")}>
@@ -494,7 +535,10 @@ export function HeroSection() {
             </div>
 
             {/* H1 */}
-            <h1 className={cn(animation.classes.fadeUp, "mt-6", typography.h1)}>
+            <h1
+              className={cn(animation.classes.fadeUp, "mt-6", typography.h1)}
+              style={{ animationDelay: "80ms" }}
+            >
               صفحه اختصاصی{" "}
               <span className="relative inline-block">
                 <span className={cn("relative z-10", gradients.textPrimary)}>
@@ -512,6 +556,7 @@ export function HeroSection() {
                 "mt-6 lg:max-w-xl",
                 typography.bodyLg,
               )}
+              style={{ animationDelay: "160ms" }}
             >
               با این پلتفرم می‌توانی برای خودت، کسب‌وکارت، کمپینت یا برند
               شخصی‌ات یک صفحه حرفه‌ای بسازی؛ جایی برای نمایش لینک‌ها، شبکه‌های
@@ -525,29 +570,37 @@ export function HeroSection() {
                 animation.classes.fadeUp,
                 "mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start",
               )}
+              style={{ animationDelay: "240ms" }}
             >
-              {/* Primary CTA */}
+              {/* Primary CTA — shimmer removed: an animated gradient
+                  over a shadowed rounded element repaints constantly */}
               <Link
                 href="/builder"
                 className={cn(components.ctaPrimary, "px-7")}
               >
-                <span
-                  className={cn(
-                    "pointer-events-none absolute inset-0",
-                    "bg-linear-to-r from-white/0 via-white/20 to-white/0",
-                    "opacity-0 group-hover:opacity-100",
-                    animation.opacity,
-                    animation.classes.shimmer,
-                  )}
-                />
                 <span className="relative z-10">ساخت صفحه من</span>
                 <ArrowIcon
                   className={cn(
                     "relative z-10 -scale-x-100",
-                    animation.transform,
+                    "transition-transform duration-200",
                     "group-hover:-translate-x-1",
                   )}
                 />
+              </Link>
+
+              {/* Secondary CTA — gives hesitant visitors a
+                  low-commitment next step */}
+              <Link
+                href="#templates"
+                className={cn(
+                  "inline-flex h-12 items-center justify-center gap-2 rounded-full border px-6 text-sm font-medium text-slate-300",
+                  borders.subtle,
+                  backgrounds.surface.glass,
+                  "transition-colors duration-200",
+                  "hover:border-white/15 hover:bg-white/5 hover:text-white",
+                )}
+              >
+                مشاهده نمونه صفحات
               </Link>
             </div>
 
@@ -557,6 +610,7 @@ export function HeroSection() {
                 animation.classes.fadeUp,
                 "mt-10 flex flex-wrap items-center justify-center gap-3 lg:justify-start",
               )}
+              style={{ animationDelay: "320ms" }}
             >
               {miniFeatures.map((f) => (
                 <div key={f.label} className={components.miniFeature}>
@@ -567,13 +621,17 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* ── Right — Phone Mockup ── */}
+          {/* ── Right — Phone Mockup ──
+              Float animation only on lg+ (and only for users who
+              haven't asked for reduced motion): animating a large
+              layered element on mobile GPUs is a major jank source. */}
           <div
             className={cn(
               animation.classes.fadeUp,
               "shrink-0",
-              animation.classes.floatSlow,
+              `motion-safe:lg:${animation.classes.floatSlow}`,
             )}
+            style={{ animationDelay: "200ms" }}
           >
             <PhoneMockup />
           </div>
@@ -592,7 +650,13 @@ export function ProblemSection() {
     <section
       id="problems"
       dir="rtl"
-      className={cn("relative overflow-hidden", layout.section)}
+      className={cn(
+        "relative overflow-hidden",
+        layout.section,
+        /* Skips layout/paint for the section until it nears the
+           viewport — free scroll performance on long pages */
+        "[content-visibility:auto] [contain-intrinsic-size:auto_800px]",
+      )}
     >
       {/* BG */}
       <SectionBackground />
