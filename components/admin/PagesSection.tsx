@@ -534,6 +534,9 @@ export default function PagesSection({
   const [uploadingBranding, setUploadingBranding] = useState<
     "logo" | "favicon" | null
   >(null);
+  const [deletingBranding, setDeletingBranding] = useState<
+    "logo" | "favicon" | null
+  >(null);
   const [savingBranding, setSavingBranding] = useState(false);
   const [expiryAlerts, setExpiryAlerts] =
     useState<PageExpiryAlertsData | null>(null);
@@ -852,9 +855,10 @@ export default function PagesSection({
     const currentUrl = kind === "logo" ? brandingLogo : brandingFavicon;
     const originalUrl =
       typeof brandingPage?.[kind] === "string" ? brandingPage[kind] : "";
-    if (!currentUrl) return;
+    if (!currentUrl || deletingBranding) return;
 
     try {
+      setDeletingBranding(kind);
       if (currentUrl !== originalUrl) {
         await deleteFile({ url: currentUrl });
       }
@@ -864,6 +868,8 @@ export default function PagesSection({
       toast.error(
         error instanceof Error ? error.message : "حذف تصویر انجام نشد.",
       );
+    } finally {
+      setDeletingBranding(null);
     }
   }
 
@@ -889,7 +895,7 @@ export default function PagesSection({
 
   async function saveBranding() {
     const pageId = String(brandingPage?._id ?? brandingPage?.id ?? "");
-    if (!pageId || savingBranding || uploadingBranding) return;
+    if (!pageId || savingBranding || uploadingBranding || deletingBranding) return;
 
     try {
       setSavingBranding(true);
@@ -1182,7 +1188,8 @@ export default function PagesSection({
             if (
               event.target === event.currentTarget &&
               !savingBranding &&
-              !uploadingBranding
+              !uploadingBranding &&
+              !deletingBranding
             ) {
               closeBrandingModal();
             }
@@ -1233,7 +1240,7 @@ export default function PagesSection({
                       "relative flex min-h-40 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition",
                       t.inputBg,
                       t.borderInput,
-                      uploadingBranding
+                      uploadingBranding || deletingBranding
                         ? "pointer-events-none opacity-70"
                         : t.hoverBg,
                     )}
@@ -1252,7 +1259,8 @@ export default function PagesSection({
                         انتخاب تصویر
                       </span>
                     )}
-                    {uploadingBranding === item.kind && (
+                    {(uploadingBranding === item.kind ||
+                      deletingBranding === item.kind) && (
                       <span className="relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
                     )}
                     <input
@@ -1272,10 +1280,12 @@ export default function PagesSection({
                     <button
                       type="button"
                       onClick={() => void removeBrandingImage(item.kind)}
-                      disabled={Boolean(uploadingBranding)}
+                      disabled={Boolean(uploadingBranding) || Boolean(deletingBranding)}
                       className="mt-2 text-xs font-bold text-red-500 disabled:opacity-50"
                     >
-                      حذف تصویر
+                      {deletingBranding === item.kind
+                        ? "در حال حذف..."
+                        : "حذف تصویر"}
                     </button>
                   )}
                 </div>
@@ -1286,7 +1296,11 @@ export default function PagesSection({
               <button
                 type="button"
                 onClick={closeBrandingModal}
-                disabled={savingBranding || Boolean(uploadingBranding)}
+                disabled={
+                  savingBranding ||
+                  Boolean(uploadingBranding) ||
+                  Boolean(deletingBranding)
+                }
                 className={cn(
                   "flex-1 rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50",
                   t.borderInput,
@@ -1299,7 +1313,11 @@ export default function PagesSection({
               <button
                 type="button"
                 onClick={() => void saveBranding()}
-                disabled={savingBranding || Boolean(uploadingBranding)}
+                disabled={
+                  savingBranding ||
+                  Boolean(uploadingBranding) ||
+                  Boolean(deletingBranding)
+                }
                 className="flex-1 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-sky-700 disabled:opacity-50"
               >
                 {savingBranding ? "در حال ذخیره..." : "ذخیره تصاویر"}

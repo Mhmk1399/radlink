@@ -327,6 +327,9 @@ export default function TicketsSection({
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [removingAttachmentIds, setRemovingAttachmentIds] = useState<
+    string[]
+  >([]);
   const [uploadedAttachments, setUploadedAttachments] = useState<
     UploadedTicketFile[]
   >([]);
@@ -578,7 +581,9 @@ export default function TicketsSection({
   }
 
   async function removeUploadedAttachment(file: UploadedTicketFile) {
+    if (removingAttachmentIds.includes(file.id)) return;
     try {
+      setRemovingAttachmentIds((current) => [...current, file.id]);
       await deleteFile({ fileId: file.id });
       setUploadedAttachments((current) =>
         current.filter((item) => item.id !== file.id),
@@ -586,6 +591,10 @@ export default function TicketsSection({
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "حذف فایل انجام نشد.",
+      );
+    } finally {
+      setRemovingAttachmentIds((current) =>
+        current.filter((id) => id !== file.id),
       );
     }
   }
@@ -1334,34 +1343,45 @@ export default function TicketsSection({
                   {/* Uploaded files row */}
                   {uploadedAttachments.length > 0 && (
                     <div className="mb-2.5 flex flex-wrap gap-1.5">
-                      {uploadedAttachments.map((file) => (
-                        <span
-                          key={file.id}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px]",
-                            t.borderSubtle,
-                            t.inputBg,
-                            t.textMuted,
-                          )}
-                        >
-                          <FaFile className="h-2.5 w-2.5 shrink-0" />
-                          <span className="max-w-[80px] truncate">
-                            {file.filename}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => void removeUploadedAttachment(file)}
+                      {uploadedAttachments.map((file) => {
+                        const isRemoving = removingAttachmentIds.includes(
+                          file.id,
+                        );
+                        return (
+                          <span
+                            key={file.id}
                             className={cn(
-                              "rounded p-0.5 transition-colors",
-                              isDark
-                                ? "text-red-400/60 hover:text-red-400"
-                                : "text-red-500/60 hover:text-red-500",
+                              "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px]",
+                              t.borderSubtle,
+                              t.inputBg,
+                              t.textMuted,
+                              isRemoving && "opacity-60",
                             )}
                           >
-                            <FaXmark className="h-2.5 w-2.5" />
-                          </button>
-                        </span>
-                      ))}
+                            <FaFile className="h-2.5 w-2.5 shrink-0" />
+                            <span className="max-w-[80px] truncate">
+                              {file.filename}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void removeUploadedAttachment(file)}
+                              disabled={isRemoving}
+                              className={cn(
+                                "rounded p-0.5 transition-colors disabled:cursor-not-allowed",
+                                isDark
+                                  ? "text-red-400/60 hover:text-red-400"
+                                  : "text-red-500/60 hover:text-red-500",
+                              )}
+                            >
+                              {isRemoving ? (
+                                <span className="block h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              ) : (
+                                <FaXmark className="h-2.5 w-2.5" />
+                              )}
+                            </button>
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
 
