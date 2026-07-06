@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
 import Category from "@/models/category";
@@ -99,10 +99,16 @@ export const POST = compose(
         return NextResponse.json({ message: "نام قالب الزامی است." }, { status: 400 });
     }
 
-    const blockAccessError = await assertBuilderBlockAccess(req, builderBlocks);
+    const blockAccessError = await assertBuilderBlockMutationAccess(req, {
+        currentBlocks: [],
+        nextBlocks: normalizeBuilderBlocks(builderBlocks),
+    });
     if (blockAccessError) return blockAccessError;
-    const templateBlockAccessError = await assertBuilderBlockAccess(req, blocks);
-    if (templateBlockAccessError) return templateBlockAccessError;
+    const legacyBlockAccessError = await assertBuilderBlockMutationAccess(req, {
+        currentBlocks: [],
+        nextBlocks: blocks,
+    });
+    if (legacyBlockAccessError) return legacyBlockAccessError;
 
     const normalizedCategory = normalizeObjectId(category ?? categoryId);
     if (

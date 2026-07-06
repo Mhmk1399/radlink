@@ -23,6 +23,7 @@ import {
   HiOutlineChevronUp,
   HiOutlineEyeDropper,
   HiOutlineAdjustmentsHorizontal,
+  HiOutlineLockClosed,
 } from "react-icons/hi2";
 
 import { RxBorderWidth, RxCornerBottomRight, RxFontSize } from "react-icons/rx";
@@ -64,6 +65,7 @@ type DynamicIslandPanelProps = {
   onClose: () => void;
   onDeleteBlock: () => void;
   onDuplicateBlock: () => void;
+  readOnly?: boolean;
 };
 
 /* ================================================================== */
@@ -1747,10 +1749,35 @@ export function DynamicIslandPanel({
   onClose,
   onDeleteBlock,
   onDuplicateBlock,
+  readOnly = false,
 }: DynamicIslandPanelProps) {
   const isDesktop = useIsDesktop();
 
   if (!block || !schema) return null;
+
+  if (readOnly) {
+    return (
+      <div
+        className="fixed bottom-5 left-1/2 z-100 flex w-[min(92vw,430px)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-amber-200 bg-white p-3 shadow-xl"
+        dir="rtl"
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+          <HiOutlineLockClosed size={18} />
+        </div>
+        <p className="min-w-0 flex-1 text-[12px] font-semibold leading-6 text-neutral-700">
+          این بلاک فقط قابل مشاهده است. برای تغییر محتوا، استایل، ترتیب یا حذف آن به دسترسی «ویرایش» نیاز دارید.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          title="بستن"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
+        >
+          <HiOutlineXMark size={17} />
+        </button>
+      </div>
+    );
+  }
 
   const selEl: BlockElement | null = selectedElementId
     ? (block.elements[selectedElementId] ?? null)

@@ -78,10 +78,11 @@
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidatePageExpiryAlertsCache } from "@/lib/pages/pageExpiryAlertsCache";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
-import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import { buildPageTargetUrl } from "@/lib/qrCode";
 import {
     hasGlobalOwnerScope,
@@ -312,8 +313,6 @@ export const PATCH = compose(
     }
 
     if (body.blocks !== undefined) {
-        const blockAccessError = await assertBuilderBlockAccess(req, body.blocks);
-        if (blockAccessError) return blockAccessError;
         update.blocks = normalizeBlocks(body.blocks);
     }
 
@@ -422,6 +421,14 @@ export const PATCH = compose(
         );
     }
 
+    if (body.blocks !== undefined) {
+        const blockAccessError = await assertBuilderBlockMutationAccess(req, {
+            currentBlocks: currentPage.blocks,
+            nextBlocks: update.blocks,
+        });
+        if (blockAccessError) return blockAccessError;
+    }
+
     const effectiveExpiration =
         "expiresAt" in update ? update.expiresAt : currentPage.expiresAt;
     if (
@@ -522,6 +529,7 @@ export const PATCH = compose(
     );
 
     revalidatePath(`/${page.url}`);
+    invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({ page });
 });
@@ -583,6 +591,7 @@ export const DELETE = compose(
     );
 
     revalidatePath("/[url]", "page");
+    invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({
         message: "صفحه حذف شد",

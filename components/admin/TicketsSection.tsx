@@ -318,7 +318,6 @@ export default function TicketsSection({
     authUser?.role === "admin" ||
     authUser?.role === "agent";
 
-  const [tableKey, setTableKey] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
   const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null);
   const [form, setForm] = useState<TicketFormState | null>(null);
@@ -514,7 +513,6 @@ export default function TicketsSection({
   }, [canManageTickets, headers]);
 
   function refreshTable() {
-    setTableKey((v) => v + 1);
     setRefreshToken((v) => v + 1);
   }
   function openCreateTicket() {
@@ -815,8 +813,8 @@ export default function TicketsSection({
 
       {/* ── Table ── */}
       <DynamicTable<TicketRow>
-        key={tableKey}
-        endpoint={`/api/tickets?refresh=${refreshToken}`}
+        endpoint="/api/tickets"
+        refreshKey={refreshToken}
         columns={columns}
         title="لیست تیکت‌ها"
         subtitle={
@@ -843,7 +841,6 @@ export default function TicketsSection({
         onDelete={async (item, del) => {
           await del(item);
           toast.success("تیکت حذف شد");
-          refreshTable();
         }}
         rowActions={(row) => (
           <button

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export type AccessAction = "view" | "create" | "update" | "delete" | "publish";
+export type BlockAccessAction = Exclude<AccessAction, "delete">;
 
 export interface IAccess extends Document {
     name: string;
@@ -20,7 +21,7 @@ export interface IAccess extends Document {
         }[];
         blocks: {
             blockId: Types.ObjectId;
-            actions: AccessAction[];
+            actions: BlockAccessAction[];
         }[];
         pages: {
             pageId: Types.ObjectId;
@@ -56,7 +57,7 @@ const AccessSchema = new Schema<IAccess>(
             blocks: [
                 {
                     blockId: { type: Schema.Types.ObjectId, ref: "Block" },
-                    actions: [{ type: String, enum: ["view", "create", "update", "delete", "publish"], required: true }],
+                    actions: [{ type: String, enum: ["view", "create", "update", "publish"], required: true }],
                 },
             ],
             pages: [

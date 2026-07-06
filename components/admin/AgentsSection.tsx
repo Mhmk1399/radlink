@@ -406,7 +406,7 @@ export default function AgentsSection({
   const canCreate = can("admin.agents", "create");
   const canUpdate = can("admin.agents", "update");
   const canDelete = can("admin.agents", "delete");
-  const [tableKey, setTableKey] = useState(0);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<AgentFormState>(() => emptyForm());
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -714,7 +714,7 @@ export default function AgentsSection({
       toast.success(form.id ? "نماینده ویرایش شد" : "نماینده ایجاد شد");
       setFormOpen(false);
       setForm(emptyForm());
-      setTableKey((key) => key + 1);
+      setRefreshToken((value) => value + 1);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "خطا در ذخیره نماینده",
@@ -735,7 +735,7 @@ export default function AgentsSection({
       if (!response.ok)
         throw new Error(json?.message ?? "خطا در تغییر وضعیت نماینده");
       toast.success(json?.message ?? "وضعیت نماینده تغییر کرد");
-      setTableKey((key) => key + 1);
+      setRefreshToken((value) => value + 1);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "خطا در تغییر وضعیت نماینده",
@@ -836,8 +836,8 @@ export default function AgentsSection({
 
       {/* ── Table ── */}
       <DynamicTable<AgentRow>
-        key={tableKey}
         endpoint="/api/agents"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         columns={columns}
         title="لیست نمایندگان"
@@ -860,7 +860,6 @@ export default function AgentsSection({
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("نماینده حذف شد");
-          setTableKey((key) => key + 1);
         }}
         rowActions={(row) => {
           const isLoading = activeActionId === row._id;

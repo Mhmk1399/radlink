@@ -440,7 +440,8 @@ export default function FilesSection({
       </div>
 
       <DynamicTable<FileRow>
-        endpoint={`/api/files?refresh=${refreshToken}`}
+        endpoint="/api/files"
+        refreshKey={refreshToken}
         columns={columns}
         title="لیست فایل‌ها"
         subtitle="فایل‌های آپلودشده همراه با مشخصات آپلودکننده"

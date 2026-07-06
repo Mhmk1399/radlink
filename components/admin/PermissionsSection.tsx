@@ -9,6 +9,7 @@ import {
   FaMagnifyingGlass,
   FaPen,
   FaPlus,
+  FaPowerOff,
   FaShieldHalved,
   FaUsers,
   FaKey,
@@ -581,6 +582,7 @@ export default function PermissionsSection({
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const canDeleteTemplates = can("admin.permissions", "delete");
   const token =
@@ -919,6 +921,44 @@ export default function PermissionsSection({
     }
   }
 
+  async function togglePermissionStatus(row: PermissionRow) {
+    if (!canUpdate || togglingId) return;
+
+    const nextStatus = !row.isActive;
+
+    try {
+      setTogglingId(row._id);
+      const response = await fetch(`/api/permissions/${row._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({ isActive: nextStatus }),
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          json?.message ?? "خطا در تغییر وضعیت پرمیشن",
+        );
+      }
+
+      toast.success(
+        nextStatus ? "پرمیشن فعال شد" : "پرمیشن غیرفعال شد",
+      );
+      setRefreshToken((value) => value + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "خطا در تغییر وضعیت پرمیشن",
+      );
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
   /* ── Shared classes ── */
   const primaryBtn = cn(
     "inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
@@ -1019,7 +1059,8 @@ export default function PermissionsSection({
 
       {/* ── Table ── */}
       <DynamicTable<PermissionRow>
-        endpoint={`/api/permissions?refresh=${refreshToken}`}
+        endpoint="/api/permissions"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         doubleClickToEdit
         columns={columns}
@@ -1074,7 +1115,36 @@ export default function PermissionsSection({
             {canUpdate && (
               <button
                 type="button"
-                onClick={() => openEdit(row)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void togglePermissionStatus(row);
+                }}
+                disabled={togglingId === row._id}
+                title={row.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                aria-label={row.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                className={cn(
+                  "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+                  row.isActive
+                    ? "text-red-400/70 hover:bg-red-500/10 hover:text-red-400"
+                    : "text-emerald-400/70 hover:bg-emerald-500/10 hover:text-emerald-400",
+                )}
+              >
+                <FaPowerOff
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    togglingId === row._id && "animate-pulse",
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
+            )}
+            {canUpdate && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openEdit(row);
+                }}
                 title="ویرایش"
                 className={cn(
                   "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",

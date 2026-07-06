@@ -134,91 +134,110 @@ const dash = {
   },
 
   light: {
-    // ── Surfaces ──────────────────────────────
-    page: "bg-[#f4f1eb]",
-    card: "bg-white",
-    cardHover: "hover:bg-[#fdfcf8]",
-    input: "bg-[#f4f1eb]",
-    hover: "hover:bg-[#00000004]",
-    active: "bg-[#8a7030]/[0.04]",
+  // ── Surfaces ──────────────────────────────
+  page: "bg-[#f1f2f4]",
+  card: "bg-[#ffffff]",
+  cardHover: "hover:bg-[#f8f8f9]",
+  input: "bg-[#f4f5f6]",
+  hover: "hover:bg-black/[0.035]",
+  active: "bg-black/[0.07]",
 
-    // ── Text ──────────────────────────────────
-    textPrimary: "text-[#2a2720]",
-    textSecondary: "text-[#6a655c]",
-    textMuted: "text-[#857f75]",
-    textDisabled: "text-[#9a948a]",
-    textAccent: "text-[#7a6428]",
+  // ── Text ──────────────────────────────────
+  textPrimary: "text-[#18181b]",
+  textSecondary: "text-[#52525b]",
+  textMuted: "text-[#71717a]",
+  textDisabled: "text-[#a1a1aa]",
+  textAccent: "text-[#27272a]",
 
-    // ── Borders ───────────────────────────────
-    border: "border-[#e6e2da]",
-    borderAccent: "border-[#8a7030]/14",
-    divider: "border-[#ece8e0]/80",
+  // ── Borders ───────────────────────────────
+  border: "border-[#dedfe3]",
+  borderAccent: "border-[#a1a1aa]/45",
+  divider: "border-[#e5e5e7]/80",
 
-    // ── Shadows ───────────────────────────────
-    shadow: "shadow-[0_1px_6px_-1px_rgba(0,0,0,0.06)]",
+  // ── Shadows ───────────────────────────────
+  shadow:
+    "shadow-[0_2px_10px_-4px_rgba(24,24,27,0.12)]",
 
-    // ── Accent fills ──────────────────────────
-    accentIcon: "bg-[#c8a84b]/[0.06] border-[#c8a84b]/10 text-[#8a7030]",
-    accentGlow: "bg-[#c8a84b]/[0.04]",
-    headerGrad: "from-[#c8a84b]/[0.03] via-transparent to-transparent",
-    avatarBg:
-      "from-[#c8a84b]/12 via-[#a07830]/8 to-[#c8a84b]/6 text-[#7a6428] ring-[#c8a84b]/12",
+  // ── Accent fills ──────────────────────────
+  accentIcon:
+    "bg-[#ececef] border-[#d4d4d8] text-[#27272a]",
+  accentGlow: "bg-black/[0.035]",
+  headerGrad:
+    "from-black/[0.035] via-transparent to-transparent",
+  avatarBg:
+    "from-[#e4e4e7] via-[#f4f4f5] to-[#d4d4d8] text-[#27272a] ring-[#a1a1aa]/35",
 
-    // ── Status ────────────────────────────────
-    successBg: "bg-emerald-50",
-    successText: "text-emerald-700",
-    successBadge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-    successDot: "bg-emerald-500",
-    pendingBg: "bg-amber-50",
-    pendingText: "text-amber-700",
-    pendingBadge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-    pendingDot: "bg-amber-500",
-    defaultBg: "bg-[#00000004]",
-    defaultText: "text-[#857f75]",
-    defaultBadge: "bg-[#00000005] text-[#6a655c] ring-1 ring-[#00000008]",
-    defaultDot: "bg-[#c2bcb4]",
-    dotRing: "ring-white",
+  // ── Status ────────────────────────────────
+  successBg: "bg-emerald-500/[0.08]",
+  successText: "text-emerald-700",
+  successBadge:
+    "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
+  successDot: "bg-emerald-600",
 
-    // ── Change badges ─────────────────────────
-    posBadge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-    negBadge: "bg-red-50 text-red-600 ring-1 ring-red-200",
+  pendingBg: "bg-amber-500/[0.08]",
+  pendingText: "text-amber-700",
+  pendingBadge:
+    "bg-amber-500/[0.08] text-amber-700 ring-1 ring-amber-500/20",
+  pendingDot: "bg-amber-500",
 
-    // ── Error banner ─────────────────────────
-    errorBg: "bg-red-50 border-red-200 text-red-600",
+  defaultBg: "bg-[#f0f0f2]",
+  defaultText: "text-[#71717a]",
+  defaultBadge:
+    "bg-[#f0f0f2] text-[#52525b] ring-1 ring-[#d4d4d8]",
+  defaultDot: "bg-[#a1a1aa]",
+  dotRing: "ring-white",
 
-    // ── System status ─────────────────────────
-    onlineBg: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-    onlineDot: "bg-emerald-600",
-    onlinePing: "bg-emerald-400",
+  // ── Change badges ─────────────────────────
+  posBadge:
+    "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
+  negBadge:
+    "bg-red-500/[0.08] text-red-600 ring-1 ring-red-500/20",
 
-    // ── Role colours ──────────────────────────
-    roleUser: "bg-[#f0ede6] text-[#6a655c] ring-1 ring-[#e2ddd6]",
-    roleAgent: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-    roleAdmin: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-    roleSuperAdmin:
-      "bg-[#c8a84b]/[0.07] text-[#7a6428] ring-1 ring-[#c8a84b]/15",
+  // ── Error banner ──────────────────────────
+  errorBg:
+    "bg-red-500/[0.07] border-red-500/20 text-red-600",
 
-    // ── Quick action colours ───────────────────
-    qaBlue: "bg-blue-50 text-blue-600",
-    qaGreen: "bg-emerald-50 text-emerald-600",
-    qaAmber: "bg-amber-50 text-amber-600",
-    qaPurple: "bg-purple-50 text-purple-600",
-    qaPink: "bg-pink-50 text-pink-600",
-    qaRed: "bg-red-50 text-red-600",
+  // ── System status ─────────────────────────
+  onlineBg:
+    "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
+  onlineDot: "bg-emerald-600",
+  onlinePing: "bg-emerald-400",
 
-    // ── Section link ──────────────────────────
-    sectionLink:
-      "text-[#8a7030]/70 hover:text-[#7a6428] hover:bg-[#c8a84b]/[0.05]",
-    sectionIcon: "bg-[#c8a84b]/[0.05] text-[#8a7030]",
+  // ── Role colours ──────────────────────────
+  roleUser:
+    "bg-[#f0f0f2] text-[#52525b] ring-1 ring-[#d4d4d8]",
 
-    // ── Mini stat icon ────────────────────────
-    miniIcon:
-      "bg-[#00000003] text-[#857f75] group-hover:bg-[#c8a84b]/[0.06] group-hover:text-[#8a7030]",
+  roleAgent:
+    "bg-[#e9e9ec] text-[#3f3f46] ring-1 ring-[#d4d4d8]",
 
-    // ── Empty state ───────────────────────────
-    emptyBg: "bg-[#00000003]",
-    emptyIcon: "text-[#c4bfb8]",
-  },
+  roleAdmin:
+    "bg-[#dedee2] text-[#27272a] ring-1 ring-[#c4c4c9]",
+
+  roleSuperAdmin:
+    "bg-[#27272a] text-white ring-1 ring-black/20",
+
+  // ── Quick action colours ──────────────────
+  qaBlue: "bg-[#ededf0] text-[#3f3f46]",
+  qaGreen: "bg-[#e8e8eb] text-[#3f3f46]",
+  qaAmber: "bg-[#e4e4e7] text-[#27272a]",
+  qaPurple: "bg-[#ededf0] text-[#52525b]",
+  qaPink: "bg-[#e8e8eb] text-[#3f3f46]",
+  qaRed: "bg-[#dedee2] text-[#27272a]",
+
+  // ── Section link ──────────────────────────
+  sectionLink:
+    "text-[#52525b] hover:text-[#18181b] hover:bg-black/[0.05]",
+  sectionIcon:
+    "bg-[#ececef] text-[#3f3f46]",
+
+  // ── Mini stat icon ────────────────────────
+  miniIcon:
+    "bg-[#eeeeef] text-[#71717a] group-hover:bg-[#27272a] group-hover:text-white",
+
+  // ── Empty state ───────────────────────────
+  emptyBg: "bg-[#f3f3f5]",
+  emptyIcon: "text-[#a1a1aa]",
+},
 } as const;
 
 /* ── useDash — resolves palette ── */
@@ -1157,54 +1176,54 @@ export default function DashboardSection({
   const quickActions = useMemo(
     () =>
       [
-      {
-        icon: <FaUserPlus className="h-4 w-4" />,
-        label: "کاربر جدید",
-        section: "users" as AdminSection,
-        color: d.qaBlue,
-        component: "admin.users",
-        action: "create",
-      },
-      {
-        icon: <FaFile className="h-4 w-4" />,
-        label: "صفحه جدید",
-        section: "pages" as AdminSection,
-        color: d.qaGreen,
-        component: "admin.pages",
-        action: "create",
-      },
-      {
-        icon: <FaTicket className="h-4 w-4" />,
-        label: "تیکت‌ها",
-        section: "tickets" as AdminSection,
-        color: d.qaAmber,
-        component: "admin.tickets",
-        action: "view",
-      },
-      {
-        icon: <FaImage className="h-4 w-4" />,
-        label: "فایل‌ها",
-        section: "files" as AdminSection,
-        color: d.qaPurple,
-        component: "admin.files",
-        action: "view",
-      },
-      {
-        icon: <FaQrcode className="h-4 w-4" />,
-        label: "QR کد",
-        section: "qrcodes" as AdminSection,
-        color: d.qaPink,
-        component: "admin.qrcodes",
-        action: "view",
-      },
-      {
-        icon: <FaBell className="h-4 w-4" />,
-        label: "اعلان‌ها",
-        section: "notifications" as AdminSection,
-        color: d.qaRed,
-        component: "admin.notifications",
-        action: "view",
-      },
+        {
+          icon: <FaUserPlus className="h-4 w-4" />,
+          label: "کاربر جدید",
+          section: "users" as AdminSection,
+          color: d.qaBlue,
+          component: "admin.users",
+          action: "create",
+        },
+        {
+          icon: <FaFile className="h-4 w-4" />,
+          label: "صفحه جدید",
+          section: "pages" as AdminSection,
+          color: d.qaGreen,
+          component: "admin.pages",
+          action: "create",
+        },
+        {
+          icon: <FaTicket className="h-4 w-4" />,
+          label: "تیکت‌ها",
+          section: "tickets" as AdminSection,
+          color: d.qaAmber,
+          component: "admin.tickets",
+          action: "view",
+        },
+        {
+          icon: <FaImage className="h-4 w-4" />,
+          label: "فایل‌ها",
+          section: "files" as AdminSection,
+          color: d.qaPurple,
+          component: "admin.files",
+          action: "view",
+        },
+        {
+          icon: <FaQrcode className="h-4 w-4" />,
+          label: "QR کد",
+          section: "qrcodes" as AdminSection,
+          color: d.qaPink,
+          component: "admin.qrcodes",
+          action: "view",
+        },
+        {
+          icon: <FaBell className="h-4 w-4" />,
+          label: "اعلان‌ها",
+          section: "notifications" as AdminSection,
+          color: d.qaRed,
+          component: "admin.notifications",
+          action: "view",
+        },
       ].filter(
         (item) =>
           can(item.component, "view") &&
@@ -1216,48 +1235,48 @@ export default function DashboardSection({
   const miniStats = useMemo(
     () =>
       [
-      {
-        icon: <FaUserTie className="h-4 w-4" />,
-        label: "نمایندگان",
-        value: stats.agents.total,
-        section: "agents" as AdminSection,
-        component: "admin.agents",
-      },
-      {
-        icon: <FaBoxOpen className="h-4 w-4" />,
-        label: "بلاک‌ها",
-        value: stats.blocks.active,
-        section: "blocks" as AdminSection,
-        component: "admin.blocks",
-      },
-      {
-        icon: <FaPalette className="h-4 w-4" />,
-        label: "قالب‌ها",
-        value: stats.templates.active,
-        section: "templates" as AdminSection,
-        component: "admin.templates",
-      },
-      {
-        icon: <FaBoxOpen className="h-4 w-4" />,
-        label: "محصولات",
-        value: stats.products.total,
-        section: "products" as AdminSection,
-        component: "admin.products",
-      },
-      {
-        icon: <FaQrcode className="h-4 w-4" />,
-        label: "QR کدها",
-        value: stats.qrcodes.active,
-        section: "qrcodes" as AdminSection,
-        component: "admin.qrcodes",
-      },
-      {
-        icon: <FaImage className="h-4 w-4" />,
-        label: "فایل‌ها",
-        value: stats.files.total,
-        section: "files" as AdminSection,
-        component: "admin.files",
-      },
+        {
+          icon: <FaUserTie className="h-4 w-4" />,
+          label: "نمایندگان",
+          value: stats.agents.total,
+          section: "agents" as AdminSection,
+          component: "admin.agents",
+        },
+        {
+          icon: <FaBoxOpen className="h-4 w-4" />,
+          label: "بلاک‌ها",
+          value: stats.blocks.active,
+          section: "blocks" as AdminSection,
+          component: "admin.blocks",
+        },
+        {
+          icon: <FaPalette className="h-4 w-4" />,
+          label: "قالب‌ها",
+          value: stats.templates.active,
+          section: "templates" as AdminSection,
+          component: "admin.templates",
+        },
+        {
+          icon: <FaBoxOpen className="h-4 w-4" />,
+          label: "محصولات",
+          value: stats.products.total,
+          section: "products" as AdminSection,
+          component: "admin.products",
+        },
+        {
+          icon: <FaQrcode className="h-4 w-4" />,
+          label: "QR کدها",
+          value: stats.qrcodes.active,
+          section: "qrcodes" as AdminSection,
+          component: "admin.qrcodes",
+        },
+        {
+          icon: <FaImage className="h-4 w-4" />,
+          label: "فایل‌ها",
+          value: stats.files.total,
+          section: "files" as AdminSection,
+          component: "admin.files",
+        },
       ].filter((item) => can(item.component, "view")),
     [can, stats],
   );
@@ -1284,10 +1303,7 @@ export default function DashboardSection({
 
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
-            <UserAvatar
-              name={displayName}
-              avatarUrl={authUser?.avatarUrl}
-            />
+            <UserAvatar name={displayName} avatarUrl={authUser?.avatarUrl} />
             <div className="min-w-0">
               {/* Date */}
               <p
@@ -1457,9 +1473,7 @@ export default function DashboardSection({
             value={stats.tickets.open}
             change={
               stats.tickets.total
-                ? -Math.round(
-                    (stats.tickets.open / stats.tickets.total) * 100,
-                  )
+                ? -Math.round((stats.tickets.open / stats.tickets.total) * 100)
                 : 0
             }
             changeLabel={`از مجموع ${toPersianDigits(stats.tickets.total)} تیکت`}
@@ -1494,85 +1508,91 @@ export default function DashboardSection({
         )}
       >
         {/* Quick Actions */}
-        {quickActions.length > 0 && <SectionCard
-          title="دسترسی سریع"
-          icon={
-            <FaArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 rotate-180" />
-          }
-        >
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
-            {quickActions.map((action) => (
-              <QuickAction
-                key={action.label}
-                icon={action.icon}
-                label={action.label}
-                onClick={() => navigate(action.section)}
-                color={action.color}
-              />
-            ))}
-          </div>
-        </SectionCard>}
+        {quickActions.length > 0 && (
+          <SectionCard
+            title="دسترسی سریع"
+            icon={
+              <FaArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 rotate-180" />
+            }
+          >
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
+              {quickActions.map((action) => (
+                <QuickAction
+                  key={action.label}
+                  icon={action.icon}
+                  label={action.label}
+                  onClick={() => navigate(action.section)}
+                  color={action.color}
+                />
+              ))}
+            </div>
+          </SectionCard>
+        )}
 
         {/* Recent Users */}
-        {isSuperAdmin && <SectionCard
-          title="کاربران جدید"
-          icon={<FaUsers className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
-          linkText="مشاهده همه"
-          onLink={() => navigate("users")}
-          loading={loading}
-          isEmpty={recentUsers.length === 0}
-          emptyMessage="کاربر جدیدی یافت نشد"
-        >
-          <div className="space-y-0.5" role="list">
-            {recentUsers.map((user) => (
-              <RecentItem
-                key={String(user._id ?? user.id ?? user.phoneNumber)}
-                icon={<FaUsers className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
-                title={displayUserName(user)}
-                subtitle={user.email || user.phoneNumber || "-"}
-                time={formatRelativeTime(user.createdAt)}
-                status={user.status === "active" ? "success" : "pending"}
-                badge={userStatusLabel(user.status)}
-              />
-            ))}
-          </div>
-        </SectionCard>}
+        {isSuperAdmin && (
+          <SectionCard
+            title="کاربران جدید"
+            icon={<FaUsers className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+            linkText="مشاهده همه"
+            onLink={() => navigate("users")}
+            loading={loading}
+            isEmpty={recentUsers.length === 0}
+            emptyMessage="کاربر جدیدی یافت نشد"
+          >
+            <div className="space-y-0.5" role="list">
+              {recentUsers.map((user) => (
+                <RecentItem
+                  key={String(user._id ?? user.id ?? user.phoneNumber)}
+                  icon={<FaUsers className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
+                  title={displayUserName(user)}
+                  subtitle={user.email || user.phoneNumber || "-"}
+                  time={formatRelativeTime(user.createdAt)}
+                  status={user.status === "active" ? "success" : "pending"}
+                  badge={userStatusLabel(user.status)}
+                />
+              ))}
+            </div>
+          </SectionCard>
+        )}
 
         {/* Recent Tickets */}
-        {isSuperAdmin && <SectionCard
-          title="آخرین تیکت‌ها"
-          icon={<FaTicket className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
-          linkText="مشاهده همه"
-          onLink={() => navigate("tickets")}
-          loading={loading}
-          isEmpty={recentTickets.length === 0}
-          emptyMessage="تیکتی یافت نشد"
-        >
-          <div className="space-y-0.5" role="list">
-            {recentTickets.map((ticket) => {
-              const si = ticketStatusInfo(ticket.status);
-              return (
-                <RecentItem
-                  key={String(ticket._id ?? ticket.id ?? ticket.title)}
-                  icon={
-                    ticket.status === "closed" ? (
-                      <FaCircleCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    ) : (
-                      <FaClock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    )
-                  }
-                  title={ticket.title || "-"}
-                  subtitle={displayRequester(ticket)}
-                  time={formatRelativeTime(
-                    ticket.updatedAt ?? ticket.createdAt,
-                  )}
-                  status={si.type}
-                  badge={si.label}
-                />
-              );
-            })}
-          </div>
-        </SectionCard>}
+        {isSuperAdmin && (
+          <SectionCard
+            title="آخرین تیکت‌ها"
+            icon={<FaTicket className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+            linkText="مشاهده همه"
+            onLink={() => navigate("tickets")}
+            loading={loading}
+            isEmpty={recentTickets.length === 0}
+            emptyMessage="تیکتی یافت نشد"
+          >
+            <div className="space-y-0.5" role="list">
+              {recentTickets.map((ticket) => {
+                const si = ticketStatusInfo(ticket.status);
+                return (
+                  <RecentItem
+                    key={String(ticket._id ?? ticket.id ?? ticket.title)}
+                    icon={
+                      ticket.status === "closed" ? (
+                        <FaCircleCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      ) : (
+                        <FaClock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      )
+                    }
+                    title={ticket.title || "-"}
+                    subtitle={displayRequester(ticket)}
+                    time={formatRelativeTime(
+                      ticket.updatedAt ?? ticket.createdAt,
+                    )}
+                    status={si.type}
+                    badge={si.label}
+                  />
+                );
+              })}
+            </div>
+          </SectionCard>
+        )}
       </div>
 
       <style>{`

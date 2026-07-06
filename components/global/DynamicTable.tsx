@@ -124,53 +124,55 @@ const themeTokens = {
 
   light: {
     // ── Surfaces ──────────────────────────────
-    pageBg: "bg-[#f8f6f1]",
-    cardBg: "bg-white",
-    cardBgHover: "hover:bg-[#fafaf8]",
-    inputBg: "bg-[#f5f3ee]",
-    modalBg: "bg-white",
-    dropdownBg: "bg-white/98 backdrop-blur-xl",
-    hoverBg: "hover:bg-[#00000006]",
-    activeBg: "bg-[#8a7032]/6",
-    selectedBg: "bg-[#8a7032]/[0.03]",
+    pageBg: "bg-[#f1f2f4]",
+    cardBg: "bg-[#ffffff]",
+    cardBgHover: "hover:bg-[#f7f7f8]",
+    inputBg: "bg-[#f3f4f6]",
+    modalBg: "bg-[#ffffff]",
+    dropdownBg: "bg-white/95 backdrop-blur-xl",
+    hoverBg: "hover:bg-black/[0.04]",
+    activeBg: "bg-black/[0.07]",
+    selectedBg: "bg-black/[0.05]",
 
     // ── Text ──────────────────────────────────
-    textPrimary: "text-[#2c2a25]",
-    textSecondary: "text-[#6b665c]",
-    textMuted: "text-[#9e9788]",
-    textDisabled: "text-[#c4bfb4]",
-    textAccent: "text-[#7a6428]",
-    textError: "text-[#c44040]",
+    textPrimary: "text-[#18181b]",
+    textSecondary: "text-[#52525b]",
+    textMuted: "text-[#71717a]",
+    textDisabled: "text-[#a1a1aa]",
+    textAccent: "text-[#27272a]",
+    textError: "text-[#3f3f46]",
     textOnAccent: "text-white",
 
     // ── Borders ───────────────────────────────
-    borderSubtle: "border-[#e8e4dc]",
-    borderInput: "border-[#ddd9d0]",
-    borderAccent: "border-[#8a7032]/20",
-    borderHover: "hover:border-[#ccc7bc]",
-    divider: "border-[#e8e4dc]/70",
+    borderSubtle: "border-[#e4e4e7]",
+    borderInput: "border-[#d4d4d8]",
+    borderAccent: "border-[#71717a]/40",
+    borderHover: "hover:border-[#a1a1aa]",
+    divider: "border-[#e4e4e7]/80",
 
     // ── Shadows ───────────────────────────────
-    cardShadow: "shadow-[0_1px_8px_-2px_rgba(0,0,0,0.06)]",
-    dropdownShadow: "shadow-[0_6px_24px_-6px_rgba(0,0,0,0.1)]",
+    cardShadow: "shadow-[0_2px_10px_-4px_rgba(24,24,27,0.12)]",
+    dropdownShadow: "shadow-[0_12px_32px_-10px_rgba(24,24,27,0.18)]",
 
     // ── Accent shades ─────────────────────────
-    accentSoft: "bg-[#8a7032]/5",
-    accentMedium: "bg-[#8a7032]/8",
-    accentGradient: "bg-[#8a7032]",
-    accentText: "#7a6428",
-    accentBorder: "#8a7032",
+    accentSoft: "bg-black/[0.05]",
+    accentMedium: "bg-black/[0.09]",
+    accentGradient:
+      "bg-gradient-to-r from-[#18181b] via-[#3f3f46] to-[#52525b]",
+    accentText: "#27272a",
+    accentBorder: "#71717a",
 
     // ── Status ────────────────────────────────
-    successBg: "bg-[#e6f5ed]",
-    successText: "text-[#2d7a50]",
-    errorBg: "bg-[#fce8e8]",
-    errorText: "text-[#c44040]",
-    warningBg: "bg-[#f5f0e0]",
-    warningText: "text-[#8a7032]",
+    successBg: "bg-[#f0f0f2]",
+    successText: "text-[#3f3f46]",
+
+    errorBg: "bg-[#e8e8eb]",
+    errorText: "text-[#27272a]",
+
+    warningBg: "bg-[#f4f4f5]",
+    warningText: "text-[#52525b]",
   },
 } as const;
-
 /* ══════════════════════════════════════════════
    DATEPICKER CUSTOM STYLES
    ══════════════════════════════════════════════ */
@@ -702,23 +704,83 @@ function MobileCardSkeleton({
 function TableLoadingBar({ isDark }: { isDark: boolean }) {
   return (
     <div
-      className={cn(
-        "relative h-0.5 w-full overflow-hidden",
-        isDark ? "bg-[#c9a84c]/6" : "bg-[#8a7032]/4",
-      )}
+      className="relative h-2 w-full"
       role="progressbar"
       aria-label="در حال بارگذاری"
       aria-valuetext="در حال بارگذاری داده‌ها"
     >
+      {/* static track */}
       <div
         className={cn(
-          "absolute inset-y-0 w-2/5",
-          isDark
-            ? "bg-linear-to-r from-transparent via-[#c9a84c]/30 to-transparent"
-            : "bg-linear-to-r from-transparent via-[#8a7032]/25 to-transparent",
-          "animate-[loading-bar_1.4s_ease-in-out_infinite]",
+          "absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2",
+          isDark ? "bg-[#c9a84c]/10" : "bg-[#8a7032]/8",
         )}
       />
+
+      {/* moving segment */}
+      <div
+        className={cn(
+          "absolute top-1/2 h-[3px] w-2/5 -translate-y-1/2 rounded-full",
+          isDark
+            ? "bg-gradient-to-l from-[#dfc06a] via-[#c9a84c] to-transparent shadow-[0_0_12px_rgba(201,168,76,0.55),0_1px_6px_rgba(201,168,76,0.35)]"
+            : "bg-gradient-to-l from-[#a98d45] via-[#8a7032] to-transparent shadow-[0_0_10px_rgba(138,112,50,0.4),0_1px_5px_rgba(138,112,50,0.25)]",
+          "animate-[loading-bar_1.5s_cubic-bezier(.45,.05,.55,.95)_infinite]",
+        )}
+      >
+        {/* leading dot — head of the progress */}
+        <span
+          className={cn(
+            "absolute -right-0.5 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full",
+            isDark
+              ? "bg-[#dfc06a] shadow-[0_0_10px_3px_rgba(212,175,55,0.5)]"
+              : "bg-[#8a7032] shadow-[0_0_8px_2px_rgba(138,112,50,0.4)]",
+            "animate-[dot-pulse_1.5s_ease-in-out_infinite]",
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TableUpdatingOverlay({ isDark }: { isDark: boolean }) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center animate-[fade-in_.25s_ease-out_both]"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-2xl border px-5 py-3 backdrop-blur-xl",
+          isDark
+            ? "border-[#c9a84c]/15 bg-[#1c1c22]/92 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.6),0_0_0_1px_rgba(201,168,76,0.06)]"
+            : "border-[#8a7032]/12 bg-white/92 shadow-[0_12px_36px_-10px_rgba(35,30,20,0.18)]",
+        )}
+      >
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className={cn(
+                "h-2 w-2 rounded-full",
+                isDark ? "bg-[#d4b863]" : "bg-[#8a7032]",
+              )}
+              style={{
+                animation: "dot-bounce 1.2s ease-in-out infinite",
+                animationDelay: `${i * 160}ms`,
+              }}
+            />
+          ))}
+        </div>
+        <span
+          className={cn(
+            "text-xs font-semibold",
+            isDark ? "text-[#e8e6e3]" : "text-[#2c2a25]",
+          )}
+        >
+          در حال بروزرسانی…
+        </span>
+      </div>
     </div>
   );
 }
@@ -747,9 +809,20 @@ const loadingKeyframes = `
 }
 
 @keyframes loading-bar {
-  0% { left: -40%; }
-  50% { left: 60%; }
-  100% { left: 100%; }
+  0% { left: -45%; }
+  50% { left: 55%; }
+  100% { left: 105%; }
+}
+
+@keyframes dot-pulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(0.8);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-50%) scale(1.25);
+    opacity: 1;
+  }
 }
 
 @keyframes dot-bounce {
@@ -2028,6 +2101,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   headers,
   updateMethod = "PUT",
   swrConfig,
+  cacheTtlMs,
+  refreshKey,
   enabled = true,
   onError,
   data: staticData,
@@ -2108,9 +2183,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           .map(([key, range]) => [
             key,
             {
-              from: range.from
-                ? dateObjectToIsoString(range.from)
-                : undefined,
+              from: range.from ? dateObjectToIsoString(range.from) : undefined,
               to: range.to ? dateObjectToIsoString(range.to) : undefined,
             },
           ]),
@@ -2144,6 +2217,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     transformResponse,
     headers,
     swrConfig,
+    cacheTtlMs,
+    refreshKey,
     enabled: enabled && !staticData,
     serverSide,
     serverPaginationParams,
@@ -2241,8 +2316,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       if (val) {
         const column = columns.find((item) => item.key === key);
         items = items.filter((row) => {
-          const values =
-            column?.filterValues?.(row) ?? [getNestedValue(row, key)];
+          const values = column?.filterValues?.(row) ?? [
+            getNestedValue(row, key),
+          ];
           if (column?.filterType === "text") {
             const query = val.trim().toLocaleLowerCase("fa");
             return values.some(
@@ -2251,9 +2327,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 String(item).toLocaleLowerCase("fa").includes(query),
             );
           }
-          return values.some(
-            (item) => item != null && String(item) === val,
-          );
+          return values.some((item) => item != null && String(item) === val);
         });
       }
     });
@@ -2422,11 +2496,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     resetModal();
 
     if (mode && onFormDiscard) {
-      void Promise.resolve(
-        onFormDiscard(discardedData, original, mode),
-      ).catch((error) => {
-        console.error("Discarded form upload cleanup failed:", error);
-      });
+      void Promise.resolve(onFormDiscard(discardedData, original, mode)).catch(
+        (error) => {
+          console.error("Discarded form upload cleanup failed:", error);
+        },
+      );
     }
   }, [formData, modalMode, onFormDiscard, resetModal, selectedRow]);
 
@@ -2441,10 +2515,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           errors[col.key] = `${col.label} الزامی است`;
       }
       if (!errors[col.key]) {
-        const identityError = validateIdentityField(
-          col.key,
-          formData[col.key],
-        );
+        const identityError = validateIdentityField(col.key, formData[col.key]);
         if (identityError) errors[col.key] = identityError;
       }
     });
@@ -2741,39 +2812,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <ErrorBanner error={fetchError} onRetry={() => mutate()} />
         )}
 
-        {/* ── Inline revalidation indicator (non-blocking) ── */}
-        {isValidating && !isLoading && (
-          <div
-            className={cn(
-              "mb-3 flex items-center gap-2.5 rounded-xl px-4 py-2.5 border",
-              t.activeBg,
-              t.borderAccent,
-              "animate-[fade-in_.3s_ease-out_both]",
-            )}
-            role="status"
-            aria-live="polite"
-          >
-            <div className="flex items-center gap-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "h-1 w-1 rounded-full",
-                    isDark ? "bg-[#c9a84c]" : "bg-[#8a7032]",
-                  )}
-                  style={{
-                    animation: "dot-bounce 1.2s ease-in-out infinite",
-                    animationDelay: `${i * 150}ms`,
-                  }}
-                />
-              ))}
-            </div>
-            <span className={cn("text-xs", t.textMuted)}>
-              در حال بروزرسانی…
-            </span>
-          </div>
-        )}
-
         {/* ── Filters ── */}
         {hasFilters && (
           <div
@@ -2901,408 +2939,464 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               threshold={80}
             />
           </div>
-
           {/* Top loading bar — shows during any loading/revalidation */}
           {(loading || isValidating) && <TableLoadingBar isDark={isDark} />}
-
-          {/* ── Desktop Table ── */}
-          <div className="hidden md:block overflow-x-auto">
-            <table
-              className="w-full text-right text-nowrap"
-              role="table"
-              aria-label={title || "جدول"}
-              aria-rowcount={totalItems}
-              aria-busy={loading}
-            >
-              <thead
-                className={
-                  stickyHeader ? cn("sticky top-0 z-10", stickyHead) : ""
-                }
+          {/* Centered updating pill over the blurred content */}{" "}
+          {isValidating && !isLoading && (
+            <TableUpdatingOverlay isDark={isDark} />
+          )}
+          <div
+            className={cn(
+              "transition-all duration-300",
+              isValidating &&
+                !isLoading &&
+                "pointer-events-none select-none opacity-70 blur-[5px]",
+            )}
+            aria-busy={isValidating && !isLoading}
+          >
+            {/* ── Desktop Table ── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table
+                className="w-full text-right text-nowrap"
+                role="table"
+                aria-label={title || "جدول"}
+                aria-rowcount={totalItems}
+                aria-busy={loading}
               >
-                <tr className={cn("border-b", t.divider)} role="row">
-                  <th
-                    className="w-10 px-3 py-3"
-                    role="columnheader"
-                    aria-label="انتخاب همه"
-                  >
-                    <button
-                      type="button"
-                      onClick={toggleAllSelection}
-                      disabled={loading && data.length === 0}
-                      title={isAllSelected ? "لغو انتخاب همه" : "انتخاب همه"}
-                      aria-label={
-                        isAllSelected
-                          ? "لغو انتخاب همه ردیف‌ها"
-                          : "انتخاب همه ردیف‌ها"
-                      }
-                      aria-pressed={isAllSelected}
-                      className={cn(
-                        checkboxClasses(isAllSelected || isSomeSelected),
-                        loading &&
-                          data.length === 0 &&
-                          "opacity-30 pointer-events-none",
-                      )}
-                    >
-                      <CheckboxIcon
-                        checked={isAllSelected}
-                        indeterminate={isSomeSelected}
-                      />
-                    </button>
-                  </th>
-                  {showRowNumbers && (
+                <thead
+                  className={
+                    stickyHeader ? cn("sticky top-0 z-10", stickyHead) : ""
+                  }
+                >
+                  <tr className={cn("border-b", t.divider)} role="row">
                     <th
-                      className={cn(
-                        "w-12 px-3 py-3 text-xs font-semibold",
-                        t.textMuted,
-                      )}
+                      className="w-10 px-3 py-3"
                       role="columnheader"
-                      aria-label="شماره ردیف"
+                      aria-label="انتخاب همه"
                     >
-                      #
-                    </th>
-                  )}
-                  {visibleCols.map((col) => {
-                    const isSorted = sortKey === col.key;
-                    const canSort = col.sortable !== false;
-                    return (
-                      <th
-                        key={col.key}
-                        role="columnheader"
-                        aria-sort={
-                          isSorted
-                            ? sortDir === "asc"
-                              ? "ascending"
-                              : "descending"
-                            : "none"
+                      <button
+                        type="button"
+                        onClick={toggleAllSelection}
+                        disabled={loading && data.length === 0}
+                        title={isAllSelected ? "لغو انتخاب همه" : "انتخاب همه"}
+                        aria-label={
+                          isAllSelected
+                            ? "لغو انتخاب همه ردیف‌ها"
+                            : "انتخاب همه ردیف‌ها"
                         }
+                        aria-pressed={isAllSelected}
                         className={cn(
-                          "px-4 py-3 text-xs font-semibold uppercase tracking-wider",
-                          t.textMuted,
-                          canSort && "cursor-pointer select-none",
-                          "transition-colors duration-200",
-                          canSort &&
-                            (isDark
-                              ? "hover:text-[#d4b863]"
-                              : "hover:text-[#7a6428]"),
+                          checkboxClasses(isAllSelected || isSomeSelected),
+                          loading &&
+                            data.length === 0 &&
+                            "opacity-30 pointer-events-none",
                         )}
-                        onClick={() => canSort && handleSort(col.key)}
                       >
-                        <span className="inline-flex items-center gap-1">
-                          {col.label}
-                          {isSorted && sortDir === "asc" && <Icon.ChevronUp />}
-                          {isSorted && sortDir === "desc" && (
-                            <Icon.ChevronDown />
-                          )}
-                        </span>
-                      </th>
-                    );
-                  })}
-                  {hasActions && (
-                    <th
-                      className={cn(
-                        "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider",
-                        t.textMuted,
-                      )}
-                      role="columnheader"
-                    >
-                      عملیات
+                        <CheckboxIcon
+                          checked={isAllSelected}
+                          indeterminate={isSomeSelected}
+                        />
+                      </button>
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {/* ═══ LOADING STATE: Initial load with no data ═══ */}
-                {loading && data.length === 0 ? (
-                  <DesktopTableSkeleton
-                    rowCount={Math.min(currentPageSize, 8)}
-                    visibleCols={visibleCols}
-                    showRowNumbers={showRowNumbers}
-                    hasActions={hasActions}
-                    isDark={isDark}
-                    t={t}
-                  />
-                ) : /* ═══ EMPTY STATE ═══ */
-                paginatedRows.length === 0 ? (
-                  <tr role="row">
-                    <td colSpan={totalColCount} className="py-16 text-center">
-                      <div
+                    {showRowNumbers && (
+                      <th
                         className={cn(
-                          "flex flex-col items-center gap-3",
+                          "w-12 px-3 py-3 text-xs font-semibold",
                           t.textMuted,
-                          "animate-[fade-in_.4s_ease-out_both]",
                         )}
+                        role="columnheader"
+                        aria-label="شماره ردیف"
                       >
+                        #
+                      </th>
+                    )}
+                    {visibleCols.map((col) => {
+                      const isSorted = sortKey === col.key;
+                      const canSort = col.sortable !== false;
+                      return (
+                        <th
+                          key={col.key}
+                          role="columnheader"
+                          aria-sort={
+                            isSorted
+                              ? sortDir === "asc"
+                                ? "ascending"
+                                : "descending"
+                              : "none"
+                          }
+                          className={cn(
+                            "px-4 py-3 text-xs font-semibold uppercase tracking-wider",
+                            t.textMuted,
+                            canSort && "cursor-pointer select-none",
+                            "transition-colors duration-200",
+                            canSort &&
+                              (isDark
+                                ? "hover:text-[#d4b863]"
+                                : "hover:text-[#7a6428]"),
+                          )}
+                          onClick={() => canSort && handleSort(col.key)}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            {isSorted && sortDir === "asc" && (
+                              <Icon.ChevronUp />
+                            )}
+                            {isSorted && sortDir === "desc" && (
+                              <Icon.ChevronDown />
+                            )}
+                          </span>
+                        </th>
+                      );
+                    })}
+                    {hasActions && (
+                      <th
+                        className={cn(
+                          "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider",
+                          t.textMuted,
+                        )}
+                        role="columnheader"
+                      >
+                        عملیات
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* ═══ LOADING STATE: Initial load with no data ═══ */}
+                  {loading && data.length === 0 ? (
+                    <DesktopTableSkeleton
+                      rowCount={Math.min(currentPageSize, 8)}
+                      visibleCols={visibleCols}
+                      showRowNumbers={showRowNumbers}
+                      hasActions={hasActions}
+                      isDark={isDark}
+                      t={t}
+                    />
+                  ) : /* ═══ EMPTY STATE ═══ */
+                  paginatedRows.length === 0 ? (
+                    <tr role="row">
+                      <td colSpan={totalColCount} className="py-16 text-center">
                         <div
                           className={cn(
-                            "flex h-16 w-16 items-center justify-center rounded-2xl",
-                            isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
+                            "flex flex-col items-center gap-3",
+                            t.textMuted,
+                            "animate-[fade-in_.4s_ease-out_both]",
                           )}
                         >
-                          <Icon.Empty />
-                        </div>
-                        <div>
-                          <p
+                          <div
                             className={cn(
-                              "text-sm font-medium mb-1",
-                              t.textSecondary,
+                              "flex h-16 w-16 items-center justify-center rounded-2xl",
+                              isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
                             )}
                           >
-                            {emptyMessage}
-                          </p>
-                          {(debouncedSearch || activeFiltersCount > 0) && (
-                            <p className={cn("text-xs", t.textDisabled)}>
-                              فیلترها را تغییر دهید یا عبارت جستجو را ویرایش
-                              کنید
+                            <Icon.Empty />
+                          </div>
+                          <div>
+                            <p
+                              className={cn(
+                                "text-sm font-medium mb-1",
+                                t.textSecondary,
+                              )}
+                            >
+                              {emptyMessage}
                             </p>
-                          )}
+                            {(debouncedSearch || activeFiltersCount > 0) && (
+                              <p className={cn("text-xs", t.textDisabled)}>
+                                فیلترها را تغییر دهید یا عبارت جستجو را ویرایش
+                                کنید
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  /* ═══ DATA ROWS ═══ */
-                  paginatedRows.map((row, ri) => {
-                    const rowKey = String(row[primaryKey] ?? ri);
-                    const isSelected = selectedRows.has(rowKey);
-                    const globalRowIndex =
-                      (currentPage - 1) * currentPageSize + ri + 1;
-                    return (
-                      <tr
-                        key={rowKey}
-                        role="row"
-                        aria-selected={isSelected}
-                        aria-rowindex={globalRowIndex}
-                        onDoubleClick={() => handleRowDoubleClick(row)}
+                      </td>
+                    </tr>
+                  ) : (
+                    /* ═══ DATA ROWS ═══ */
+                    paginatedRows.map((row, ri) => {
+                      const rowKey = String(row[primaryKey] ?? ri);
+                      const isSelected = selectedRows.has(rowKey);
+                      const globalRowIndex =
+                        (currentPage - 1) * currentPageSize + ri + 1;
+                      return (
+                        <tr
+                          key={rowKey}
+                          role="row"
+                          aria-selected={isSelected}
+                          aria-rowindex={globalRowIndex}
+                          onDoubleClick={() => handleRowDoubleClick(row)}
+                          className={cn(
+                            "group border-b last:border-b-0",
+                            t.divider,
+                            "transition-all duration-200",
+                            isSelected ? rowSelected : rowHover,
+                            doubleClickToEdit && canUpdate && "cursor-pointer",
+                            // Subtle fade when revalidating existing data
+                            isValidating &&
+                              !isLoading &&
+                              "opacity-80 transition-opacity duration-300",
+                          )}
+                        >
+                          <td className="w-10 px-3 py-3" role="cell">
+                            <button
+                              type="button"
+                              onClick={() => toggleRowSelection(row)}
+                              aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف ${toPersianDigits(globalRowIndex)}`}
+                              aria-pressed={isSelected}
+                              className={checkboxClasses(isSelected)}
+                            >
+                              {isSelected && <CheckboxIcon checked />}
+                            </button>
+                          </td>
+                          {showRowNumbers && (
+                            <td
+                              className={cn(
+                                "w-12 px-3 py-3 text-xs font-mono",
+                                t.textMuted,
+                              )}
+                              role="cell"
+                              aria-label={`ردیف ${toPersianDigits(globalRowIndex)}`}
+                            >
+                              {toPersianDigits(globalRowIndex)}
+                            </td>
+                          )}
+                          {visibleCols.map((col) => {
+                            const raw = getNestedValue(row, col.key);
+                            const display = col.render
+                              ? col.render(raw as T[keyof T], row)
+                              : formatCellValue(raw);
+                            const cellId = `${rowKey}-${col.key}`;
+                            const isCopied = copiedCell === cellId;
+                            const canCopy =
+                              enableCellCopy && col.copyable !== false;
+                            return (
+                              <td
+                                key={col.key}
+                                role="cell"
+                                className={cn(
+                                  "px-4 py-3 text-sm relative group/cell",
+                                  t.textSecondary,
+                                  canCopy && "cursor-copy",
+                                )}
+                                onClick={() =>
+                                  canCopy &&
+                                  handleCellCopy(raw, rowKey, col.key)
+                                }
+                                title={canCopy ? "کلیک برای کپی" : undefined}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span className="flex-1">
+                                    {typeof display === "string"
+                                      ? truncate(display, 60)
+                                      : display}
+                                  </span>
+                                  {canCopy && (
+                                    <span
+                                      className={cn(
+                                        "shrink-0 transition-all duration-200",
+                                        isCopied
+                                          ? isDark
+                                            ? "text-[#6ec99a] opacity-100"
+                                            : "text-[#2d7a50] opacity-100"
+                                          : cn(
+                                              "opacity-0 group-hover/cell:opacity-40",
+                                              t.textMuted,
+                                            ),
+                                      )}
+                                    >
+                                      {isCopied ? (
+                                        <Icon.CopyDone />
+                                      ) : (
+                                        <Icon.Copy />
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                          {hasActions && (
+                            <td className="px-4 py-3" role="cell">
+                              <div
+                                className="flex items-center justify-start gap-1"
+                                role="toolbar"
+                                aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
+                              >
+                                <ActionBtn
+                                  onClick={() => openView(row)}
+                                  title="مشاهده جزئیات"
+                                >
+                                  <Icon.Eye />
+                                </ActionBtn>
+                                {canUpdate && (
+                                  <ActionBtn
+                                    onClick={() => openEdit(row)}
+                                    title="ویرایش"
+                                  >
+                                    <Icon.Edit />
+                                  </ActionBtn>
+                                )}
+                                {canDelete && (
+                                  <ActionBtn
+                                    onClick={() => openDelete(row)}
+                                    title="حذف"
+                                    variant="danger"
+                                  >
+                                    <Icon.Trash />
+                                  </ActionBtn>
+                                )}
+                                {rowActions?.(row)}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* ── Mobile Card List ── */}
+            <div className={cn("block md:hidden divide-y", t.divider)}>
+              {/* ═══ MOBILE LOADING STATE ═══ */}
+              {loading && data.length === 0 ? (
+                <MobileCardSkeleton
+                  cardCount={Math.min(currentPageSize, 5)}
+                  showRowNumbers={showRowNumbers}
+                  hasActions={hasActions}
+                  isDark={isDark}
+                  t={t}
+                />
+              ) : paginatedRows.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div
+                    className={cn(
+                      "flex flex-col items-center gap-3",
+                      t.textMuted,
+                      "animate-[fade-in_.4s_ease-out_both]",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-16 w-16 items-center justify-center rounded-2xl",
+                        isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
+                      )}
+                    >
+                      <Icon.Empty />
+                    </div>
+                    <div>
+                      <p
                         className={cn(
-                          "group border-b last:border-b-0",
-                          t.divider,
-                          "transition-all duration-200",
-                          isSelected ? rowSelected : rowHover,
-                          doubleClickToEdit && canUpdate && "cursor-pointer",
-                          // Subtle fade when revalidating existing data
-                          isValidating &&
-                            !isLoading &&
-                            "opacity-80 transition-opacity duration-300",
+                          "text-sm font-medium mb-1",
+                          t.textSecondary,
                         )}
                       >
-                        <td className="w-10 px-3 py-3" role="cell">
+                        {emptyMessage}
+                      </p>
+                      {(debouncedSearch || activeFiltersCount > 0) && (
+                        <p className={cn("text-xs", t.textDisabled)}>
+                          فیلترها را تغییر دهید یا عبارت جستجو را ویرایش کنید
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                paginatedRows.map((row, ri) => {
+                  const mobileCols = visibleCols.filter((c) => !c.hideOnMobile);
+                  const rowKey = String(row[primaryKey] ?? ri);
+                  const isSelected = selectedRows.has(rowKey);
+                  const globalIdx =
+                    (currentPage - 1) * currentPageSize + ri + 1;
+                  return (
+                    <div
+                      key={rowKey}
+                      role="article"
+                      aria-label={`ردیف ${toPersianDigits(globalIdx)}`}
+                      onDoubleClick={() => handleRowDoubleClick(row)}
+                      className={cn(
+                        "group p-4 transition-all duration-200",
+                        isSelected
+                          ? isDark
+                            ? "bg-[#c9a84c]/3"
+                            : "bg-[#8a7032]/2"
+                          : isDark
+                            ? "active:bg-[#ffffff04]"
+                            : "active:bg-[#00000003]",
+                        // Subtle fade when revalidating
+                        isValidating &&
+                          !isLoading &&
+                          "opacity-80 transition-opacity duration-300",
+                      )}
+                    >
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="flex items-center gap-2">
+                          {showRowNumbers && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-mono w-5",
+                                t.textMuted,
+                              )}
+                            >
+                              {toPersianDigits(globalIdx)}
+                            </span>
+                          )}
                           <button
                             type="button"
                             onClick={() => toggleRowSelection(row)}
-                            aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف ${toPersianDigits(globalRowIndex)}`}
+                            aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف`}
                             aria-pressed={isSelected}
-                            className={checkboxClasses(isSelected)}
+                            className={cn(
+                              "mt-0.5 shrink-0",
+                              checkboxClasses(isSelected),
+                            )}
                           >
                             {isSelected && <CheckboxIcon checked />}
                           </button>
-                        </td>
-                        {showRowNumbers && (
-                          <td
-                            className={cn(
-                              "w-12 px-3 py-3 text-xs font-mono",
-                              t.textMuted,
-                            )}
-                            role="cell"
-                            aria-label={`ردیف ${toPersianDigits(globalRowIndex)}`}
-                          >
-                            {toPersianDigits(globalRowIndex)}
-                          </td>
-                        )}
-                        {visibleCols.map((col) => {
-                          const raw = getNestedValue(row, col.key);
-                          const display = col.render
-                            ? col.render(raw as T[keyof T], row)
-                            : formatCellValue(raw);
-                          const cellId = `${rowKey}-${col.key}`;
-                          const isCopied = copiedCell === cellId;
-                          const canCopy =
-                            enableCellCopy && col.copyable !== false;
-                          return (
-                            <td
-                              key={col.key}
-                              role="cell"
-                              className={cn(
-                                "px-4 py-3 text-sm relative group/cell",
-                                t.textSecondary,
-                                canCopy && "cursor-copy",
-                              )}
-                              onClick={() =>
-                                canCopy && handleCellCopy(raw, rowKey, col.key)
-                              }
-                              title={canCopy ? "کلیک برای کپی" : undefined}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <span className="flex-1">
-                                  {typeof display === "string"
-                                    ? truncate(display, 60)
-                                    : display}
-                                </span>
-                                {canCopy && (
-                                  <span
-                                    className={cn(
-                                      "shrink-0 transition-all duration-200",
-                                      isCopied
-                                        ? isDark
-                                          ? "text-[#6ec99a] opacity-100"
-                                          : "text-[#2d7a50] opacity-100"
-                                        : cn(
-                                            "opacity-0 group-hover/cell:opacity-40",
-                                            t.textMuted,
-                                          ),
-                                    )}
-                                  >
-                                    {isCopied ? (
-                                      <Icon.CopyDone />
-                                    ) : (
-                                      <Icon.Copy />
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
-                        {hasActions && (
-                          <td className="px-4 py-3" role="cell">
-                            <div
-                              className="flex items-center justify-start gap-1"
-                              role="toolbar"
-                              aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
-                            >
-                              <ActionBtn
-                                onClick={() => openView(row)}
-                                title="مشاهده جزئیات"
+                        </div>
+                        <div className="flex-1">
+                          {mobileCols.slice(0, 1).map((col) => {
+                            const raw = getNestedValue(row, col.key);
+                            const display = col.render
+                              ? col.render(raw as T[keyof T], row)
+                              : formatCellValue(raw);
+                            return (
+                              <div
+                                key={col.key}
+                                onClick={() =>
+                                  enableCellCopy &&
+                                  handleCellCopy(raw, rowKey, col.key)
+                                }
+                                className={
+                                  enableCellCopy
+                                    ? "cursor-copy active:opacity-70"
+                                    : ""
+                                }
                               >
-                                <Icon.Eye />
-                              </ActionBtn>
-                              {canUpdate && (
-                                <ActionBtn
-                                  onClick={() => openEdit(row)}
-                                  title="ویرایش"
+                                <p
+                                  className={cn(
+                                    "text-[10px] font-medium uppercase tracking-wider mb-0.5",
+                                    t.textMuted,
+                                  )}
                                 >
-                                  <Icon.Edit />
-                                </ActionBtn>
-                              )}
-                              {canDelete && (
-                                <ActionBtn
-                                  onClick={() => openDelete(row)}
-                                  title="حذف"
-                                  variant="danger"
+                                  {col.label}
+                                </p>
+                                <p
+                                  className={cn(
+                                    "text-sm font-semibold",
+                                    t.textPrimary,
+                                  )}
                                 >
-                                  <Icon.Trash />
-                                </ActionBtn>
-                              )}
-                              {rowActions?.(row)}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Mobile Card List ── */}
-          <div className={cn("block md:hidden divide-y", t.divider)}>
-            {/* ═══ MOBILE LOADING STATE ═══ */}
-            {loading && data.length === 0 ? (
-              <MobileCardSkeleton
-                cardCount={Math.min(currentPageSize, 5)}
-                showRowNumbers={showRowNumbers}
-                hasActions={hasActions}
-                isDark={isDark}
-                t={t}
-              />
-            ) : paginatedRows.length === 0 ? (
-              <div className="py-16 text-center">
-                <div
-                  className={cn(
-                    "flex flex-col items-center gap-3",
-                    t.textMuted,
-                    "animate-[fade-in_.4s_ease-out_both]",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex h-16 w-16 items-center justify-center rounded-2xl",
-                      isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
-                    )}
-                  >
-                    <Icon.Empty />
-                  </div>
-                  <div>
-                    <p
-                      className={cn(
-                        "text-sm font-medium mb-1",
-                        t.textSecondary,
-                      )}
-                    >
-                      {emptyMessage}
-                    </p>
-                    {(debouncedSearch || activeFiltersCount > 0) && (
-                      <p className={cn("text-xs", t.textDisabled)}>
-                        فیلترها را تغییر دهید یا عبارت جستجو را ویرایش کنید
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              paginatedRows.map((row, ri) => {
-                const mobileCols = visibleCols.filter((c) => !c.hideOnMobile);
-                const rowKey = String(row[primaryKey] ?? ri);
-                const isSelected = selectedRows.has(rowKey);
-                const globalIdx = (currentPage - 1) * currentPageSize + ri + 1;
-                return (
-                  <div
-                    key={rowKey}
-                    role="article"
-                    aria-label={`ردیف ${toPersianDigits(globalIdx)}`}
-                    onDoubleClick={() => handleRowDoubleClick(row)}
-                    className={cn(
-                      "group p-4 transition-all duration-200",
-                      isSelected
-                        ? isDark
-                          ? "bg-[#c9a84c]/3"
-                          : "bg-[#8a7032]/2"
-                        : isDark
-                          ? "active:bg-[#ffffff04]"
-                          : "active:bg-[#00000003]",
-                      // Subtle fade when revalidating
-                      isValidating &&
-                        !isLoading &&
-                        "opacity-80 transition-opacity duration-300",
-                    )}
-                  >
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="flex items-center gap-2">
-                        {showRowNumbers && (
-                          <span
-                            className={cn(
-                              "text-[10px] font-mono w-5",
-                              t.textMuted,
-                            )}
-                          >
-                            {toPersianDigits(globalIdx)}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => toggleRowSelection(row)}
-                          aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف`}
-                          aria-pressed={isSelected}
-                          className={cn(
-                            "mt-0.5 shrink-0",
-                            checkboxClasses(isSelected),
-                          )}
-                        >
-                          {isSelected && <CheckboxIcon checked />}
-                        </button>
+                                  {typeof display === "string"
+                                    ? truncate(display, 40)
+                                    : display}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        {mobileCols.slice(0, 1).map((col) => {
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 mr-8">
+                        {mobileCols.slice(1, 5).map((col) => {
                           const raw = getNestedValue(row, col.key);
                           const display = col.render
                             ? col.render(raw as T[keyof T], row)
@@ -3328,98 +3422,56 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                               >
                                 {col.label}
                               </p>
-                              <p
-                                className={cn(
-                                  "text-sm font-semibold",
-                                  t.textPrimary,
-                                )}
-                              >
+                              <p className={cn("text-xs", t.textSecondary)}>
                                 {typeof display === "string"
-                                  ? truncate(display, 40)
+                                  ? truncate(display, 30)
                                   : display}
                               </p>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 mr-8">
-                      {mobileCols.slice(1, 5).map((col) => {
-                        const raw = getNestedValue(row, col.key);
-                        const display = col.render
-                          ? col.render(raw as T[keyof T], row)
-                          : formatCellValue(raw);
-                        return (
-                          <div
-                            key={col.key}
-                            onClick={() =>
-                              enableCellCopy &&
-                              handleCellCopy(raw, rowKey, col.key)
-                            }
-                            className={
-                              enableCellCopy
-                                ? "cursor-copy active:opacity-70"
-                                : ""
-                            }
-                          >
-                            <p
-                              className={cn(
-                                "text-[10px] font-medium uppercase tracking-wider mb-0.5",
-                                t.textMuted,
-                              )}
-                            >
-                              {col.label}
-                            </p>
-                            <p className={cn("text-xs", t.textSecondary)}>
-                              {typeof display === "string"
-                                ? truncate(display, 30)
-                                : display}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {hasActions && (
-                      <div
-                        className={cn(
-                          "mt-3 flex items-center gap-1 border-t pt-3 mr-8",
-                          t.divider,
-                        )}
-                        role="toolbar"
-                        aria-label="عملیات"
-                      >
-                        <ActionBtn
-                          onClick={() => openView(row)}
-                          title="مشاهده جزئیات"
+                      {hasActions && (
+                        <div
+                          className={cn(
+                            "mt-3 flex items-center gap-1 border-t pt-3 mr-8",
+                            t.divider,
+                          )}
+                          role="toolbar"
+                          aria-label="عملیات"
                         >
-                          <Icon.Eye />
-                        </ActionBtn>
-                        {canUpdate && (
                           <ActionBtn
-                            onClick={() => openEdit(row)}
-                            title="ویرایش"
+                            onClick={() => openView(row)}
+                            title="مشاهده جزئیات"
                           >
-                            <Icon.Edit />
+                            <Icon.Eye />
                           </ActionBtn>
-                        )}
-                        {canDelete && (
-                          <ActionBtn
-                            onClick={() => openDelete(row)}
-                            title="حذف"
-                            variant="danger"
-                          >
-                            <Icon.Trash />
-                          </ActionBtn>
-                        )}
-                        {rowActions?.(row)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                          {canUpdate && (
+                            <ActionBtn
+                              onClick={() => openEdit(row)}
+                              title="ویرایش"
+                            >
+                              <Icon.Edit />
+                            </ActionBtn>
+                          )}
+                          {canDelete && (
+                            <ActionBtn
+                              onClick={() => openDelete(row)}
+                              title="حذف"
+                              variant="danger"
+                            >
+                              <Icon.Trash />
+                            </ActionBtn>
+                          )}
+                          {rowActions?.(row)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-
           {/* ── Pagination ── */}
           {totalPages > 1 && (
             <nav
@@ -3678,14 +3730,8 @@ export default function DynamicTable<T extends Record<string, unknown>>({
           <div className="max-h-[60vh] overflow-y-auto overflow-x-visible px-5 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {editableCols.map((col) => {
-                const formMode =
-                  modalMode === "create" ? "create" : "edit";
-                if (
-                  col.hiddenInForm?.(
-                    formData as Partial<T>,
-                    formMode,
-                  )
-                )
+                const formMode = modalMode === "create" ? "create" : "edit";
+                if (col.hiddenInForm?.(formData as Partial<T>, formMode))
                   return null;
 
                 const fv = formData[col.key];

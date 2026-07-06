@@ -8,6 +8,22 @@ export const ACCESS_ACTIONS = [
 
 export type AccessActionValue = (typeof ACCESS_ACTIONS)[number]["value"];
 
+export const BLOCK_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
+  (action) => action.value !== "delete",
+);
+
+export function getAccessActionsForComponent(componentName: string) {
+  return componentName === "admin.blocks"
+    ? BLOCK_ACCESS_ACTIONS
+    : ACCESS_ACTIONS;
+}
+
+export function getAccessActionsForResource(
+  resource: "templates" | "blocks" | "pages",
+) {
+  return resource === "blocks" ? BLOCK_ACCESS_ACTIONS : ACCESS_ACTIONS;
+}
+
 export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.dashboard", label: "داشبورد ادمین" },
   { key: "admin.users", label: "کاربران" },

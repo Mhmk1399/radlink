@@ -6,17 +6,24 @@ import { AuthRequest } from "@/lib/auth/types";
 import Access from "@/models/access";
 import Permission from "@/models/permission";
 import { accessCache } from "@/lib/auth/accessCache";
+import {
+    ACCESS_ACTIONS,
+    getAccessActionsForComponent,
+    getAccessActionsForResource,
+} from "@/lib/auth/accessCatalog";
 import "@/models/template";
 import "@/models/blocks";
 import "@/models/pages";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const VALID_ACTIONS = new Set(["view", "create", "update", "delete", "publish"]);
-
-function normalizeActions(value: unknown) {
+function normalizeActions(
+    value: unknown,
+    allowedActions: readonly { value: string }[] = ACCESS_ACTIONS,
+) {
     if (!Array.isArray(value)) return [];
-    return [...new Set(value.map(String).filter((action) => VALID_ACTIONS.has(action)))];
+    const validActions = new Set<string>(allowedActions.map((action) => action.value));
+    return [...new Set(value.map(String).filter((action) => validActions.has(action)))];
 }
 
 function normalizeObjectId(value: unknown) {
@@ -35,21 +42,31 @@ function normalizeStaticComponents(value: unknown) {
         .map((item) => {
             if (typeof item !== "object" || item === null) return null;
             const componentName = String((item as Record<string, unknown>).componentName ?? "").trim();
-            const actions = normalizeActions((item as Record<string, unknown>).actions);
+            const actions = normalizeActions(
+                (item as Record<string, unknown>).actions,
+                getAccessActionsForComponent(componentName),
+            );
             if (!componentName || actions.length === 0) return null;
             return { componentName, actions };
         })
         .filter(Boolean);
 }
 
-function normalizeDynamicItems(value: unknown, idKey: "templateId" | "blockId" | "pageId") {
+function normalizeDynamicItems(
+    value: unknown,
+    idKey: "templateId" | "blockId" | "pageId",
+    resource: "templates" | "blocks" | "pages",
+) {
     if (!Array.isArray(value)) return [];
 
     return value
         .map((item) => {
             if (typeof item !== "object" || item === null) return null;
             const id = normalizeObjectId((item as Record<string, unknown>)[idKey]);
-            const actions = normalizeActions((item as Record<string, unknown>).actions);
+            const actions = normalizeActions(
+                (item as Record<string, unknown>).actions,
+                getAccessActionsForResource(resource),
+            );
             if (!id || actions.length === 0) return null;
             return { [idKey]: id, actions };
         })
@@ -65,9 +82,9 @@ function normalizeAccessPayload(body: Record<string, unknown>) {
     return {
         staticComponents: normalizeStaticComponents(body.staticComponents),
         dynamicAccess: {
-            templates: normalizeDynamicItems(dynamicAccess.templates, "templateId"),
-            blocks: normalizeDynamicItems(dynamicAccess.blocks, "blockId"),
-            pages: normalizeDynamicItems(dynamicAccess.pages, "pageId"),
+            templates: normalizeDynamicItems(dynamicAccess.templates, "templateId", "templates"),
+            blocks: normalizeDynamicItems(dynamicAccess.blocks, "blockId", "blocks"),
+            pages: normalizeDynamicItems(dynamicAccess.pages, "pageId", "pages"),
         },
     };
 }

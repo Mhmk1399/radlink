@@ -364,7 +364,8 @@ export default function CategoriesSection({
 
       {/* ── Table ── */}
       <DynamicTable<CategoryRow>
-        endpoint={`/api/categories?refresh=${refreshToken}`}
+        endpoint="/api/categories"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         columns={columns}
         title="لیست دسته‌بندی‌ها"

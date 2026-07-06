@@ -13,25 +13,29 @@ import {
   animation,
   focus,
   interactive,
-  accentTokens,
 } from "@/lib/design/design-system";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
 /* ──────────────────────────────────────────────
-   KEYFRAMES
+   KEYFRAMES — transform/opacity only (GPU-cheap),
+   fully disabled for prefers-reduced-motion.
    ────────────────────────────────────────────── */
 
 const navKeyframes = `
-@keyframes nav-slide-down{0%{opacity:0;transform:translateY(-100%)}100%{opacity:1;transform:translateY(0)}}
-@keyframes nav-item-fade{0%{opacity:0;transform:translateY(-8px)}100%{opacity:1;transform:translateY(0)}}
-@keyframes nav-underline{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
-@keyframes nav-mobile-item{0%{opacity:0;transform:translateX(16px)}100%{opacity:1;transform:translateX(0)}}
-@keyframes nav-logo-pulse{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,0.4)}50%{box-shadow:0 0 0 8px rgba(56,189,248,0)}}
-.nav-slide-down{animation:nav-slide-down .5s cubic-bezier(.22,1,.36,1) both}
-.nav-item-fade{animation:nav-item-fade .4s cubic-bezier(.22,1,.36,1) both}
-.nav-mobile-item{animation:nav-mobile-item .35s cubic-bezier(.22,1,.36,1) both}
-.nav-logo-pulse{animation:nav-logo-pulse 3s ease-in-out infinite}
+@keyframes nav-slide-down{0%{opacity:0;transform:translateY(-16px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes nav-item-fade{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes nav-mobile-item{0%{opacity:0;transform:translateX(12px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes nav-overlay-in{0%{opacity:0}100%{opacity:1}}
+@keyframes nav-underline-in{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+.nav-slide-down{animation:nav-slide-down .45s cubic-bezier(.22,1,.36,1) both}
+.nav-item-fade{animation:nav-item-fade .35s cubic-bezier(.22,1,.36,1) both}
+.nav-mobile-item{animation:nav-mobile-item .3s cubic-bezier(.22,1,.36,1) both}
+.nav-overlay-in{animation:nav-overlay-in .25s ease both}
+.nav-underline-in{animation:nav-underline-in .25s cubic-bezier(.22,1,.36,1) both;transform-origin:center}
+@media (prefers-reduced-motion: reduce){
+  .nav-slide-down,.nav-item-fade,.nav-mobile-item,.nav-overlay-in,.nav-underline-in{animation:none}
+}
 `;
 
 /* ──────────────────────────────────────────────
@@ -41,11 +45,10 @@ const navKeyframes = `
 type NavItem = {
   label: string;
   href: string;
-  current?: boolean;
 };
 
 const navItems: NavItem[] = [
-  { label: "خانه", href: "#home", current: true },
+  { label: "خانه", href: "#home" },
   { label: "امکانات", href: "#features" },
   { label: "کاربردها", href: "#use-cases" },
   { label: "نمونه صفحات", href: "#templates" },
@@ -65,17 +68,20 @@ function useScrollState() {
   });
 
   useEffect(() => {
-    let lastY = 0;
+    let lastY = window.scrollY;
     let ticking = false;
 
     const update = () => {
       const y = window.scrollY;
       const down = y > lastY;
-      const scrolled = y > 20;
-      const atTop = y < 5;
-      const hidden = down && y > 200;
+      /* Small threshold so tiny touch jitters don't flicker the navbar. */
+      const delta = Math.abs(y - lastY);
 
-      setState({ scrolled, hidden, atTop });
+      setState((prev) => ({
+        scrolled: y > 20,
+        atTop: y < 5,
+        hidden: delta > 4 ? down && y > 200 : prev.hidden,
+      }));
       lastY = y;
       ticking = false;
     };
@@ -102,7 +108,6 @@ function useActiveSection(ids: string[]) {
       (entries) => {
         const visible = entries.filter((e) => e.isIntersecting);
         if (visible.length > 0) {
-          // Pick the one with highest intersection ratio
           const best = visible.reduce((a, b) =>
             a.intersectionRatio > b.intersectionRatio ? a : b,
           );
@@ -130,7 +135,7 @@ function useActiveSection(ids: string[]) {
 export default function SmartLandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasAuthToken, setHasAuthToken] = useState(false);
-  const { scrolled, hidden, atTop } = useScrollState();
+  const { scrolled, hidden } = useScrollState();
   const activeSection = useActiveSection(navItems.map((i) => i.href));
   const pathName = usePathname();
   const ctaHref = hasAuthToken ? "/admin" : "/auth";
@@ -138,7 +143,11 @@ export default function SmartLandingNavbar() {
 
   useEffect(() => {
     const syncAuthToken = () => {
-      setHasAuthToken(Boolean(localStorage.getItem("auth_token")));
+      try {
+        setHasAuthToken(Boolean(localStorage.getItem("auth_token")));
+      } catch {
+        setHasAuthToken(false);
+      }
     };
 
     syncAuthToken();
@@ -159,25 +168,40 @@ export default function SmartLandingNavbar() {
     };
   }, [isOpen]);
 
-  // Close mobile menu on resize to desktop
+  // Close mobile menu on resize to desktop + on Escape
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 1024) setIsOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const handleNavClick = useCallback((href: string) => {
     setIsOpen(false);
     const el = document.querySelector(href);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      el.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        block: "start",
+      });
     }
   }, []);
-  if (pathName === "/admin") {
+
+  if (pathName?.startsWith("/admin")) {
     return null;
   }
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: navKeyframes }} />
@@ -185,74 +209,58 @@ export default function SmartLandingNavbar() {
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="nav-overlay-in fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setIsOpen(false)}
           aria-hidden
-          style={{ animation: "toast-enter-top .3s ease both" }}
         />
       )}
 
       <header
         dir="rtl"
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 px-3 transition-all  duration-500 ease-out",
-          scrolled ? "pt-2 sm:pt-2" : "pt-3 sm:pt-4",
+          "fixed top-0 left-0 right-0 z-50 px-3 transition-all duration-300 ease-out",
+          scrolled ? "pt-2" : "pt-3 sm:pt-4",
           hidden && !isOpen
             ? "-translate-y-full opacity-0"
             : "translate-y-0 opacity-100",
-          scrolled ? backgrounds.navbarScrolled : backgrounds.navbar,
+          /* Keyboard users can always reach the navbar even while hidden */
+          "focus-within:translate-y-0 focus-within:opacity-100",
         )}
       >
         <div className={layout.container}>
           <nav
             aria-label="منوی اصلی سایت"
             className={cn(
-              "nav-slide-down relative overflow-visible p-1.5 transition-all duration-500 ease-out",
+              "nav-slide-down relative overflow-visible p-1.5 transition-all duration-300 ease-out",
               layout.radius.navbar,
-              // Dynamic background using design system
-              scrolled
-                ? cn(
-                    backgrounds.navbarScrolled, // ← DS navbar background
-                    borders.inner, // ← DS border
-                    shadows.navbar, // ← DS shadow
-                  )
-                : cn(
-                    backgrounds.navbar, // ← DS navbar background
-                    borders.inner, // ← DS border
-                    shadows.navbar, // ← DS shadow
-                  ),
+              scrolled ? backgrounds.navbarScrolled : backgrounds.navbar,
+              borders.inner,
+              shadows.navbar,
             )}
           >
             {/* ── Top highlight line ── */}
             <div
               className={cn(
-                "pointer-events-none absolute inset-x-6 top-0 h-px transition-opacity duration-500",
+                "pointer-events-none absolute inset-x-6 top-0 h-px transition-opacity duration-300",
                 gradients.dividerSky,
                 scrolled ? "opacity-40" : "opacity-70",
               )}
             />
 
-            {/* ── Corner glows ── */}
+            {/* ── Corner glow — one, desktop only (blur-3xl is expensive on mobile GPUs) ── */}
             <div
               className={cn(
-                "pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-sky-400/10 blur-3xl transition-opacity duration-500",
+                "pointer-events-none absolute -right-8 -top-8 hidden h-20 w-20 rounded-full bg-sky-400/10 blur-3xl transition-opacity duration-300 lg:block",
                 scrolled ? "opacity-30" : "opacity-60",
-              )}
-            />
-            <div
-              className={cn(
-                "pointer-events-none absolute -left-8 -bottom-8 h-20 w-20 rounded-full bg-cyan-400/10 blur-3xl transition-opacity duration-500",
-                scrolled ? "opacity-20" : "opacity-50",
               )}
             />
 
             {/* ── Inner container ── */}
             <div
               className={cn(
-                "relative flex items-center justify-between transition-all duration-500",
+                "relative flex items-center justify-between transition-all duration-300",
                 layout.gap.md,
                 layout.radius.navbarInner,
-                // Inner background changes with scroll
                 scrolled
                   ? "border border-white/4 bg-white/2 px-3 py-2 sm:px-4"
                   : cn(
@@ -264,13 +272,13 @@ export default function SmartLandingNavbar() {
             >
               {/* ══ LOGO ══ */}
               <Link
-                href="/base-landing"
+                href="/"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNavClick("#home");
                 }}
                 className={cn(
-                  "group inline-flex items-center gap-2.5 rounded-2xl px-1 py-1 text-white",
+                  "group inline-flex shrink-0 items-center gap-2.5 rounded-2xl px-1 py-1 text-white",
                   animation.base,
                   animation.activePressSmall,
                   animation.motionSafe,
@@ -278,22 +286,25 @@ export default function SmartLandingNavbar() {
                 )}
                 aria-label="صفحه اصلی"
               >
-                <span className="flex flex-col leading-none">
-                  <Image
-                    src="/assets/images/logo.png"
-                    width={150}
-                    height={200}
-                    alt="logo"
-                    className="object-cover h-10"
-                  />
-                </span>
+                <Image
+                  src="/assets/images/logo.png"
+                  width={150}
+                  height={200}
+                  alt="لوگو"
+                  priority
+                  className={cn(
+                    "object-cover transition-all duration-300",
+                    scrolled ? "h-8" : "h-10",
+                    "w-auto",
+                  )}
+                />
               </Link>
 
               {/* ══ DESKTOP NAV ══ */}
               <div className="hidden lg:flex lg:flex-1 lg:justify-center">
                 <ul
                   className={cn(
-                    "flex items-center gap-0.5 p-1 transition-all duration-500",
+                    "flex items-center gap-0.5 p-1",
                     layout.radius.full,
                   )}
                 >
@@ -304,8 +315,9 @@ export default function SmartLandingNavbar() {
                         <button
                           onClick={() => handleNavClick(item.href)}
                           aria-current={isActive ? "page" : undefined}
+                          style={{ animationDelay: `${i * 45}ms` }}
                           className={cn(
-                            "nav-item-fade group relative inline-flex cursor-pointer items-center px-3.5 py-2 text-[13px] font-medium transition-all duration-300",
+                            "nav-item-fade group relative inline-flex cursor-pointer items-center px-3.5 py-2 text-[13px] font-medium transition-colors duration-200",
                             layout.radius.full,
                             interactive.touch,
                             animation.motionSafe,
@@ -315,16 +327,23 @@ export default function SmartLandingNavbar() {
                                   typography.navItemActive,
                                   borders.inner,
                                   shadows.innerLight,
-                                  accentTokens.sky.bgHover,
+                                  "bg-sky-400/10",
                                 )
                               : cn(
                                   typography.navItem,
-                                  "hover:" + accentTokens.sky.bgHover,
+                                  "hover:bg-sky-400/8 hover:text-white",
                                   animation.activePress,
                                 ),
                           )}
                         >
                           <span className="relative z-10">{item.label}</span>
+                          {/* animated active underline */}
+                          {isActive && (
+                            <span
+                              aria-hidden="true"
+                              className="nav-underline-in absolute inset-x-3 -bottom-px h-px rounded-full bg-gradient-to-l from-transparent via-sky-300/80 to-transparent"
+                            />
+                          )}
                         </button>
                       </li>
                     );
@@ -333,7 +352,7 @@ export default function SmartLandingNavbar() {
               </div>
 
               {/* ══ DESKTOP CTAs ══ */}
-              <div className="hidden lg:flex items-center gap-2.5">
+              <div className="hidden items-center gap-2.5 lg:flex">
                 <Link
                   href={ctaHref}
                   className={cn(
@@ -342,7 +361,7 @@ export default function SmartLandingNavbar() {
                     scrolled
                       ? "border-white/6 bg-white/3 hover:bg-white/6"
                       : cn(borders.medium, backgrounds.surface.glass),
-                    "hover:text-white hover:border-white/15",
+                    "hover:border-white/15 hover:text-white",
                     shadows.insetGlow,
                     animation.activePress,
                     focus.ring,
@@ -359,22 +378,18 @@ export default function SmartLandingNavbar() {
                     borders.skyStrong,
                     gradients.primary,
                     "font-semibold text-white",
-                    scrolled
-                      ? shadows.ctaSmall
-                      : cn(
-                          shadows.ctaSmall,
-                          "hover:shadow-[0_22px_42px_-18px_rgba(56,189,248,0.7)]",
-                        ),
-                    "hover:-translate-y-0.5",
+                    shadows.ctaSmall,
+                    "hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-18px_rgba(56,189,248,0.7)]",
                     animation.activePress,
                     animation.activeRestore,
+                    animation.motionSafe,
                     focus.ringLight,
                   )}
                 >
                   <span>{hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}</span>
                   <span
                     className={cn(
-                      "rounded-full bg-white/90 transition-all duration-300",
+                      "rounded-full bg-white/90 transition-transform duration-300",
                       shadows.dot,
                       "group-hover:scale-125",
                       scrolled ? "h-1.5 w-1.5" : "h-2 w-2",
@@ -391,7 +406,7 @@ export default function SmartLandingNavbar() {
                 aria-label={isOpen ? "بستن منو" : "باز کردن منو"}
                 onClick={() => setIsOpen((prev) => !prev)}
                 className={cn(
-                  "inline-flex items-center justify-center text-white lg:hidden transition-all duration-300",
+                  "inline-flex items-center justify-center text-white transition-all duration-300 lg:hidden",
                   scrolled ? "h-9 w-9 rounded-xl" : "h-11 w-11 rounded-2xl",
                   borders.light,
                   backgrounds.surface.glass,
@@ -418,14 +433,14 @@ export default function SmartLandingNavbar() {
                   />
                   <span
                     className={cn(
-                      "absolute left-0 top-1/2 -translate-y-1/2 h-0.5 rounded-full bg-white transition-all duration-300",
+                      "absolute left-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-white transition-all duration-300",
                       scrolled ? "w-4" : "w-5",
-                      isOpen ? "opacity-0 scale-x-0" : "opacity-100",
+                      isOpen ? "scale-x-0 opacity-0" : "opacity-100",
                     )}
                   />
                   <span
                     className={cn(
-                      "absolute left-0 bottom-0 h-0.5 rounded-full bg-white transition-all duration-300",
+                      "absolute bottom-0 left-0 h-0.5 rounded-full bg-white transition-all duration-300",
                       isOpen
                         ? cn(
                             scrolled ? "w-4" : "w-5",
@@ -443,7 +458,7 @@ export default function SmartLandingNavbar() {
             {/* ══ MOBILE MENU ══ */}
             <div
               className={cn(
-                "grid overflow-hidden transition-all duration-500 ease-out lg:hidden",
+                "grid overflow-hidden transition-all duration-300 ease-out lg:hidden",
                 animation.motionSafe,
                 isOpen
                   ? "mt-2 grid-rows-[1fr] opacity-100"
@@ -453,7 +468,8 @@ export default function SmartLandingNavbar() {
               <div id="mobile-navigation" className="min-h-0">
                 <div
                   className={cn(
-                    "rounded-2xl p-2.5 transition-all duration-500",
+                    "max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl p-2.5 transition-all duration-300",
+                    "pb-[max(0.625rem,env(safe-area-inset-bottom))]",
                     borders.subtle,
                     "bg-[#060e1b]/90 backdrop-blur-2xl",
                     shadows.card,
@@ -487,7 +503,11 @@ export default function SmartLandingNavbar() {
                                     animation.activePressSmall,
                                   ),
                             )}
-                            style={{ animationDelay: `${i * 0.05 + 0.05}s` }}
+                            style={{
+                              animationDelay: isOpen
+                                ? `${i * 0.04 + 0.05}s`
+                                : "0s",
+                            }}
                           >
                             <span className="text-sm font-medium">
                               {item.label}
@@ -500,7 +520,7 @@ export default function SmartLandingNavbar() {
                                       "bg-sky-300",
                                       "shadow-[0_0_8px_rgba(125,211,252,0.6)]",
                                     )
-                                  : "bg-slate-600 group-hover:bg-cyan-400 group-hover:scale-125",
+                                  : "bg-slate-600 group-hover:scale-125 group-hover:bg-cyan-400",
                               )}
                             />
                           </button>
@@ -512,44 +532,41 @@ export default function SmartLandingNavbar() {
                   {/* Divider */}
                   <div
                     className={cn(
-                      "my-2.5 h-px mx-2",
+                      "mx-2 my-2.5 h-px",
                       gradients.divider,
                       "opacity-30",
                     )}
                   />
 
-                  {/* Mobile CTAs */}
+                  {/* Mobile CTAs — same mapping as desktop:
+                      primary = builder, secondary = account */}
                   <div className="grid grid-cols-2 gap-2">
                     <Link
-                      href={ctaHref}
+                      href={builderHref}
+                      onClick={() => setIsOpen(false)}
                       className={cn(
-                        "group inline-flex items-center justify-center gap-2 rounded-full border transition-all duration-300",
-                        scrolled ? "h-9 px-4 text-[13px]" : "h-10 px-5 text-sm",
+                        "group inline-flex h-11 items-center justify-center gap-2 rounded-full border text-sm transition-all duration-300",
                         borders.skyStrong,
                         gradients.primary,
                         typography.ctaText,
-                        scrolled ? shadows.ctaSmall : shadows.ctaSmall,
-                        "hover:-translate-y-0.5",
+                        shadows.ctaSmall,
                         animation.activePress,
                         animation.activeRestore,
                         focus.ringLight,
                       )}
                     >
-                      <span>
-                        {hasAuthToken ? "ورود به پنل" : "شروع رایگان"}
-                      </span>
+                      <span>{hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}</span>
                       <span
                         className={cn(
-                          "rounded-full",
+                          "h-2 w-2 rounded-full bg-white/90 transition-transform duration-300",
                           shadows.dot,
                           "group-hover:scale-125",
-                          scrolled ? "h-1.5 w-1.5" : "h-2 w-2",
                         )}
                       />
                     </Link>
 
                     <Link
-                      href={builderHref}
+                      href={ctaHref}
                       onClick={() => setIsOpen(false)}
                       className={cn(
                         "inline-flex h-11 items-center justify-center px-4",
@@ -565,7 +582,7 @@ export default function SmartLandingNavbar() {
                         animation.activePress,
                       )}
                     >
-                      {hasAuthToken ? "  ساخت صفحه  " : "ورود به حساب"}
+                      {hasAuthToken ? "ورود به پنل" : "ورود به حساب"}
                     </Link>
                   </div>
                 </div>
@@ -577,8 +594,9 @@ export default function SmartLandingNavbar() {
 
       {/* Spacer — prevents content from going under fixed navbar */}
       <div
+        aria-hidden="true"
         className={cn(
-          "transition-all duration-500",
+          "transition-all duration-300",
           scrolled ? "h-16" : "h-20",
         )}
       />

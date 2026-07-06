@@ -49,7 +49,6 @@ export default function BlocksSection({
   const { can, canOnResource } = useAccess();
   const canUpdateBlocks = can("admin.blocks", "update");
   const canDeleteBlocks = can("admin.blocks", "delete");
-  const [tableKey, setTableKey] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [togglingBlockId, setTogglingBlockId] = useState<string | null>(null);
@@ -251,7 +250,6 @@ export default function BlocksSection({
         throw new Error(json?.message ?? "خطا در همگام سازی بلاک‌ها");
       }
       toast.success(json?.message ?? "بلاک‌ها همگام سازی شدند");
-      setTableKey((key) => key + 1);
       setRefreshToken((token) => token + 1);
     } catch (error) {
       toast.error(
@@ -280,7 +278,6 @@ export default function BlocksSection({
         throw new Error(json?.message ?? "خطا در تغییر وضعیت بلاک");
       }
       toast.success(nextStatus ? "بلاک فعال شد" : "بلاک غیرفعال شد");
-      setTableKey((key) => key + 1);
       setRefreshToken((token) => token + 1);
     } catch (error) {
       toast.error(
@@ -370,8 +367,8 @@ export default function BlocksSection({
 
       {/* ── Table ── */}
       <DynamicTable<BlockRow>
-        key={tableKey}
-        endpoint={`/api/blocks?refresh=${refreshToken}`}
+        endpoint="/api/blocks"
+        refreshKey={refreshToken}
         columns={columns}
         title="لیست بلاک‌ها"
         subtitle="snapshot ذخیره‌شده هر بلاک در دیتابیس"
@@ -391,8 +388,6 @@ export default function BlocksSection({
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("بلاک غیرفعال شد");
-          setTableKey((key) => key + 1);
-          setRefreshToken((token) => token + 1);
         }}
         rowActions={(row) => {
           const isLoading = togglingBlockId === row._id;

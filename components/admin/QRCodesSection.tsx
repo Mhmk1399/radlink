@@ -105,7 +105,6 @@ export default function QRCodesSection({
   const { can } = useAccess();
   const canUpdate = can("admin.qrcodes", "update");
   const canDelete = can("admin.qrcodes", "delete");
-  const [tableKey, setTableKey] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
   const [togglingQrId, setTogglingQrId] = useState<string | null>(null);
 
@@ -324,7 +323,6 @@ export default function QRCodesSection({
       }
 
       toast.success(nextStatus ? "QR کد فعال شد" : "QR کد غیرفعال شد");
-      setTableKey((key) => key + 1);
       setRefreshToken((token) => token + 1);
     } catch (error) {
       toast.error(
@@ -391,8 +389,8 @@ export default function QRCodesSection({
 
       {/* ── Table ── */}
       <DynamicTable<QRCodeRow>
-        key={tableKey}
-        endpoint={`/api/qr?refresh=${refreshToken}`}
+        endpoint="/api/qr"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         columns={columns}
         title="لیست QR کدها"

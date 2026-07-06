@@ -9,10 +9,6 @@ import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { SECTION_META, type AdminSection } from "@/hook/admin/useHashRoute";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 
-function cn(...c: (string | false | null | undefined)[]): string {
-  return c.filter(Boolean).join(" ");
-}
-
 // ── Lazy Sections ──
 const DashboardSection = lazy(
   () => import("@/components/admin/DashboardSection"),
@@ -42,27 +38,6 @@ const NotificationsSection = lazy(
 );
 const ProfileSection = lazy(() => import("@/components/admin/ProfileSection"));
 
-function SectionSkeleton() {
-  const t = useThemeTokens();
-  return (
-    <div className="space-y-4 animate-pulse" dir="rtl">
-      <div className={cn("h-8 w-48 rounded-xl", t.inputBg)} />
-      <div className={cn("h-4 w-32 rounded", t.inputBg)} />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className={cn(
-              "h-32 rounded-2xl border",
-              `${t.cardBg} border ${t.borderSubtle}`,
-            )}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ComingSoon({
   section,
   navigate,
@@ -76,25 +51,17 @@ function ComingSoon({
   return (
     <div className="flex flex-col items-center justify-center py-20" dir="rtl">
       <div
-        className={cn(
-          "flex h-20 w-20 items-center justify-center rounded-2xl border mb-6",
-          `${t.cardBg} border ${t.borderSubtle}`,
-        )}
+        className={`mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border ${t.cardBg} ${t.borderSubtle}`}
       >
         <span className="text-3xl">🚧</span>
       </div>
-      <h2 className={cn("text-xl font-bold mb-2", t.textPrimary)}>
+      <h2 className={`mb-2 text-xl font-bold ${t.textPrimary}`}>
         بخش «{label}» در حال ساخت
       </h2>
-      <p className={cn("text-sm mb-6", t.textMuted)}>به زودی اضافه می‌شود</p>
+      <p className={`mb-6 text-sm ${t.textMuted}`}>به زودی اضافه می‌شود</p>
       <button
         onClick={() => navigate("dashboard")}
-        className={cn(
-          "text-sm font-medium px-4 py-2 rounded-xl border transition-colors",
-          `border ${t.borderAccent}`,
-          t.textAccent,
-          t.hoverBg,
-        )}
+        className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${t.borderAccent} ${t.textAccent} ${t.hoverBg}`}
       >
         بازگشت به داشبورد
       </button>
@@ -150,7 +117,7 @@ export default function AdminPage() {
     <AdminAuthProvider>
       <AdminShell>
         {({ section, navigate }) => (
-          <Suspense fallback={<SectionSkeleton />}>
+          <Suspense fallback={null}>
             <SectionRouter section={section} navigate={navigate} />
           </Suspense>
         )}

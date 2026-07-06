@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
-import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
 import Category from "@/models/category";
@@ -100,11 +100,19 @@ export const PATCH = compose(
     if (!template) return NextResponse.json({ message: "قالب پیدا نشد." }, { status: 404 });
 
     const previousCategory = template.category ? String(template.category) : undefined;
-    if (body.blocks !== undefined || body.builderBlocks !== undefined) {
-        const blockAccessError = await assertBuilderBlockAccess(req, body.builderBlocks);
+    if (body.builderBlocks !== undefined) {
+        const blockAccessError = await assertBuilderBlockMutationAccess(req, {
+            currentBlocks: template.builderBlocks,
+            nextBlocks: normalizeBuilderBlocks(body.builderBlocks),
+        });
         if (blockAccessError) return blockAccessError;
-        const templateBlockAccessError = await assertBuilderBlockAccess(req, body.blocks);
-        if (templateBlockAccessError) return templateBlockAccessError;
+    }
+    if (body.blocks !== undefined) {
+        const legacyBlockAccessError = await assertBuilderBlockMutationAccess(req, {
+            currentBlocks: template.blocks,
+            nextBlocks: body.blocks,
+        });
+        if (legacyBlockAccessError) return legacyBlockAccessError;
     }
 
     if (typeof body.name === "string") template.name = body.name.trim();

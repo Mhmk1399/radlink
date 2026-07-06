@@ -260,7 +260,7 @@ function DigitDisplay() {
 const suggestedLinks = [
   {
     label: "صفحه اصلی",
-    href: "/base-landing",
+    href: "/",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
         <path
@@ -274,7 +274,7 @@ const suggestedLinks = [
   },
   {
     label: "امکانات",
-    href: "/base-landing#features",
+    href: "/#features",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 0 0 .95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 0 0-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 0 0-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 0 0-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 0 0 .951-.69l1.07-3.292Z" />
@@ -284,7 +284,7 @@ const suggestedLinks = [
   },
   {
     label: "سوالات متداول",
-    href: "/base-landing#faq",
+    href: "/#faq",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
         <path
@@ -298,7 +298,7 @@ const suggestedLinks = [
   },
   {
     label: "تماس با ما",
-    href: "/base-landing#contact",
+    href: "/#contact",
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
         <path d="M3.505 2.365A41.369 41.369 0 0 1 9 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.249 2.205 2.504a1.535 1.535 0 0 1-1.07 1.509 33.964 33.964 0 0 1-5.63.744c-.124-.005-.25.07-.323.182a40.7 40.7 0 0 1-1.676 2.47A41.382 41.382 0 0 1 3.505 2.365Z" />
@@ -318,7 +318,7 @@ function useAutoRedirect(seconds: number) {
 
   useEffect(() => {
     if (remaining <= 0) {
-      window.location.href = "/base-landing";
+      window.location.href = "/";
       return;
     }
     const id = setTimeout(() => setRemaining((r) => r - 1), 1000);
@@ -413,7 +413,7 @@ export default function NotFoundPage() {
           {/* Primary CTA */}
           <div className="nf-fade-in nf-fade-d3">
             <Link
-              href="/base-landing"
+              href="/"
               className={cn(components.ctaPrimary, "px-8 py-4 text-base")}
             >
               <span

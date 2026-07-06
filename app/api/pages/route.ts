@@ -88,7 +88,7 @@ import { revalidatePath } from "next/cache";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
-import { assertBuilderBlockAccess } from "@/lib/auth/builderBlockAccess";
+import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import {
     withPageAccessScope,
     withTemplateAccessScope,
@@ -111,9 +111,85 @@ import {
 import "@/models/blocks";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
 import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import {
+    getCachedPageExpiryAlerts,
+    invalidatePageExpiryAlertsCache,
+    type PageExpiryAlert,
+    type PageExpiryAlertsData,
+} from "@/lib/pages/pageExpiryAlertsCache";
+import { PAGE_EXPIRY_DAY_MS } from "@/lib/pages/pageExpiryStatus";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function loadPageExpiryAlerts(): Promise<PageExpiryAlertsData> {
+    const now = new Date();
+    const warningLimit = new Date(now.getTime() + 10 * PAGE_EXPIRY_DAY_MS);
+    const criticalLimit = new Date(now.getTime() + 3 * PAGE_EXPIRY_DAY_MS);
+
+    const [upcomingPages, expiredPages, expired, critical, warning] =
+        await Promise.all([
+            Page.find({
+                expiresAt: { $gt: now, $lte: warningLimit },
+            })
+                .select("title url expiresAt owner")
+                .sort({ expiresAt: 1 })
+                .limit(50)
+                .populate("owner", "firstName lastName phoneNumber")
+                .lean(),
+            Page.find({ expiresAt: { $lte: now } })
+                .select("title url expiresAt owner")
+                .sort({ expiresAt: -1 })
+                .limit(20)
+                .populate("owner", "firstName lastName phoneNumber")
+                .lean(),
+            Page.countDocuments({ expiresAt: { $lte: now } }),
+            Page.countDocuments({
+                expiresAt: { $gt: now, $lte: criticalLimit },
+            }),
+            Page.countDocuments({
+                expiresAt: { $gt: criticalLimit, $lte: warningLimit },
+            }),
+        ]);
+
+    const alerts = [...upcomingPages, ...expiredPages]
+        .map((page): PageExpiryAlert | null => {
+            const pageRecord = page as unknown as Record<string, unknown>;
+            const ownerRecord = isObject(pageRecord.owner)
+                ? pageRecord.owner
+                : null;
+            const expiresAt = new Date(String(pageRecord.expiresAt ?? ""));
+
+            if (Number.isNaN(expiresAt.getTime())) return null;
+
+            return {
+                id: String(pageRecord._id ?? ""),
+                title: String(pageRecord.title ?? "بدون عنوان"),
+                url: String(pageRecord.url ?? ""),
+                expiresAt: expiresAt.toISOString(),
+                owner: ownerRecord
+                    ? {
+                        id: String(ownerRecord._id ?? ownerRecord.id ?? ""),
+                        firstName: String(ownerRecord.firstName ?? ""),
+                        lastName: String(ownerRecord.lastName ?? ""),
+                        phoneNumber: String(ownerRecord.phoneNumber ?? ""),
+                    }
+                    : null,
+            };
+        })
+        .filter((page): page is PageExpiryAlert => page !== null);
+
+    return {
+        alerts,
+        counts: {
+            expired,
+            critical,
+            warning,
+            total: expired + critical + warning,
+        },
+        generatedAt: new Date().toISOString(),
+    };
 }
 
 function getOptionalObjectId(value: unknown) {
@@ -326,9 +402,6 @@ export const POST = compose(
     });
     if (!pageQuota.allowed) return quotaExceededResponse(pageQuota);
 
-    const blockAccessError = await assertBuilderBlockAccess(req, body.blocks);
-    if (blockAccessError) return blockAccessError;
-
     let blocks = Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [];
 
     if (templateId) {
@@ -362,10 +435,14 @@ export const POST = compose(
 
         if (blocks.length === 0) {
             blocks = getTemplateBlocks(template as Record<string, unknown>);
-            const templateBlockAccessError = await assertBuilderBlockAccess(req, blocks);
-            if (templateBlockAccessError) return templateBlockAccessError;
         }
     }
+
+    const blockAccessError = await assertBuilderBlockMutationAccess(req, {
+        currentBlocks: [],
+        nextBlocks: blocks,
+    });
+    if (blockAccessError) return blockAccessError;
 
     const blockQuota = await checkUserQuota({
         user: ownerUser,
@@ -461,6 +538,7 @@ export const POST = compose(
         .lean({ virtuals: true });
 
     revalidatePath(`/${page.url}`);
+    invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({ page: populatedPage ?? page, qr }, { status: 201 });
 });
@@ -477,6 +555,28 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const isPublished = searchParams.get("isPublished");
     const mode = searchParams.get("mode");
+
+    if (mode === "expiry-alerts") {
+        if (user.role !== "admin" && user.role !== "superAdmin") {
+            return NextResponse.json(
+                { message: "دسترسی به گزارش انقضای صفحات مجاز نیست." },
+                { status: 403 },
+            );
+        }
+
+        const { data, cacheStatus } = await getCachedPageExpiryAlerts(
+            loadPageExpiryAlerts,
+            searchParams.get("force") === "1",
+        );
+
+        return NextResponse.json(data, {
+            headers: {
+                "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+                "X-Radlink-Cache": cacheStatus,
+            },
+        });
+    }
+
     const sortFields: Record<string, string> = {
         title: "title",
         createdAt: "createdAt",

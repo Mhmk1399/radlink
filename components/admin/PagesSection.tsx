@@ -17,6 +17,10 @@ import { deleteFile, uploadFile } from "@/lib/fileUtils";
 import Image from "next/image";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 import { isPageExpired } from "@/lib/pages/pageExpiration";
+import PageExpiryAlertsPanel, {
+  PageExpiryBadge,
+} from "@/components/admin/PageExpiryAlertsPanel";
+import type { PageExpiryAlertsData } from "@/lib/pages/pageExpiryAlertsCache";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -58,6 +62,13 @@ type UserOptionSource = {
 type SelectOption = {
   label: string;
   value: string;
+};
+
+const PAGE_EXPIRY_BROWSER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+type BrowserExpiryCache = {
+  savedAt: number;
+  data: PageExpiryAlertsData;
 };
 
 function PageImageUploadField({
@@ -203,6 +214,24 @@ function getUserLabel(user?: UserOptionSource | null) {
     user.fullName ||
     [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
   return fullName || user.phoneNumber || user.email || getObjectId(user);
+}
+
+function parseExpiryAlertsData(value: unknown): PageExpiryAlertsData | null {
+  if (!isRecord(value) || !Array.isArray(value.alerts)) return null;
+  if (!isRecord(value.counts) || typeof value.generatedAt !== "string") {
+    return null;
+  }
+
+  const counts = value.counts;
+  if (
+    !["expired", "critical", "warning", "total"].every(
+      (key) => typeof counts[key] === "number",
+    )
+  ) {
+    return null;
+  }
+
+  return value as unknown as PageExpiryAlertsData;
 }
 
 /* columns builder — receives theme tokens so badges use theme colors */
@@ -398,28 +427,7 @@ function buildColumns(
       sortable: true,
       hideOnMobile: true,
       placeholder: "بدون تاریخ انقضا",
-      render: (value) => {
-        const expiration =
-          typeof value === "string" && value ? value : undefined;
-        const expired = isPageExpired(expiration);
-
-        return (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
-              !expiration
-                ? isDark
-                  ? "bg-white/[0.04] text-slate-400 ring-white/10"
-                  : "bg-black/[0.03] text-slate-500 ring-black/5"
-                : expired
-                  ? "bg-red-500/10 text-red-500 ring-red-500/15"
-                  : "bg-amber-500/10 text-amber-500 ring-amber-500/15",
-            )}
-          >
-            {expiration ? formatFaDate(expiration) : "بدون انقضا"}
-          </span>
-        );
-      },
+      render: (value) => <PageExpiryBadge expiresAt={value} />,
     },
     {
       key: "isPublished",
@@ -505,6 +513,9 @@ export default function PagesSection({
     user?.role === "agent" ||
     user?.role === "admin" ||
     user?.role === "superAdmin";
+  const canViewExpiryAlerts =
+    user?.role === "admin" || user?.role === "superAdmin";
+  const expiryAlertsUserId = user?.id ?? "";
 
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
 
@@ -524,6 +535,10 @@ export default function PagesSection({
     "logo" | "favicon" | null
   >(null);
   const [savingBranding, setSavingBranding] = useState(false);
+  const [expiryAlerts, setExpiryAlerts] =
+    useState<PageExpiryAlertsData | null>(null);
+  const [expiryAlertsLoading, setExpiryAlertsLoading] = useState(false);
+  const [expiryAlertsRefreshing, setExpiryAlertsRefreshing] = useState(false);
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     title: string;
@@ -535,19 +550,17 @@ export default function PagesSection({
 
   const transformResponse = useMemo(
     () => (json: unknown) => {
-      const pages =
-        typeof json === "object" &&
-        json !== null &&
-        "pages" in json &&
-        Array.isArray((json as any).pages)
-          ? (json as any).pages
+      const pages: unknown[] =
+        isRecord(json) && Array.isArray(json.pages)
+          ? json.pages
           : Array.isArray(json)
             ? json
             : [];
 
-      return pages.map((page: any) => {
+      return pages.filter(isRecord).map((page) => {
         const pageId = String(page._id ?? page.id ?? "");
         const owner = isRecord(page.owner) ? page.owner : undefined;
+        const stats = isRecord(page.stats) ? page.stats : {};
         const ownerId =
           getObjectId(owner) ||
           getObjectId(page.ownerId) ||
@@ -561,10 +574,10 @@ export default function PagesSection({
             page.isPublished !== false && !isPageExpired(page.expiresAt),
           ownerId,
           owner: owner ?? page.owner,
-          viewCount: Number(page.stats?.views ?? 0),
-          visitorCount: Number(page.stats?.visitors ?? 0),
-        };
-      }) as AdminPageRow[];
+          viewCount: Number(stats.views ?? 0),
+          visitorCount: Number(stats.visitors ?? 0),
+        } as unknown as AdminPageRow;
+      });
     },
     [],
   );
@@ -579,13 +592,90 @@ export default function PagesSection({
     [token],
   );
 
+  const loadExpiryAlerts = useCallback(
+    async (forceRefresh = false) => {
+      if (!canViewExpiryAlerts || !expiryAlertsUserId) return;
+
+      const browserCacheKey = `radlink:page-expiry-alerts:${expiryAlertsUserId}`;
+      let hasBrowserFallback = false;
+
+      if (!forceRefresh) {
+        try {
+          const raw = localStorage.getItem(browserCacheKey);
+          const cached = raw ? (JSON.parse(raw) as BrowserExpiryCache) : null;
+          const cachedData = parseExpiryAlertsData(cached?.data);
+
+          if (
+            cachedData &&
+            typeof cached?.savedAt === "number" &&
+            Date.now() - cached.savedAt <=
+              PAGE_EXPIRY_BROWSER_CACHE_MAX_AGE_MS
+          ) {
+            hasBrowserFallback = true;
+            setExpiryAlerts(cachedData);
+          }
+        } catch {
+          localStorage.removeItem(browserCacheKey);
+        }
+      }
+
+      setExpiryAlertsLoading(!hasBrowserFallback);
+      setExpiryAlertsRefreshing(true);
+
+      try {
+        const response = await fetch(
+          `/api/pages?mode=expiry-alerts${forceRefresh ? "&force=1" : ""}`,
+          {
+            headers,
+            cache: forceRefresh ? "no-store" : "default",
+          },
+        );
+        const json = await response.json().catch(() => null);
+        const data = parseExpiryAlertsData(json);
+
+        if (!response.ok || !data) {
+          throw new Error(
+            typeof json?.message === "string"
+              ? json.message
+              : "دریافت وضعیت انقضای صفحات انجام نشد.",
+          );
+        }
+
+        setExpiryAlerts(data);
+        localStorage.setItem(
+          browserCacheKey,
+          JSON.stringify({ savedAt: Date.now(), data } satisfies BrowserExpiryCache),
+        );
+      } catch (error) {
+        if (!hasBrowserFallback || forceRefresh) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "دریافت وضعیت انقضای صفحات انجام نشد.",
+          );
+        }
+      } finally {
+        setExpiryAlertsLoading(false);
+        setExpiryAlertsRefreshing(false);
+      }
+    },
+    [canViewExpiryAlerts, expiryAlertsUserId, headers],
+  );
+
+  useEffect(() => {
+    if (!canViewExpiryAlerts) return;
+
+    const timer = window.setTimeout(() => {
+      void loadExpiryAlerts();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [canViewExpiryAlerts, loadExpiryAlerts, refreshToken]);
+
   useEffect(() => {
     // Do not request /api/users until the current user is loaded.
     // Normal users must never fetch the users list.
-    if (!shouldLoadUsers) {
-      setOwnerOptions([]);
-      return;
-    }
+    if (!shouldLoadUsers) return;
 
     const controller = new AbortController();
 
@@ -910,24 +1000,45 @@ export default function PagesSection({
         </div>
       </div>
 
+      {canViewExpiryAlerts && (
+        <PageExpiryAlertsPanel
+          data={expiryAlerts}
+          loading={expiryAlertsLoading}
+          refreshing={expiryAlertsRefreshing}
+          onRefresh={() => void loadExpiryAlerts(true)}
+        />
+      )}
+
       {/* ── Table ── */}
       <DynamicTable<AdminPageRow>
-        endpoint={`/api/pages?refresh=${refreshToken}`}
+        endpoint="/api/pages"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         onFormDiscard={cleanupDiscardedPageImages}
+        onCreate={async (item, builtInCreate) => {
+          await builtInCreate(item);
+          await loadExpiryAlerts(true);
+        }}
         onUpdate={async (item, builtInUpdate) => {
           if (!canManageOwners) {
-            const {
-              ownerId: _ownerId,
-              owner: _owner,
-              expiresAt: _expiresAt,
-              ...updatePayload
-            } = item;
+            const updatePayload = Object.fromEntries(
+              Object.entries(item).filter(
+                ([key]) =>
+                  key !== "ownerId" &&
+                  key !== "owner" &&
+                  key !== "expiresAt",
+              ),
+            );
             await builtInUpdate(updatePayload as AdminPageRow);
           } else {
             await builtInUpdate(item);
           }
           toast.success("تغییر اعمال شد");
+          await loadExpiryAlerts(true);
+        }}
+        onDelete={async (item, builtInRemove) => {
+          await builtInRemove(item);
+          await loadExpiryAlerts(true);
         }}
         columns={columns}
         title="لیست صفحات"

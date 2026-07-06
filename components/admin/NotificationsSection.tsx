@@ -571,7 +571,8 @@ export default function NotificationsSection({
       </div>
 
       <DynamicTable<NotificationRow>
-        endpoint={`/api/notifications?limit=100&includeInactive=true&refresh=${refreshToken}`}
+        endpoint="/api/notifications?limit=100&includeInactive=true"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         columns={columns}
         title="لیست اعلانات صفحات"

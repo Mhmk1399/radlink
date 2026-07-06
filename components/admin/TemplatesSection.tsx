@@ -69,7 +69,6 @@ export default function TemplatesSection({
   const canUpdateTemplates = can("admin.templates", "update");
   const canDeleteTemplates = can("admin.templates", "delete");
   const canCreatePages = can("admin.pages", "create");
-  const [tableKey, setTableKey] = useState(0);
   const [refreshToken, setRefreshToken] = useState(0);
   const [togglingTemplateId, setTogglingTemplateId] = useState<string | null>(
     null,
@@ -254,7 +253,6 @@ export default function TemplatesSection({
       }
 
       toast.success(nextStatus ? "قالب فعال شد" : "قالب غیرفعال شد");
-      setTableKey((key) => key + 1);
       setRefreshToken((token) => token + 1);
     } catch (error) {
       toast.error(
@@ -341,8 +339,8 @@ export default function TemplatesSection({
 
       {/* ── Table ── */}
       <DynamicTable<TemplateRow>
-        key={tableKey}
-        endpoint={`/api/templates?refresh=${refreshToken}`}
+        endpoint="/api/templates"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         columns={columns}
         title="لیست قالب‌ها"

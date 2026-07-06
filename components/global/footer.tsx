@@ -116,7 +116,7 @@ export function SmartLandingFooter() {
             <div className="flex flex-col gap-5">
               {/* Logo */}
               <Link
-                href="/base-landing"
+                href="/"
                 onClick={(e) => {
                   e.preventDefault();
                  }}

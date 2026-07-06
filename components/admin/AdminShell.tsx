@@ -103,42 +103,61 @@ const shell = {
     error: "text-[#e08080]",
   },
 
-  light: {
-    page: "bg-[#f4f1eb]",
-    sidebar: "bg-[#faf8f3]",
-    header: "bg-[#faf8f3]/80",
-    card: "bg-white",
-    input: "bg-[#f4f1eb]",
-    dropdown: "bg-white/98 backdrop-blur-2xl",
-    hover: "hover:bg-[#00000007]",
-    active: "bg-[#8a7030]/[0.06]",
-    tooltip: "bg-[#2c2a25]",
-    textPrimary: "text-[#2a2720]",
-    textSecondary: "text-[#615c53]",
-    textMuted: "text-[#6a655c]",
-    textDisabled: "text-[#9a948b]",
-    textAccent: "text-[#7a6428]",
-    textAccentSub: "text-[#8a7030]/65",
-    border: "border-[#e4e0d7]",
-    borderAccent: "border-[#8a7030]/18",
-    divider: "border-[#ece8e0]/80",
-    cardShadow: "shadow-[0_1px_6px_-1px_rgba(0,0,0,0.06)]",
-    dropShadow:
-      "shadow-[0_12px_36px_-8px_rgba(0,0,0,0.14),0_2px_6px_-2px_rgba(0,0,0,0.06)]",
-    accentBadge: "bg-[#8a7030]/[0.06] ring-1 ring-[#8a7030]/14 text-[#7a6428]",
-    accentDot: "bg-[#8a7030]",
-    avatarBg:
-      "bg-gradient-to-br from-[#c8a84b]/14 to-[#a07830]/8 text-[#7a6428] ring-1 ring-[#8a7030]/10",
-    logoBg: "bg-[#c8a84b]/[0.07] border-[#c8a84b]/14",
-    activePill: "bg-[#8a7030]",
-    scrollbar:
-      "[scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.1)_transparent]",
-    unreadDot: "bg-[#8a7030]",
-    info: "text-[#3a7a9c]",
-    success: "text-[#2d7a50]",
-    warning: "text-[#7a6428]",
-    error: "text-[#b84040]",
-  },
+ 
+light: {
+  // ── Surfaces ───────────────────────────────
+  page: "bg-[#f1f2f4]",
+  sidebar: "bg-[#f8f8f9]",
+  header: "bg-[#f8f8f9]/88 backdrop-blur-xl",
+  card: "bg-[#ffffff]",
+  input: "bg-[#f3f4f6]",
+  dropdown: "bg-white/95 backdrop-blur-2xl",
+  hover: "hover:bg-black/[0.04]",
+  active: "bg-black/[0.07]",
+  tooltip: "bg-[#27272a]",
+
+  // ── Text ───────────────────────────────────
+  textPrimary: "text-[#18181b]",
+  textSecondary: "text-[#52525b]",
+  textMuted: "text-[#71717a]",
+  textDisabled: "text-[#a1a1aa]",
+  textAccent: "text-[#27272a]",
+  textAccentSub: "text-[#52525b]/75",
+
+  // ── Borders ────────────────────────────────
+  border: "border-[#dedfe3]",
+  borderAccent: "border-[#a1a1aa]/45",
+  divider: "border-[#e5e5e7]/80",
+
+  // ── Shadows ────────────────────────────────
+  cardShadow:
+    "shadow-[0_2px_10px_-4px_rgba(24,24,27,0.12)]",
+  dropShadow:
+    "shadow-[0_14px_38px_-12px_rgba(24,24,27,0.18),0_3px_8px_-3px_rgba(24,24,27,0.08)]",
+
+  // ── Accent elements ────────────────────────
+  accentBadge:
+    "bg-[#f0f0f2] ring-1 ring-[#d4d4d8] text-[#27272a]",
+  accentDot: "bg-[#52525b]",
+  avatarBg:
+    "bg-gradient-to-br from-[#e4e4e7] to-[#f4f4f5] text-[#27272a] ring-1 ring-[#a1a1aa]/35",
+  logoBg:
+    "bg-[#f0f0f2] border-[#d4d4d8]",
+  activePill: "bg-[#27272a]",
+
+  // ── Utility ────────────────────────────────
+  scrollbar:
+    "[scrollbar-width:thin] [scrollbar-color:rgba(39,39,42,0.18)_transparent]",
+  unreadDot: "bg-[#27272a]",
+
+  // ── Status ─────────────────────────────────
+  info: "text-[#52525b]",
+  success: "text-[#3f3f46]",
+  warning: "text-[#71717a]",
+  error: "text-[#27272a]",
+},
+ 
+
 } as const;
 
 /* ══════════════════════════════════════════════

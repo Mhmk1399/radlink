@@ -120,7 +120,10 @@ type MasterBlockDefinition = {
   elements?: PageBlock["elements"];
   defaultBlock?: Partial<PageBlock>;
   isActive?: boolean;
+  builderActions?: BuilderBlockAction[];
 };
+
+type BuilderBlockAction = "view" | "create" | "update" | "publish";
 
 type CreatedPageResponse = {
   _id?: unknown;
@@ -621,6 +624,46 @@ export default function SimplePageBuilder({
     () => new Set(Object.keys(masterBlocks)),
     [masterBlocks],
   );
+  const canUseBlockAction = useCallback(
+    (type: string, action: BuilderBlockAction) =>
+      masterBlocks[type]?.builderActions?.includes(action) ?? false,
+    [masterBlocks],
+  );
+  const requireBlockAction = useCallback(
+    (
+      blockOrType: PageBlock | string,
+      action: Exclude<BuilderBlockAction, "view">,
+    ) => {
+      const type =
+        typeof blockOrType === "string" ? blockOrType : blockOrType.type;
+      if (canUseBlockAction(type, action)) return true;
+
+      const config = blockRegistry[type as keyof typeof blockRegistry];
+      const actionLabel = {
+        create: "ساخت",
+        update: "ویرایش",
+        publish: "انتشار",
+      }[action];
+      toast.show(
+        `برای این عملیات روی بلاک «${config?.label ?? type}» به دسترسی «${actionLabel}» نیاز دارید.`,
+        "error",
+      );
+      return false;
+    },
+    [canUseBlockAction, toast],
+  );
+  const canUpdateCanvas = useMemo(
+    () => blocks.every((block) => canUseBlockAction(block.type, "update")),
+    [blocks, canUseBlockAction],
+  );
+  const requireCanvasUpdateAccess = useCallback(() => {
+    const protectedBlock = blocks.find(
+      (block) => !canUseBlockAction(block.type, "update"),
+    );
+    return protectedBlock
+      ? requireBlockAction(protectedBlock, "update")
+      : true;
+  }, [blocks, canUseBlockAction, requireBlockAction]);
   const catalogBlocks = useMemo(
     () =>
       Object.values(masterBlocks)
@@ -635,6 +678,7 @@ export default function SimplePageBuilder({
             label: masterBlock.name ?? config.label,
             description: masterBlock.description ?? config.description,
             category: masterBlock.category ?? config.category,
+            canCreate: masterBlock.builderActions?.includes("create") ?? false,
           };
         })
         .filter((item): item is NonNullable<typeof item> => Boolean(item)),
@@ -797,6 +841,14 @@ export default function SimplePageBuilder({
               ? (block.defaultBlock as Partial<PageBlock>)
               : undefined,
             isActive: block.isActive !== false,
+            builderActions: Array.isArray(block.builderActions)
+              ? block.builderActions.filter(
+                  (action): action is BuilderBlockAction =>
+                    ["view", "create", "update", "publish"].includes(
+                      String(action),
+                    ),
+                )
+              : [],
           };
         });
 
@@ -896,6 +948,7 @@ export default function SimplePageBuilder({
 
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
+        if (!requireCanvasUpdateAccess()) return;
         history.undo();
         toast.show("برگشت به حالت قبل", "info");
         return;
@@ -905,6 +958,7 @@ export default function SimplePageBuilder({
         (e.key === "y" || (e.key === "z" && e.shiftKey))
       ) {
         e.preventDefault();
+        if (!requireCanvasUpdateAccess()) return;
         history.redo();
         toast.show("اعمال مجدد", "info");
         return;
@@ -913,14 +967,12 @@ export default function SimplePageBuilder({
         e.preventDefault();
         if (selectedBlockId) {
           duplicateBlockById(selectedBlockId);
-          toast.show("بلاک کپی شد", "success");
         }
         return;
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedBlockId) {
           removeBlockById(selectedBlockId);
-          toast.show("بلاک حذف شد", "success");
         }
         return;
       }
@@ -934,7 +986,7 @@ export default function SimplePageBuilder({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [history, selectedBlockId, toast]);
+  }, [history, requireCanvasUpdateAccess, selectedBlockId, toast]);
   useEffect(() => {
     if (!hasUnsavedServerChanges) return;
 
@@ -1004,6 +1056,7 @@ export default function SimplePageBuilder({
         );
         return;
       }
+      if (!requireBlockAction(type, "create")) return;
       const next = createBlockFromSource(type, sortedBlocks.length);
       if (!next) return;
       setBlocks(normalizeOrder([...blocks, next]));
@@ -1016,6 +1069,7 @@ export default function SimplePageBuilder({
       blocks,
       canAddBlockCount,
       createBlockFromSource,
+      requireBlockAction,
       setBlocks,
       sortedBlocks.length,
       toast,
@@ -1047,6 +1101,7 @@ export default function SimplePageBuilder({
       if (idx === -1) return;
 
       const blockToRemove = sortedBlocks[idx];
+      if (!requireBlockAction(blockToRemove, "update")) return;
       const config =
         blockRegistry[blockToRemove.type as keyof typeof blockRegistry];
       const label = config?.label ?? blockToRemove.type;
@@ -1083,6 +1138,7 @@ export default function SimplePageBuilder({
       selectedElementId,
       blocks,
       setBlocks,
+      requireBlockAction,
       undoable,
       toast,
     ],
@@ -1110,6 +1166,7 @@ export default function SimplePageBuilder({
         );
         return;
       }
+      if (!requireBlockAction(sourceBlock, "create")) return;
       const dup = {
         ...cloneBlock(sourceBlock),
         order: sourceBlock.order + 1,
@@ -1122,11 +1179,13 @@ export default function SimplePageBuilder({
       setBlocks(normalizeOrder(n));
       setSelectedBlockId(dup.instanceId);
       setSelectedElementId("container");
+      toast.show("بلاک کپی شد", "success");
     },
     [
       allowedBlockTypes,
       blocks,
       canAddBlockCount,
+      requireBlockAction,
       setBlocks,
       sortedBlocks,
       toast,
@@ -1136,20 +1195,20 @@ export default function SimplePageBuilder({
   const duplicateSelectedBlock = useCallback(() => {
     if (selectedBlockId) {
       duplicateBlockById(selectedBlockId);
-      toast.show("بلاک کپی شد", "success");
     }
-  }, [selectedBlockId, duplicateBlockById, toast]);
+  }, [selectedBlockId, duplicateBlockById]);
 
   const moveBlock = useCallback(
     (id: string, direction: "up" | "down") => {
       const sorted = [...blocks].sort((a, b) => a.order - b.order);
       const idx = sorted.findIndex((b) => b.instanceId === id);
       if (idx === -1) return;
+      if (!requireBlockAction(sorted[idx], "update")) return;
       const targetIdx = direction === "up" ? idx - 1 : idx + 1;
       if (targetIdx < 0 || targetIdx >= sorted.length) return;
       setBlocks(normalizeOrder(arrayMove(sorted, idx, targetIdx)));
     },
-    [blocks, setBlocks],
+    [blocks, requireBlockAction, setBlocks],
   );
   const reorderBlocks = useCallback(
     (activeId: string, overId: string) => {
@@ -1157,10 +1216,11 @@ export default function SimplePageBuilder({
       const oldIndex = sorted.findIndex((b) => b.instanceId === activeId);
       const newIndex = sorted.findIndex((b) => b.instanceId === overId);
       if (oldIndex === -1 || newIndex === -1) return;
+      if (!requireBlockAction(sorted[oldIndex], "update")) return;
       setBlocks(normalizeOrder(arrayMove(sorted, oldIndex, newIndex)));
       toast.show("ترتیب بلاک‌ها تغییر کرد", "info");
     },
-    [blocks, setBlocks, toast],
+    [blocks, requireBlockAction, setBlocks, toast],
   );
   /* ── Selection ── */
   const handleSelectElement = useCallback(
@@ -1184,6 +1244,8 @@ export default function SimplePageBuilder({
   const updateSelectedContent = useCallback(
     (key: string, value: unknown) => {
       if (!selectedBlockId) return;
+      const selected = blocks.find((b) => b.instanceId === selectedBlockId);
+      if (!selected || !requireBlockAction(selected, "update")) return;
       setBlocks(
         blocks.map((b) =>
           b.instanceId !== selectedBlockId
@@ -1192,11 +1254,13 @@ export default function SimplePageBuilder({
         ),
       );
     },
-    [selectedBlockId, blocks, setBlocks],
+    [selectedBlockId, blocks, requireBlockAction, setBlocks],
   );
 
   const handleInlineUpdateContent = useCallback(
     (instanceId: string, key: string, value: string) => {
+      const selected = blocks.find((b) => b.instanceId === instanceId);
+      if (!selected || !requireBlockAction(selected, "update")) return;
       setBlocks(
         blocks.map((b) =>
           b.instanceId !== instanceId
@@ -1205,7 +1269,7 @@ export default function SimplePageBuilder({
         ),
       );
     },
-    [blocks, setBlocks],
+    [blocks, requireBlockAction, setBlocks],
   );
 
   const updateSelectedElementStyle = useCallback(
@@ -1215,6 +1279,8 @@ export default function SimplePageBuilder({
       value: string | number | AnimationType,
     ) => {
       if (!selectedBlockId) return;
+      const selected = blocks.find((b) => b.instanceId === selectedBlockId);
+      if (!selected || !requireBlockAction(selected, "update")) return;
       setBlocks(
         blocks.map((b) => {
           if (b.instanceId !== selectedBlockId) return b;
@@ -1251,21 +1317,22 @@ export default function SimplePageBuilder({
         }),
       );
     },
-    [selectedBlockId, blocks, setBlocks],
+    [selectedBlockId, blocks, requireBlockAction, setBlocks],
   );
 
   const toggleBlockVisibility = useCallback(
     (id: string) => {
+      const block = blocks.find((b) => b.instanceId === id);
+      if (!block || !requireBlockAction(block, "update")) return;
       setBlocks(
         blocks.map((b) =>
           b.instanceId !== id ? b : { ...b, hidden: !b.hidden },
         ),
       );
-      const block = blocks.find((b) => b.instanceId === id);
       const isNowHidden = !block?.hidden;
       toast.show(isNowHidden ? "بلاک مخفی شد 👁️‍🗨️" : "بلاک نمایان شد 👁️", "info");
     },
-    [blocks, setBlocks, toast],
+    [blocks, requireBlockAction, setBlocks, toast],
   );
 
   /* ── Clear all ── */
@@ -1275,13 +1342,21 @@ export default function SimplePageBuilder({
   );
 
   const confirmClearAllBlocks = useCallback(() => {
+    const deniedBlock = blocks.find(
+      (block) => !canUseBlockAction(block.type, "update"),
+    );
+    if (deniedBlock) {
+      requireBlockAction(deniedBlock, "update");
+      setClearConfirmOpen(false);
+      return;
+    }
     setBlocks([]);
     setSelectedBlockId(null);
     setSelectedElementId(null);
     localStorage.removeItem(STORAGE_KEY);
     setClearConfirmOpen(false);
     toast.show("همه بلاک‌ها حذف شدند", "success");
-  }, [setBlocks, toast]);
+  }, [blocks, canUseBlockAction, requireBlockAction, setBlocks, toast]);
 
   /* ════════════════════════════════════════════ */
   /*  Server Save                                 */
@@ -1605,6 +1680,15 @@ export default function SimplePageBuilder({
       return "برای ذخیره، حداقل یک بلاک به صفحه اضافه کنید.";
     }
 
+    const unpublishedBlock = blocks.find(
+      (block) => !canUseBlockAction(block.type, "publish"),
+    );
+    if (unpublishedBlock) {
+      const config =
+        blockRegistry[unpublishedBlock.type as keyof typeof blockRegistry];
+      return `برای ذخیره‌ی صفحه یا قالب، دسترسی «انتشار» بلاک «${config?.label ?? unpublishedBlock.type}» لازم است.`;
+    }
+
     if (saveMode === "page") {
       const normalizedUrl = pageUrl.trim().replace(/^\/+/, "");
 
@@ -1626,7 +1710,7 @@ export default function SimplePageBuilder({
     }
 
     return null;
-  }, [blocks.length, pageTitle, pageUrl, saveMode]);
+  }, [blocks, canUseBlockAction, pageTitle, pageUrl, saveMode]);
 
   const reconcileBuilderFiles = useCallback(
     async (previousSnapshot: string, savedSnapshot: string) => {
@@ -1817,8 +1901,16 @@ export default function SimplePageBuilder({
     (blockTypes: string[]) => {
       const newBlocks: PageBlock[] = [];
       const allowedTypes = blockTypes.filter((type) =>
-        allowedBlockTypes.has(type),
+        allowedBlockTypes.has(type) && canUseBlockAction(type, "create"),
       );
+
+      const protectedBlock = blocks.find(
+        (block) => !canUseBlockAction(block.type, "update"),
+      );
+      if (protectedBlock) {
+        requireBlockAction(protectedBlock, "update");
+        return;
+      }
 
       if (allowedTypes.length === 0) {
         toast.show("برای استفاده از بلاک‌های این قالب دسترسی ندارید", "error");
@@ -1852,8 +1944,11 @@ export default function SimplePageBuilder({
     },
     [
       allowedBlockTypes,
+      blocks,
       blockLimit,
+      canUseBlockAction,
       createBlockFromSource,
+      requireBlockAction,
       setBlocks,
       toast,
     ],
@@ -1884,6 +1979,7 @@ export default function SimplePageBuilder({
           );
           return;
         }
+        if (!requireBlockAction(blockType, "create")) return;
         if (!config) return;
 
         // ── Drop روی gap بین بلاک‌ها ──
@@ -1967,6 +2063,7 @@ export default function SimplePageBuilder({
       const oi = sorted.findIndex((b) => b.instanceId === aId);
       const ni = sorted.findIndex((b) => b.instanceId === overId);
       if (oi === -1 || ni === -1) return;
+      if (!requireBlockAction(sorted[oi], "update")) return;
       setBlocks(normalizeOrder(arrayMove(sorted, oi, ni)));
       toast.show("ترتیب بلاک‌ها تغییر کرد", "info");
     },
@@ -1976,6 +2073,7 @@ export default function SimplePageBuilder({
       blocks,
       canAddBlockCount,
       createBlockFromSource,
+      requireBlockAction,
       setBlocks,
       sortedBlocks,
       toast,
@@ -2011,15 +2109,17 @@ export default function SimplePageBuilder({
           mode={saveMode}
           pageId={saveMode === "template" ? templateId : pageId}
           isServerSaving={isServerSaving}
-          canUndo={history.canUndo}
-          canRedo={history.canRedo}
+          canUndo={canUpdateCanvas && history.canUndo}
+          canRedo={canUpdateCanvas && history.canRedo}
           hasUnsavedChanges={hasUnsavedServerChanges}
           onBack={handleBackToAdmin}
           onUndo={() => {
+            if (!requireCanvasUpdateAccess()) return;
             history.undo();
             toast.show("برگشت", "info");
           }}
           onRedo={() => {
+            if (!requireCanvasUpdateAccess()) return;
             history.redo();
             toast.show("بعدی", "info");
           }}
@@ -2044,10 +2144,7 @@ export default function SimplePageBuilder({
             selectedBlockId={selectedBlockId}
             onSelectBlock={handleSelectBlock}
             onDeleteBlock={(id) => removeBlockById(id)}
-            onDuplicateBlock={(id) => {
-              duplicateBlockById(id);
-              toast.show("بلاک کپی شد", "success");
-            }}
+            onDuplicateBlock={(id) => duplicateBlockById(id)}
             onMoveBlock={moveBlock}
             onReorder={reorderBlocks}
             onToggleVisibility={toggleBlockVisibility} // ← اضافه
@@ -2095,14 +2192,8 @@ export default function SimplePageBuilder({
               onSelectElement={handleSelectElement}
               onUpdateContent={handleInlineUpdateContent}
               onMoveBlock={moveBlock}
-              onDuplicateBlock={(id) => {
-                duplicateBlockById(id);
-                toast.show("بلاک کپی شد", "success");
-              }}
-              onDeleteBlock={(id) => {
-                removeBlockById(id);
-                toast.show("بلاک حذف شد", "success");
-              }}
+              onDuplicateBlock={(id) => duplicateBlockById(id)}
+              onDeleteBlock={(id) => removeBlockById(id)}
               onOpenCatalog={() => setCatalogOpen(true)}
               floatingActions={
                 <LandingFloatingActions
@@ -2245,6 +2336,10 @@ export default function SimplePageBuilder({
       <DynamicIslandPanel
         block={selectedBlock}
         schema={selectedSchema}
+        readOnly={
+          Boolean(selectedBlock) &&
+          !canUseBlockAction(selectedBlock?.type ?? "", "update")
+        }
         selectedElementId={selectedElementId}
         breakpoint={breakpoint}
         isScrolled={isScrolled}

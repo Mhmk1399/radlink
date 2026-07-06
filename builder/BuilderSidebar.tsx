@@ -53,6 +53,7 @@ type SidebarCatalogBlock = {
   label: string;
   description?: string;
   icon: React.ReactNode;
+  canCreate?: boolean;
 };
 
 function SidebarPaletteDraggableItem({
@@ -61,12 +62,14 @@ function SidebarPaletteDraggableItem({
   label,
   description,
   tourId,
+  disabled = false,
 }: {
   type: string;
   icon: React.ReactNode;
   label: string;
   description?: string;
   tourId?: string;
+  disabled?: boolean;
 }) {
   const [showPreview, setShowPreview] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,6 +78,7 @@ function SidebarPaletteDraggableItem({
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${type}`,
     data: { fromPalette: true, blockType: type },
+    disabled,
   });
 
   // وقتی drag شروع میشه preview رو ببند
@@ -97,7 +101,12 @@ function SidebarPaletteDraggableItem({
         {...listeners}
         className={[
           "group relative flex cursor-grab items-center gap-3 rounded-2xl border-2 p-3 transition-all duration-200 select-none",
-          isDragging
+          disabled
+            ? "cursor-not-allowed border-neutral-100 bg-neutral-50 opacity-60"
+            : "",
+          disabled
+            ? "bg-neutral-100 text-neutral-400"
+            : isDragging
             ? "border-emerald-400 bg-emerald-50/80 opacity-50 shadow-lg scale-[0.97]"
             : "border-transparent bg-white hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-sm active:cursor-grabbing active:scale-[0.97]",
         ].join(" ")}
@@ -138,8 +147,13 @@ function SidebarPaletteDraggableItem({
             </p>
           )}
         </div>
+        {disabled && (
+          <span className="shrink-0 text-[10px] font-semibold text-neutral-400">
+            فقط مشاهده
+          </span>
+        )}
         {/* Drag dots */}
-        <div className="flex shrink-0 flex-col items-center gap-[3px] opacity-30 transition-opacity group-hover:opacity-60">
+        <div className={disabled ? "hidden" : "flex shrink-0 flex-col items-center gap-[3px] opacity-30 transition-opacity group-hover:opacity-60"}>
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex gap-[3px]">
               <span className="h-[3px] w-[3px] rounded-full bg-current" />
@@ -750,7 +764,7 @@ export function BlocksSidebar({
     [sortedBlocks],
   );
 
-  const availableBlocks = useMemo(
+  const availableBlocks = useMemo<SidebarCatalogBlock[]>(
     () => allowedPaletteBlocks ?? Object.values(blockRegistry),
     [allowedPaletteBlocks],
   );
@@ -950,6 +964,7 @@ export function BlocksSidebar({
                         icon={item.icon}
                         label={item.label}
                         description={item.description}
+                        disabled={item.canCreate === false}
                         tourId={
                           index === 0 ? "tour-palette-first-item" : undefined
                         }

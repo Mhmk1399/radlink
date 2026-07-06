@@ -25,6 +25,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   ACCESS_ACTIONS,
   STATIC_COMPONENT_CATALOG,
+  getAccessActionsForComponent,
+  getAccessActionsForResource,
   type AccessActionValue,
 } from "@/lib/auth/accessCatalog";
 import type { ColumnDef } from "@/types/table";
@@ -84,9 +86,14 @@ function getId(value: unknown) {
   return String(value._id ?? value.id ?? "");
 }
 
-function normalizeActions(value: unknown): AccessActionValue[] {
+type AccessActionOption = (typeof ACCESS_ACTIONS)[number];
+
+function normalizeActions(
+  value: unknown,
+  availableActions: readonly AccessActionOption[] = ACCESS_ACTIONS,
+): AccessActionValue[] {
   if (!Array.isArray(value)) return [];
-  const valid = new Set(ACCESS_ACTIONS.map((action) => action.value));
+  const valid = new Set(availableActions.map((action) => action.value));
   return [...new Set(value.map(String))].filter(
     (action): action is AccessActionValue =>
       valid.has(action as AccessActionValue),
@@ -103,7 +110,10 @@ function resourceObjectLabel(value: unknown, fallback: string) {
 function normalizeStaticRule(value: unknown): StaticAccessRule | null {
   if (!isRecord(value)) return null;
   const componentName = String(value.componentName ?? "").trim();
-  const actions = normalizeActions(value.actions);
+  const actions = normalizeActions(
+    value.actions,
+    getAccessActionsForComponent(componentName),
+  );
   if (!componentName || actions.length === 0) return null;
   return { componentName, actions };
 }
@@ -115,7 +125,16 @@ function normalizeResourceRule(
   if (!isRecord(value)) return null;
   const rawResource = value[idKey];
   const id = getId(rawResource);
-  const actions = normalizeActions(value.actions);
+  const resource =
+    idKey === "blockId"
+      ? "blocks"
+      : idKey === "templateId"
+        ? "templates"
+        : "pages";
+  const actions = normalizeActions(
+    value.actions,
+    getAccessActionsForResource(resource),
+  );
   if (!id || actions.length === 0) return null;
   return {
     id,
@@ -432,17 +451,19 @@ function ActionRuleRow({
   label,
   helper,
   actions,
+  availableActions = ACCESS_ACTIONS,
   onChange,
 }: {
   label: string;
   helper?: string;
   actions: AccessActionValue[];
+  availableActions?: readonly AccessActionOption[];
   onChange: (actions: AccessActionValue[]) => void;
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const hasActions = actions.length > 0;
-  const allSelected = ACCESS_ACTIONS.every((action) =>
+  const allSelected = availableActions.every((action) =>
     actions.includes(action.value),
   );
 
@@ -450,7 +471,7 @@ function ActionRuleRow({
     if (allSelected) {
       onChange([]);
     } else {
-      onChange(ACCESS_ACTIONS.map((action) => action.value));
+      onChange(availableActions.map((action) => action.value));
     }
   }
 
@@ -514,7 +535,7 @@ function ActionRuleRow({
         />
 
         {/* Individual action buttons */}
-        {ACCESS_ACTIONS.map((action) => {
+        {availableActions.map((action) => {
           const checked = actions.includes(action.value);
           return (
             <button
@@ -550,12 +571,16 @@ function SectionBulkActions({
   onSelectAll,
   onClearAll,
   onToggleAction,
+  availableActions = ACCESS_ACTIONS,
+  getAvailableActions,
 }: {
   optionIds: string[];
   ruleStates: { id: string; actions: AccessActionValue[] }[];
   onSelectAll: () => void;
   onClearAll: () => void;
   onToggleAction: (action: AccessActionValue) => void;
+  availableActions?: readonly AccessActionOption[];
+  getAvailableActions?: (id: string) => readonly AccessActionOption[];
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
@@ -565,15 +590,20 @@ function SectionBulkActions({
   const allSelected =
     optionIds.length > 0 &&
     optionIds.every((id) =>
-      ACCESS_ACTIONS.every((action) =>
+      (getAvailableActions?.(id) ?? availableActions).every((action) =>
         (actionsMap.get(id) ?? []).includes(action.value),
       ),
     );
 
   function actionSelectedForAll(action: AccessActionValue) {
+    const eligibleIds = optionIds.filter((id) =>
+      (getAvailableActions?.(id) ?? availableActions).some(
+        (item) => item.value === action,
+      ),
+    );
     return (
-      optionIds.length > 0 &&
-      optionIds.every((id) => (actionsMap.get(id) ?? []).includes(action))
+      eligibleIds.length > 0 &&
+      eligibleIds.every((id) => (actionsMap.get(id) ?? []).includes(action))
     );
   }
 
@@ -632,7 +662,7 @@ function SectionBulkActions({
           )}
         />
 
-        {ACCESS_ACTIONS.map((action) => {
+        {availableActions.map((action) => {
           const checked = actionSelectedForAll(action.value);
 
           return (
@@ -674,6 +704,7 @@ function ResourceRulePanel({
   onSelectAll,
   onClearAll,
   onToggleActionForAll,
+  availableActions = ACCESS_ACTIONS,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -685,6 +716,7 @@ function ResourceRulePanel({
   onSelectAll?: () => void;
   onClearAll?: () => void;
   onToggleActionForAll?: (action: AccessActionValue) => void;
+  availableActions?: readonly AccessActionOption[];
 }) {
   const t = useThemeTokens();
   const activeCount = rules.length;
@@ -718,6 +750,7 @@ function ResourceRulePanel({
               onSelectAll={onSelectAll ?? (() => {})}
               onClearAll={onClearAll ?? (() => {})}
               onToggleAction={onToggleActionForAll ?? (() => {})}
+              availableActions={availableActions}
             />
           )}
 
@@ -730,6 +763,7 @@ function ResourceRulePanel({
                 actions={
                   rules.find((item) => item.id === option.value)?.actions ?? []
                 }
+                availableActions={availableActions}
                 onChange={(acts) => onChange(option, acts)}
               />
             ))}
@@ -753,7 +787,6 @@ export default function AccessesSection({
   const { isDark } = useTheme();
   const { can } = useAccess();
   const [refreshToken, setRefreshToken] = useState(0);
-  const [tableKey, setTableKey] = useState(0);
   const [form, setForm] = useState<AccessFormState>(() => emptyForm());
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -777,13 +810,13 @@ export default function AccessesSection({
   const canUpdate = can("admin.accesses", "update");
   const canDelete = can("admin.accesses", "delete");
   function selectAllStaticComponents() {
-    const allActions = ACCESS_ACTIONS.map((action) => action.value);
-
     setForm((prev) => ({
       ...prev,
       staticComponents: STATIC_COMPONENT_CATALOG.map((component) => ({
         componentName: component.key,
-        actions: allActions,
+        actions: getAccessActionsForComponent(component.key).map(
+          (action) => action.value,
+        ),
       })),
     }));
   }
@@ -802,22 +835,37 @@ export default function AccessesSection({
       );
 
       const allHaveAction =
-        componentKeys.length > 0 &&
-        componentKeys.every((key) => {
+        componentKeys.some((key) =>
+          getAccessActionsForComponent(key).some(
+            (item) => item.value === action,
+          ),
+        ) &&
+        componentKeys
+          .filter((key) =>
+            getAccessActionsForComponent(key).some(
+              (item) => item.value === action,
+            ),
+          )
+          .every((key) => {
           const currentActions =
             prev.staticComponents.find((item) => item.componentName === key)
               ?.actions ?? [];
           return currentActions.includes(action);
-        });
+          });
 
       const nextComponents: StaticAccessRule[] = [];
 
       for (const key of componentKeys) {
+        const actionIsAvailable = getAccessActionsForComponent(key).some(
+          (item) => item.value === action,
+        );
         const currentActions =
           prev.staticComponents.find((item) => item.componentName === key)
             ?.actions ?? [];
 
-        const nextActions = allHaveAction
+        const nextActions = !actionIsAvailable
+          ? currentActions.filter((item) => item !== action)
+          : allHaveAction
           ? currentActions.filter((item) => item !== action)
           : currentActions.includes(action)
             ? currentActions
@@ -836,7 +884,9 @@ export default function AccessesSection({
   }
 
   function selectAllResources(resource: ResourceKind) {
-    const allActions = ACCESS_ACTIONS.map((action) => action.value);
+    const allActions = getAccessActionsForResource(resource).map(
+      (action) => action.value,
+    );
 
     setForm((prev) => ({
       ...prev,
@@ -865,6 +915,14 @@ export default function AccessesSection({
     resource: ResourceKind,
     action: AccessActionValue,
   ) {
+    if (
+      !getAccessActionsForResource(resource).some(
+        (item) => item.value === action,
+      )
+    ) {
+      return;
+    }
+
     setForm((prev) => {
       const resourceOptions = options[resource];
       const currentRules = prev.dynamicAccess[resource];
@@ -1121,7 +1179,6 @@ export default function AccessesSection({
   }
 
   function refreshTable() {
-    setTableKey((value) => value + 1);
     setRefreshToken((value) => value + 1);
   }
 
@@ -1129,10 +1186,14 @@ export default function AccessesSection({
     componentName: string,
     actions: AccessActionValue[],
   ) {
+    const normalizedActions = normalizeActions(
+      actions,
+      getAccessActionsForComponent(componentName),
+    );
     setForm((prev) => ({
       ...prev,
       staticComponents:
-        actions.length === 0
+        normalizedActions.length === 0
           ? prev.staticComponents.filter(
               (item) => item.componentName !== componentName,
             )
@@ -1140,7 +1201,7 @@ export default function AccessesSection({
               ...prev.staticComponents.filter(
                 (item) => item.componentName !== componentName,
               ),
-              { componentName, actions },
+              { componentName, actions: normalizedActions },
             ],
     }));
   }
@@ -1150,12 +1211,16 @@ export default function AccessesSection({
     option: ResourceOption,
     actions: AccessActionValue[],
   ) {
+    const normalizedActions = normalizeActions(
+      actions,
+      getAccessActionsForResource(resource),
+    );
     setForm((prev) => ({
       ...prev,
       dynamicAccess: {
         ...prev.dynamicAccess,
         [resource]:
-          actions.length === 0
+          normalizedActions.length === 0
             ? prev.dynamicAccess[resource].filter(
                 (item) => item.id !== option.value,
               )
@@ -1163,7 +1228,11 @@ export default function AccessesSection({
                 ...prev.dynamicAccess[resource].filter(
                   (item) => item.id !== option.value,
                 ),
-                { id: option.value, label: option.label, actions },
+                {
+                  id: option.value,
+                  label: option.label,
+                  actions: normalizedActions,
+                },
               ],
       },
     }));
@@ -1359,8 +1428,8 @@ export default function AccessesSection({
 
       {/* ── Table ── */}
       <DynamicTable<AccessRow>
-        key={tableKey}
-        endpoint={`/api/accesses?refresh=${refreshToken}`}
+        endpoint="/api/accesses"
+        refreshKey={refreshToken}
         columns={columns}
         title="لیست Accessها"
         subtitle="هر Access ترکیبی از قوانین static و dynamic است"
@@ -1382,7 +1451,6 @@ export default function AccessesSection({
         onDelete={async (item, builtInDelete) => {
           await builtInDelete(item);
           toast.success("Access حذف شد");
-          refreshTable();
         }}
         rowActions={(row) => (
           <>
@@ -1657,6 +1725,7 @@ export default function AccessesSection({
                   onSelectAll={selectAllStaticComponents}
                   onClearAll={clearAllStaticComponents}
                   onToggleAction={toggleStaticActionForAll}
+                  getAvailableActions={getAccessActionsForComponent}
                 />
 
                 <div className="grid gap-2.5 sm:grid-cols-2">
@@ -1670,6 +1739,9 @@ export default function AccessesSection({
                           (item) => item.componentName === component.key,
                         )?.actions ?? []
                       }
+                      availableActions={getAccessActionsForComponent(
+                        component.key,
+                      )}
                       onChange={(actions) =>
                         updateStaticActions(component.key, actions)
                       }
@@ -1711,6 +1783,7 @@ export default function AccessesSection({
                 onToggleActionForAll={(action) =>
                   toggleResourceActionForAll("blocks", action)
                 }
+                availableActions={getAccessActionsForResource("blocks")}
               />
 
               <ResourceRulePanel

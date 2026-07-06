@@ -32,6 +32,7 @@ type CatalogBlock = {
   label: string;
   description?: string;
   icon: ReactNode;
+  canCreate?: boolean;
 };
 
 type PageSaveResult = {
@@ -230,7 +231,7 @@ export function BlockCatalogModal({
   availableBlocks?: CatalogBlock[];
   isLoading?: boolean;
 }) {
-  const available = useMemo(
+  const available = useMemo<CatalogBlock[]>(
     () => availableBlocks ?? Object.values(blockRegistry),
     [availableBlocks],
   );
@@ -353,10 +354,12 @@ export function BlockCatalogModal({
                   key={item.type}
                   type="button"
                   onClick={() => {
+                    if (item.canCreate === false) return;
                     onAdd(item.type);
                     onClose();
                   }}
-                  className="group flex items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-sm active:scale-[0.98]"
+                  disabled={item.canCreate === false}
+                  className="group flex items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 enabled:hover:border-emerald-200 enabled:hover:bg-emerald-50/50 enabled:hover:shadow-sm enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:opacity-60"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center text-blue-500 justify-center rounded-2xl bg-neutral-100 text-xl transition-all duration-200 group-hover:scale-110 group-hover:bg-emerald-100">
                     {item.icon}
@@ -369,10 +372,16 @@ export function BlockCatalogModal({
                       {item.description}
                     </p>
                   </div>
-                  <HiOutlinePlus
-                    size={18}
-                    className="shrink-0 text-neutral-300 transition group-hover:text-emerald-500"
-                  />
+                  {item.canCreate === false ? (
+                    <span className="shrink-0 text-[10px] font-semibold text-neutral-400">
+                      فقط مشاهده
+                    </span>
+                  ) : (
+                    <HiOutlinePlus
+                      size={18}
+                      className="shrink-0 text-neutral-300 transition group-hover:text-emerald-500"
+                    />
+                  )}
                 </button>
               ))}
             </div>

@@ -771,7 +771,8 @@ export default function UsersSection({
 
       {/* ── Table ──────────────────────────── */}
       <DynamicTable<UserRow>
-        endpoint={`/api/users?includeDeleted=true&refresh=${refreshToken}`}
+        endpoint="/api/users?includeDeleted=true"
+        refreshKey={refreshToken}
         updateMethod="PATCH"
         onUpdate={async (item, builtInUpdate) => {
           try {

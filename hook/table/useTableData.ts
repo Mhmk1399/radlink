@@ -4,7 +4,7 @@
 "use client";
 
 import useSWR, { type SWRConfiguration, type KeyedMutator } from "swr";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ServerPaginatedResponse } from "@/types/table";
 
 /* ══════════════════════════════════════════════
@@ -28,6 +28,8 @@ export interface UseTableDataOptions<T> {
     fetcher?: (url: string) => Promise<T[]>;
     transformResponse?: (raw: unknown) => T[];
     swrConfig?: SWRConfiguration<T[]>;
+    cacheTtlMs?: number;
+    refreshKey?: string | number;
     headers?: Record<string, string>;
     updateMethod?: "PUT" | "PATCH";
     enabled?: boolean;
@@ -73,9 +75,9 @@ function createDefaultFetcher<T>(
             const errorBody = await res.text().catch(() => "");
             const error = new Error(
                 `خطا در دریافت داده: ${res.status} ${res.statusText}`,
-            );
-            (error as any).status = res.status;
-            (error as any).body = errorBody;
+            ) as Error & { status?: number; body?: string };
+            error.status = res.status;
+            error.body = errorBody;
             throw error;
         }
 
@@ -126,6 +128,62 @@ function unwrapMutationResponse<T>(json: unknown): T | null {
     }
 
     return json as T;
+}
+
+export const DEFAULT_TABLE_CACHE_TTL_MS = 60_000;
+
+const MAX_TRACKED_TABLE_CACHE_KEYS = 250;
+const tableCacheFetchedAt = new Map<string, number>();
+const tablePaginationInfo = new Map<
+    string,
+    { total: number; totalPages: number }
+>();
+const tableCacheFamilyByKey = new Map<string, string>();
+
+function markTableCacheFresh(key: string, familyKey: string) {
+    tableCacheFetchedAt.delete(key);
+    tableCacheFetchedAt.set(key, Date.now());
+    tableCacheFamilyByKey.set(key, familyKey);
+
+    while (tableCacheFetchedAt.size > MAX_TRACKED_TABLE_CACHE_KEYS) {
+        const oldestKey = tableCacheFetchedAt.keys().next().value;
+        if (typeof oldestKey !== "string") break;
+        tableCacheFetchedAt.delete(oldestKey);
+        tablePaginationInfo.delete(oldestKey);
+        tableCacheFamilyByKey.delete(oldestKey);
+    }
+}
+
+function invalidateTableCacheFamily(familyKey: string) {
+    for (const [key, currentFamilyKey] of tableCacheFamilyByKey) {
+        if (currentFamilyKey === familyKey) {
+            tableCacheFetchedAt.set(key, 0);
+        }
+    }
+}
+
+function serializeHeaders(headers: Record<string, string>) {
+    return JSON.stringify(
+        Object.entries(headers).sort(([left], [right]) =>
+            left.localeCompare(right),
+        ),
+    );
+}
+
+function hashCacheScope(value: string) {
+    let hash = 2166136261;
+
+    for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+    }
+
+    return (hash >>> 0).toString(36);
+}
+
+function parseSerializedHeaders(value: string): Record<string, string> {
+    const entries = JSON.parse(value) as Array<[string, string]>;
+    return Object.fromEntries(entries);
 }
 
 async function createMutationError(
@@ -212,6 +270,8 @@ export function useTableData<T extends Record<string, unknown>>(
         fetcher: customFetcher,
         transformResponse,
         swrConfig,
+        cacheTtlMs = DEFAULT_TABLE_CACHE_TTL_MS,
+        refreshKey,
         headers = {},
         enabled = true,
         updateMethod = "PUT",
@@ -220,15 +280,36 @@ export function useTableData<T extends Record<string, unknown>>(
         transformPaginatedResponse,
     } = options;
 
-    const headersRef = useRef(headers);
-    useEffect(() => {
-        headersRef.current = headers;
-    }, [headers]);
+    const serializedHeaders = serializeHeaders(headers);
+    const requestHeaders = useMemo(
+        () => parseSerializedHeaders(serializedHeaders),
+        [serializedHeaders],
+    );
+    const requestUrl =
+        enabled && endpoint
+            ? serverSide
+                ? buildServerUrl(endpoint, serverPaginationParams)
+                : endpoint
+            : "";
+    const swrKey = requestUrl
+        ? `${requestUrl}::table-scope:${hashCacheScope(serializedHeaders)}`
+        : null;
+    const cacheFamilyKey = `${endpoint}::table-scope:${hashCacheScope(
+        serializedHeaders,
+    )}`;
 
     const [serverInfo, setServerInfo] = useState<{
         total: number;
         totalPages: number;
-    }>({ total: 0, totalPages: 0 });
+    }>(() =>
+        swrKey
+            ? (tablePaginationInfo.get(swrKey) ?? {
+                total: 0,
+                totalPages: 0,
+            })
+            : { total: 0, totalPages: 0 },
+    );
+    const [mountedAt] = useState(() => Date.now());
 
     const finalFetcher = useCallback(
         async (url: string): Promise<T[]> => {
@@ -238,15 +319,15 @@ export function useTableData<T extends Record<string, unknown>>(
                 const res = await fetch(url, {
                     headers: {
                         "Content-Type": "application/json",
-                        ...headersRef.current,
+                        ...requestHeaders,
                     },
                 });
 
                 if (!res.ok) {
                     const error = new Error(
                         `خطا در دریافت داده: ${res.status}`,
-                    );
-                    (error as any).status = res.status;
+                    ) as Error & { status?: number };
+                    error.status = res.status;
                     throw error;
                 }
 
@@ -286,16 +367,18 @@ export function useTableData<T extends Record<string, unknown>>(
                         ),
                     };
 
-                setServerInfo({
+                const nextServerInfo = {
                     total: paginated.total,
                     totalPages: paginated.totalPages,
-                });
+                };
+                setServerInfo(nextServerInfo);
+                if (swrKey) tablePaginationInfo.set(swrKey, nextServerInfo);
 
                 return paginated.data;
             }
 
             return createDefaultFetcher<T>(
-                headersRef.current,
+                requestHeaders,
                 transformResponse,
             )(url);
         },
@@ -305,15 +388,20 @@ export function useTableData<T extends Record<string, unknown>>(
             serverSide,
             transformPaginatedResponse,
             serverPaginationParams,
+            requestHeaders,
+            swrKey,
         ],
     );
 
-    const swrKey =
-        enabled && endpoint
-            ? serverSide
-                ? buildServerUrl(endpoint, serverPaginationParams)
-                : endpoint
-            : null;
+    const lastFetchedAt = swrKey
+        ? tableCacheFetchedAt.get(swrKey)
+        : undefined;
+    const cacheExpired =
+        typeof lastFetchedAt === "number" &&
+        mountedAt - lastFetchedAt >= cacheTtlMs;
+    const configuredOnSuccess = swrConfig?.onSuccess;
+    const revalidateOnMount =
+        swrConfig?.revalidateOnMount ?? (cacheExpired ? true : undefined);
 
     const {
         data: rawData,
@@ -322,12 +410,31 @@ export function useTableData<T extends Record<string, unknown>>(
 
         isValidating,
         mutate,
-    } = useSWR<T[]>(swrKey, finalFetcher, {
+    } = useSWR<T[]>(swrKey, () => finalFetcher(requestUrl), {
         revalidateOnFocus: false,
-        dedupingInterval: 5000,
+        revalidateOnReconnect: false,
+        revalidateIfStale: false,
+        dedupingInterval: cacheTtlMs,
         keepPreviousData: true,
         ...swrConfig,
+        revalidateOnMount,
+        onSuccess: (nextData, key, config) => {
+            markTableCacheFresh(key, cacheFamilyKey);
+            configuredOnSuccess?.(nextData, key, config);
+        },
     });
+
+    const previousRefreshKeyRef = useRef(refreshKey);
+
+    useEffect(() => {
+        if (Object.is(previousRefreshKeyRef.current, refreshKey)) return;
+
+        previousRefreshKeyRef.current = refreshKey;
+        if (swrKey) {
+            invalidateTableCacheFamily(cacheFamilyKey);
+            void mutate();
+        }
+    }, [cacheFamilyKey, mutate, refreshKey, swrKey]);
 
     const data: T[] = rawData ?? [];
 
@@ -339,7 +446,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    ...headersRef.current,
+                    ...requestHeaders,
                 },
                 body: JSON.stringify(item),
             });
@@ -352,6 +459,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 await res.json().catch(() => null),
             );
 
+            invalidateTableCacheFamily(cacheFamilyKey);
             await mutate(
                 (current) => {
                     if (!current) return created ? [created] : [];
@@ -362,7 +470,7 @@ export function useTableData<T extends Record<string, unknown>>(
 
             return created as T;
         },
-        [endpoint, mutate],
+        [cacheFamilyKey, endpoint, mutate, requestHeaders],
     );
 
     const update = useCallback(
@@ -374,7 +482,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 method: updateMethod,
                 headers: {
                     "Content-Type": "application/json",
-                    ...headersRef.current,
+                    ...requestHeaders,
                 },
                 body: JSON.stringify(item),
             });
@@ -387,6 +495,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 await res.json().catch(() => null),
             );
 
+            invalidateTableCacheFamily(cacheFamilyKey);
             await mutate(
                 (current) => {
                     if (!current) return current;
@@ -401,7 +510,7 @@ export function useTableData<T extends Record<string, unknown>>(
 
             return (updated ?? item) as T;
         },
-        [endpoint, mutate],
+        [cacheFamilyKey, endpoint, mutate, requestHeaders, updateMethod],
     );
 
     const remove = useCallback(
@@ -413,7 +522,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
-                    ...headersRef.current,
+                    ...requestHeaders,
                 },
             });
 
@@ -421,6 +530,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 throw await createMutationError(res, "خطا در حذف");
             }
 
+            invalidateTableCacheFamily(cacheFamilyKey);
             await mutate(
                 (current) => {
                     if (!current) return current;
@@ -429,7 +539,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 { revalidate: true },
             );
         },
-        [endpoint, mutate],
+        [cacheFamilyKey, endpoint, mutate, requestHeaders],
     );
 
     return {

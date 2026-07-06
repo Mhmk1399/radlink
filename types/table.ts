@@ -105,6 +105,10 @@ export interface DynamicTableProps<T extends object> {
     headers?: Record<string, string>;
     updateMethod?: "PUT" | "PATCH";
     swrConfig?: SWRConfiguration<T[]>;
+    /** Keep cached table data fresh across sidebar remounts for this duration. */
+    cacheTtlMs?: number;
+    /** Change this value to explicitly revalidate custom table actions. */
+    refreshKey?: string | number;
     enabled?: boolean;
     onError?: (error: Error) => void;
     data?: T[];
