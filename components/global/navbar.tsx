@@ -287,7 +287,7 @@ export default function SmartLandingNavbar() {
                 aria-label="صفحه اصلی"
               >
                 <Image
-                  src="/assets/images/logo.png"
+                  src="/assets/images/radlinklogo.png"
                   width={150}
                   height={200}
                   alt="لوگو"

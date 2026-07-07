@@ -79,6 +79,7 @@ interface BackendUser {
   phoneVerifiedAt?: string;
   isPhoneVerified: boolean;
   isDeleted: boolean;
+  hasPassword?: boolean;
   createdBy?: string;
   updatedBy?: string;
   createdAt: string;
@@ -88,6 +89,8 @@ interface BackendUser {
 const OTP_LENGTH = 6; // Backend generates 6-digit OTP
 const OTP_EXPIRY = 120; // seconds — matches backend 2 * 60_000 ms
 const RESEND_COOLDOWN = 60; // seconds — matches backend 60_000 ms
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 72;
 
 /* ══════════════════════════════════════════════
    API HELPERS
@@ -127,6 +130,25 @@ async function apiVerifyOtp(
   return data;
 }
 
+async function apiLoginWithPassword(
+  phoneNumber: string,
+  password: string,
+): Promise<{ token: string; user: BackendUser }> {
+  const res = await fetch("/api/auth/login-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phoneNumber, password }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw { status: res.status, message: data.message ?? "خطا در ورود" };
+  }
+
+  return data;
+}
+
 async function apiUpdateProfile(
   token: string,
   data: {
@@ -135,6 +157,8 @@ async function apiUpdateProfile(
     email?: string;
     nationalCode?: string;
     fatherName?: string;
+    password?: string;
+    passwordConfirm?: string;
   }
 ): Promise<BackendUser> {
   const res = await fetch("/api/auth/me", {
@@ -169,6 +193,24 @@ function formatPhone(phone: string): string {
 
 function isValidIranPhone(phone: string): boolean {
   return isValidPhoneNumber(normalizePhoneNumber(phone));
+}
+
+function validatePasswordStrength(password: string, phoneNumber?: string) {
+  if (password.length < PASSWORD_MIN_LENGTH)
+    return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
+  if (password.length > PASSWORD_MAX_LENGTH)
+    return "رمز عبور نباید بیشتر از ۷۲ کاراکتر باشد.";
+  if (/\s/.test(password)) return "رمز عبور نباید فاصله داشته باشد.";
+  if (!/[a-z]/.test(password))
+    return "رمز عبور باید حداقل یک حرف کوچک انگلیسی داشته باشد.";
+  if (!/[A-Z]/.test(password))
+    return "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد.";
+  if (!/\d/.test(password)) return "رمز عبور باید حداقل یک عدد داشته باشد.";
+  if (!/[^A-Za-z0-9]/.test(password))
+    return "رمز عبور باید حداقل یک نشانه مثل ! یا @ داشته باشد.";
+  if (phoneNumber && password.includes(phoneNumber))
+    return "رمز عبور نباید شامل شماره موبایل باشد.";
+  return "";
 }
 
 /** Normalize Persian/Arabic digits typed on a mobile keyboard to Latin digits */
@@ -328,7 +370,8 @@ interface FieldProps {
   numeric?: boolean;
   maxLength?: number;
   dir?: "ltr" | "rtl";
-  type?: "text" | "tel" | "email";
+  type?: "text" | "tel" | "email" | "password";
+  autoComplete?: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   hint?: string;
   errorMessage?: string;
@@ -349,12 +392,15 @@ function Field({
   maxLength,
   dir,
   type = "text",
+  autoComplete,
   inputRef,
   hint,
   errorMessage,
 }: FieldProps) {
   const localRef = useRef<HTMLInputElement>(null);
   const ref = inputRef ?? localRef;
+  const isPassword = type === "password";
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (autoFocus) {
@@ -374,39 +420,76 @@ function Field({
         {label}
         {required && <span className="text-red-400"> *</span>}
       </label>
-      <input
-        ref={ref}
-        id={id}
-        type={numeric ? "text" : type}
-        dir={dir ?? (numeric || type === "email" ? "ltr" : undefined)}
-        {...(numeric
-          ? {
-              inputMode: "numeric" as const,
-              pattern: "[0-9]*",
-              autoComplete: "one-time-code",
-            }
-          : {})}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        value={value}
-        onChange={(e) =>
-          onChange(numeric ? onlyDigits(e.target.value) : e.target.value)
-        }
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && onEnter) onEnter();
-        }}
-        disabled={disabled}
-        className={cn(
-          "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
-          numeric && "tracking-wide",
-          animation.smooth,
-          error
-            ? "border-red-400/40 bg-red-400/4"
-            : cn(borders.light, backgrounds.surface.glass),
-          "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
-          disabled && "opacity-60 cursor-not-allowed",
+      <div className="relative">
+        <input
+          ref={ref}
+          id={id}
+          name={id}
+          type={
+            numeric ? "text" : isPassword && showPassword ? "text" : type
+          }
+          dir={dir ?? (numeric || type === "email" ? "ltr" : undefined)}
+          {...(numeric
+            ? {
+                inputMode: "numeric" as const,
+                pattern: "[0-9]*",
+                autoComplete: "one-time-code",
+              }
+            : {})}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) =>
+            onChange(numeric ? onlyDigits(e.target.value) : e.target.value)
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && onEnter) onEnter();
+          }}
+          disabled={disabled}
+          className={cn(
+            "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+            numeric && "tracking-wide",
+            isPassword && "pl-11",
+            animation.smooth,
+            error
+              ? "border-red-400/40 bg-red-400/4"
+              : cn(borders.light, backgrounds.surface.glass),
+            "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
+            disabled && "opacity-60 cursor-not-allowed",
+          )}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setShowPassword((s) => !s)}
+            disabled={disabled}
+            aria-label={showPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300",
+              animation.colors,
+              disabled && "pointer-events-none opacity-60",
+            )}
+          >
+            {showPassword ? (
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4.5 w-4.5">
+                <path d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" />
+                <path d="M10.748 13.93l2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4.5 w-4.5">
+                <path fillRule="evenodd" d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14.5 10a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </button>
         )}
-      />
+      </div>
       {errorMessage ? (
         <p className="mt-1.5 text-[11px] font-medium text-red-400">
           {errorMessage}
@@ -574,13 +657,17 @@ export default function AuthPage() {
 
   // ── State ──
   const [step, setStep] = useState<AuthStep>("phone");
+  const [authMode, setAuthMode] = useState<"sms" | "password">("sms");
   const [phone, setPhone] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [nationalCode, setNationalCode] = useState("");
   const [fatherName, setFatherName] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpError, setOtpError] = useState(false);
@@ -590,7 +677,7 @@ export default function AuthPage() {
   const [timer, setTimer] = useState(OTP_EXPIRY);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isExistingUser, setIsExistingUser] = useState(false);
-  const [currentUser, setCurrentUser] = useState<BackendUser | null>(null);
+  const [, setCurrentUser] = useState<BackendUser | null>(null);
   const [authToken, setAuthToken] = useState("");
   const [animKey, setAnimKey] = useState(0);
 
@@ -599,6 +686,10 @@ export default function AuthPage() {
 
   const phoneComplete = phone.length === 11;
   const phoneValid = isValidIranPhone(phone);
+  const loginPasswordReady = loginPassword.length > 0;
+  const registerPasswordReady =
+    !validatePasswordStrength(registerPassword, normalizePhoneNumber(phone)) &&
+    registerPassword === registerPasswordConfirm;
 
   // ── Timer ──
   useEffect(() => {
@@ -613,14 +704,6 @@ export default function AuthPage() {
     const id = setInterval(() => setResendCooldown((t) => t - 1), 1000);
     return () => clearInterval(id);
   }, [resendCooldown]);
-
-  // ── Auto-submit OTP when all digits filled ──
-  useEffect(() => {
-    if (otp.length === OTP_LENGTH && step === "otp") {
-      handleVerifyOtp();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [otp]);
 
   const changeStep = (newStep: AuthStep) => {
     setAnimKey((k) => k + 1);
@@ -653,8 +736,11 @@ export default function AuthPage() {
       setTimer(OTP_EXPIRY);
       setResendCooldown(RESEND_COOLDOWN);
       changeStep("otp");
-    } catch (err: any) {
-      const msg = resolveErrorMessage(err, "send");
+    } catch (err: unknown) {
+      const msg = resolveErrorMessage(
+        err as { status?: number; message?: string },
+        "send",
+      );
       setError(msg);
       toast.error(msg);
     } finally {
@@ -665,6 +751,54 @@ export default function AuthPage() {
   /* ────────────────────────────────────────────
      STEP 2: Verify OTP → POST /api/auth/verify-otp
   ──────────────────────────────────────────── */
+  const handlePasswordLogin = useCallback(async () => {
+    const cleanPhone = normalizePhoneNumber(phone);
+
+    if (!isValidIranPhone(cleanPhone)) {
+      setError("شماره موبایل معتبر نیست");
+      toast.error("لطفاً یک شماره موبایل معتبر وارد کنید.");
+      return;
+    }
+
+    if (!loginPassword) {
+      setError("رمز عبور را وارد کنید.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const { token, user } = await apiLoginWithPassword(
+        cleanPhone,
+        loginPassword,
+      );
+
+      localStorage.setItem("auth_token", token);
+      setAuthToken(token);
+      setCurrentUser(user);
+      setIsExistingUser(true);
+
+      const displayName = [user.firstName, user.lastName]
+        .filter(Boolean)
+        .join(" ");
+      toast.success(
+        displayName ? `خوش آمدی ${displayName}!` : "ورود با موفقیت انجام شد.",
+        { title: "ورود موفق" },
+      );
+      changeStep("success");
+    } catch (err: unknown) {
+      const apiError = err as { message?: string };
+      const msg =
+        apiError.message ??
+        "شماره موبایل یا رمز عبور اشتباه است. می‌توانید با پیامک وارد شوید.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [loginPassword, phone]);
+
   const handleVerifyOtp = useCallback(async () => {
     if (otp.length !== OTP_LENGTH) return;
 
@@ -694,9 +828,12 @@ export default function AuthPage() {
         toast.info("لطفاً اطلاعات خود را تکمیل کنید.", { title: "ثبت‌نام" });
         changeStep("register");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setOtpError(true);
-      const msg = resolveErrorMessage(err, "verify");
+      const msg = resolveErrorMessage(
+        err as { status?: number; message?: string },
+        "verify",
+      );
       setError(msg);
       toast.error(msg);
       setOtp("");
@@ -708,6 +845,14 @@ export default function AuthPage() {
   /* ────────────────────────────────────────────
      STEP 3: Register → PATCH /api/auth/me
   ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (otp.length !== OTP_LENGTH || step !== "otp") return;
+    const id = window.setTimeout(() => {
+      void handleVerifyOtp();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [handleVerifyOtp, otp, step]);
+
   const handleRegister = useCallback(async () => {
     if (firstName.trim().length < 2) {
       setError("نام الزامی است (حداقل ۲ کاراکتر)");
@@ -720,6 +865,13 @@ export default function AuthPage() {
       nextErrors.email = "فرمت ایمیل معتبر نیست.";
     if (nationalCode && !isValidNationalCode(nationalCode))
       nextErrors.nationalCode = "کد ملی باید دقیقاً ۱۰ رقم باشد.";
+    const passwordError = validatePasswordStrength(
+      registerPassword,
+      normalizePhoneNumber(phone),
+    );
+    if (passwordError) nextErrors.password = passwordError;
+    if (registerPassword !== registerPasswordConfirm)
+      nextErrors.passwordConfirm = "تکرار رمز عبور با رمز عبور یکسان نیست.";
     if (Object.keys(nextErrors).length) {
       setRegisterErrors(nextErrors);
       return;
@@ -735,6 +887,8 @@ export default function AuthPage() {
         email: email.trim() || undefined,
         nationalCode: nationalCode.trim() || undefined,
         fatherName: fatherName.trim() || undefined,
+        password: registerPassword,
+        passwordConfirm: registerPasswordConfirm,
       });
 
       setCurrentUser(updatedUser);
@@ -747,14 +901,27 @@ export default function AuthPage() {
       });
 
       changeStep("success");
-    } catch (err: any) {
-      const msg = resolveErrorMessage(err, "send");
+    } catch (err: unknown) {
+      const msg = resolveErrorMessage(
+        err as { status?: number; message?: string },
+        "send",
+      );
       setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [firstName, lastName, email, nationalCode, fatherName, authToken]);
+  }, [
+    firstName,
+    lastName,
+    email,
+    nationalCode,
+    fatherName,
+    registerPassword,
+    registerPasswordConfirm,
+    phone,
+    authToken,
+  ]);
 
   /* ────────────────────────────────────────────
      Resend OTP
@@ -775,8 +942,11 @@ export default function AuthPage() {
       setError("");
 
       toast.success("کد جدید ارسال شد.", { title: "ارسال مجدد" });
-    } catch (err: any) {
-      const msg = resolveErrorMessage(err, "send");
+    } catch (err: unknown) {
+      const msg = resolveErrorMessage(
+        err as { status?: number; message?: string },
+        "send",
+      );
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -896,12 +1066,33 @@ export default function AuthPage() {
                         "text-slate-400",
                       )}
                     >
-                      شماره موبایل خود را وارد کنید تا کد تأیید برایتان ارسال شود
+                      شماره موبایل را وارد کنید و با پیامک یا رمز عبور وارد شوید
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-8 space-y-4">
+                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                    {(["sms", "password"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => {
+                          setAuthMode(mode);
+                          setError("");
+                        }}
+                        className={cn(
+                          "h-10 rounded-lg text-sm font-bold transition-all duration-200",
+                          authMode === mode
+                            ? "bg-yellow-400 text-slate-950"
+                            : "text-slate-400 hover:bg-white/8 hover:text-white",
+                        )}
+                      >
+                        {mode === "sms" ? "ورود با پیامک" : "ورود با رمز"}
+                      </button>
+                    ))}
+                  </div>
+
                   <div>
                     <label
                       htmlFor="phone"
@@ -913,11 +1104,12 @@ export default function AuthPage() {
                       <input
                         ref={phoneInputRef}
                         id="phone"
+                        name="phoneNumber"
                         type="text"
                         dir="ltr"
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        autoComplete="tel"
+                        autoComplete="username"
                         autoFocus
                         placeholder="09123456789"
                         maxLength={11}
@@ -926,9 +1118,11 @@ export default function AuthPage() {
                           setPhone(onlyDigits(e.target.value).slice(0, 11));
                           setError("");
                         }}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && phoneComplete && handleSendOtp()
-                        }
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" || !phoneComplete) return;
+                          if (authMode === "password") handlePasswordLogin();
+                          else handleSendOtp();
+                        }}
                         disabled={loading}
                         className={cn(
                           "w-full rounded-xl border px-4 py-3.5 pr-12 text-left text-base font-medium tracking-wide text-white placeholder:text-slate-500 outline-none",
@@ -979,18 +1173,51 @@ export default function AuthPage() {
                     )}
                   </div>
 
+                  {authMode === "password" && (
+                    <Field
+                      id="loginPassword"
+                      label="رمز عبور"
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder="رمز عبور حساب"
+                      value={loginPassword}
+                      onChange={(value) => {
+                        setLoginPassword(value);
+                        setError("");
+                      }}
+                      onEnter={handlePasswordLogin}
+                      disabled={loading}
+                    />
+                  )}
+
                   <button
                     type="button"
-                    onClick={handleSendOtp}
-                    disabled={loading || !phoneComplete}
+                    onClick={
+                      authMode === "password"
+                        ? handlePasswordLogin
+                        : handleSendOtp
+                    }
+                    disabled={
+                      loading ||
+                      !phoneComplete ||
+                      (authMode === "password" && !loginPasswordReady)
+                    }
                     className={cn(
                       components.ctaPrimary,
                       "w-full justify-center py-3.5",
-                      (loading || !phoneComplete) &&
+                      (loading ||
+                        !phoneComplete ||
+                        (authMode === "password" && !loginPasswordReady)) &&
                         "pointer-events-none opacity-60",
                     )}
                   >
-                    {loading ? <LoadingDots /> : "دریافت کد تأیید"}
+                    {loading ? (
+                      <LoadingDots />
+                    ) : authMode === "password" ? (
+                      "ورود با رمز عبور"
+                    ) : (
+                      "دریافت کد تأیید"
+                    )}
                   </button>
                 </div>
               </div>
@@ -1155,7 +1382,7 @@ export default function AuthPage() {
                         "text-slate-400",
                       )}
                     >
-                      فقط نام الزامی است، بقیه موارد اختیاری‌اند
+                      نام و رمز عبور الزامی است؛ بعداً با همین رمز و شماره موبایل می‌توانید بدون پیامک وارد شوید
                     </p>
                   </div>
                 </div>
@@ -1292,16 +1519,84 @@ export default function AuthPage() {
                     disabled={loading}
                   />
 
+                  <Field
+                    id="registerPassword"
+                    label="رمز عبور"
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="حداقل ۸ کاراکتر"
+                    value={registerPassword}
+                    onChange={(value) => {
+                      setRegisterPassword(value);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        const message = validatePasswordStrength(
+                          value,
+                          normalizePhoneNumber(phone),
+                        );
+                        if (message) next.password = message;
+                        else delete next.password;
+                        if (
+                          registerPasswordConfirm &&
+                          value !== registerPasswordConfirm
+                        )
+                          next.passwordConfirm =
+                            "تکرار رمز عبور با رمز عبور یکسان نیست.";
+                        else delete next.passwordConfirm;
+                        return next;
+                      });
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                    hint="حرف بزرگ، حرف کوچک، عدد و نشانه مثل ! یا @ لازم است."
+                    error={Boolean(registerErrors.password)}
+                    errorMessage={registerErrors.password}
+                  />
+
+                  <Field
+                    id="registerPasswordConfirm"
+                    label="تکرار رمز عبور"
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="رمز عبور را دوباره وارد کنید"
+                    value={registerPasswordConfirm}
+                    onChange={(value) => {
+                      setRegisterPasswordConfirm(value);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        if (registerPassword && value !== registerPassword)
+                          next.passwordConfirm =
+                            "تکرار رمز عبور با رمز عبور یکسان نیست.";
+                        else delete next.passwordConfirm;
+                        return next;
+                      });
+                      setError("");
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                    error={Boolean(registerErrors.passwordConfirm)}
+                    errorMessage={registerErrors.passwordConfirm}
+                  />
+
                   {error && <ErrorLine msg={error} />}
 
                   <button
                     type="button"
                     onClick={handleRegister}
-                    disabled={loading || firstName.trim().length < 2}
+                    disabled={
+                      loading ||
+                      firstName.trim().length < 2 ||
+                      !registerPasswordReady
+                    }
                     className={cn(
                       components.ctaPrimary,
                       "w-full justify-center py-3.5",
-                      (loading || firstName.trim().length < 2) &&
+                      (loading ||
+                        firstName.trim().length < 2 ||
+                        !registerPasswordReady) &&
                         "opacity-60 pointer-events-none",
                     )}
                   >

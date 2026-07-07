@@ -11,6 +11,8 @@ export interface IUser extends Document {
   phoneNumber: string;
   email?: string;
   avatarUrl?: string;
+  passwordHash?: string;
+  passwordChangedAt?: Date;
 
   nationalCode?: string;
   fatherName?: string;
@@ -78,6 +80,17 @@ const UserSchema = new Schema<IUser>(
     avatarUrl: {
       type: String,
       trim: true,
+    },
+
+    passwordHash: {
+      type: String,
+      select: false,
+      maxlength: 100,
+    },
+
+    passwordChangedAt: {
+      type: Date,
+      select: false,
     },
 
     nationalCode: {
@@ -173,6 +186,20 @@ const UserSchema = new Schema<IUser>(
   },
   {
     timestamps: true,
+    toJSON: {
+      transform(_doc, ret) {
+        delete ret.passwordHash;
+        delete ret.passwordChangedAt;
+        return ret;
+      },
+    },
+    toObject: {
+      transform(_doc, ret) {
+        delete ret.passwordHash;
+        delete ret.passwordChangedAt;
+        return ret;
+      },
+    },
   }
 );
 

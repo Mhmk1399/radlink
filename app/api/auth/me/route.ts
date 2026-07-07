@@ -4,6 +4,7 @@ import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import User from "@/models/users";
+import { hashPassword, validateStrongPassword } from "@/lib/auth/password";
 import {
     isValidEmail,
     isValidNationalCode,
@@ -22,6 +23,12 @@ export const GET = compose(
     const user = req.ctx.user!;
 
     const access = await resolveUserAccess(String(user._id), user.permissions);
+    const hasPassword = Boolean(
+        await User.exists({
+            _id: user._id,
+            passwordHash: { $exists: true, $ne: "" },
+        }),
+    );
 
     // Serialize Sets to arrays for JSON
     const serialized = {
@@ -49,6 +56,7 @@ export const GET = compose(
             ...userObject,
             id: String(user._id),
             permissions: user.permissions?.map(String) ?? [],
+            hasPassword,
         },
         access: serialized,
     });
@@ -60,7 +68,16 @@ export const PATCH = compose(
     withStatus("active")
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
-    const { firstName, lastName, email, avatarUrl, nationalCode, fatherName } = await req.json();
+    const {
+        firstName,
+        lastName,
+        email,
+        avatarUrl,
+        nationalCode,
+        fatherName,
+        password,
+        passwordConfirm,
+    } = await req.json();
 
     if (!firstName || typeof firstName !== "string" || firstName.trim().length < 2) {
         return NextResponse.json(
@@ -119,6 +136,24 @@ export const PATCH = compose(
     if (fatherName !== undefined)
         updateData.fatherName =
             typeof fatherName === "string" ? fatherName.trim() || null : null;
+    if (password !== undefined || passwordConfirm !== undefined) {
+        if (password !== passwordConfirm) {
+            return NextResponse.json(
+                { message: "تکرار رمز عبور با رمز عبور یکسان نیست." },
+                { status: 400 },
+            );
+        }
+
+        const passwordError = validateStrongPassword(password, {
+            phoneNumber: user.phoneNumber,
+        });
+        if (passwordError) {
+            return NextResponse.json({ message: passwordError }, { status: 400 });
+        }
+
+        updateData.passwordHash = await hashPassword(password);
+        updateData.passwordChangedAt = new Date();
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
         user._id,

@@ -13,8 +13,7 @@ import {
   focus,
   components,
   accentTokens,
-  animDelay,
-} from "@/lib/design/design-system";
+ } from "@/lib/design/design-system";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
@@ -72,6 +71,55 @@ const socialLinks = [
   },
 ];
 
+const ENAMAD = {
+  id: "6802735",
+  code: "P9TZBGkuLhWv4KuLpyEaZdRk7k75NRaQ",
+};
+
+function EnamadTrustSeal() {
+  const href = `https://trustseal.enamad.ir/?id=${ENAMAD.id}&Code=${ENAMAD.code}`;
+  const src = `https://trustseal.enamad.ir/logo.aspx?id=${ENAMAD.id}&Code=${ENAMAD.code}`;
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border px-3.5 py-3",
+        borders.subtle,
+        backgrounds.surface.glassMedium,
+      )}
+    >
+      <p className="mb-3 text-xs font-medium text-white">
+        نماد اعتماد الکترونیکی
+      </p>
+
+      <a
+        referrerPolicy="origin"
+        target="_blank"
+        rel="noopener noreferrer"
+        href={href}
+        aria-label="مشاهده نماد اعتماد الکترونیکی رادلینک"
+        className={cn(
+          "flex items-center justify-center rounded-xl bg-white/95 p-3",
+          animation.base,
+          animation.activePressSmall,
+          "hover:bg-white",
+          focus.ring,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          referrerPolicy="origin"
+          src={src}
+          alt="نماد اعتماد الکترونیکی رادلینک"
+          loading="lazy"
+          className="h-20 w-20 cursor-pointer object-contain"
+          {...({ code: ENAMAD.code } as Record<string, string>)}
+        />
+      </a>
+    </div>
+  );
+}
+
 /* ──────────────────────────────────────────────
    FOOTER COMPONENT
    ────────────────────────────────────────────── */
@@ -119,7 +167,7 @@ export function SmartLandingFooter() {
                 href="/"
                 onClick={(e) => {
                   e.preventDefault();
-                 }}
+                }}
                 className={cn(
                   "group inline-flex items-center gap-2.5 rounded-2xl px-1 py-1 text-white",
                   animation.base,
@@ -131,13 +179,12 @@ export function SmartLandingFooter() {
               >
                 <span className="flex flex-col leading-none">
                   <Image
-                    src="/assets/images/logo.png"
+                    src="/assets/images/radlinklogo.png"
                     width={150}
                     height={200}
                     alt="logo"
-                    className="object-cover h-10"
+                    className="object-cover h-28"
                   />
-               
                 </span>
               </Link>
 
@@ -290,6 +337,8 @@ export function SmartLandingFooter() {
                   </p>
                 </div>
               </div>
+
+              <EnamadTrustSeal />
             </div>
           </div>
 

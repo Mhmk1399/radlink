@@ -25,7 +25,7 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
         return NextResponse.json({ message: "شماره موبایل و کد تایید الزامی هستند." }, { status: 400 });
     }
 
-    const record = otpStore?.get(phoneNumber);
+    // const record = otpStore?.get(phoneNumber);
 
     // if (!record || record.otp !== otp) {
     //     return NextResponse.json({ message: "کد تایید معتبر نیست." }, { status: 401 });
@@ -46,6 +46,13 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
 
     if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
 
+    const hasPassword = Boolean(
+        await User.exists({
+            _id: user._id,
+            passwordHash: { $exists: true, $ne: "" },
+        }),
+    );
+
     const token = signToken({
         userId: String(user._id),
         role: user.role,
@@ -54,5 +61,12 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
         lastName: user.lastName ?? "",     // ← اضافه کنید
         phoneNumber: user.phoneNumber ?? "", // ← اضافه کنید
     });
-    return NextResponse.json({ token, user });
+    return NextResponse.json({
+        token,
+        user: {
+            ...user.toObject(),
+            id: String(user._id),
+            hasPassword,
+        },
+    });
 });

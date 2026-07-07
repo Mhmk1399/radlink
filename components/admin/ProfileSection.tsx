@@ -8,6 +8,8 @@ import {
   FaCloudArrowUp,
   FaClock,
   FaEnvelope,
+  FaEye,
+  FaEyeSlash,
   FaFile,
   FaIdCard,
   FaLock,
@@ -52,6 +54,7 @@ type ProfileUser = {
   status: UserStatus;
   limits?: UserLimits;
   isPhoneVerified?: boolean;
+  hasPassword?: boolean;
   lastLoginAt?: string;
   phoneVerifiedAt?: string;
   createdAt?: string;
@@ -110,6 +113,7 @@ function normalizeProfileUser(value: unknown): ProfileUser {
       pages: toNumber(limits.pages),
     },
     isPhoneVerified: record.isPhoneVerified === true,
+    hasPassword: record.hasPassword === true,
     lastLoginAt: toText(record.lastLoginAt),
     phoneVerifiedAt: toText(record.phoneVerifiedAt),
     createdAt: toText(record.createdAt),
@@ -177,6 +181,47 @@ async function updateProfile(payload: ProfileFormState): Promise<ProfileUser> {
   }
 
   return normalizeProfileUser(isRecord(json) ? json.user : null);
+}
+
+function validatePasswordStrength(password: string, phoneNumber?: string) {
+  if (password.length < 8) return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
+  if (password.length > 72) return "رمز عبور نباید بیشتر از ۷۲ کاراکتر باشد.";
+  if (/\s/.test(password)) return "رمز عبور نباید فاصله داشته باشد.";
+  if (!/[a-z]/.test(password))
+    return "رمز عبور باید حداقل یک حرف کوچک انگلیسی داشته باشد.";
+  if (!/[A-Z]/.test(password))
+    return "رمز عبور باید حداقل یک حرف بزرگ انگلیسی داشته باشد.";
+  if (!/\d/.test(password)) return "رمز عبور باید حداقل یک عدد داشته باشد.";
+  if (!/[^A-Za-z0-9]/.test(password))
+    return "رمز عبور باید حداقل یک نشانه مثل ! یا @ داشته باشد.";
+  if (phoneNumber && password.includes(phoneNumber))
+    return "رمز عبور نباید شامل شماره موبایل باشد.";
+  return "";
+}
+
+async function updatePassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+  newPasswordConfirm: string;
+}): Promise<{ hasPassword: boolean }> {
+  const response = await fetch("/api/auth/password", {
+    method: "PATCH",
+    headers: getAuthHeaders(true),
+    body: JSON.stringify(payload),
+  });
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      isRecord(json) && typeof json.message === "string"
+        ? json.message
+        : "ذخیره رمز عبور با خطا مواجه شد.",
+    );
+  }
+
+  return {
+    hasPassword: isRecord(json) ? json.hasPassword === true : true,
+  };
 }
 
 function publishProfileUpdate(user: ProfileUser) {
@@ -258,6 +303,7 @@ function Field({
   required,
   identityField,
   error,
+  autoComplete,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -268,12 +314,15 @@ function Field({
   required?: boolean;
   identityField?: "email" | "nationalCode";
   error?: string;
+  autoComplete?: string;
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const identityInputProps = identityField
     ? getIdentityInputProps(identityField)
     : {};
+  const isPassword = type === "password";
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <label className="block">
       <span
@@ -307,8 +356,10 @@ function Field({
       >
         <span className={cn("shrink-0", t.textDisabled)}>{icon}</span>
         <input
-          type={type}
+          name={autoComplete ?? label}
+          type={isPassword && showPassword ? "text" : type}
           value={value}
+          autoComplete={autoComplete}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           inputMode={identityInputProps.inputMode}
@@ -323,6 +374,21 @@ function Field({
               : "placeholder:text-[#b0aa9e]",
           )}
         />
+        {isPassword && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setShowPassword((s) => !s)}
+            aria-label={showPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+            className={cn("shrink-0", t.textDisabled, "hover:text-current")}
+          >
+            {showPassword ? (
+              <FaEyeSlash className="h-3.5 w-3.5" />
+            ) : (
+              <FaEye className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
       </span>
       {error && (
         <span className="mt-1.5 block text-xs font-medium text-red-500">
@@ -594,6 +660,189 @@ function AvatarUploadField({
    PROFILE EDITOR
    ══════════════════════════════════════════════ */
 
+function PasswordSettings({
+  user,
+  onPasswordSaved,
+}: {
+  user: ProfileUser;
+  onPasswordSaved: () => void;
+}) {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const hasPassword = user.hasPassword === true;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextErrors: Record<string, string> = {};
+    if (hasPassword && !currentPassword)
+      nextErrors.currentPassword = "رمز عبور فعلی الزامی است.";
+
+    const passwordError = validatePasswordStrength(
+      newPassword,
+      user.phoneNumber,
+    );
+    if (passwordError) nextErrors.newPassword = passwordError;
+    if (newPassword !== newPasswordConfirm)
+      nextErrors.newPasswordConfirm =
+        "تکرار رمز عبور جدید با رمز عبور یکسان نیست.";
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await updatePassword({
+        currentPassword,
+        newPassword,
+        newPasswordConfirm,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setNewPasswordConfirm("");
+      setErrors({});
+      onPasswordSaved();
+      toast.success("رمز عبور با موفقیت ذخیره شد.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "ذخیره رمز عبور با خطا مواجه شد.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={cn("overflow-hidden rounded-2xl border", t.borderSubtle, t.cardBg)}
+    >
+      <div className={cn("border-b px-4 py-3 sm:px-5 sm:py-4", t.divider)}>
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-xl",
+              isDark
+                ? "bg-[#c8a84b]/10 text-[#c8a84b]"
+                : "bg-[#8a7030]/8 text-[#8a7030]",
+            )}
+          >
+            <FaLock className="h-3.5 w-3.5" />
+          </span>
+          <div>
+            <h2 className={cn("text-base font-extrabold", t.textPrimary)}>
+              رمز عبور
+            </h2>
+            <p className={cn("mt-0.5 text-xs", t.textDisabled)}>
+              {hasPassword
+                ? "برای تغییر رمز، رمز فعلی را هم وارد کنید."
+                : "برای ورود بدون پیامک، یک رمز عبور قوی تنظیم کنید."}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+        {hasPassword && (
+          <Field
+            icon={<FaLock className="h-3.5 w-3.5" />}
+            label="رمز فعلی"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(value) => {
+              setCurrentPassword(value);
+              setErrors((current) => {
+                const next = { ...current };
+                if (value) delete next.currentPassword;
+                return next;
+              });
+            }}
+            error={errors.currentPassword}
+            required
+          />
+        )}
+        <Field
+          icon={<FaLock className="h-3.5 w-3.5" />}
+          label="رمز جدید"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(value) => {
+            setNewPassword(value);
+            setErrors((current) => {
+              const next = { ...current };
+              const message = validatePasswordStrength(value, user.phoneNumber);
+              if (message) next.newPassword = message;
+              else delete next.newPassword;
+              if (newPasswordConfirm && value !== newPasswordConfirm)
+                next.newPasswordConfirm =
+                  "تکرار رمز عبور جدید با رمز عبور یکسان نیست.";
+              else delete next.newPasswordConfirm;
+              return next;
+            });
+          }}
+          error={errors.newPassword}
+          required
+        />
+        <Field
+          icon={<FaLock className="h-3.5 w-3.5" />}
+          label="تکرار رمز جدید"
+          type="password"
+          autoComplete="new-password"
+          value={newPasswordConfirm}
+          onChange={(value) => {
+            setNewPasswordConfirm(value);
+            setErrors((current) => {
+              const next = { ...current };
+              if (newPassword && value !== newPassword)
+                next.newPasswordConfirm =
+                  "تکرار رمز عبور جدید با رمز عبور یکسان نیست.";
+              else delete next.newPasswordConfirm;
+              return next;
+            });
+          }}
+          error={errors.newPasswordConfirm}
+          required
+        />
+        <p className={cn("text-xs leading-6 sm:col-span-2", t.textMuted)}>
+          رمز باید حداقل ۸ کاراکتر و شامل حرف بزرگ، حرف کوچک، عدد و نشانه باشد.
+        </p>
+      </div>
+
+      <div className={cn("flex justify-end border-t p-4", t.divider)}>
+        <button
+          type="submit"
+          disabled={saving}
+          className={cn(
+            "inline-flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+            isDark
+              ? "bg-[#c8a84b] text-[#111116] hover:bg-[#d2b660]"
+              : "bg-[#8a7030] text-white hover:bg-[#7a6428]",
+          )}
+        >
+          {saving ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <FaCircleCheck className="h-3.5 w-3.5" />
+          )}
+          {saving ? "در حال ذخیره..." : "ذخیره رمز عبور"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function ProfileEditor({
   user,
   onSaved,
@@ -749,6 +998,7 @@ function ProfileEditor({
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
       {/* ── Left: Editable form ── */}
+      <div className="space-y-5">
       <form
         onSubmit={handleSubmit}
         className={cn(
@@ -881,6 +1131,12 @@ function ProfileEditor({
       </form>
 
       {/* ── Right: Sidebar info ── */}
+      <PasswordSettings
+        user={user}
+        onPasswordSaved={() => onSaved({ ...user, hasPassword: true })}
+      />
+      </div>
+
       <aside className="space-y-4">
         {/* Profile card */}
         <div
