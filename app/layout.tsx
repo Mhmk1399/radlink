@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/favicon.ico",
   },
+  other: {
+    enamad: "2184341",
+  },
 };
 
 export default function RootLayout({
