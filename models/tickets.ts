@@ -71,6 +71,14 @@ const ticketSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
+ticketSchema.index({ createdAt: -1 });
+ticketSchema.index({ updatedAt: -1 });
+ticketSchema.index({ requester: 1, createdAt: -1 });
+ticketSchema.index({ requester: 1, status: 1, createdAt: -1 });
+ticketSchema.index({ requester: 1, updatedAt: -1 });
+ticketSchema.index({ status: 1, createdAt: -1 });
+ticketSchema.index({ assignee: 1, status: 1, updatedAt: -1 });
+
 const Ticket: mongoose.Model<any> =
     mongoose.models.Ticket || mongoose.model("Ticket", ticketSchema);
 

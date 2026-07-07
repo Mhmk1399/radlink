@@ -3,6 +3,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import otpStore from "@/lib/auth/otp-store";
+import { sendVerificationCode } from "@/lib/auth/sms";
 import User from "@/models/users";
 import {
     isValidPhoneNumber,
@@ -12,7 +13,9 @@ import {
 
 // In production replace this with a real SMS provider (e.g. Kavenegar, Twilio)
 async function sendSms(phone: string, otp: string) {
+    const sent = await sendVerificationCode(phone, otp);
     console.log(`[OTP] ${phone} → ${otp}`);
+    return sent;
 }
 
 export const POST = compose(withDB())(async (req: AuthRequest) => {
@@ -43,8 +46,16 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(phoneNumber, { otp, expiresAt: Date.now() + 2 * 60_000 });
 
+    const sent = await sendSms(phoneNumber, otp);
+    if (!sent) {
+        otpStore.delete(phoneNumber);
+        return NextResponse.json(
+            { message: "ارسال کد تایید با خطا مواجه شد." },
+            { status: 502 },
+        );
+    }
+
     await User.findByIdAndUpdate(user._id, { lastOtpRequestAt: new Date() });
-    await sendSms(phoneNumber, otp);
 
     return NextResponse.json({ message: "کد تایید ارسال شد." });
 });

@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { toast } from "@/components/ui/CustomToast";
 import {
   authorizeBuilderAccess,
   getBuilderAuthToken,
 } from "@/hook/auth/builderAuthorization";
 import type { PageBlock } from "@/types/blocks/builder.types";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type PageMetadata = {
   title: string;
@@ -38,15 +40,66 @@ function setClientMetadata(title: string, description: string) {
 }
 
 function LoadingScreen() {
+  const { isDark } = useTheme();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+    <div
+      className={`flex min-h-screen items-center justify-center transition-colors duration-300 ${
+        isDark ? "bg-[#141418]" : "bg-[#f1f2f4]"
+      }`}
+    >
       <div className="relative z-10 flex flex-col items-center gap-6 px-4 text-center">
-        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/30" />
-        <div className="inline-flex h-10 w-10 animate-spin rounded-full border-[3px] border-slate-700 border-t-violet-500" />
+        <div className="relative flex   items-center justify-center">
+          <div
+            className={`absolute inset-0 animate-pulse rounded-2xl bg-linear-to-br from-[#a0833a] via-[#c9a84c] to-[#dfc06a] blur-lg opacity-50`}
+          />
+          
+          <div
+            className={`relative flex h-60 w-60 items-center justify-center rounded-2xl   ${
+              isDark
+                ? "   *:"
+                : "    s "
+            }`}
+          >
+
+
+            <Image
+              src="/assets/images/radlinklogo.png"
+              width={96}
+              height={96}
+              alt="رادلینک"
+              priority
+              className="h-120 w-120 object-contain"
+            />
+          </div>
+        </div>
+
+        <div
+          className={`inline-flex h-10 w-10 animate-spin rounded-full border-[3px] border-t-[#c9a84c] ${
+            isDark ? "border-[#2e2e38]" : "border-[#d4d4d8]"
+          }`}
+        />
+
         <div>
-          <h1 className="text-xl font-semibold tracking-wide text-white sm:text-2xl">
-          ...  در حال بارگذاری
+          <h1
+            className={`text-xl font-semibold tracking-wide sm:text-2xl ${
+              isDark ? "text-[#e8e6e3]" : "text-[#18181b]"
+            }`}
+          >
+            در حال بارگذاری
+            <span className="inline-flex w-6 justify-start">
+              <span className="animate-[pulse_1.4s_ease-in-out_infinite]">.</span>
+              <span className="animate-[pulse_1.4s_ease-in-out_0.2s_infinite]">.</span>
+              <span className="animate-[pulse_1.4s_ease-in-out_0.4s_infinite]">.</span>
+            </span>
           </h1>
+          <p
+            className={`mt-1 text-sm ${
+              isDark ? "text-[#9e9a93]" : "text-[#52525b]"
+            }`}
+          >
+            در حال آماده‌سازی صفحه‌ساز رادلینک
+          </p>
         </div>
       </div>
     </div>

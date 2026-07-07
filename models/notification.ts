@@ -76,6 +76,8 @@ const notificationSchema = new Schema<INotification>(
 );
 
 notificationSchema.index({ page: 1, isActive: 1, createdAt: -1 });
+notificationSchema.index({ isGlobal: 1, isActive: 1, createdAt: -1 });
+notificationSchema.index({ isActive: 1, createdAt: -1 });
 
 const Notification: Model<INotification> =
     (mongoose.models.Notification as Model<INotification> | undefined) ||

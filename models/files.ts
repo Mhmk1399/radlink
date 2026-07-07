@@ -52,6 +52,11 @@ const fileSchema = new mongoose.Schema<IFile>({
 });
 
 fileSchema.index({ owner: 1, kind: 1 });
+fileSchema.index({ owner: 1, createdAt: -1 });
+fileSchema.index({ kind: 1, createdAt: -1 });
+fileSchema.index({ owner: 1, kind: 1, createdAt: -1 });
+fileSchema.index({ path: 1, kind: 1 });
+fileSchema.index({ owner: 1, path: 1, kind: 1 });
 
 const File: Model<IFile> =
     mongoose.models.File || mongoose.model<IFile>("File", fileSchema);

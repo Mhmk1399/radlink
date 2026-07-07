@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/data/db";
+import { queuePageViewIncrement } from "@/lib/pages/pageViewCounter";
 import Page from "@/models/pages";
 
 type RouteContext = {
@@ -25,21 +26,11 @@ export async function POST(request: Request, context: RouteContext) {
     "isNewVisitor" in body &&
     body.isNewVisitor === true;
 
-  const page = await Page.findOneAndUpdate(
+  const page = await Page.findOne(
     {
       _id: id,
       isPublished: true,
       $or: [{ expiresAt: null }, { expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
-    },
-    {
-      $inc: {
-        "stats.views": 1,
-        "stats.visitors": isNewVisitor ? 1 : 0,
-      },
-    },
-    {
-      new: true,
-      runValidators: true,
     },
   )
     .select("stats")
@@ -52,8 +43,16 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
+  const pendingDelta = queuePageViewIncrement(id, isNewVisitor);
+  const currentStats = page.stats ?? { views: 0, visitors: 0 };
+
   return NextResponse.json(
-    { stats: page.stats },
+    {
+      stats: {
+        views: Number(currentStats.views ?? 0) + pendingDelta.views,
+        visitors: Number(currentStats.visitors ?? 0) + pendingDelta.visitors,
+      },
+    },
     {
       headers: {
         "Cache-Control": "no-store",

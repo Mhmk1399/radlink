@@ -16,6 +16,73 @@ import Product from "@/models/products";
 import FileModel from "@/models/files";
 import Notification from "@/models/notification";
 
+const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+
+type DashboardPayload = {
+  stats: Record<string, unknown>;
+  recentUsers: unknown;
+  recentTickets: unknown;
+  generatedAt: string;
+};
+
+type DashboardCacheEntry = {
+  value: DashboardPayload;
+  expiresAt: number;
+};
+
+const dashboardCacheGlobal = global as typeof globalThis & {
+  _adminDashboardCache?: Map<string, DashboardCacheEntry>;
+};
+
+if (!dashboardCacheGlobal._adminDashboardCache) {
+  dashboardCacheGlobal._adminDashboardCache = new Map();
+}
+
+const dashboardCache = dashboardCacheGlobal._adminDashboardCache;
+
+function stringifyId(value: unknown) {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return String(record._id ?? record.id ?? value);
+  }
+
+  return String(value ?? "");
+}
+
+function getDashboardCacheKey(user: AuthRequest["ctx"]["user"]) {
+  const permissionKey = (user?.permissions ?? [])
+    .map(stringifyId)
+    .filter(Boolean)
+    .sort()
+    .join(",");
+
+  return [
+    stringifyId(user?._id),
+    user?.role ?? "",
+    user?.status ?? "",
+    permissionKey,
+  ].join("|");
+}
+
+function getCachedDashboard(key: string) {
+  const entry = dashboardCache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() > entry.expiresAt) {
+    dashboardCache.delete(key);
+    return null;
+  }
+
+  return entry.value;
+}
+
+function setCachedDashboard(key: string, value: DashboardPayload) {
+  dashboardCache.set(key, {
+    value,
+    expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS,
+  });
+}
+
 function percentChange(current: number, previous: number) {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
@@ -40,6 +107,12 @@ export const GET = compose(
   withStatus("active"),
 )(async (req: AuthRequest) => {
   const user = req.ctx.user!;
+  const dashboardCacheKey = getDashboardCacheKey(user);
+  const cachedDashboard = getCachedDashboard(dashboardCacheKey);
+  if (cachedDashboard) {
+    return NextResponse.json(cachedDashboard);
+  }
+
   const isSuperAdmin = user.role === "superAdmin";
   const hasGlobalScope = hasGlobalOwnerScope(user);
   const access = await resolveUserAccess(String(user._id), user.permissions);
@@ -214,10 +287,10 @@ export const GET = compose(
           .sort({ updatedAt: -1 })
           .limit(4)
           .lean()
-      : [],
+    : [],
   ]);
 
-  return NextResponse.json({
+  const payload: DashboardPayload = {
     stats: {
       users: {
         total: totalUsers,
@@ -243,5 +316,9 @@ export const GET = compose(
     recentUsers,
     recentTickets,
     generatedAt: new Date().toISOString(),
-  });
+  };
+
+  setCachedDashboard(dashboardCacheKey, payload);
+
+  return NextResponse.json(payload);
 });

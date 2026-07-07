@@ -497,6 +497,12 @@ const PageSchema = new Schema<IPage>(
 );
 
 PageSchema.index({ isPublished: 1, expiresAt: 1 });
+PageSchema.index({ expiresAt: 1 });
+PageSchema.index({ owner: 1, updatedAt: -1 });
+PageSchema.index({ owner: 1, createdAt: -1 });
+PageSchema.index({ owner: 1, isPublished: 1, updatedAt: -1 });
+PageSchema.index({ owner: 1, "stats.views": -1, _id: -1 });
+PageSchema.index({ owner: 1, "stats.visitors": -1, _id: -1 });
 
 
 

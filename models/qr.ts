@@ -47,6 +47,10 @@ const qrSchema = new mongoose.Schema<IQR>({
     timestamps: true,
 });
 
+qrSchema.index({ page: 1, isActive: 1 });
+qrSchema.index({ owner: 1, createdAt: -1 });
+qrSchema.index({ owner: 1, isActive: 1, createdAt: -1 });
+
 const QR: Model<IQR> =
     mongoose.models.QR || mongoose.model<IQR>("QR", qrSchema);
 
