@@ -424,8 +424,9 @@ export function LogoHeaderFrame({
     normalized.logoSize,
     Math.max(48, normalized.height - 32),
   );
+  const hasBackgroundImage = Boolean(normalized.backgroundImage.trim());
 
-  if (!normalized.enabled || normalized.variant === "none") {
+  if (!normalized.enabled || (normalized.variant === "none" && !hasBackgroundImage)) {
     if (!hasLogo && !showPlaceholder) return null;
 
     return (
@@ -452,20 +453,31 @@ export function LogoHeaderFrame({
           background: `linear-gradient(135deg, ${normalized.primaryColor}, ${normalized.secondaryColor})`,
         }}
       >
-        <svg
-          className="absolute inset-0 h-full w-full"
-          viewBox="0 0 960 240"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          {patternForVariant(
-            normalized.variant,
-            normalized.primaryColor,
-            normalized.secondaryColor,
-            normalized.accentColor,
-            normalized.patternOpacity,
-          )}
-        </svg>
+        {hasBackgroundImage ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url(${JSON.stringify(normalized.backgroundImage)})`,
+            }}
+            aria-hidden="true"
+          />
+        ) : null}
+        {normalized.variant !== "none" ? (
+          <svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 960 240"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            {patternForVariant(
+              normalized.variant,
+              normalized.primaryColor,
+              normalized.secondaryColor,
+              normalized.accentColor,
+              normalized.patternOpacity,
+            )}
+          </svg>
+        ) : null}
         <div className="absolute inset-0 flex items-center justify-center">
           <LogoSlot
             logo={logo}

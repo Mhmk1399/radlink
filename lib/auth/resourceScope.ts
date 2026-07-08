@@ -39,13 +39,19 @@ export async function withPageAccessScope<T>(
   query: FilterQuery<T> = {},
   _action = "view",
 ): Promise<FilterQuery<T>> {
+  void _action;
   const actorScope = await resolveActorScope(user);
   if (actorScope.global) return query;
 
   return {
     $and: [
       query,
-      { owner: { $in: actorScope.userIds ?? [user._id] } },
+      {
+        $or: [
+          { owner: { $in: actorScope.userIds ?? [user._id] } },
+          { assignedUser: { $in: actorScope.userIds ?? [user._id] } },
+        ],
+      },
     ],
   } as FilterQuery<T>;
 }

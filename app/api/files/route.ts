@@ -56,7 +56,12 @@ export const GET = compose(
         ];
     }
 
-    if (kind === "upload" || kind === "qr" || kind === "ticket") {
+    if (
+        kind === "upload" ||
+        kind === "qr" ||
+        kind === "ticket" ||
+        kind === "logo-header"
+    ) {
         query.kind = kind;
     }
 
@@ -79,7 +84,7 @@ export const GET = compose(
     if (fileType) {
         const extensionPattern =
             fileType === "تصویر"
-                ? "\\.(?:jpe?g|png|gif|webp)(?:\\?.*)?$"
+                ? "\\.(?:jpe?g|png|gif|webp|avif)(?:\\?.*)?$"
                 : fileType === "PDF"
                   ? "\\.pdf(?:\\?.*)?$"
                   : fileType === "سند"

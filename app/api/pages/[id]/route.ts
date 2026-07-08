@@ -128,6 +128,10 @@ function getOptionalObjectId(value: unknown) {
     return null;
 }
 
+function canAssignPageUser(role: unknown) {
+    return role === "agent" || role === "admin" || role === "superAdmin";
+}
+
 function normalizeBlocks(blocks: unknown) {
     if (!Array.isArray(blocks)) return [];
 
@@ -212,6 +216,7 @@ export const GET = compose(
 
     const page = await Page.findOne(query)
         .populate("owner", "firstName lastName email phoneNumber")
+        .populate("assignedUser", "firstName lastName email phoneNumber")
         .populate("template", "name thumbnail category")
         .lean();
 
@@ -278,6 +283,46 @@ export const PATCH = compose(
 
             update.owner = requestedOwnerId;
         }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "assignedUserId")) {
+        const requestedAssignedUserId = getOptionalObjectId(body.assignedUserId);
+        if (requestedAssignedUserId === null) {
+            return NextResponse.json(
+                { message: "شناسه کاربر اختصاص‌داده‌شده معتبر نیست." },
+                { status: 400 }
+            );
+        }
+
+        if (!canAssignPageUser(user.role)) {
+            return NextResponse.json(
+                { message: "شما اجازه اختصاص صفحه به کاربر دیگر را ندارید." },
+                { status: 403 }
+            );
+        }
+
+        if (requestedAssignedUserId) {
+            if (!(await canAccessActorOwner(user, requestedAssignedUserId))) {
+                return NextResponse.json(
+                    { message: "شما اجازه اختصاص صفحه به این کاربر را ندارید." },
+                    { status: 403 }
+                );
+            }
+
+            const assignedUserExists = await User.exists({
+                _id: requestedAssignedUserId,
+                isDeleted: { $ne: true },
+            });
+
+            if (!assignedUserExists) {
+                return NextResponse.json(
+                    { message: "کاربر انتخاب‌شده برای اختصاص صفحه پیدا نشد." },
+                    { status: 404 }
+                );
+            }
+        }
+
+        update.assignedUser = requestedAssignedUserId ?? null;
     }
 
     if (typeof body.title === "string") {
@@ -416,7 +461,7 @@ export const PATCH = compose(
 
     const query = await withPageAccessScope(user, { _id: id }, "update");
     const currentPage = await Page.findOne(query)
-        .select("owner blocks url logo favicon seo expiresAt")
+        .select("owner assignedUser blocks url logo favicon seo expiresAt")
         .lean();
 
     if (!currentPage) {
@@ -497,6 +542,7 @@ export const PATCH = compose(
         }
     )
         .populate("owner", "firstName lastName email phoneNumber")
+        .populate("assignedUser", "firstName lastName email phoneNumber")
         .populate("template", "name thumbnail category")
         .lean({ virtuals: true });
 

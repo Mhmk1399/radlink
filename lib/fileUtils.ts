@@ -17,7 +17,7 @@ export interface LiaraFileInfo {
   uploadedAt?: string;
 }
 
-export type UploadFileKind = "upload" | "ticket";
+export type UploadFileKind = "upload" | "ticket" | "logo-header";
 export const FILE_UPLOADED_EVENT = "radlink:file-uploaded";
 
 export type FileUploadedEventDetail = {

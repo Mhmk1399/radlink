@@ -1,3 +1,5 @@
+import { normalizeCssColorValue } from "./color";
+
 export type LogoHeaderVariant =
   | "none"
   | "wave-soft"
@@ -43,6 +45,7 @@ export type LogoHeaderSettings = {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
+  backgroundImage: string;
   patternOpacity: number;
   height: number;
   maxWidth: number;
@@ -101,6 +104,7 @@ export const DEFAULT_LOGO_HEADER: LogoHeaderSettings = {
   primaryColor: "#064789",
   secondaryColor: "#427AA1",
   accentColor: "#EBF2FA",
+  backgroundImage: "",
   patternOpacity: 0.38,
   height: 190,
   maxWidth: 860,
@@ -114,12 +118,14 @@ function isLogoHeaderVariant(value: unknown): value is LogoHeaderVariant {
   return typeof value === "string" && variantIds.has(value as LogoHeaderVariant);
 }
 
-function normalizeHexColor(value: unknown, fallback: string) {
-  if (typeof value !== "string") return fallback;
-  const color = value.trim();
-  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color)
-    ? color
-    : fallback;
+function normalizeColor(value: unknown, fallback: string) {
+  return normalizeCssColorValue(value, fallback);
+}
+
+function normalizeImageUrl(value: unknown) {
+  if (typeof value !== "string") return "";
+  const url = value.trim();
+  return /^https?:\/\//i.test(url) ? url : "";
 }
 
 function normalizeNumber(
@@ -155,15 +161,16 @@ export function normalizeLogoHeaderSettings(
     variant: isLogoHeaderVariant(raw.variant)
       ? raw.variant
       : DEFAULT_LOGO_HEADER.variant,
-    primaryColor: normalizeHexColor(
+    primaryColor: normalizeColor(
       raw.primaryColor,
       DEFAULT_LOGO_HEADER.primaryColor,
     ),
-    secondaryColor: normalizeHexColor(
+    secondaryColor: normalizeColor(
       raw.secondaryColor,
       DEFAULT_LOGO_HEADER.secondaryColor,
     ),
-    accentColor: normalizeHexColor(raw.accentColor, DEFAULT_LOGO_HEADER.accentColor),
+    accentColor: normalizeColor(raw.accentColor, DEFAULT_LOGO_HEADER.accentColor),
+    backgroundImage: normalizeImageUrl(raw.backgroundImage),
     patternOpacity:
       normalizeNumber(
         typeof raw.patternOpacity === "number"

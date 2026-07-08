@@ -44,7 +44,7 @@ type FileRow = {
   owner?: UserRef | string;
   ownerId: string;
   ownerLabel: string;
-  kind: "upload" | "qr" | "ticket";
+  kind: "upload" | "qr" | "ticket" | "logo-header";
   page?: PageRef | string;
   pageLabel: string;
   fileType: string;
@@ -121,7 +121,14 @@ function getExtension(filename: string, path: string) {
 
 function getFileMeta(filename: string, path: string) {
   const extension = getExtension(filename, path);
-  const imageExtensions = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
+  const imageExtensions = new Set([
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "avif",
+  ]);
 
   if (imageExtensions.has(extension)) {
     return { extension, label: "تصویر", isImage: true };
@@ -160,7 +167,9 @@ function normalizeFile(value: unknown): FileRow | null {
         ? "qr"
         : value.kind === "ticket"
           ? "ticket"
-          : "upload",
+          : value.kind === "logo-header"
+            ? "logo-header"
+            : "upload",
     page: value.page as PageRef | string | undefined,
     pageLabel: getPageLabel(value.page),
     fileType: meta.label,
@@ -177,7 +186,7 @@ function FileTypeIcon({
   path: string;
 }) {
   const extension = getExtension(filename, path);
-  if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension)) {
+  if (["jpg", "jpeg", "png", "gif", "webp", "avif"].includes(extension)) {
     return <FaFileImage className="h-4 w-4" />;
   }
   if (extension === "pdf") return <FaFilePdf className="h-4 w-4" />;
@@ -297,6 +306,7 @@ export default function FilesSection({
         options: [
           { label: "آپلود کاربر", value: "upload" },
           { label: "فایل تیکت", value: "ticket" },
+          { label: "پس‌زمینه قاب لوگو", value: "logo-header" },
           { label: "کد QR", value: "qr" },
         ],
         render: (value) => (
@@ -305,7 +315,9 @@ export default function FilesSection({
               ? "کد QR"
               : value === "ticket"
                 ? "فایل تیکت"
-                : "آپلود کاربر"}
+                : value === "logo-header"
+                  ? "پس‌زمینه قاب لوگو"
+                  : "آپلود کاربر"}
           </span>
         ),
       },

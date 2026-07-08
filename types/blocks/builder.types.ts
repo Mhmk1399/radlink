@@ -82,6 +82,7 @@ export type ContentFieldType =
     | "video"
     | "boolean"
     | "datetime"
+    | "color"
     | "repeater"
     | "select";
 
@@ -108,7 +109,7 @@ export type RepeaterFieldConfig = {
     fields: ReadonlyArray<{
         key: string;
         label: string;
-        type: "text" | "textarea" | "boolean" | "url" | "image";
+        type: "text" | "textarea" | "boolean" | "url" | "image" | "color";
     }>;
 };
 

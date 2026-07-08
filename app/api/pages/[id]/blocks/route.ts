@@ -15,10 +15,11 @@ import { canAccessActorOwner } from "@/lib/auth/agentScope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-async function canAccess(req: AuthRequest, ownerId: string) {
+async function canAccess(req: AuthRequest, ownerId: string, assignedUserId?: string) {
     const user = req.ctx.user;
     if (!user) return false;
-    return canAccessActorOwner(user, ownerId);
+    if (await canAccessActorOwner(user, ownerId)) return true;
+    return assignedUserId ? canAccessActorOwner(user, assignedUserId) : false;
 }
 
 // PATCH /api/pages/[id]/blocks
@@ -39,7 +40,13 @@ export const PATCH = compose(
 
     const page = await Page.findById(id);
     if (!page) return NextResponse.json({ message: "صفحه پیدا نشد." }, { status: 404 });
-    if (!(await canAccess(req, String(page.owner)))) {
+    if (
+        !(await canAccess(
+            req,
+            String(page.owner),
+            page.assignedUser ? String(page.assignedUser) : undefined,
+        ))
+    ) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 

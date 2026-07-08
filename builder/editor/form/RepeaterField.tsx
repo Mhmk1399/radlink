@@ -15,6 +15,7 @@ import {
   HiOutlinePhoto,
   HiOutlineXMark,
   HiOutlineCheck,
+  HiOutlineSwatch,
 } from "react-icons/hi2";
 import {
   getIdentityInputProps,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/validation/identityFields";
 import { uploadFile } from "@/lib/fileUtils";
 import { LinkTypeHelp } from "./LinkTypeHelp";
+import { RgbaColorInput } from "./RgbaColorInput";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -31,7 +33,7 @@ import { LinkTypeHelp } from "./LinkTypeHelp";
 type RepeaterSubField = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "boolean" | "url" | "image";
+  type: "text" | "textarea" | "boolean" | "url" | "image" | "color";
 };
 
 type RepeaterItem = Record<string, unknown> & { id: string };
@@ -523,6 +525,27 @@ export function RepeaterField({
                   }
 
                   /* ── URL ── */
+                  if (field.type === "color") {
+                    return (
+                      <div key={field.key}>
+                        <label className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500">
+                          <HiOutlineSwatch size={12} />
+                          {field.label}
+                        </label>
+                        <RgbaColorInput
+                          value={String(fieldValue ?? "")}
+                          label={field.label}
+                          onChange={(color) =>
+                            updateItemField(item.id, field.key, color)
+                          }
+                          className="min-w-0"
+                          swatchClassName="h-10 w-11 rounded-xl"
+                          inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+                        />
+                      </div>
+                    );
+                  }
+
                   if (field.type === "url") {
                     return (
                       <div key={field.key}>

@@ -12,7 +12,6 @@ import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "../ui/CustomToast";
-import { useRouter } from "next/navigation";
 import { deleteFile, uploadFile } from "@/lib/fileUtils";
 import Image from "next/image";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
@@ -240,6 +239,7 @@ function buildColumns(
   t: ReturnType<typeof useThemeTokens>,
   isDark: boolean,
   canEditOwner: boolean,
+  canAssignUser: boolean,
   canEditExpiration: boolean,
   onPreviewImage: (src: string, title: string) => void,
 ): ColumnDef<AdminPageRow>[] {
@@ -400,8 +400,7 @@ function buildColumns(
 
     {
       key: "ownerId",
-      editable: canEditOwner,
-      required: canEditOwner,
+      editable: false,
       options: ownerOptions,
       placeholder: "سازنده صفحه را انتخاب کنید",
       label: "سازنده",
@@ -414,6 +413,29 @@ function buildColumns(
         return (
           <span className={cn("text-sm", t.textMuted)}>
             {ownerName || String(row.ownerId ?? "—")}
+          </span>
+        );
+      },
+    },
+
+    {
+      key: "assignedUserId",
+      visible: canAssignUser,
+      editable: canAssignUser,
+      options: ownerOptions,
+      placeholder: "کاربری که صفحه به او داده می‌شود",
+      label: "صاحب سایت",
+      filterable: canAssignUser,
+      filterSearchable: true,
+      hideOnMobile: true,
+      render: (_: unknown, row: AdminPageRow) => {
+        const assignedUserName = getUserLabel(
+          row.assignedUser as UserOptionSource,
+        );
+
+        return (
+          <span className={cn("text-sm", t.textMuted)}>
+            {assignedUserName || String(row.assignedUserId ?? "—")}
           </span>
         );
       },
@@ -488,8 +510,8 @@ function buildColumns(
       editable: false,
       label: "دامنه",
       sortable: true,
- 
-       render: (value) => (
+
+      render: (value) => (
         <span
           className={cn("block max-w-[18rem] truncate text-sm", t.textMuted)}
         >
@@ -507,7 +529,6 @@ export default function PagesSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const router = useRouter();
   const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
   const canManageOwners =
     user?.role === "agent" ||
@@ -520,6 +541,7 @@ export default function PagesSection({
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
 
   const canEditOwner = !isAccessLoading && user !== null && canManageOwners;
+  const canAssignPages = !isAccessLoading && user !== null && canManageOwners;
   const canEditExpiration =
     !isAccessLoading && user !== null && canManageOwners;
   const canCreatePages = can("admin.pages", "create");
@@ -538,8 +560,9 @@ export default function PagesSection({
     "logo" | "favicon" | null
   >(null);
   const [savingBranding, setSavingBranding] = useState(false);
-  const [expiryAlerts, setExpiryAlerts] =
-    useState<PageExpiryAlertsData | null>(null);
+  const [expiryAlerts, setExpiryAlerts] = useState<PageExpiryAlertsData | null>(
+    null,
+  );
   const [expiryAlertsLoading, setExpiryAlertsLoading] = useState(false);
   const [expiryAlertsRefreshing, setExpiryAlertsRefreshing] = useState(false);
   const [previewImage, setPreviewImage] = useState<{
@@ -563,11 +586,18 @@ export default function PagesSection({
       return pages.filter(isRecord).map((page) => {
         const pageId = String(page._id ?? page.id ?? "");
         const owner = isRecord(page.owner) ? page.owner : undefined;
+        const assignedUser = isRecord(page.assignedUser)
+          ? page.assignedUser
+          : undefined;
         const stats = isRecord(page.stats) ? page.stats : {};
         const ownerId =
           getObjectId(owner) ||
           getObjectId(page.ownerId) ||
           getObjectId(page.owner);
+        const assignedUserId =
+          getObjectId(assignedUser) ||
+          getObjectId(page.assignedUserId) ||
+          getObjectId(page.assignedUser);
 
         return {
           ...page,
@@ -577,6 +607,8 @@ export default function PagesSection({
             page.isPublished !== false && !isPageExpired(page.expiresAt),
           ownerId,
           owner: owner ?? page.owner,
+          assignedUserId,
+          assignedUser: assignedUser ?? page.assignedUser,
           viewCount: Number(stats.views ?? 0),
           visitorCount: Number(stats.visitors ?? 0),
         } as unknown as AdminPageRow;
@@ -611,8 +643,7 @@ export default function PagesSection({
           if (
             cachedData &&
             typeof cached?.savedAt === "number" &&
-            Date.now() - cached.savedAt <=
-              PAGE_EXPIRY_BROWSER_CACHE_MAX_AGE_MS
+            Date.now() - cached.savedAt <= PAGE_EXPIRY_BROWSER_CACHE_MAX_AGE_MS
           ) {
             hasBrowserFallback = true;
             setExpiryAlerts(cachedData);
@@ -647,7 +678,10 @@ export default function PagesSection({
         setExpiryAlerts(data);
         localStorage.setItem(
           browserCacheKey,
-          JSON.stringify({ savedAt: Date.now(), data } satisfies BrowserExpiryCache),
+          JSON.stringify({
+            savedAt: Date.now(),
+            data,
+          } satisfies BrowserExpiryCache),
         );
       } catch (error) {
         if (!hasBrowserFallback || forceRefresh) {
@@ -757,6 +791,7 @@ export default function PagesSection({
         t,
         isDark,
         canEditOwner,
+        canAssignPages,
         canEditExpiration,
         openPreviewImage,
       ),
@@ -765,6 +800,7 @@ export default function PagesSection({
       t,
       isDark,
       canEditOwner,
+      canAssignPages,
       canEditExpiration,
       openPreviewImage,
     ],
@@ -895,7 +931,8 @@ export default function PagesSection({
 
   async function saveBranding() {
     const pageId = String(brandingPage?._id ?? brandingPage?.id ?? "");
-    if (!pageId || savingBranding || uploadingBranding || deletingBranding) return;
+    if (!pageId || savingBranding || uploadingBranding || deletingBranding)
+      return;
 
     try {
       setSavingBranding(true);
@@ -1032,6 +1069,8 @@ export default function PagesSection({
                 ([key]) =>
                   key !== "ownerId" &&
                   key !== "owner" &&
+                  key !== "assignedUserId" &&
+                  key !== "assignedUser" &&
                   key !== "expiresAt",
               ),
             );
@@ -1133,28 +1172,32 @@ export default function PagesSection({
                 </button>
               )}
 
-           {canUpdateThisPage && (
-  <button
-    type="button"
-    onClick={(event) => {
-      event.stopPropagation();
+              {canUpdateThisPage && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
 
-      if (pageId) {
-        window.open(`/builder/${pageId}`, "_blank", "noopener,noreferrer");
-      }
-    }}
-    title="ویرایش صفحه"
-    className={cn(
-      "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
-      isDark
-        ? "text-violet-400/70 hover:bg-violet-500/10 hover:text-violet-400"
-        : "text-violet-600/70 hover:bg-violet-500/8 hover:text-violet-600",
-    )}
-  >
-    <HiOutlinePencil className="h-4 w-4" />
-    <span className="sr-only">ویرایش صفحه</span>
-  </button>
-)}
+                    if (pageId) {
+                      window.open(
+                        `/builder/${pageId}`,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }
+                  }}
+                  title="ویرایش صفحه"
+                  className={cn(
+                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
+                    isDark
+                      ? "text-violet-400/70 hover:bg-violet-500/10 hover:text-violet-400"
+                      : "text-violet-600/70 hover:bg-violet-500/8 hover:text-violet-600",
+                  )}
+                >
+                  <HiOutlinePencil className="h-4 w-4" />
+                  <span className="sr-only">ویرایش صفحه</span>
+                </button>
+              )}
 
               {href && canViewThisPage && (
                 <button
@@ -1283,7 +1326,9 @@ export default function PagesSection({
                     <button
                       type="button"
                       onClick={() => void removeBrandingImage(item.kind)}
-                      disabled={Boolean(uploadingBranding) || Boolean(deletingBranding)}
+                      disabled={
+                        Boolean(uploadingBranding) || Boolean(deletingBranding)
+                      }
                       className="mt-2 text-xs font-bold text-red-500 disabled:opacity-50"
                     >
                       {deletingBranding === item.kind

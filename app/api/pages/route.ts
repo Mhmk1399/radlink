@@ -201,6 +201,10 @@ function getOptionalObjectId(value: unknown) {
     return null;
 }
 
+function canAssignPageUser(role: unknown) {
+    return role === "agent" || role === "admin" || role === "superAdmin";
+}
+
 function normalizeBlocks(blocks: unknown) {
     if (!Array.isArray(blocks)) return [];
 
@@ -371,6 +375,14 @@ export const POST = compose(
         );
     }
 
+    const requestedAssignedUserId = getOptionalObjectId(body.assignedUserId);
+    if (requestedAssignedUserId === null) {
+        return NextResponse.json(
+            { message: "شناسه کاربر اختصاص‌داده‌شده معتبر نیست." },
+            { status: 400 }
+        );
+    }
+
     let ownerId: mongoose.Types.ObjectId | string = user._id;
     let ownerUser = user;
     if (requestedOwnerId && requestedOwnerId !== String(user._id)) {
@@ -395,6 +407,34 @@ export const POST = compose(
 
         ownerId = requestedOwnerId;
         ownerUser = requestedOwner;
+    }
+
+    if (requestedAssignedUserId) {
+        if (!canAssignPageUser(user.role)) {
+            return NextResponse.json(
+                { message: "شما اجازه اختصاص صفحه به کاربر دیگر را ندارید." },
+                { status: 403 }
+            );
+        }
+
+        if (!(await canAccessActorOwner(user, requestedAssignedUserId))) {
+            return NextResponse.json(
+                { message: "شما اجازه اختصاص صفحه به این کاربر را ندارید." },
+                { status: 403 }
+            );
+        }
+
+        const assignedUserExists = await User.exists({
+            _id: requestedAssignedUserId,
+            isDeleted: { $ne: true },
+        });
+
+        if (!assignedUserExists) {
+            return NextResponse.json(
+                { message: "کاربر انتخاب‌شده برای اختصاص صفحه پیدا نشد." },
+                { status: 404 }
+            );
+        }
     }
 
     const pageQuota = await checkUserQuota({
@@ -460,6 +500,7 @@ export const POST = compose(
         description,
         url,
         owner: ownerId,
+        assignedUser: requestedAssignedUserId ?? null,
         template: templateId,
         blocks,
         seo: {
@@ -540,6 +581,7 @@ export const POST = compose(
 
     const populatedPage = await Page.findById(page._id)
         .populate("owner", "firstName lastName email phoneNumber")
+        .populate("assignedUser", "firstName lastName email phoneNumber")
         .populate("template", "name thumbnail category")
         .lean({ virtuals: true });
 
@@ -600,11 +642,27 @@ export const GET = compose(
         filters.isPublished = isPublished === "true";
     }
 
+    const ownerIdFilter =
+        searchParams.get("filter_ownerId") ?? searchParams.get("ownerId");
+    if (ownerIdFilter && mongoose.Types.ObjectId.isValid(ownerIdFilter)) {
+        filters.owner = ownerIdFilter;
+    }
+
+    const assignedUserIdFilter =
+        searchParams.get("filter_assignedUserId") ??
+        searchParams.get("assignedUserId");
+    if (
+        assignedUserIdFilter &&
+        mongoose.Types.ObjectId.isValid(assignedUserIdFilter)
+    ) {
+        filters.assignedUser = assignedUserIdFilter;
+    }
+
     const query = await withPageAccessScope(user, filters);
 
     if (mode === "notification-options") {
         const pages = await Page.find(query)
-            .select("title url owner isPublished")
+            .select("title url owner assignedUser isPublished")
             .sort({ updatedAt: -1 })
             .limit(limit)
             .lean();
@@ -616,6 +674,7 @@ export const GET = compose(
         Page.find(query)
             .sort({ [sortField]: sortDirection, _id: -1 })
             .populate("owner", "firstName lastName email phoneNumber")
+            .populate("assignedUser", "firstName lastName email phoneNumber")
             .populate("template", "name thumbnail category")
             .skip((page - 1) * limit)
             .limit(limit)

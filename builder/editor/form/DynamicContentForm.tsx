@@ -19,6 +19,7 @@ import {
   HiOutlineCheck,
   HiOutlineFilm,
   HiOutlineBars3,
+  HiOutlineSwatch,
 } from "react-icons/hi2";
 import {
   getIdentityInputProps,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/validation/identityFields";
 import { PersianDateTimePicker } from "./PersianDateTimePicker";
 import { RepeaterField } from "./RepeaterField";
+import { RgbaColorInput } from "./RgbaColorInput";
 import { SelectField } from "./SelectField";
 import type { SelectFieldConfig } from "@/types/blocks/builder.types";
 import { uploadFile } from "@/lib/fileUtils";
@@ -62,6 +64,8 @@ function getFieldIcon(type: ContentFieldType): React.ReactNode {
       return <HiOutlinePencil size={14} />;
     case "select":
       return <HiOutlineBars3 size={14} />;
+    case "color":
+      return <HiOutlineSwatch size={14} />;
 
     case "textarea":
       return <HiOutlineDocumentText size={14} />;
@@ -76,6 +80,8 @@ function getFieldIcon(type: ContentFieldType): React.ReactNode {
       return <HiOutlineEye size={14} />;
     case "repeater":
       return <HiOutlineBars3 size={14} />;
+    case "color":
+      return "color";
     default:
       return <HiOutlinePencil size={14} />;
   }
@@ -847,6 +853,25 @@ export function DynamicContentForm({
                   </div>
                 </FieldCard>
               </label>
+            );
+          }
+          if (field.type === "color") {
+            return (
+              <FieldCard key={field.key}>
+                <FieldHeader
+                  icon={icon}
+                  label={field.label}
+                  type={getFieldTypeLabel(field.type)}
+                />
+                <RgbaColorInput
+                  value={toInputValue(value)}
+                  label={field.label}
+                  onChange={(color) => onChange(field.key, color)}
+                  className="min-w-0"
+                  swatchClassName="h-11 w-12 rounded-xl"
+                  inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
+                />
+              </FieldCard>
             );
           }
           /* Image */

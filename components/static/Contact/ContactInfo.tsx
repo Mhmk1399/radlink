@@ -71,7 +71,7 @@ const infoItems: InfoItem[] = [
   },
   {
     title: "آدرس دفتر",
-    value: "تهران، ابوذر",
+    value:  "تهران، میدان بهاران، خیابان روزگاری، بن بست سوم، پلاک  14",
     href: "#",
     color: "emerald",
     icon: (
@@ -167,7 +167,7 @@ function InfoCard({ item, index }: { item: InfoItem; index: number }) {
         </div>
       </div>
       <h3 className={cn("mt-5", typography.cardTitle)}>{item.title}</h3>
-      <p className={cn("mt-2 text-sm", tokens.text)} dir="ltr">
+      <p className={cn("mt-2 text-xs md:text-sm", tokens.text)} dir="ltr">
         {item.value}
       </p>
     </>

@@ -432,7 +432,7 @@ export interface UpdateCategoryPayload extends Partial<CreateCategoryPayload> {
     id: string;
 }
 
-export interface CategoryFilters extends ListFilters { }
+export type CategoryFilters = ListFilters;
 
 export type PaginatedCategoriesResponse = PaginatedResponse<Category>;
 
@@ -472,6 +472,8 @@ export interface Page extends BaseDocument {
     selectedTemplate?: Template;
     ownerId: string;
     owner?: User;
+    assignedUserId?: string;
+    assignedUser?: User;
     bgImage?: string;
     blocks: Record<string, unknown>[];
     logo?: string;

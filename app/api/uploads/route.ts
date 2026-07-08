@@ -60,7 +60,13 @@ export const POST = compose(
 
         const formData = await req.formData();
         const file = formData.get("file") as File;
-        const kind = formData.get("kind") === "ticket" ? "ticket" : "upload";
+        const requestedKind = formData.get("kind");
+        const kind =
+            requestedKind === "ticket"
+                ? "ticket"
+                : requestedKind === "logo-header"
+                    ? "logo-header"
+                    : "upload";
 
         if (!file) {
             return jsonError("فایلی برای آپلود ارسال نشده است.", 400);

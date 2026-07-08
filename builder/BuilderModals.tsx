@@ -33,6 +33,7 @@ import {
   normalizeLogoHeaderSettings,
   type LogoHeaderSettings,
 } from "@/lib/design/logo-header";
+import { RgbaColorInput } from "@/builder/editor/form/RgbaColorInput";
 
 type CatalogBlock = {
   type: string;
@@ -404,73 +405,6 @@ export function BlockCatalogModal({
 /*  Page Meta Modal                                                    */
 /* ================================================================== */
 
-const HEX_COLOR_PICKER_PATTERN = /^#[0-9a-fA-F]{6}$/;
-
-function normalizeColorPickerValue(value: string) {
-  return HEX_COLOR_PICKER_PATTERN.test(value) ? value : "#ffffff";
-}
-
-function StableNativeColorInput({
-  value,
-  label,
-  className,
-  onCommit,
-}: {
-  value: string;
-  label: string;
-  className: string;
-  onCommit?: (value: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const onCommitRef = useRef(onCommit);
-  const normalizedValue = normalizeColorPickerValue(value);
-  const lastCommittedValueRef = useRef(normalizedValue);
-
-  useEffect(() => {
-    onCommitRef.current = onCommit;
-  }, [onCommit]);
-
-  useEffect(() => {
-    lastCommittedValueRef.current = normalizedValue;
-
-    const input = inputRef.current;
-    if (input && input.value !== normalizedValue) {
-      input.value = normalizedValue;
-    }
-  }, [normalizedValue]);
-
-  useEffect(() => {
-    const input = inputRef.current;
-    if (!input) return;
-
-    const commitColor = () => {
-      const nextValue = input.value;
-      if (nextValue === lastCommittedValueRef.current) return;
-
-      lastCommittedValueRef.current = nextValue;
-      onCommitRef.current?.(nextValue);
-    };
-
-    input.addEventListener("change", commitColor);
-    input.addEventListener("blur", commitColor);
-
-    return () => {
-      input.removeEventListener("change", commitColor);
-      input.removeEventListener("blur", commitColor);
-    };
-  }, []);
-
-  return (
-    <input
-      ref={inputRef}
-      type="color"
-      defaultValue={normalizedValue}
-      className={className}
-      aria-label={label}
-    />
-  );
-}
-
 function TemplateBackgroundSettings({
   color,
   image,
@@ -506,33 +440,12 @@ function TemplateBackgroundSettings({
           رنگ پس‌زمینه
         </label>
         <div className="flex items-center gap-3">
-          <StableNativeColorInput
+          <RgbaColorInput
             value={color}
-            onCommit={onColorChange}
-            className="h-12 w-14 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
+            onChange={onColorChange}
+            className="min-w-0 flex-1"
+            swatchClassName="h-12 w-14 rounded-xl"
             label="انتخاب رنگ پس‌زمینه قالب"
-          />
-          <input
-            type="text"
-            value={color}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === "" || /^#[0-9a-fA-F]{0,8}$/.test(value)) {
-                onColorChange?.(value);
-              }
-            }}
-            onBlur={() => {
-              if (
-                !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
-                  color,
-                )
-              ) {
-                onColorChange?.("#ffffff");
-              }
-            }}
-            dir="ltr"
-            placeholder="#ffffff"
-            className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-3 font-mono text-sm text-neutral-800 outline-none transition focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100"
           />
         </div>
       </div>
@@ -627,10 +540,56 @@ function LogoHeaderSettingsPanel({
   onChange?: (value: LogoHeaderSettings) => void;
 }) {
   const settings = normalizeLogoHeaderSettings(value);
+  const logoHeaderBgInputRef = useRef<HTMLInputElement>(null);
+  const [isLogoHeaderBgUploading, setIsLogoHeaderBgUploading] = useState(false);
+  const [logoHeaderBgUploadError, setLogoHeaderBgUploadError] = useState<
+    string | null
+  >(null);
 
   const update = (patch: Partial<LogoHeaderSettings>) => {
     onChange?.(normalizeLogoHeaderSettings({ ...settings, ...patch }));
   };
+
+  const handleLogoHeaderBgFile = useCallback(
+    async (file: File | null | undefined) => {
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setLogoHeaderBgUploadError("فقط فایل تصویر قابل آپلود است.");
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        setLogoHeaderBgUploadError(
+          "حجم تصویر باید کمتر از ۱۰ مگابایت باشد.",
+        );
+        return;
+      }
+
+      try {
+        setIsLogoHeaderBgUploading(true);
+        setLogoHeaderBgUploadError(null);
+
+        const uploaded = await uploadFile(file, { kind: "logo-header" });
+        onChange?.(
+          normalizeLogoHeaderSettings({
+            ...settings,
+            backgroundImage: uploaded.url,
+            enabled: true,
+          }),
+        );
+      } catch (error) {
+        setLogoHeaderBgUploadError(
+          error instanceof Error
+            ? error.message
+            : "آپلود تصویر پس‌زمینه قاب لوگو با خطا مواجه شد.",
+        );
+      } finally {
+        setIsLogoHeaderBgUploading(false);
+      }
+    },
+    [onChange, settings],
+  );
 
   return (
     <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
@@ -664,24 +623,154 @@ function LogoHeaderSettingsPanel({
           showPlaceholder
         />
 
-        <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-neutral-200 sm:grid-cols-3">
-          {LOGO_HEADER_VARIANTS.filter((variant) => variant.id !== "none").map(
-            (variant) => (
+        <label className="mb-3 block rounded-2xl border border-[#064789]/15 bg-white p-3 shadow-sm">
+          <span className="flex items-center justify-between gap-3 text-[11px] font-black text-neutral-700">
+            ارتفاع قاب لوگو
+            <span className="rounded-full bg-[#064789]/8 px-2.5 py-1 font-mono text-[11px] text-[#064789]">
+              {settings.height}px
+            </span>
+          </span>
+          <input
+            type="range"
+            min={110}
+            max={360}
+            value={settings.height}
+            onChange={(event) =>
+              update({ height: Number(event.target.value), enabled: true })
+            }
+            className="mt-3 w-full accent-[#064789]"
+          />
+        </label>
+
+        <div className="mb-3 rounded-2xl border border-neutral-200 bg-white p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black text-neutral-700">
+                تصویر پس‌زمینه قاب لوگو
+              </p>
+              <p className="mt-1 text-[10px] leading-5 text-neutral-400">
+                می‌توانید تصویر را به‌تنهایی استفاده کنید یا روی آن پترن و موج
+                بیندازید.
+              </p>
+            </div>
+            {settings.backgroundImage ? (
               <button
-                key={variant.id}
                 type="button"
-                onClick={() => update({ variant: variant.id, enabled: true })}
-                className={[
-                  "rounded-xl border px-2 py-2 text-[11px] font-bold transition",
-                  settings.variant === variant.id
-                    ? "border-[#064789] bg-[#064789] text-white shadow-sm"
-                    : "border-neutral-200 bg-neutral-50 text-neutral-500 hover:border-neutral-300 hover:bg-white",
-                ].join(" ")}
+                onClick={() => update({ backgroundImage: "" })}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100"
+                title="حذف تصویر پس‌زمینه"
               >
-                {variant.label}
+                <HiOutlineTrash className="h-4 w-4" />
               </button>
-            ),
-          )}
+            ) : null}
+          </div>
+
+          <input
+            ref={logoHeaderBgInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => {
+              void handleLogoHeaderBgFile(event.target.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
+
+          <button
+            type="button"
+            disabled={isLogoHeaderBgUploading}
+            onClick={() => logoHeaderBgInputRef.current?.click()}
+            className={[
+              "group relative flex min-h-28 w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed transition",
+              isLogoHeaderBgUploading
+                ? "cursor-wait border-neutral-200 bg-neutral-50 text-neutral-400"
+                : "border-neutral-300 bg-neutral-50 text-neutral-500 hover:border-[#064789]/45 hover:bg-[#064789]/5 hover:text-[#064789]",
+            ].join(" ")}
+          >
+            {settings.backgroundImage ? (
+              <span
+                className="absolute inset-0 bg-cover bg-center transition duration-200 group-hover:scale-[1.03]"
+                style={{
+                  backgroundImage: `url(${JSON.stringify(settings.backgroundImage)})`,
+                }}
+              />
+            ) : null}
+            {settings.backgroundImage ? (
+              <span className="absolute inset-0 bg-black/25" />
+            ) : null}
+            <span className="relative z-10 flex flex-col items-center text-center text-[11px] font-bold">
+              {settings.backgroundImage ? (
+                <HiOutlinePhoto className="mb-2 h-8 w-8 text-white drop-shadow" />
+              ) : (
+                <HiOutlineCloudArrowUp className="mb-2 h-8 w-8" />
+              )}
+              <span
+                className={
+                  settings.backgroundImage
+                    ? "rounded-full bg-white/90 px-3 py-1 text-neutral-700 shadow-sm"
+                    : ""
+                }
+              >
+                {isLogoHeaderBgUploading
+                  ? "در حال آپلود..."
+                  : settings.backgroundImage
+                    ? "تعویض تصویر"
+                    : "آپلود تصویر پس‌زمینه"}
+              </span>
+            </span>
+          </button>
+
+          {logoHeaderBgUploadError ? (
+            <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[11px] font-bold text-red-500">
+              {logoHeaderBgUploadError}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black text-neutral-700">
+                موج و پترن قاب
+              </p>
+              <p className="mt-1 text-[10px] leading-5 text-neutral-400">
+                می‌توانید پترن را خاموش کنید و فقط تصویر پس‌زمینه یا گرادیانت را
+                نگه دارید.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => update({ variant: "none", enabled: true })}
+              className={[
+                "shrink-0 rounded-xl border px-3 py-2 text-[11px] font-black transition",
+                settings.variant === "none"
+                  ? "border-[#064789] bg-[#064789] text-white shadow-sm"
+                  : "border-neutral-200 bg-neutral-50 text-neutral-500 hover:border-neutral-300 hover:bg-white",
+              ].join(" ")}
+            >
+              بدون موج
+            </button>
+          </div>
+
+          <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 sm:grid-cols-3">
+            {LOGO_HEADER_VARIANTS.filter((variant) => variant.id !== "none").map(
+              (variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  onClick={() => update({ variant: variant.id, enabled: true })}
+                  className={[
+                    "rounded-xl border px-2 py-2 text-[11px] font-bold transition",
+                    settings.variant === variant.id
+                      ? "border-[#064789] bg-[#064789] text-white shadow-sm"
+                      : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:bg-white",
+                  ].join(" ")}
+                >
+                  {variant.label}
+                </button>
+              ),
+            )}
+          </div>
         </div>
       </div>
 
@@ -697,20 +786,15 @@ function LogoHeaderSettingsPanel({
             <label className="mb-2 block text-[11px] font-bold text-neutral-600">
               {label}
             </label>
-            <div className="flex items-center gap-2">
-              <StableNativeColorInput
-                value={settings[key]}
-                onCommit={(color) => update({ [key]: color })}
-                className="h-10 w-12 shrink-0 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
-                label={label}
-              />
-              <input
-                value={settings[key]}
-                onChange={(event) => update({ [key]: event.target.value })}
-                dir="ltr"
-                className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-2 py-2 font-mono text-[11px] text-neutral-700 outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
-              />
-            </div>
+            <RgbaColorInput
+              value={settings[key]}
+              onChange={(color) => update({ [key]: color })}
+              label={label}
+              className="min-w-0"
+              swatchClassName="h-10 w-12 rounded-xl"
+              inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-2 py-2 font-mono text-[11px] text-neutral-700 outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
+              panelClassName="left-0 w-80"
+            />
           </div>
         ))}
       </div>
@@ -718,7 +802,6 @@ function LogoHeaderSettingsPanel({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {(
           [
-            ["height", "ارتفاع", 110, 360, "px"],
             ["maxWidth", "عرض", 320, 1920, "px"],
             ["logoSize", "اندازه لوگو", 56, 180, "px"],
             ["patternOpacity", "شدت پترن", 5, 90, "%"],
@@ -1540,33 +1623,12 @@ export function PageMetaModal({
                     رنگ پس‌زمینه
                   </label>
                   <div className="flex items-center gap-3">
-                    <StableNativeColorInput
+                    <RgbaColorInput
                       value={backgroundColor}
-                      onCommit={onBackgroundColorChange}
-                      className="h-12 w-14 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
+                      onChange={onBackgroundColorChange}
+                      className="min-w-0 flex-1"
+                      swatchClassName="h-12 w-14 rounded-xl"
                       label="انتخاب رنگ پس‌زمینه"
-                    />
-                    <input
-                      type="text"
-                      value={backgroundColor}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        if (value === "" || /^#[0-9a-fA-F]{0,8}$/.test(value)) {
-                          onBackgroundColorChange?.(value);
-                        }
-                      }}
-                      onBlur={() => {
-                        if (
-                          !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
-                            backgroundColor,
-                          )
-                        ) {
-                          onBackgroundColorChange?.("#ffffff");
-                        }
-                      }}
-                      dir="ltr"
-                      placeholder="#ffffff"
-                      className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-3 font-mono text-sm text-neutral-800 outline-none transition focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100"
                     />
                   </div>
                 </div>

@@ -233,6 +233,7 @@ export interface IPage extends Document {
     url: string;
 
     owner: Types.ObjectId;
+    assignedUser?: Types.ObjectId | null;
 
     // Optional template reference.
     template?: Types.ObjectId;
@@ -378,6 +379,13 @@ const PageSchema = new Schema<IPage>(
             index: true,
         },
 
+        assignedUser: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+            index: true,
+        },
+
         template: {
             type: Schema.Types.ObjectId,
             ref: "Template",
@@ -510,6 +518,8 @@ PageSchema.index({ owner: 1, createdAt: -1 });
 PageSchema.index({ owner: 1, isPublished: 1, updatedAt: -1 });
 PageSchema.index({ owner: 1, "stats.views": -1, _id: -1 });
 PageSchema.index({ owner: 1, "stats.visitors": -1, _id: -1 });
+PageSchema.index({ assignedUser: 1, updatedAt: -1 });
+PageSchema.index({ assignedUser: 1, isPublished: 1, updatedAt: -1 });
 
 
 

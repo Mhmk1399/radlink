@@ -40,6 +40,13 @@ import type {
 import { DynamicContentForm } from "./form/DynamicContentForm";
 import { DynamicStyleForm } from "./form/DynamicStyleForm";
 import { ANIMATION_OPTIONS, previewAnimation } from "./animationOptions";
+import {
+  formatCssColor,
+  formatHexColor,
+  isLightCssColor,
+  isValidCssColorValue,
+  parseCssColor,
+} from "@/lib/design/color";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -72,35 +79,6 @@ type DynamicIslandPanelProps = {
 /*  Constants                                                          */
 /* ================================================================== */
 
-const RECENT_COLORS_KEY = "radlink_recent_colors";
-const MAX_RECENT_COLORS = 6;
-
-function getRecentColors(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = localStorage.getItem(RECENT_COLORS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-function addRecentColor(color: string) {
-  if (typeof window === "undefined") return;
-  try {
-    const recent = getRecentColors().filter(
-      (c) => c.toLowerCase() !== color.toLowerCase(),
-    );
-    recent.unshift(color);
-    localStorage.setItem(
-      RECENT_COLORS_KEY,
-      JSON.stringify(recent.slice(0, MAX_RECENT_COLORS)),
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
 const STYLE_LABELS: Record<EditableStyleKey, string> = {
   color: "رنگ متن",
   backgroundColor: "پس‌زمینه",
@@ -124,35 +102,59 @@ const NUMERIC_CONFIG: Record<
   gridColumns: { min: 1, max: 4, step: 1, unit: " ستون" },
 };
 
+const RECENT_COLORS_KEY = "radlink_recent_colors";
+const MAX_RECENT_COLORS = 10;
+
+function getRecentColors(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(RECENT_COLORS_KEY);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => isValidCssColorValue(item))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function addRecentColor(color: string) {
+  if (typeof window === "undefined" || !isValidCssColorValue(color)) return;
+  try {
+    const recent = getRecentColors().filter(
+      (c) => c.toLowerCase() !== color.toLowerCase(),
+    );
+    recent.unshift(color);
+    localStorage.setItem(
+      RECENT_COLORS_KEY,
+      JSON.stringify(recent.slice(0, MAX_RECENT_COLORS)),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 const COLOR_PRESETS = [
   "#ffffff",
   "#f8fafc",
-  "#f1f5f9",
   "#e2e8f0",
-  "#cbd5e1",
   "#94a3b8",
-  "#64748b",
   "#475569",
-  "#334155",
-  "#1e293b",
   "#0f172a",
   "#000000",
   "#ef4444",
   "#f97316",
   "#f59e0b",
-  "#eab308",
-  "#84cc16",
   "#22c55e",
   "#10b981",
-  "#14b8a6",
   "#06b6d4",
-  "#0ea5e9",
   "#3b82f6",
   "#6366f1",
   "#8b5cf6",
-  "#a855f7",
-  "#d946ef",
   "#ec4899",
+  "rgba(255, 255, 255, 0.4)",
+  "rgba(0, 0, 0, 0.4)",
+  "transparent",
 ];
 
 const CUSTOM_SCROLLBAR = [
@@ -177,10 +179,8 @@ function getResp<T>(
   return val.mobile;
 }
 
-function toHex(v: string | number | undefined): string {
-  return typeof v === "string" && /^#([0-9a-fA-F]{3,8})$/.test(v)
-    ? v
-    : "#000000";
+function toColorString(v: string | number | undefined): string {
+  return typeof v === "string" && v.trim() ? v : "#000000";
 }
 
 function toNum(v: string | number | undefined): number {
@@ -192,21 +192,12 @@ function toNum(v: string | number | undefined): number {
   return 0;
 }
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : null;
+function getParsedColor(value: string) {
+  return parseCssColor(value) ?? parseCssColor("#000000")!;
 }
 
-function isLightColor(hex: string): boolean {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return false;
-  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255 > 0.7;
+function isLightColor(color: string): boolean {
+  return isLightCssColor(color);
 }
 
 /* ================================================================== */
@@ -488,11 +479,15 @@ function CustomColorPicker({
   onClose: () => void;
 }) {
   const [inputValue, setInputValue] = useState(color);
-  const [recentColors, setRecentColors] = useState<string[]>([]);
+  const [recentColors, setRecentColors] = useState<string[]>(() =>
+    getRecentColors(),
+  );
   const hiddenRef = useRef<HTMLInputElement>(null);
   const isUpdatingRef = useRef(false);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const parsedColor = getParsedColor(inputValue || color);
+  const nativeHex = formatHexColor(parsedColor);
 
   useEffect(() => {
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -513,13 +508,9 @@ function CustomColorPicker({
     };
   }, []);
 
-  useEffect(() => {
-    setRecentColors(getRecentColors());
-  }, []);
-
   const handleInput = (val: string) => {
     setInputValue(val);
-    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+    if (isValidCssColorValue(val)) {
       onChange(val);
       addRecentColor(val);
       setRecentColors(getRecentColors());
@@ -543,7 +534,20 @@ function CustomColorPicker({
     }, 100);
   };
 
-  const rgb = hexToRgb(color);
+  const handleNativeColor = (newColor: string) => {
+    const next = parseCssColor(newColor);
+    if (!next) return;
+    handleColorChange(formatCssColor({ ...next, a: parsedColor.a }));
+  };
+
+  const handleAlpha = (alphaPercent: number) => {
+    handleColorChange(
+      formatCssColor({
+        ...parsedColor,
+        a: Math.min(1, Math.max(0, alphaPercent / 100)),
+      }),
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -582,10 +586,9 @@ function CustomColorPicker({
           <input
             ref={hiddenRef}
             type="color"
-            value={color}
+            value={nativeHex}
             onChange={(e) => {
-              handleColorChange(e.target.value);
-              setInputValue(e.target.value);
+              handleNativeColor(e.target.value);
             }}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
@@ -597,17 +600,26 @@ function CustomColorPicker({
             onChange={(e) => handleInput(e.target.value)}
             className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 font-mono text-base text-neutral-900 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
             dir="ltr"
-            placeholder="#000000"
+            placeholder="rgba(0, 0, 0, 0.4)"
           />
-          {rgb && (
-            <div className="flex gap-2 px-1 font-mono text-[10px] text-neutral-400">
-              <span>R {rgb.r}</span>
+          <div className="flex gap-2 px-1 font-mono text-[10px] text-neutral-400">
+              <span>R {parsedColor.r}</span>
               <span>·</span>
-              <span>G {rgb.g}</span>
+              <span>G {parsedColor.g}</span>
               <span>·</span>
-              <span>B {rgb.b}</span>
-            </div>
-          )}
+              <span>B {parsedColor.b}</span>
+              <span>Â·</span>
+              <span>A {Math.round(parsedColor.a * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(parsedColor.a * 100)}
+            onChange={(event) => handleAlpha(Number(event.target.value))}
+            className="w-full accent-neutral-900"
+            aria-label={`${label} opacity`}
+          />
         </div>
       </div>
 
@@ -1072,12 +1084,12 @@ function DesktopToolbar({
                     return (
                       <InlineColorWithPicker
                         key={key}
-                        color={toHex(raw)}
+                        color={toColorString(raw)}
                         label={colorLabels[key] ?? key}
                         styleKey={key}
-                        onChange={(hex) => {
-                          fire(key, hex);
-                          addRecentColor(hex);
+                        onChange={(color) => {
+                          fire(key, color);
+                          addRecentColor(color);
                         }}
                         openPickerKey={openColorPicker}
                         setOpenPickerKey={setOpenColorPicker}

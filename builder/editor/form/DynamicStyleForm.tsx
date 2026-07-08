@@ -6,7 +6,6 @@ import {
   HiOutlineSwatch,
   HiOutlineEyeDropper,
 } from "react-icons/hi2";
-import { useEffect, useRef, useState } from "react";
 import { RxBorderWidth, RxCornerBottomRight, RxFontSize } from "react-icons/rx";
 
 import type {
@@ -20,6 +19,7 @@ import {
   ANIMATION_OPTIONS,
   previewAnimation,
 } from "../animationOptions";
+import { RgbaColorInput } from "./RgbaColorInput";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -123,22 +123,6 @@ function getNumericValue(value: string | number | undefined): number {
   return 0;
 }
 
-function getColorPickerValue(value: string | number | undefined): string {
-  if (typeof value !== "string") return "#000000";
-  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value) ? value : "#000000";
-}
-
-function isLightColor(hex: string): boolean {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return false;
-  const l =
-    (0.299 * parseInt(m[1], 16) +
-      0.587 * parseInt(m[2], 16) +
-      0.114 * parseInt(m[3], 16)) /
-    255;
-  return l > 0.7;
-}
-
 /* ================================================================== */
 /*  Sub                                                                */
 /* ================================================================== */
@@ -183,90 +167,6 @@ function SectionHeader({
         </span>
       )}
     </div>
-  );
-}
-
-type StableColorPickerProps = {
-  value: string;
-  label: string;
-  onCommit: (value: string) => void;
-};
-
-function StableColorPicker({ value, label, onCommit }: StableColorPickerProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const onCommitRef = useRef(onCommit);
-  const lastCommittedValueRef = useRef(value);
-
-  const [previewValue, setPreviewValue] = useState(value);
-
-  useEffect(() => {
-    onCommitRef.current = onCommit;
-  }, [onCommit]);
-
-  useEffect(() => {
-    setPreviewValue(value);
-    lastCommittedValueRef.current = value;
-
-    const input = inputRef.current;
-
-    if (input && input.value !== value) {
-      input.value = value;
-    }
-  }, [value]);
-
-  useEffect(() => {
-    const input = inputRef.current;
-
-    if (!input) return;
-
-    // Local visual preview only. No builder/history update.
-    const handleInput = () => {
-      setPreviewValue(input.value);
-    };
-
-    // Commit once after the native picker closes.
-    const handleCommit = () => {
-      const nextValue = input.value;
-
-      setPreviewValue(nextValue);
-
-      if (nextValue === lastCommittedValueRef.current) {
-        return;
-      }
-
-      lastCommittedValueRef.current = nextValue;
-      onCommitRef.current(nextValue);
-    };
-
-    input.addEventListener("input", handleInput);
-    input.addEventListener("change", handleCommit);
-    input.addEventListener("blur", handleCommit);
-
-    return () => {
-      input.removeEventListener("input", handleInput);
-      input.removeEventListener("change", handleCommit);
-      input.removeEventListener("blur", handleCommit);
-    };
-  }, []);
-
-  return (
-    <label className="relative shrink-0 cursor-pointer">
-      <span
-        className={[
-          "block h-11 w-11 rounded-xl shadow-sm transition hover:scale-105",
-          isLightColor(previewValue) ? "ring-1 ring-neutral-200" : "",
-        ].join(" ")}
-        style={{ backgroundColor: previewValue }}
-      />
-
-      <input
-        ref={inputRef}
-        type="color"
-        defaultValue={value}
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        aria-label={label}
-      />
-    </label>
   );
 }
 
@@ -380,7 +280,6 @@ export function DynamicStyleForm({
           /* Color */
           if (isColorStyleKey(styleKey)) {
             const textValue = typeof value === "string" ? value : "";
-            const pickerValue = getColorPickerValue(value);
 
             return (
               <div
@@ -394,34 +293,17 @@ export function DynamicStyleForm({
                       {styleLabels[styleKey]}
                     </span>
                   </div>
-                  <span
-                    className={[
-                      "h-5 w-5 rounded-full shadow-sm",
-                      isLightColor(pickerValue)
-                        ? "ring-1 ring-neutral-200"
-                        : "",
-                    ].join(" ")}
-                    style={{ backgroundColor: pickerValue }}
-                  />
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <StableColorPicker
-                    value={pickerValue}
-                    label={styleLabels[styleKey]}
-                    onCommit={(newColor) => {
-                      onChange(styleKey, newColor);
-                    }}
-                  />
-
                   {/* text-base = 16px → no iOS zoom */}
-                  <input
-                    type="text"
+                  <RgbaColorInput
                     value={textValue}
-                    onChange={(e) => onChange(styleKey, e.target.value)}
-                    className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
-                    dir="ltr"
-                    placeholder="#000000"
+                    label={styleLabels[styleKey]}
+                    onChange={(newColor) => onChange(styleKey, newColor)}
+                    className="min-w-0 flex-1"
+                    swatchClassName="h-11 w-11 rounded-xl"
+                    inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
                   />
                 </div>
               </div>

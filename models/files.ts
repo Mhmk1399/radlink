@@ -1,6 +1,6 @@
 import mongoose, { Model, Types } from "mongoose";
 
-export type FileKind = "upload" | "qr" | "ticket";
+export type FileKind = "upload" | "qr" | "ticket" | "logo-header";
 
 export interface IFile {
     filename: string;
@@ -38,7 +38,7 @@ const fileSchema = new mongoose.Schema<IFile>({
     },
     kind: {
         type: String,
-        enum: ["upload", "qr", "ticket"],
+        enum: ["upload", "qr", "ticket", "logo-header"],
         default: "upload",
         index: true,
     },
