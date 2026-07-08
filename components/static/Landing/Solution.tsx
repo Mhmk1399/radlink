@@ -6,7 +6,6 @@ import {
   backgrounds,
   gradients,
   borders,
-  shadows,
   typography,
   layout,
   animation,
@@ -394,23 +393,16 @@ function SolutionVisual() {
         <div className="relative">
           {/* Pulse ring — one is enough visually; transform/opacity
               only, and paused for reduced-motion users */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className={cn(
-                "h-40 w-40 rounded-full border border-sky-400/10 sm:h-48 sm:w-48",
-                `motion-safe:${animation.classes.pulseRing}`,
-              )}
-            />
-          </div>
+          
 
           {/* Orb */}
-          <div
-            className={cn(
-              "relative z-10 flex h-24 w-24 items-center justify-center rounded-full sm:h-40 sm:w-54",
-              )}
-          >
-            <Image alt="logo" src="/assets/images/radlinkLogo.png" fill />
-          </div>
+
+          <Image
+            alt="logo"
+            src="/assets/images/radlinkLogo.png"
+            width={200}
+            height={200}
+          />
 
           {/* Connecting line from orb to cards */}
           <div className="absolute bottom-0 left-1/2 h-8 w-px -translate-x-1/2 bg-linear-to-b from-sky-400/20 to-transparent" />
