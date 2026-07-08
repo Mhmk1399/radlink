@@ -1,71 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
-import {
-  cn,
-  backgrounds,
-  gradients,
-  borders,
-  shadows,
-  typography,
-  layout,
-  animation,
-  focus,
-  interactive,
-} from "@/lib/design/design-system";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/design/design-system";
 
-/* ──────────────────────────────────────────────
-   KEYFRAMES — transform/opacity only (GPU-cheap),
-   fully disabled for prefers-reduced-motion.
-   ────────────────────────────────────────────── */
+const LOGO_W = 160; // ← put the real pixel width of radlinklogo.png
+const LOGO_H = 48; //  ← put the real pixel height (keeps the true ratio)
 
-const navKeyframes = `
-@keyframes nav-slide-down{0%{opacity:0;transform:translateY(-16px)}100%{opacity:1;transform:translateY(0)}}
-@keyframes nav-item-fade{0%{opacity:0;transform:translateY(-6px)}100%{opacity:1;transform:translateY(0)}}
-@keyframes nav-mobile-item{0%{opacity:0;transform:translateX(12px)}100%{opacity:1;transform:translateX(0)}}
-@keyframes nav-overlay-in{0%{opacity:0}100%{opacity:1}}
-@keyframes nav-underline-in{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
-.nav-slide-down{animation:nav-slide-down .45s cubic-bezier(.22,1,.36,1) both}
-.nav-item-fade{animation:nav-item-fade .35s cubic-bezier(.22,1,.36,1) both}
-.nav-mobile-item{animation:nav-mobile-item .3s cubic-bezier(.22,1,.36,1) both}
-.nav-overlay-in{animation:nav-overlay-in .25s ease both}
-.nav-underline-in{animation:nav-underline-in .25s cubic-bezier(.22,1,.36,1) both;transform-origin:center}
-@media (prefers-reduced-motion: reduce){
-  .nav-slide-down,.nav-item-fade,.nav-mobile-item,.nav-overlay-in,.nav-underline-in{animation:none}
-}
+const navCss = `
+@keyframes nav-enter{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.nav-enter{animation:nav-enter .5s cubic-bezier(.22,1,.36,1) both}
+@media (prefers-reduced-motion:reduce){.nav-enter{animation:none}}
 `;
 
-/* ──────────────────────────────────────────────
-   DATA
-   ────────────────────────────────────────────── */
-
-type NavItem = {
-  label: string;
-  href: string;
-};
+type NavItem = { label: string; href: string };
 
 const navItems: NavItem[] = [
   { label: "خانه", href: "#home" },
   { label: "امکانات", href: "#features" },
   { label: "کاربردها", href: "#use-cases" },
-  { label: "نمونه صفحات", href: "#templates" },
-  { label: "مراحل", href: "#how-it-works" },
   { label: "سوالات متداول", href: "#faq" },
+  { label: "درباره ما", href: "/about" },
+  { label: "ارتباط با ما", href: "/contact" },
 ];
 
-/* ──────────────────────────────────────────────
-   HOOKS
-   ────────────────────────────────────────────── */
-
+/* ── Scroll state: scrolled flag, hide-on-scroll-down, progress ── */
 function useScrollState() {
-  const [state, setState] = useState({
-    scrolled: false,
-    hidden: false,
-    atTop: true,
-  });
+  const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -73,94 +38,99 @@ function useScrollState() {
 
     const update = () => {
       const y = window.scrollY;
-      const down = y > lastY;
-      /* Small threshold so tiny touch jitters don't flicker the navbar. */
-      const delta = Math.abs(y - lastY);
+      const delta = y - lastY;
 
-      setState((prev) => ({
-        scrolled: y > 20,
-        atTop: y < 5,
-        hidden: delta > 4 ? down && y > 200 : prev.hidden,
-      }));
+      setScrolled(y > 16);
+      // Hysteresis: hide only after clear downward intent, show instantly on up
+      if (delta > 6 && y > 240) setHidden(true);
+      else if (delta < -4 || y < 120) setHidden(false);
+
+      // Progress line — direct DOM write, no re-render per scroll frame
+      if (progressRef.current) {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const p = max > 0 ? Math.min(y / max, 1) : 0;
+        progressRef.current.style.transform = `scaleX(${p})`;
+      }
+
       lastY = y;
       ticking = false;
     };
 
     const onScroll = () => {
       if (!ticking) {
-        requestAnimationFrame(update);
         ticking = true;
+        requestAnimationFrame(update);
       }
     };
 
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  return state;
+  return { scrolled, hidden, progressRef };
 }
 
+/* ── Active section via IntersectionObserver ── */
 function useActiveSection(ids: string[]) {
   const [active, setActive] = useState(ids[0]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length > 0) {
-          const best = visible.reduce((a, b) =>
-            a.intersectionRatio > b.intersectionRatio ? a : b,
-          );
-          setActive(`#${best.target.id}`);
-        }
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActive(`#${visible[0].target.id}`);
       },
-      { rootMargin: "-20% 0px -60% 0px", threshold: [0, 0.25, 0.5] },
+      { rootMargin: "-25% 0px -55% 0px", threshold: [0, 0.3, 0.6] },
     );
 
     ids.forEach((id) => {
-      const el = document.getElementById(id.replace("#", ""));
+      const el = document.getElementById(id.slice(1));
       if (el) observer.observe(el);
     });
-
     return () => observer.disconnect();
   }, [ids]);
 
   return active;
 }
 
-/* ──────────────────────────────────────────────
-   NAVBAR
-   ────────────────────────────────────────────── */
-
 export default function SmartLandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasAuthToken, setHasAuthToken] = useState(false);
-  const { scrolled, hidden } = useScrollState();
-  const activeSection = useActiveSection(navItems.map((i) => i.href));
+  const { scrolled, hidden, progressRef } = useScrollState();
   const pathName = usePathname();
+  const router = useRouter();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  const sectionIds = navItems
+    .filter((i) => i.href.startsWith("#"))
+    .map((i) => i.href);
+  const activeSection = useActiveSection(sectionIds);
+
   const ctaHref = hasAuthToken ? "/admin" : "/auth";
   const builderHref = hasAuthToken ? "/builder" : "/auth";
 
+  /* Sync auth token from localStorage */
   useEffect(() => {
-    const syncAuthToken = () => {
+    const sync = () => {
       try {
         setHasAuthToken(Boolean(localStorage.getItem("auth_token")));
       } catch {
         setHasAuthToken(false);
       }
     };
-
-    syncAuthToken();
-    window.addEventListener("storage", syncAuthToken);
-    window.addEventListener("focus", syncAuthToken);
-
+    sync();
+    window.addEventListener("storage", sync);
+    window.addEventListener("focus", sync);
     return () => {
-      window.removeEventListener("storage", syncAuthToken);
-      window.removeEventListener("focus", syncAuthToken);
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("focus", sync);
     };
   }, []);
 
-  // Lock body scroll when mobile menu is open
+  /* Body scroll lock while mobile menu is open */
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => {
@@ -168,13 +138,14 @@ export default function SmartLandingNavbar() {
     };
   }, [isOpen]);
 
-  // Close mobile menu on resize to desktop + on Escape
+  /* Close on resize-to-desktop and on Escape (returning focus to toggle) */
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth >= 1024) setIsOpen(false);
-    };
+    const onResize = () => window.innerWidth >= 1024 && setIsOpen(false);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        toggleRef.current?.focus();
+      }
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("keydown", onKey);
@@ -184,10 +155,31 @@ export default function SmartLandingNavbar() {
     };
   }, []);
 
-  const handleNavClick = useCallback((href: string) => {
-    setIsOpen(false);
-    const el = document.querySelector(href);
-    if (el) {
+  const isItemActive = useCallback(
+    (item: NavItem) =>
+      item.href.startsWith("#")
+        ? pathName === "/" && activeSection === item.href
+        : pathName === item.href,
+    [pathName, activeSection],
+  );
+
+  const handleNavClick = useCallback(
+    (href: string) => {
+      setIsOpen(false);
+
+      // لینک‌های صفحه‌ای مثل /contact یا /about
+      if (!href.startsWith("#")) {
+        router.push(href);
+        return;
+      }
+
+      // لینک‌های سکشن — اگر روی صفحه دیگری بودیم، برگرد به خانه
+      const el = document.getElementById(href.slice(1));
+      if (!el) {
+        router.push(`/${href}`);
+        return;
+      }
+
       const reduceMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
@@ -195,411 +187,271 @@ export default function SmartLandingNavbar() {
         behavior: reduceMotion ? "auto" : "smooth",
         block: "start",
       });
-    }
-  }, []);
+    },
+    [router],
+  );
 
-  if (pathName?.startsWith("/admin")) {
-    return null;
-  }
+  if (pathName?.startsWith("/admin")) return null;
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: navKeyframes }} />
+      <style dangerouslySetInnerHTML={{ __html: navCss }} />
 
       {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="nav-overlay-in fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setIsOpen(false)}
-          aria-hidden
-        />
-      )}
+      <div
+        aria-hidden="true"
+        onClick={() => setIsOpen(false)}
+        className={cn(
+          "fixed inset-0 z-40 bg-[#020817]/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden",
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
 
       <header
         dir="rtl"
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 px-3 transition-all duration-300 ease-out",
-          scrolled ? "pt-2" : "pt-3 sm:pt-4",
-          hidden && !isOpen
-            ? "-translate-y-full opacity-0"
-            : "translate-y-0 opacity-100",
+          "fixed inset-x-0 top-0 z-50 px-3 pt-3 transition-transform duration-300 ease-out sm:px-4",
+          hidden && !isOpen ? "-translate-y-[120%]" : "translate-y-0",
           /* Keyboard users can always reach the navbar even while hidden */
-          "focus-within:translate-y-0 focus-within:opacity-100",
+          "focus-within:translate-y-0",
         )}
       >
-        <div className={layout.container}>
-          <nav
-            aria-label="منوی اصلی سایت"
+        <nav
+          aria-label="منوی اصلی سایت"
+          className={cn(
+            "nav-enter relative mx-auto max-w-6xl rounded-2xl border transition-[background-color,border-color,box-shadow] duration-300",
+            scrolled || isOpen
+              ? "border-white/10 bg-[#060e1b]/85 shadow-[0_16px_40px_-20px_rgba(2,8,23,0.9)] backdrop-blur-xl"
+              : "border-white/5 bg-[#060e1b]/40 backdrop-blur-md",
+          )}
+        >
+          {/* Scroll progress — functional detail, transform-only */}
+          <div
             className={cn(
-              "nav-slide-down relative overflow-visible p-1.5 transition-all duration-300 ease-out",
-              layout.radius.navbar,
-              scrolled ? backgrounds.navbarScrolled : backgrounds.navbar,
-              borders.inner,
-              shadows.navbar,
+              "pointer-events-none absolute inset-x-4 top-0 h-px overflow-hidden rounded-full transition-opacity duration-300",
+              scrolled ? "opacity-100" : "opacity-0",
             )}
           >
-            {/* ── Top highlight line ── */}
             <div
-              className={cn(
-                "pointer-events-none absolute inset-x-6 top-0 h-px transition-opacity duration-300",
-                gradients.dividerSky,
-                scrolled ? "opacity-40" : "opacity-70",
-              )}
+              ref={progressRef}
+              className="h-full w-full origin-right scale-x-0 bg-gradient-to-l from-sky-400/80 via-cyan-300/60 to-transparent"
             />
+          </div>
 
-            {/* ── Corner glow — one, desktop only (blur-3xl is expensive on mobile GPUs) ── */}
-            <div
+          {/* ── Row: constant height, nothing resizes on scroll ── */}
+          <div className="flex h-16 items-center justify-between gap-3 px-3 sm:px-4">
+            {/* ══ LOGO — fixed box, true ratio, no crop ══ */}
+            <Link
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick("#home");
+              }}
+              aria-label="صفحه اصلی"
               className={cn(
-                "pointer-events-none absolute -right-8 -top-8 hidden h-20 w-20 rounded-full bg-sky-400/10 blur-3xl transition-opacity duration-300 lg:block",
-                scrolled ? "opacity-30" : "opacity-60",
-              )}
-            />
-
-            {/* ── Inner container ── */}
-            <div
-              className={cn(
-                "relative flex items-center justify-between transition-all duration-300",
-                layout.gap.md,
-                layout.radius.navbarInner,
-                scrolled
-                  ? "border border-white/4 bg-white/2 px-3 py-2 sm:px-4"
-                  : cn(
-                      borders.inner,
-                      backgrounds.surface.glassMedium,
-                      "px-3 py-2.5 sm:px-4",
-                    ),
+                "flex h-11 shrink-0 items-center rounded-xl px-1 transition-opacity duration-200 hover:opacity-85",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#060e1b]",
               )}
             >
-              {/* ══ LOGO ══ */}
+              <Image
+                src="/assets/images/radlinklogo.png"
+                width={LOGO_W}
+                height={LOGO_H}
+                alt="رادلینک"
+                priority
+                className="h-9 w-auto object-contain sm:h-10"
+              />
+            </Link>
+
+            {/* ══ DESKTOP NAV ══ */}
+            <ul className="hidden items-center gap-1 lg:flex">
+              {navItems.map((item) => {
+                const isActive = isItemActive(item);
+                return (
+                  <li key={item.href}>
+                    <button
+                      type="button"
+                      onClick={() => handleNavClick(item.href)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={cn(
+                        "group relative rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors duration-200",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
+                        isActive
+                          ? "text-white"
+                          : "text-slate-400 hover:text-white",
+                      )}
+                    >
+                      {item.label}
+                      {/* Underline: always mounted, scaleX transition — no keyframe replays */}
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "absolute inset-x-3 -bottom-0.5 h-px rounded-full bg-gradient-to-l from-transparent via-sky-300 to-transparent",
+                          "origin-center transition-transform duration-300 ease-out",
+                          isActive
+                            ? "scale-x-100"
+                            : "scale-x-0 group-hover:scale-x-50",
+                        )}
+                      />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* ══ DESKTOP CTAs ══ */}
+            <div className="hidden items-center gap-2 lg:flex">
               <Link
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick("#home");
-                }}
+                href={ctaHref}
                 className={cn(
-                  "group inline-flex shrink-0 items-center gap-2.5 rounded-2xl px-1 py-1 text-white",
-                  animation.base,
-                  animation.activePressSmall,
-                  animation.motionSafe,
-                  focus.ring,
+                  "inline-flex h-9 items-center rounded-full border border-white/10 px-4 text-[13px] font-medium text-slate-300",
+                  "transition-colors duration-200 hover:border-white/20 hover:bg-white/5 hover:text-white",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
                 )}
-                aria-label="صفحه اصلی"
               >
-                <Image
-                  src="/assets/images/radlinklogo.png"
-                  width={150}
-                  height={200}
-                  alt="لوگو"
-                  priority
-                  className={cn(
-                    "object-cover transition-all duration-300",
-                    scrolled ? "h-12" : "h-16",
-                    "w-auto",
-                  )}
-                />
+                {hasAuthToken ? "ورود به پنل" : "ورود به حساب"}
               </Link>
 
-              {/* ══ DESKTOP NAV ══ */}
-              <div className="hidden lg:flex lg:flex-1 lg:justify-center">
-                <ul
+              <Link
+                href={builderHref}
+                className={cn(
+                  "inline-flex h-9 items-center rounded-full bg-gradient-to-l from-sky-500 to-cyan-400 px-5 text-[13px] font-semibold text-[#04121f]",
+                  "shadow-[0_10px_24px_-10px_rgba(56,189,248,0.6)]",
+                  "transition-[opacity,box-shadow] duration-200 hover:opacity-90 hover:shadow-[0_12px_28px_-10px_rgba(56,189,248,0.75)]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+                )}
+              >
+                {hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}
+              </Link>
+            </div>
+
+            {/* ══ MOBILE TOGGLE ══ */}
+            <button
+              ref={toggleRef}
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls="mobile-navigation"
+              aria-label={isOpen ? "بستن منو" : "باز کردن منو"}
+              onClick={() => setIsOpen((p) => !p)}
+              className={cn(
+                "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-white lg:hidden",
+                "transition-colors duration-200 hover:bg-white/5 active:scale-95",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
+              )}
+            >
+              <span className="relative h-4 w-5">
+                <span
                   className={cn(
-                    "flex items-center gap-0.5 p-1",
-                    layout.radius.full,
+                    "absolute right-0 h-0.5 w-5 rounded-full bg-current transition-transform duration-300",
+                    isOpen ? "top-1/2 -translate-y-1/2 rotate-45" : "top-0",
                   )}
-                >
+                />
+                <span
+                  className={cn(
+                    "absolute right-0 top-1/2 h-0.5 w-5 -translate-y-1/2 rounded-full bg-current transition-opacity duration-200",
+                    isOpen ? "opacity-0" : "opacity-100",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "absolute bottom-0 right-0 h-0.5 rounded-full bg-current transition-all duration-300",
+                    isOpen
+                      ? "bottom-1/2 w-5 translate-y-1/2 -rotate-45"
+                      : "w-3.5",
+                  )}
+                />
+              </span>
+            </button>
+          </div>
+
+          {/* ══ MOBILE MENU — grid-rows collapse (height animates for free) ══ */}
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows,opacity] duration-300 ease-out lg:hidden",
+              isOpen
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0",
+            )}
+          >
+            <div id="mobile-navigation" className="min-h-0 overflow-hidden">
+              <div className="max-h-[calc(100dvh-8rem)] overflow-y-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
+                <ul className="space-y-1">
                   {navItems.map((item, i) => {
-                    const isActive = activeSection === item.href;
+                    const isActive = isItemActive(item);
                     return (
-                      <li key={item.label}>
+                      <li
+                        key={item.href}
+                        /* Stagger via transition-delay only — no keyframes */
+                        style={{
+                          transitionDelay: isOpen ? `${i * 35}ms` : "0ms",
+                        }}
+                        className={cn(
+                          "transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none",
+                          isOpen
+                            ? "translate-x-0 opacity-100"
+                            : "translate-x-3 opacity-0",
+                        )}
+                      >
                         <button
+                          type="button"
                           onClick={() => handleNavClick(item.href)}
                           aria-current={isActive ? "page" : undefined}
-                          style={{ animationDelay: `${i * 45}ms` }}
                           className={cn(
-                            "nav-item-fade group relative inline-flex cursor-pointer items-center px-3.5 py-2 text-[13px] font-medium transition-colors duration-200",
-                            layout.radius.full,
-                            interactive.touch,
-                            animation.motionSafe,
-                            focus.ring,
+                            "flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium",
+                            "transition-colors duration-200",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
                             isActive
-                              ? cn(
-                                  typography.navItemActive,
-                                  borders.inner,
-                                  shadows.innerLight,
-                                  "bg-sky-400/10",
-                                )
-                              : cn(
-                                  typography.navItem,
-                                  "hover:bg-sky-400/8 hover:text-white",
-                                  animation.activePress,
-                                ),
+                              ? "bg-sky-400/10 text-white"
+                              : "text-slate-300 hover:bg-white/5 hover:text-white",
                           )}
                         >
-                          <span className="relative z-10">{item.label}</span>
-                          {/* animated active underline */}
-                          {isActive && (
-                            <span
-                              aria-hidden="true"
-                              className="nav-underline-in absolute inset-x-3 -bottom-px h-px rounded-full bg-gradient-to-l from-transparent via-sky-300/80 to-transparent"
-                            />
-                          )}
+                          {item.label}
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full transition-colors duration-200",
+                              isActive ? "bg-sky-300" : "bg-slate-600",
+                            )}
+                          />
                         </button>
                       </li>
                     );
                   })}
                 </ul>
-              </div>
 
-              {/* ══ DESKTOP CTAs ══ */}
-              <div className="hidden items-center gap-2.5 lg:flex">
-                <Link
-                  href={ctaHref}
-                  className={cn(
-                    "inline-flex items-center justify-center rounded-full border px-4 text-[13px] font-medium text-slate-300 transition-all duration-300",
-                    scrolled ? "h-9" : "h-10",
-                    scrolled
-                      ? "border-white/6 bg-white/3 hover:bg-white/6"
-                      : cn(borders.medium, backgrounds.surface.glass),
-                    "hover:border-white/15 hover:text-white",
-                    shadows.insetGlow,
-                    animation.activePress,
-                    focus.ring,
-                  )}
-                >
-                  {hasAuthToken ? "ورود به پنل" : "ورود به حساب"}
-                </Link>
+                <div className="my-3 h-px bg-white/8" />
 
-                <Link
-                  href={builderHref}
-                  className={cn(
-                    "group inline-flex items-center justify-center gap-2 rounded-full border transition-all duration-300",
-                    scrolled ? "h-9 px-4 text-[13px]" : "h-10 px-5 text-sm",
-                    borders.skyStrong,
-                    gradients.primary,
-                    "font-semibold text-white",
-                    shadows.ctaSmall,
-                    "hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-18px_rgba(56,189,248,0.7)]",
-                    animation.activePress,
-                    animation.activeRestore,
-                    animation.motionSafe,
-                    focus.ringLight,
-                  )}
-                >
-                  <span>{hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}</span>
-                  <span
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href={builderHref}
+                    onClick={() => setIsOpen(false)}
                     className={cn(
-                      "rounded-full bg-white/90 transition-transform duration-300",
-                      shadows.dot,
-                      "group-hover:scale-125",
-                      scrolled ? "h-1.5 w-1.5" : "h-2 w-2",
+                      "inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-l from-sky-500 to-cyan-400 text-sm font-semibold text-[#04121f]",
+                      "transition-opacity duration-200 hover:opacity-90",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
                     )}
-                  />
-                </Link>
-              </div>
-
-              {/* ══ MOBILE TOGGLE ══ */}
-              <button
-                type="button"
-                aria-expanded={isOpen}
-                aria-controls="mobile-navigation"
-                aria-label={isOpen ? "بستن منو" : "باز کردن منو"}
-                onClick={() => setIsOpen((prev) => !prev)}
-                className={cn(
-                  "inline-flex items-center justify-center text-white transition-all duration-300 lg:hidden",
-                  scrolled ? "h-9 w-9 rounded-xl" : "h-11 w-11 rounded-2xl",
-                  borders.light,
-                  backgrounds.surface.glass,
-                  shadows.insetGlow,
-                  animation.base,
-                  "hover:bg-white/8",
-                  "active:scale-[0.92]",
-                  focus.ring,
-                  animation.motionSafe,
-                )}
-              >
-                <span
-                  className={cn(
-                    "relative transition-all duration-300",
-                    scrolled ? "h-4 w-4" : "h-5 w-5",
-                  )}
-                >
-                  <span
+                  >
+                    {hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}
+                  </Link>
+                  <Link
+                    href={ctaHref}
+                    onClick={() => setIsOpen(false)}
                     className={cn(
-                      "absolute left-0 h-0.5 rounded-full bg-white transition-all duration-300",
-                      scrolled ? "w-4" : "w-5",
-                      isOpen ? "top-1/2 -translate-y-1/2 rotate-45" : "top-0",
+                      "inline-flex h-11 items-center justify-center rounded-xl border border-white/10 text-sm font-medium text-slate-200",
+                      "transition-colors duration-200 hover:bg-white/5 hover:text-white",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
                     )}
-                  />
-                  <span
-                    className={cn(
-                      "absolute left-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-white transition-all duration-300",
-                      scrolled ? "w-4" : "w-5",
-                      isOpen ? "scale-x-0 opacity-0" : "opacity-100",
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      "absolute bottom-0 left-0 h-0.5 rounded-full bg-white transition-all duration-300",
-                      isOpen
-                        ? cn(
-                            scrolled ? "w-4" : "w-5",
-                            "bottom-1/2 translate-y-1/2 -rotate-45",
-                          )
-                        : scrolled
-                          ? "w-3"
-                          : "w-4",
-                    )}
-                  />
-                </span>
-              </button>
-            </div>
-
-            {/* ══ MOBILE MENU ══ */}
-            <div
-              className={cn(
-                "grid overflow-hidden transition-all duration-300 ease-out lg:hidden",
-                animation.motionSafe,
-                isOpen
-                  ? "mt-2 grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0",
-              )}
-            >
-              <div id="mobile-navigation" className="min-h-0">
-                <div
-                  className={cn(
-                    "max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl p-2.5 transition-all duration-300",
-                    "pb-[max(0.625rem,env(safe-area-inset-bottom))]",
-                    borders.subtle,
-                    "bg-[#060e1b]/90 backdrop-blur-2xl",
-                    shadows.card,
-                    isOpen
-                      ? "translate-y-0 scale-100"
-                      : "-translate-y-3 scale-[0.97]",
-                  )}
-                >
-                  <ul className="space-y-1">
-                    {navItems.map((item, i) => {
-                      const isActive = activeSection === item.href;
-                      return (
-                        <li key={item.label}>
-                          <button
-                            onClick={() => handleNavClick(item.href)}
-                            aria-current={isActive ? "page" : undefined}
-                            className={cn(
-                              "nav-mobile-item group flex w-full items-center justify-between border px-4 py-3",
-                              layout.radius.lg,
-                              animation.base,
-                              interactive.touch,
-                              focus.ring,
-                              isActive
-                                ? cn(
-                                    "border-sky-400/20 bg-sky-400/8 text-white",
-                                    "shadow-[inset_0_1px_0_rgba(56,189,248,0.1)]",
-                                  )
-                                : cn(
-                                    "border-white/4 bg-white/2 text-slate-300",
-                                    "hover:border-white/8 hover:bg-white/4 hover:text-white",
-                                    animation.activePressSmall,
-                                  ),
-                            )}
-                            style={{
-                              animationDelay: isOpen
-                                ? `${i * 0.04 + 0.05}s`
-                                : "0s",
-                            }}
-                          >
-                            <span className="text-sm font-medium">
-                              {item.label}
-                            </span>
-                            <span
-                              className={cn(
-                                "h-2 w-2 rounded-full transition-all duration-300",
-                                isActive
-                                  ? cn(
-                                      "bg-sky-300",
-                                      "shadow-[0_0_8px_rgba(125,211,252,0.6)]",
-                                    )
-                                  : "bg-slate-600 group-hover:scale-125 group-hover:bg-cyan-400",
-                              )}
-                            />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  {/* Divider */}
-                  <div
-                    className={cn(
-                      "mx-2 my-2.5 h-px",
-                      gradients.divider,
-                      "opacity-30",
-                    )}
-                  />
-
-                  {/* Mobile CTAs — same mapping as desktop:
-                      primary = builder, secondary = account */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href={builderHref}
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "group inline-flex h-11 items-center justify-center gap-2 rounded-full border text-sm transition-all duration-300",
-                        borders.skyStrong,
-                        gradients.primary,
-                        typography.ctaText,
-                        shadows.ctaSmall,
-                        animation.activePress,
-                        animation.activeRestore,
-                        focus.ringLight,
-                      )}
-                    >
-                      <span>{hasAuthToken ? "ساخت صفحه" : "شروع رایگان"}</span>
-                      <span
-                        className={cn(
-                          "h-2 w-2 rounded-full bg-white/90 transition-transform duration-300",
-                          shadows.dot,
-                          "group-hover:scale-125",
-                        )}
-                      />
-                    </Link>
-
-                    <Link
-                      href={ctaHref}
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "inline-flex h-11 items-center justify-center px-4",
-                        layout.radius.lg,
-                        "border border-white/6",
-                        "bg-white/3",
-                        shadows.insetGlow,
-                        "text-sm font-medium text-slate-200",
-                        animation.base,
-                        interactive.touch,
-                        "hover:bg-white/6 hover:text-white",
-                        focus.ring,
-                        animation.activePress,
-                      )}
-                    >
-                      {hasAuthToken ? "ورود به پنل" : "ورود به حساب"}
-                    </Link>
-                  </div>
+                  >
+                    {hasAuthToken ? "ورود به پنل" : "ورود به حساب"}
+                  </Link>
                 </div>
               </div>
             </div>
-          </nav>
-        </div>
+          </div>
+        </nav>
       </header>
 
-      {/* Spacer — prevents content from going under fixed navbar */}
-      <div
-        aria-hidden="true"
-        className={cn(
-          "transition-all duration-300",
-          scrolled ? "h-16" : "h-20",
-        )}
-      />
+      {/* Spacer — CONSTANT height so page content never jumps on scroll */}
+      <div aria-hidden="true" className="h-[5.5rem]" />
     </>
   );
 }

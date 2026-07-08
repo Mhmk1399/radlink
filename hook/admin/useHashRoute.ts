@@ -20,6 +20,7 @@ export type AdminSection =
     | "products"
     | "tickets"
     | "notifications"
+    | "contactMessages"
     | "settings"
     | "profile";
 
@@ -69,7 +70,7 @@ function isValidSection(s: string): s is AdminSection {
         "dashboard", "users", "agents", "permissions", "accesses",
         "pages", "templates", "blocks", "categories",
         "files", "qrcodes", "products",
-        "tickets", "notifications",
+        "tickets", "notifications", "contactMessages",
         "settings", "profile",
     ];
     return valid.includes(s as AdminSection);
@@ -111,6 +112,7 @@ export const SECTION_META: SectionMeta[] = [
     // Support
     { key: "tickets", label: "تیکت‌ها", icon: "FaTicket", group: "پشتیبانی", minRole: "user" },
     { key: "notifications", label: "اعلانات", icon: "FaBell", group: "پشتیبانی", minRole: "user" },
+    { key: "contactMessages", label: "پیام‌های تماس", icon: "FaEnvelope", group: "پشتیبانی", minRole: "superAdmin" },
 
     // System
      { key: "profile", label: "پروفایل", icon: "FaUser", group: "سیستم", minRole: "user" },

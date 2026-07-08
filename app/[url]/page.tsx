@@ -299,7 +299,7 @@ export default async function PageRoute({ params }: Props) {
         block.hidden !== true,
     ) ?? null;
   return (
-    <div className="relative isolate min-h-screen w-full px-2 pb-10  ">
+    <div className="relative isolate min-h-screen max-w-4xl mx-auto w-full px-2 pb-10  ">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10"

@@ -129,7 +129,6 @@ export default function LandingFloatingActions({
     try {
       if (navigator.share) {
         await navigator.share({ title: document.title, url: targetUrl });
-        setFeedback("صفحه به‌اشتراک گذاشته شد.");
       } else {
         await copyText(targetUrl);
         setFeedback("لینک صفحه کپی شد.");

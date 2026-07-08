@@ -1133,25 +1133,28 @@ export default function PagesSection({
                 </button>
               )}
 
-              {canUpdateThisPage && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (pageId) router.push(`/builder/${pageId}`);
-                  }}
-                  title="ویرایش صفحه"
-                  className={cn(
-                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
-                    isDark
-                      ? "text-violet-400/70 hover:bg-violet-500/10 hover:text-violet-400"
-                      : "text-violet-600/70 hover:bg-violet-500/8 hover:text-violet-600",
-                  )}
-                >
-                  <HiOutlinePencil className="h-4 w-4" />
-                  <span className="sr-only">ویرایش صفحه</span>
-                </button>
-              )}
+           {canUpdateThisPage && (
+  <button
+    type="button"
+    onClick={(event) => {
+      event.stopPropagation();
+
+      if (pageId) {
+        window.open(`/builder/${pageId}`, "_blank", "noopener,noreferrer");
+      }
+    }}
+    title="ویرایش صفحه"
+    className={cn(
+      "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
+      isDark
+        ? "text-violet-400/70 hover:bg-violet-500/10 hover:text-violet-400"
+        : "text-violet-600/70 hover:bg-violet-500/8 hover:text-violet-600",
+    )}
+  >
+    <HiOutlinePencil className="h-4 w-4" />
+    <span className="sr-only">ویرایش صفحه</span>
+  </button>
+)}
 
               {href && canViewThisPage && (
                 <button

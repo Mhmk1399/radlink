@@ -42,6 +42,7 @@ import {
   FaShieldHalved,
   FaKey,
   FaGear,
+  FaEnvelope,
   FaBars,
   FaXmark,
   FaSun,
@@ -170,6 +171,9 @@ function cn(...c: (string | false | null | undefined)[]): string {
 
 const SIDEBAR_KEY = "sidebar-collapsed";
 
+/** Sections that only superAdmin may ever see — no permission-grant override. */
+const SUPER_ADMIN_ONLY_SECTIONS = new Set<AdminSection>(["contactMessages"]);
+
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   FaHouse,
   FaUsers,
@@ -186,6 +190,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   FaShieldHalved,
   FaKey,
   FaGear,
+  FaEnvelope,
   FaUser,
 };
 
@@ -1545,6 +1550,7 @@ function DynamicIsland({
   const config = ISLAND_BY_ROLE[effectiveRole];
 
   const canShow = (key: AdminSection) => {
+    if (SUPER_ADMIN_ONLY_SECTIONS.has(key)) return isSuperAdmin;
     if (key === "profile" || isSuperAdmin) return true;
     return !accessLoading && !accessError && can(`admin.${key}`, "view");
   };
@@ -1819,6 +1825,7 @@ function Sidebar({
   }, [open]);
 
   const sections = SECTION_META.filter((item) => {
+    if (SUPER_ADMIN_ONLY_SECTIONS.has(item.key)) return isSuperAdmin;
     if (item.key === "profile" || isSuperAdmin) return true;
     return !accessLoading && !accessError && can(`admin.${item.key}`, "view");
   });
@@ -2353,10 +2360,14 @@ export default function AdminShell({
   } = useAccess();
 
   const canViewSection = useCallback(
-    (key: AdminSection) =>
-      key === "profile" ||
-      isSuperAdmin ||
-      (!isAccessError && can(`admin.${key}`, "view")),
+    (key: AdminSection) => {
+      if (SUPER_ADMIN_ONLY_SECTIONS.has(key)) return isSuperAdmin;
+      return (
+        key === "profile" ||
+        isSuperAdmin ||
+        (!isAccessError && can(`admin.${key}`, "view"))
+      );
+    },
     [can, isAccessError, isSuperAdmin],
   );
 

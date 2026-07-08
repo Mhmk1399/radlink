@@ -36,6 +36,9 @@ const TicketsSection = lazy(() => import("@/components/admin/TicketsSection"));
 const NotificationsSection = lazy(
   () => import("@/components/admin/NotificationsSection"),
 );
+const ContactMessagesSection = lazy(
+  () => import("@/components/admin/ContactMessagesSection"),
+);
 const ProfileSection = lazy(() => import("@/components/admin/ProfileSection"));
 
 function ComingSoon({
@@ -105,6 +108,8 @@ function SectionRouter({
       return <TicketsSection navigate={navigate} />;
     case "notifications":
       return <NotificationsSection navigate={navigate} />;
+    case "contactMessages":
+      return <ContactMessagesSection navigate={navigate} />;
     case "profile":
       return <ProfileSection navigate={navigate} />;
     default:
