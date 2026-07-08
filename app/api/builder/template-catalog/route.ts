@@ -91,6 +91,7 @@ function normalizeTemplateSummary(template: TemplateRecord) {
       isRecord(template.background)
         ? template.background
         : undefined,
+    logoHeader: isRecord(template.logoHeader) ? template.logoHeader : undefined,
     categoryId,
   };
 }
@@ -136,7 +137,7 @@ export const GET = compose(
     });
     const template = (await Template.findOne(templateQuery)
       .select(
-        "name description thumbnail background style category blocks builderBlocks isActive",
+        "name description thumbnail background logoHeader style category blocks builderBlocks isActive",
       )
       .populate(
         "blocks",
@@ -174,7 +175,7 @@ export const GET = compose(
   });
   const templates = await Template.find(templateQuery)
     .select(
-      "name description thumbnail background style category blocks builderBlocks isActive",
+      "name description thumbnail background logoHeader style category blocks builderBlocks isActive",
     )
     .populate("blocks", "name type version isActive")
     .sort({ name: 1 })

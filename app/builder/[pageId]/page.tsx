@@ -11,6 +11,7 @@ import {
 } from "@/hook/auth/builderAuthorization";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import { useTheme } from "@/contexts/ThemeContext";
+import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 
 type PageMetadata = {
   title: string;
@@ -18,6 +19,7 @@ type PageMetadata = {
   url: string;
   logo: string;
   logoShape: "square" | "circle";
+  logoHeader?: Partial<LogoHeaderSettings>;
   favicon: string;
   background: {
     color: string;
@@ -50,15 +52,12 @@ function LoadingScreen() {
     >
       <div className="relative z-10 flex flex-col items-center gap-6 px-4 text-center">
         <div className="relative flex   items-center justify-center">
-          <div
-            className={`absolute inset-0 animate-pulse rounded-2xl bg-linear-to-br from-[#a0833a] via-[#c9a84c] to-[#dfc06a] blur-lg opacity-50`}
-          />
-          
+      
           <div
             className={`relative flex h-60 w-60 items-center justify-center rounded-2xl   ${
               isDark
-                ? "   *:"
-                : "    s "
+                ? " "
+                : ""
             }`}
           >
 
@@ -86,12 +85,13 @@ function LoadingScreen() {
               isDark ? "text-[#e8e6e3]" : "text-[#18181b]"
             }`}
           >
-            در حال بارگذاری
+        
             <span className="inline-flex w-6 justify-start">
               <span className="animate-[pulse_1.4s_ease-in-out_infinite]">.</span>
               <span className="animate-[pulse_1.4s_ease-in-out_0.2s_infinite]">.</span>
               <span className="animate-[pulse_1.4s_ease-in-out_0.4s_infinite]">.</span>
             </span>
+                در حال بارگذاری
           </h1>
           <p
             className={`mt-1 text-sm ${
@@ -172,6 +172,10 @@ export default function EditPageBuilder() {
           url: page.url || "new-page",
           logo: typeof page.logo === "string" ? page.logo : "",
           logoShape: page.logoShape === "circle" ? "circle" : "square",
+          logoHeader:
+            page.logoHeader && typeof page.logoHeader === "object"
+              ? page.logoHeader
+              : undefined,
           favicon: typeof page.favicon === "string" ? page.favicon : "",
           background: {
             color:
@@ -245,6 +249,7 @@ export default function EditPageBuilder() {
       initialUrl={pageMetadata?.url}
       initialLogo={pageMetadata?.logo}
       initialLogoShape={pageMetadata?.logoShape}
+      initialLogoHeader={pageMetadata?.logoHeader}
       initialFavicon={pageMetadata?.favicon}
       initialBackground={pageMetadata?.background}
     />

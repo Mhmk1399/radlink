@@ -10,6 +10,8 @@ import QR from "@/models/qr";
 import User from "@/models/users";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
+import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
+import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 import PageNotificationModal, {
   type PublicPageNotification,
 } from "./PageNotificationModal";
@@ -21,7 +23,8 @@ type Props = {
   params: Promise<{ url: string }>;
 };
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const getPublicPage = cache(async (url: string) => {
   await connectDB();
@@ -86,7 +89,7 @@ function isValidBackgroundColor(value: unknown): value is string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { url } = await params;
 
-  const page = await getPublicPage(url);
+  const page = (await getPublicPage(url))!;
 
   if (!page) {
     return {
@@ -132,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PageRoute({ params }: Props) {
   const { url } = await params;
 
-  const page = await getPublicPage(url);
+  const page = (await getPublicPage(url))!;
 
   if (!page) return notFound();
   const pageExpired = isPageExpired(page.expiresAt);
@@ -152,13 +155,14 @@ export default async function PageRoute({ params }: Props) {
     /^https?:\/\//i.test(page.background.image)
       ? page.background.image
       : "";
+  const logoHeader = normalizeLogoHeaderSettings(page.logoHeader);
 
   if (page.isPublished !== true || pageExpired) {
     // Replace with your actual support phone number
     const supportPhoneNumber = "02112345678";
 
     return (
-      <main className="relative isolate min-h-screen overflow-hidden">
+      <main className="relative isolate min-h-screen  overflow-hidden">
         {/* Background Layer */}
         <div
           aria-hidden="true"
@@ -295,7 +299,7 @@ export default async function PageRoute({ params }: Props) {
         block.hidden !== true,
     ) ?? null;
   return (
-    <div className="relative isolate min-h-screen w-full px-2 pb-10 pt-2">
+    <div className="relative isolate min-h-screen w-full px-2 pb-10  ">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10"
@@ -311,17 +315,23 @@ export default async function PageRoute({ params }: Props) {
       />
       <PageNotificationModal notifications={notifications} />
       <header
-        className="mb-8 flex flex-col items-center justify-center  p-6 "
+        className="flex flex-col items-center justify-center "
         dir="rtl"
       >
-        {typeof page.logo === "string" && page.logo ? (
+        <LogoHeaderFrame
+          settings={logoHeader}
+          logo={typeof page.logo === "string" ? page.logo : ""}
+          logoShape={page.logoShape === "circle" ? "circle" : "square"}
+          title={String(page.title || "")}
+        />
+        {false ? (
           <div
             className={`relative mb-5 h-24 w-24 overflow-hidden border border-neutral-200 bg-white shadow-sm ${
-              page.logoShape === "circle" ? "rounded-full" : "rounded-xl"
+              page!.logoShape === "circle" ? "rounded-full" : "rounded-xl"
             }`}
           >
             <Image
-              src={page.logo}
+              src={String(page!.logo || "")}
               alt={`لوگوی ${page.title}`}
               fill
               unoptimized
@@ -330,12 +340,12 @@ export default async function PageRoute({ params }: Props) {
             />
           </div>
         ) : null}
-        <h1 className="text-4xl font-bold text-neutral-900">{page.title}</h1>
+        {/* <h1 className="text-4xl font-bold text-neutral-900">{page.title}</h1>
         {page.description && (
           <p className="mt-3 text-sm leading-7 text-neutral-600">
             {page.description}
           </p>
-        )}
+        )} */}
       </header>
 
       <section className="space-y-6 overflow-hidden">

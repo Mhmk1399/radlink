@@ -108,6 +108,7 @@ import {
 } from "@/lib/pages/pageExpiration";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
 import { deleteFileByIdentifier } from "@/lib/fileDeletion";
+import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 
 type RouteContext = {
     params: Promise<{
@@ -375,6 +376,10 @@ export const PATCH = compose(
         update.logoShape = body.logoShape;
     }
 
+    if (isObject(body.logoHeader)) {
+        update.logoHeader = normalizeLogoHeaderSettings(body.logoHeader);
+    }
+
     if (typeof body.favicon === "string") {
         update.favicon = body.favicon.trim();
     }
@@ -529,6 +534,10 @@ export const PATCH = compose(
     );
 
     revalidatePath(`/${page.url}`);
+    if (String(currentPage.url) !== String(page.url)) {
+        revalidatePath(`/${currentPage.url}`);
+    }
+    revalidatePath("/[url]", "page");
     invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({ page });

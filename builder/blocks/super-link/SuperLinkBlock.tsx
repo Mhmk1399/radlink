@@ -31,7 +31,6 @@ import {
   FaHeart,
   FaPlay,
   FaFileAlt,
-  FaChevronLeft,
 } from "react-icons/fa";
 
 /* ------------------------------------------------------------------ */
@@ -224,6 +223,7 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
 
   const isEditor = mode === "editor";
   const responsiveOpts = { mobileOnly: isEditor };
+  const direction = block.settings.direction === "ltr" ? "ltr" : "rtl";
 
   /* ---------- styles ---------- */
   const containerStyle = useMemo(
@@ -297,17 +297,6 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
   /* ---------- icon ---------- */
   const IconComp = ICONS[iconName] ?? FaLink;
 
-  /* ---------- click handler ---------- */
-  const handleClick = (e: React.MouseEvent) => {
-    if (isEditor) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    if (!hasUrl) {
-      e.preventDefault();
-    }
-  };
   const handleContainerSelect = (event: React.MouseEvent) => {
     if (!isEditor) return;
 
@@ -316,123 +305,19 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
 
     onSelectElement?.(block.instanceId, "container");
   };
-  /* ---------- inner content ---------- */
-  const innerContent = (
-    <StyledContainer
-      as={isEditor || !hasUrl ? "div" : "a"}
-      href={!isEditor && hasUrl ? url : undefined}
-      target={!isEditor && hasUrl && openInNewTab ? "_blank" : undefined}
-      rel={
-        !isEditor && hasUrl && openInNewTab ? "noopener noreferrer" : undefined
-      }
-      onClick={isEditor ? handleContainerSelect : undefined}
-      $styleCss={responsiveStyleToCss(
-        block.elements.container.style,
-        "super-link-container",
-        { mobileOnly: mode === "editor" },
-      )}
-    >
-      {/* Icon */}
-      <EditablePart
-        instanceId={block.instanceId}
-        elementId="icon"
-        mode={mode}
-        selectedElementId={selectedElementId}
-        onSelectElement={onSelectElement}
-      >
-        <StyledIcon
-          $iconAnim={iconAnimation}
-          onClick={(event) => {
-            if (isEditor) event.stopPropagation();
-          }}
-          $styleCss={responsiveStyleToCss(
-            block.elements.icon.style,
-            "super-link-icon",
-            { mobileOnly: mode === "editor" },
-          )}
-        >
-          <IconComp />
-        </StyledIcon>
-      </EditablePart>
-
-      {/* Text section */}
-      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
-        <EditablePart
-          instanceId={block.instanceId}
-          elementId="title"
-          mode={mode}
-          selectedElementId={selectedElementId}
-          onSelectElement={onSelectElement}
-        >
-          <StyledTitle $styleCss={titleStyle}>
-            <InlineEditableText
-              value={title}
-              dataKey="title"
-              instanceId={block.instanceId}
-              mode={mode}
-              onUpdateContent={onUpdateContent}
-            >
-              {(text) => <>{text}</>}
-            </InlineEditableText>
-          </StyledTitle>
-        </EditablePart>
-
-        {showDescription && (
-          <EditablePart
-            instanceId={block.instanceId}
-            elementId="description"
-            mode={mode}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          >
-            <StyledDescription $styleCss={descriptionStyle}>
-              <InlineEditableText
-                value={description}
-                dataKey="description"
-                instanceId={block.instanceId}
-                mode={mode}
-                multiline
-                onUpdateContent={onUpdateContent}
-              >
-                {(text) => <>{text}</>}
-              </InlineEditableText>
-            </StyledDescription>
-          </EditablePart>
-        )}
-      </div>
-
-      {/* Arrow */}
-      {showArrow && (
-        <EditablePart
-          instanceId={block.instanceId}
-          elementId="arrow"
-          mode={mode}
-          selectedElementId={selectedElementId}
-          onSelectElement={onSelectElement}
-        >
-          <StyledArrow $styleCss={arrowStyle}>
-            <FaChevronLeft />
-          </StyledArrow>
-        </EditablePart>
-      )}
-    </StyledContainer>
-  );
 
   /* ---------- render ---------- */
   return (
     <StyledContainer
       as={isEditor || !hasUrl ? "div" : "a"}
+      dir={direction}
       href={!isEditor && hasUrl ? url : undefined}
       target={!isEditor && hasUrl && openInNewTab ? "_blank" : undefined}
       rel={
         !isEditor && hasUrl && openInNewTab ? "noopener noreferrer" : undefined
       }
       onClick={isEditor ? handleContainerSelect : undefined}
-      $styleCss={responsiveStyleToCss(
-        block.elements.container.style,
-        "super-link-container",
-        { mobileOnly: mode === "editor" },
-      )}
+      $styleCss={containerStyle}
     >
       <EditablePart
         instanceId={block.instanceId}
@@ -441,14 +326,7 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
         selectedElementId={selectedElementId}
         onSelectElement={onSelectElement}
       >
-        <StyledIcon
-        $iconAnim={iconAnimation}
-          $styleCss={responsiveStyleToCss(
-            block.elements.icon.style,
-            "super-link-icon",
-            { mobileOnly: mode === "editor" },
-          )}
-        >
+        <StyledIcon $iconAnim={iconAnimation} $styleCss={iconStyle}>
           <IconComp />
         </StyledIcon>
       </EditablePart>
@@ -461,13 +339,7 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
           selectedElementId={selectedElementId}
           onSelectElement={onSelectElement}
         >
-          <StyledTitle
-            $styleCss={responsiveStyleToCss(
-              block.elements.title.style,
-              "super-link-title",
-              { mobileOnly: mode === "editor" },
-            )}
-          >
+          <StyledTitle $styleCss={titleStyle}>
             <InlineEditableText
               value={title}
               dataKey="title"
@@ -488,13 +360,7 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
             selectedElementId={selectedElementId}
             onSelectElement={onSelectElement}
           >
-            <StyledDescription
-              $styleCss={responsiveStyleToCss(
-                block.elements.description.style,
-                "super-link-description",
-                { mobileOnly: mode === "editor" },
-              )}
-            >
+            <StyledDescription $styleCss={descriptionStyle}>
               <InlineEditableText
                 value={description}
                 dataKey="description"
@@ -518,13 +384,7 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
           selectedElementId={selectedElementId}
           onSelectElement={onSelectElement}
         >
-          <StyledArrow
-            $styleCss={responsiveStyleToCss(
-              block.elements.arrow.style,
-              "super-link-arrow",
-              { mobileOnly: mode === "editor" },
-            )}
-          >
+          <StyledArrow $styleCss={arrowStyle}>
             ←
           </StyledArrow>
         </EditablePart>

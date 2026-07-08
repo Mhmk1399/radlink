@@ -37,13 +37,7 @@ export function createDefaultContactSaveBlock(order = 0): PageBlock {
     elements: {
       container: {
         label: "قاب بلاک",
-        allowedStyleKeys: [
-          "backgroundColor",
-          "borderRadius",
-          "borderColor",
-          "borderWidth",
-          "animation",
-        ],
+        allowedStyleKeys: [],
         style: {
           backgroundColor: { mobile: "transparent" },
           borderRadius: { mobile: 18 },
@@ -54,15 +48,7 @@ export function createDefaultContactSaveBlock(order = 0): PageBlock {
       },
       button: {
         label: "دکمه ذخیره مخاطب",
-        allowedStyleKeys: [
-          "color",
-          "backgroundColor",
-          "fontSize",
-          "borderRadius",
-          "borderColor",
-          "borderWidth",
-          "animation",
-        ],
+        allowedStyleKeys: [],
         style: {
           color: { mobile: "#ffffff" },
           backgroundColor: { mobile: "#064789" },
@@ -75,11 +61,7 @@ export function createDefaultContactSaveBlock(order = 0): PageBlock {
       },
       icon: {
         label: "آیکون مخاطب",
-        allowedStyleKeys: [
-          "color",
-          "backgroundColor",
-          "borderRadius",
-        ],
+        allowedStyleKeys: [],
         style: {
           color: { mobile: "#ffffff" },
           backgroundColor: { mobile: "rgba(235,242,250,0.16)" },

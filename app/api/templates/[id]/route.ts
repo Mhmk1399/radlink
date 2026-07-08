@@ -8,6 +8,7 @@ import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
 import Category from "@/models/category";
 import "@/models/blocks";
+import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -124,6 +125,9 @@ export const PATCH = compose(
             body.background,
             body.style && typeof body.style === "object" ? body.style : undefined
         );
+    }
+    if (body.logoHeader && typeof body.logoHeader === "object") {
+        template.logoHeader = normalizeLogoHeaderSettings(body.logoHeader);
     }
     if (body.blocks !== undefined) template.set("blocks", normalizeObjectIdArray(body.blocks));
     if (body.builderBlocks !== undefined) template.builderBlocks = normalizeBuilderBlocks(body.builderBlocks);

@@ -19,6 +19,8 @@ import {
   DropGap,
 } from "@/builder/editor/DraggableBlockItem";
 import type { PageBlock } from "@/types/blocks/builder.types";
+import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
 import { LegacySmartSuggestions } from "./SmartSuggestions";
 
 /* ================================================================== */
@@ -202,13 +204,43 @@ export function CanvasDropZone({
 export function PageLogoPreview({
   logo,
   logoShape = "square",
+  logoHeader,
+  showPlaceholder = false,
+  onEdit,
 }: {
   logo?: string;
   logoShape?: "square" | "circle";
+  logoHeader?: Partial<LogoHeaderSettings> | null;
+  showPlaceholder?: boolean;
+  onEdit?: () => void;
 }) {
+  if (logoHeader?.enabled || showPlaceholder) {
+    const frame = (
+      <LogoHeaderFrame
+        settings={logoHeader}
+        logo={logo}
+        logoShape={logoShape}
+        showPlaceholder={showPlaceholder}
+      />
+    );
+
+    if (!onEdit) return frame;
+
+    return (
+      <button
+        type="button"
+        onClick={onEdit}
+        className="group block w-full rounded-[32px] text-start outline-none transition hover:opacity-95 focus-visible:ring-2 focus-visible:ring-[#064789]/35"
+        aria-label="Edit logo header"
+      >
+        {frame}
+      </button>
+    );
+  }
+
   if (!logo?.trim()) return null;
 
-  return (
+  const logoNode = (
     <div className="flex justify-center px-4 pb-5 pt-6">
       <div
         className={[
@@ -219,10 +251,23 @@ export function PageLogoPreview({
         <img
           src={logo}
           alt="لوگوی صفحه"
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover"
         />
       </div>
     </div>
+  );
+
+  if (!onEdit) return logoNode;
+
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      className="block w-full rounded-[32px] outline-none transition hover:opacity-95 focus-visible:ring-2 focus-visible:ring-[#064789]/35"
+      aria-label="Edit logo header"
+    >
+      {logoNode}
+    </button>
   );
 }
 
@@ -230,6 +275,7 @@ export function CanvasContent({
   background,
   logo,
   logoShape,
+  logoHeader,
   sortedBlocks,
   availableBlockTypes,
   blockIds,
@@ -244,6 +290,7 @@ export function CanvasContent({
   onDeleteBlock,
   onOpenCatalog,
   onApplyTemplate,
+  onEditLogoHeader,
   floatingActions,
   showSmartSuggestions = true,
 }: {
@@ -253,6 +300,7 @@ export function CanvasContent({
   };
   logo?: string;
   logoShape?: "square" | "circle";
+  logoHeader?: Partial<LogoHeaderSettings> | null;
   sortedBlocks: PageBlock[];
   availableBlockTypes?: string[];
   blockIds: string[];
@@ -267,6 +315,7 @@ export function CanvasContent({
   onDeleteBlock: (id: string) => void;
   onOpenCatalog: () => void;
   onApplyTemplate: (blockTypes: string[]) => void;
+  onEditLogoHeader?: () => void;
   floatingActions?: React.ReactNode;
   showSmartSuggestions?: boolean;
 }) {
@@ -297,7 +346,13 @@ export function CanvasContent({
         ].join(" ")}
         style={backgroundStyle}
       >
-        <PageLogoPreview logo={logo} logoShape={logoShape} />
+        <PageLogoPreview
+          logo={logo}
+          logoShape={logoShape}
+          logoHeader={logoHeader}
+          showPlaceholder={Boolean(logoHeader?.enabled)}
+          onEdit={onEditLogoHeader}
+        />
         {isActive ? (
           /* حالت drag فعال */
           <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
@@ -344,7 +399,13 @@ export function CanvasContent({
       className="relative min-h-[420px] rounded-3xl"
       style={backgroundStyle}
     >
-      <PageLogoPreview logo={logo} logoShape={logoShape} />
+      <PageLogoPreview
+        logo={logo}
+        logoShape={logoShape}
+        logoHeader={logoHeader}
+        showPlaceholder={Boolean(logoHeader?.enabled)}
+        onEdit={onEditLogoHeader}
+      />
       <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
         {sortedBlocks.map((block, index) => (
           <div key={block.instanceId}>

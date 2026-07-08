@@ -7,6 +7,7 @@ import {
   HiOutlineShare,
   HiOutlineUserPlus,
   HiOutlineXMark,
+  HiOutlinePencilSquare,
 } from "react-icons/hi2";
 import {
   buildVCardFileName,
@@ -63,14 +64,30 @@ export default function LandingFloatingActions({
   const [qrOpen, setQrOpen] = useState(false);
   const [generatedQr, setGeneratedQr] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [dismissedHelpFor, setDismissedHelpFor] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const targetUrl = useMemo(() => normalizeTargetUrl(pageUrl), [pageUrl]);
   const contactData = contactBlock
     ? getContactSaveData(contactBlock)
     : null;
+  const contactBlockId = contactBlock?.instanceId ?? null;
   const canSaveContact = Boolean(
     contactData?.phoneNumber.trim() && contactBlock && !contactBlock.hidden,
   );
+  const showEditorContactHelp =
+    mode === "editor" &&
+    Boolean(contactBlockId) &&
+    dismissedHelpFor !== contactBlockId;
+
+  const dismissContactHelp = useCallback(() => {
+    if (contactBlockId) setDismissedHelpFor(contactBlockId);
+  }, [contactBlockId]);
+
+  const startEditingContact = useCallback(() => {
+    dismissContactHelp();
+    onEditContact?.();
+    setOpen(false);
+  }, [dismissContactHelp, onEditContact]);
 
   useEffect(() => {
     if (!open) return;
@@ -142,13 +159,10 @@ export default function LandingFloatingActions({
       <div
         ref={rootRef}
         data-floating-mode={mode}
-        className="flex flex-col items-end gap-2.5"
-        style={{
-          position: "fixed",
-          right: 20,
-          bottom: 20,
-          zIndex: 9000,
-        }}
+        className={[
+          "fixed bottom-5 z-[9000] flex flex-col items-end gap-2.5",
+          mode === "editor" ? "right-5 lg:right-[290px]" : "-right-30",
+        ].join(" ")}
         dir="rtl"
       >
         {feedback && (
@@ -162,9 +176,9 @@ export default function LandingFloatingActions({
 
         <div
           className={[
-            "w-48 origin-bottom-right overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_18px_55px_rgba(15,23,42,0.22)] backdrop-blur-xl transition duration-200 sm:w-52",
+            "w-48 origin-bottom-right  overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_18px_55px_rgba(15,23,42,0.22)] backdrop-blur-xl transition duration-200 sm:w-52",
             open
-              ? "translate-y-0 scale-100 opacity-100"
+              ? "translate-y-0 -translate-x-36 scale-100 opacity-100"
               : "pointer-events-none translate-y-2 scale-95 opacity-0",
           ].join(" ")}
           aria-hidden={!open}
@@ -182,8 +196,7 @@ export default function LandingFloatingActions({
               onClick={(event) => {
                 if (mode === "editor") {
                   event.preventDefault();
-                  onEditContact?.();
-                  setOpen(false);
+                  startEditingContact();
                 }
               }}
               className={actionClass}
@@ -261,6 +274,74 @@ export default function LandingFloatingActions({
           )}
         </button>
       </div>
+
+      {showEditorContactHelp && (
+        <div
+          className="fixed inset-0 z-[9400] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="contact-save-editor-help-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) dismissContactHelp();
+          }}
+        >
+          <section
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 text-right shadow-2xl sm:p-6"
+            dir="rtl"
+          >
+            <button
+              type="button"
+              onClick={dismissContactHelp}
+              className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200"
+              aria-label="بستن راهنمای ذخیره مخاطب"
+            >
+              <HiOutlineXMark className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-start gap-3 pl-10">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                <HiOutlineUserPlus className="h-6 w-6" />
+              </span>
+              <div className="min-w-0">
+                <h2
+                  id="contact-save-editor-help-title"
+                  className="text-base font-black text-slate-950"
+                >
+                  بلاک ذخیره مخاطب داخل دکمه شناور است
+                </h2>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  این بلاک در بدنه صفحه نمایش داده نمی‌شود؛ کاربر آن را از دکمه
+                  شناور پایین صفحه باز می‌کند. برای ویرایش اطلاعات مخاطب، همین
+                  بلاک را انتخاب کنید و فیلدهای پنل ادیتور را تغییر دهید.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-6 text-blue-800">
+              در صفحه‌ساز دکمه کمی از راست فاصله دارد تا بیرون از سایدبار
+              بماند؛ در صفحه منتشر شده، کامل در پایین راست صفحه قرار می‌گیرد.
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={dismissContactHelp}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
+              >
+                متوجه شدم
+              </button>
+              <button
+                type="button"
+                onClick={startEditingContact}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200"
+              >
+                <HiOutlinePencilSquare className="h-5 w-5" />
+                ویرایش بلاک
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {qrOpen && (
         <div

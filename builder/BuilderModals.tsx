@@ -26,6 +26,13 @@ import { FaTrash } from "react-icons/fa";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { slugify } from "@/helper/builder.helpers";
 import { uploadFile } from "@/lib/fileUtils";
+import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
+import {
+  DEFAULT_LOGO_HEADER,
+  LOGO_HEADER_VARIANTS,
+  normalizeLogoHeaderSettings,
+  type LogoHeaderSettings,
+} from "@/lib/design/logo-header";
 
 type CatalogBlock = {
   type: string;
@@ -606,6 +613,276 @@ function TemplateBackgroundSettings({
   );
 }
 
+function LogoHeaderSettingsPanel({
+  value,
+  logo,
+  logoShape,
+  title,
+  onChange,
+}: {
+  value?: Partial<LogoHeaderSettings>;
+  logo?: string;
+  logoShape?: "square" | "circle";
+  title: string;
+  onChange?: (value: LogoHeaderSettings) => void;
+}) {
+  const settings = normalizeLogoHeaderSettings(value);
+
+  const update = (patch: Partial<LogoHeaderSettings>) => {
+    onChange?.(normalizeLogoHeaderSettings({ ...settings, ...patch }));
+  };
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[13px] font-black text-neutral-800">
+            قاب لوگوی بالای سایت
+          </h3>
+          <p className="mt-1 text-[11px] leading-5 text-neutral-400">
+            یک طرح موجی یا پترنی برای بالای سایت انتخاب کنید؛ لوگو در مرکز آن
+            قرار می‌گیرد.
+          </p>
+        </div>
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 ring-1 ring-neutral-200">
+          <input
+            type="checkbox"
+            checked={settings.enabled}
+            onChange={(event) => update({ enabled: event.target.checked })}
+            className="h-4 w-4 rounded border-neutral-300 accent-[#064789]"
+          />
+          فعال
+        </label>
+      </div>
+
+      <div className={settings.enabled ? "" : "pointer-events-none opacity-50"}>
+        <LogoHeaderFrame
+          settings={settings}
+          logo={logo}
+          logoShape={logoShape}
+          title={title}
+          showPlaceholder
+        />
+
+        <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-neutral-200 sm:grid-cols-3">
+          {LOGO_HEADER_VARIANTS.filter((variant) => variant.id !== "none").map(
+            (variant) => (
+              <button
+                key={variant.id}
+                type="button"
+                onClick={() => update({ variant: variant.id, enabled: true })}
+                className={[
+                  "rounded-xl border px-2 py-2 text-[11px] font-bold transition",
+                  settings.variant === variant.id
+                    ? "border-[#064789] bg-[#064789] text-white shadow-sm"
+                    : "border-neutral-200 bg-neutral-50 text-neutral-500 hover:border-neutral-300 hover:bg-white",
+                ].join(" ")}
+              >
+                {variant.label}
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {(
+          [
+            ["primaryColor", "رنگ اصلی"],
+            ["secondaryColor", "رنگ شکل"],
+            ["accentColor", "رنگ جزئیات"],
+          ] as const
+        ).map(([key, label]) => (
+          <div key={key}>
+            <label className="mb-2 block text-[11px] font-bold text-neutral-600">
+              {label}
+            </label>
+            <div className="flex items-center gap-2">
+              <StableNativeColorInput
+                value={settings[key]}
+                onCommit={(color) => update({ [key]: color })}
+                className="h-10 w-12 shrink-0 cursor-pointer rounded-xl border border-neutral-200 bg-white p-1"
+                label={label}
+              />
+              <input
+                value={settings[key]}
+                onChange={(event) => update({ [key]: event.target.value })}
+                dir="ltr"
+                className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-2 py-2 font-mono text-[11px] text-neutral-700 outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {(
+          [
+            ["height", "ارتفاع", 110, 360, "px"],
+            ["maxWidth", "عرض", 320, 1920, "px"],
+            ["logoSize", "اندازه لوگو", 56, 180, "px"],
+            ["patternOpacity", "شدت پترن", 5, 90, "%"],
+          ] as const
+        ).map(([key, label, min, max, suffix]) => {
+          const rawValue =
+            key === "patternOpacity"
+              ? Math.round(settings.patternOpacity * 100)
+              : settings[key];
+
+          return (
+            <label
+              key={key}
+              className="rounded-2xl border border-neutral-200 bg-white p-3"
+            >
+              <span className="flex items-center justify-between text-[11px] font-bold text-neutral-600">
+                {label}
+                <span className="font-mono text-neutral-400">
+                  {rawValue}
+                  {suffix}
+                </span>
+              </span>
+              <input
+                type="range"
+                min={min}
+                max={max}
+                value={rawValue}
+                onChange={(event) => {
+                  const nextValue = Number(event.target.value);
+                  update({
+                    [key]:
+                      key === "patternOpacity" ? nextValue / 100 : nextValue,
+                  });
+                }}
+                className="mt-3 w-full accent-[#064789]"
+              />
+            </label>
+          );
+        })}
+      </div>
+
+      <label className="block rounded-2xl border border-neutral-200 bg-white p-3">
+        <span className="flex items-center justify-between text-[11px] font-bold text-neutral-600">
+          انحنا
+          <span className="font-mono text-neutral-400">
+            {settings.cornerRadius}px
+          </span>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={80}
+          value={settings.cornerRadius}
+          onChange={(event) =>
+            update({ cornerRadius: Number(event.target.value) })
+          }
+          className="mt-3 w-full accent-[#064789]"
+        />
+      </label>
+
+      <button
+        type="button"
+        onClick={() => onChange?.(DEFAULT_LOGO_HEADER)}
+        className="text-[11px] font-bold text-neutral-400 transition hover:text-red-500"
+      >
+        بازنشانی تنظیمات قاب لوگو
+      </button>
+    </section>
+  );
+}
+
+export function LogoHeaderEditorModal({
+  open,
+  value,
+  logo,
+  logoShape,
+  title,
+  onChange,
+  onClose,
+}: {
+  open: boolean;
+  value?: Partial<LogoHeaderSettings>;
+  logo?: string;
+  logoShape?: "square" | "circle";
+  title: string;
+  onChange: (value: LogoHeaderSettings) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose, open]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[420] flex items-end justify-center bg-black/5 p-0  sm:items-center sm:p-5"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="logo-header-editor-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-white/90 backdrop-blur-sm shadow-2xl sm:rounded-[28px]">
+        <header className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
+          <div>
+            <h2
+              id="logo-header-editor-title"
+              className="text-[16px] font-black text-neutral-900"
+            >
+              ویرایش قاب لوگوی بالای سایت
+            </h2>
+            <p className="mt-1 text-[11px] text-neutral-400">
+              تغییرات همین‌جا روی پیش‌نمایش صفحه‌ساز اعمال می‌شود.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200 hover:text-neutral-800"
+            aria-label="بستن"
+          >
+            <HiOutlineXMark className="h-5 w-5" />
+          </button>
+        </header>
+        <div className="builder-modal-scrollbar min-h-0 flex-1 overflow-y-auto p-5">
+          <LogoHeaderSettingsPanel
+            value={value}
+            logo={logo}
+            logoShape={logoShape}
+            title={title}
+            onChange={onChange}
+          />
+        </div>
+        <footer className="border-t border-neutral-100 bg-neutral-50/70 p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-2xl bg-neutral-900 px-4 py-3 text-[13px] font-bold text-white transition hover:bg-neutral-800"
+          >
+            انجام شد
+          </button>
+        </footer>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 export function PageMetaModal({
   open,
   mode = "page",
@@ -619,6 +896,7 @@ export function PageMetaModal({
   thumbnail,
   logo,
   logoShape = "square",
+  logoHeader,
   favicon,
   backgroundColor = "#ffffff",
   backgroundImage = "",
@@ -629,6 +907,7 @@ export function PageMetaModal({
   onThumbnailChange,
   onLogoChange,
   onLogoShapeChange,
+  onLogoHeaderChange,
   onFaviconChange,
   onBackgroundColorChange,
   onBackgroundImageChange,
@@ -649,6 +928,7 @@ export function PageMetaModal({
   thumbnail?: string;
   logo?: string;
   logoShape?: "square" | "circle";
+  logoHeader?: Partial<LogoHeaderSettings>;
   favicon?: string;
   backgroundColor?: string;
   backgroundImage?: string;
@@ -659,6 +939,7 @@ export function PageMetaModal({
   onThumbnailChange?: (v: string) => void;
   onLogoChange?: (v: string) => void;
   onLogoShapeChange?: (v: "square" | "circle") => void;
+  onLogoHeaderChange?: (v: LogoHeaderSettings) => void;
   onFaviconChange?: (v: string) => void;
   onBackgroundColorChange?: (v: string) => void;
   onBackgroundImageChange?: (v: string) => void;
@@ -1529,6 +1810,13 @@ export function PageMetaModal({
               />
             </>
           )}
+          <LogoHeaderSettingsPanel
+            value={logoHeader}
+            logo={mode === "page" ? logo : ""}
+            logoShape={logoShape}
+            title={title}
+            onChange={onLogoHeaderChange}
+          />
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               توضیح کوتاه

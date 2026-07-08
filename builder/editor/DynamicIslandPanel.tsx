@@ -1455,10 +1455,6 @@ function MobileIsland({
   const [tab, setTab] = useState<PanelTab>("content");
 
   useEffect(() => {
-    if (!selectedElementId && tab === "style") setTab("content");
-  }, [selectedElementId, tab]);
-
-  useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
     } else {
@@ -1472,6 +1468,9 @@ function MobileIsland({
   const hasContent = schema.contentFields.length > 0;
   const hasStyle = Boolean(selSchema?.allowedStyleKeys?.length);
   const allowedKeys = selSchema?.allowedStyleKeys ?? [];
+  const blockHasEditableStyle = Object.values(schema.elements).some(
+    (element) => element.allowedStyleKeys.length > 0,
+  );
 
   const TABS: Array<{
     key: PanelTab;
@@ -1498,6 +1497,13 @@ function MobileIsland({
       icon: <HiOutlineCog6Tooth size={16} />,
     },
   ];
+  const visibleTabs = TABS.filter(
+    (item) => item.key !== "style" || blockHasEditableStyle,
+  );
+  const activeTab: PanelTab =
+    tab === "style" && (!selectedElementId || !blockHasEditableStyle)
+      ? "content"
+      : tab;
 
   return (
     <>
@@ -1577,14 +1583,14 @@ function MobileIsland({
             {/* Tabs */}
             <nav className="shrink-0 px-4 pb-1.5 pt-3.5">
               <div className="flex gap-1 rounded-2xl bg-neutral-100 p-1">
-                {TABS.map((t) => (
+                {visibleTabs.map((t) => (
                   <button
                     key={t.key}
                     type="button"
                     onClick={() => setTab(t.key)}
                     className={[
                       "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-[13px] transition-all duration-200",
-                      tab === t.key
+                      activeTab === t.key
                         ? "bg-white font-bold text-neutral-800 shadow-sm"
                         : "font-medium text-neutral-400 active:bg-white/50",
                     ].join(" ")}
@@ -1595,7 +1601,7 @@ function MobileIsland({
                       <span
                         className={[
                           "flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-bold",
-                          tab === t.key
+                          activeTab === t.key
                             ? "bg-neutral-200 text-neutral-600"
                             : "bg-neutral-200/60 text-neutral-400",
                         ].join(" ")}
@@ -1615,7 +1621,7 @@ function MobileIsland({
                 CUSTOM_SCROLLBAR,
               ].join(" ")}
             >
-              {tab === "content" &&
+              {activeTab === "content" &&
                 (hasContent ? (
                   <DynamicContentForm
                     fields={schema.contentFields}
@@ -1630,7 +1636,7 @@ function MobileIsland({
                   />
                 ))}
 
-              {tab === "style" &&
+              {activeTab === "style" &&
                 (selectedElementId ? (
                   hasStyle ? (
                     <DynamicStyleForm
@@ -1659,7 +1665,7 @@ function MobileIsland({
                   />
                 ))}
 
-              {tab === "actions" && (
+              {activeTab === "actions" && (
                 <div className="space-y-3">
                   <button
                     type="button"

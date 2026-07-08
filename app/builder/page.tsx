@@ -12,6 +12,7 @@ import {
 import { SmartSuggestions } from "@/builder/SmartSuggestions";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { PageBlock } from "@/types/blocks/builder.types";
+import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 
 type BuilderMode = "page" | "template";
 
@@ -31,6 +32,7 @@ type BuilderState = {
   initialUrl?: string;
   initialCategoryId?: string;
   initialThumbnail?: string;
+  initialLogoHeader?: Partial<LogoHeaderSettings>;
   initialBackground?: {
     color: string;
     image: string;
@@ -174,6 +176,12 @@ function getTemplateBackground(template: Record<string, unknown>) {
   };
 }
 
+function getTemplateLogoHeader(template: Record<string, unknown>) {
+  return isObject(template.logoHeader)
+    ? (template.logoHeader as Partial<LogoHeaderSettings>)
+    : undefined;
+}
+
 async function fetchTemplate(templateId: string) {
   const token = getBuilderAuthToken();
   const res = await fetch(`/api/templates/${templateId}`, {
@@ -280,6 +288,7 @@ export default function BuilderPage() {
           initialCategoryId: categoryId,
           initialThumbnail:
             typeof template.thumbnail === "string" ? template.thumbnail : "",
+          initialLogoHeader: getTemplateLogoHeader(template),
           initialBackground: getTemplateBackground(template),
         });
       } catch (error) {
@@ -355,6 +364,7 @@ export default function BuilderPage() {
             initialCategoryId: categoryId,
             initialThumbnail:
               typeof template.thumbnail === "string" ? template.thumbnail : "",
+            initialLogoHeader: getTemplateLogoHeader(template),
             initialBackground: getTemplateBackground(template),
           }));
         }}
@@ -373,6 +383,7 @@ export default function BuilderPage() {
       initialUrl={state.initialUrl}
       initialCategoryId={state.initialCategoryId}
       initialThumbnail={state.initialThumbnail}
+      initialLogoHeader={state.initialLogoHeader}
       initialBackground={state.initialBackground}
       suppressSmartSuggestions={state.suppressSmartSuggestions}
     />

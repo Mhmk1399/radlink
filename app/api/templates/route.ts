@@ -8,6 +8,7 @@ import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
 import Category from "@/models/category";
 import "@/models/blocks";
+import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 
 const DEFAULT_TEMPLATE_STYLE = {
     fontFamily: "inherit",
@@ -93,6 +94,7 @@ export const POST = compose(
         blocks,
         builderBlocks,
         background,
+        logoHeader,
     } = await req.json();
 
     if (!name) {
@@ -136,6 +138,7 @@ export const POST = compose(
             background,
             style && typeof style === "object" ? style : undefined
         ),
+        logoHeader: normalizeLogoHeaderSettings(logoHeader),
     });
 
     if (normalizedCategory) {

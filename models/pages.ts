@@ -124,6 +124,7 @@
 // src/models/pages.ts
 
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 
 /* ================================================================== */
 /*  Shared Builder Types                                               */
@@ -247,6 +248,7 @@ export interface IPage extends Document {
     // Media
     logo?: string;
     logoShape: "square" | "circle";
+    logoHeader: LogoHeaderSettings;
     favicon?: string;
     thumbnail?: string;
 
@@ -413,6 +415,11 @@ const PageSchema = new Schema<IPage>(
             type: String,
             enum: ["square", "circle"],
             default: "square",
+        },
+
+        logoHeader: {
+            type: Schema.Types.Mixed,
+            default: {},
         },
 
         favicon: {

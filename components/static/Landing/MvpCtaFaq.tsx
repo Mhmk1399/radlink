@@ -794,8 +794,8 @@ export function FaqSection() {
                   </p>
                 </div>
 
-                <Link
-                  href="/contact"
+                <a
+                  href="tel:09101822840"
                   className={cn(
                     "inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold",
                     accentTokens.sky.border,
@@ -809,7 +809,7 @@ export function FaqSection() {
                 >
                   <span>ارسال پیام</span>
                   <ArrowIcon className="-scale-x-100 h-3.5 w-3.5" />
-                </Link>
+                </a>
               </div>
             </div>
           </div>

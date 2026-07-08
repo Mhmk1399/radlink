@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 
 type StyleMap = Record<string, unknown>;
 
@@ -57,6 +58,7 @@ export interface ITemplate extends Document {
     // The full style skin — consumed by styled-components
     style: TemplateStyle;
     background: TemplateBackground;
+    logoHeader: LogoHeaderSettings;
 
     category?: Types.ObjectId;
 
@@ -122,6 +124,7 @@ const TemplateSchema = new Schema<ITemplate>(
                 default: "",
             },
         },
+        logoHeader: { type: Schema.Types.Mixed, default: {} },
 
         category: { type: Schema.Types.ObjectId, ref: "Category", index: true },
 

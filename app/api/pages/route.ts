@@ -118,6 +118,7 @@ import {
     type PageExpiryAlertsData,
 } from "@/lib/pages/pageExpiryAlertsCache";
 import { PAGE_EXPIRY_DAY_MS } from "@/lib/pages/pageExpiryStatus";
+import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -403,6 +404,7 @@ export const POST = compose(
     if (!pageQuota.allowed) return quotaExceededResponse(pageQuota);
 
     let blocks = Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [];
+    let templateLogoHeader: unknown;
 
     if (templateId) {
         const templateQuery = await withTemplateAccessScope(user, {
@@ -419,6 +421,7 @@ export const POST = compose(
                 { status: 404 }
             );
         }
+        templateLogoHeader = template.logoHeader;
 
         if (
             template.category &&
@@ -487,6 +490,9 @@ export const POST = compose(
         background: normalizePageBackground(body.background),
         logo,
         logoShape: body.logoShape === "circle" ? "circle" : "square",
+        logoHeader: normalizeLogoHeaderSettings(
+            body.logoHeader ?? templateLogoHeader,
+        ),
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
         expiresAt,
         isPublished: effectivePublished,
@@ -538,6 +544,7 @@ export const POST = compose(
         .lean({ virtuals: true });
 
     revalidatePath(`/${page.url}`);
+    revalidatePath("/[url]", "page");
     invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({ page: populatedPage ?? page, qr }, { status: 201 });

@@ -294,7 +294,7 @@ export default function SmartLandingNavbar() {
                   priority
                   className={cn(
                     "object-cover transition-all duration-300",
-                    scrolled ? "h-8" : "h-10",
+                    scrolled ? "h-12" : "h-16",
                     "w-auto",
                   )}
                 />

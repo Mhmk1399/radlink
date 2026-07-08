@@ -66,10 +66,15 @@ import {
   PageSaveResultModal,
   ClearAllConfirmModal,
   PageMetaModal,
+  LogoHeaderEditorModal,
 } from "../BuilderModals";
 import { BuilderTour } from "../BuilderTour";
 import { useAccess } from "@/hook/auth/useAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
+import {
+  normalizeLogoHeaderSettings,
+  type LogoHeaderSettings,
+} from "@/lib/design/logo-header";
 import {
   deleteFile,
   extractKeyFromUrl,
@@ -95,6 +100,7 @@ type SimplePageBuilderProps = {
   initialLogo?: string;
   initialLogoShape?: "square" | "circle";
   initialFavicon?: string;
+  initialLogoHeader?: Partial<LogoHeaderSettings>;
   initialBackground?: {
     color?: string;
     image?: string;
@@ -220,6 +226,7 @@ type BuilderSaveSnapshotInput = {
   logo: string;
   logoShape: "square" | "circle";
   favicon: string;
+  logoHeader: LogoHeaderSettings;
   backgroundColor: string;
   backgroundImage: string;
   blocks: PageBlock[];
@@ -235,6 +242,7 @@ function serializeBuilderSaveState({
   logo,
   logoShape,
   favicon,
+  logoHeader,
   backgroundColor,
   backgroundImage,
   blocks,
@@ -249,6 +257,7 @@ function serializeBuilderSaveState({
     logo: saveMode === "page" ? logo : "",
     logoShape: saveMode === "page" ? logoShape : "square",
     favicon: saveMode === "page" ? favicon : "",
+    logoHeader,
     background: { color: backgroundColor, image: backgroundImage },
     blocks,
   });
@@ -440,6 +449,7 @@ export default function SimplePageBuilder({
   initialLogo,
   initialLogoShape = "square",
   initialFavicon,
+  initialLogoHeader,
   initialBackground,
   suppressSmartSuggestions = false,
 }: SimplePageBuilderProps = {}) {
@@ -487,6 +497,9 @@ export default function SimplePageBuilder({
     initialLogoShape,
   );
   const [pageFavicon, setPageFavicon] = useState(initialFavicon || "");
+  const [logoHeader, setLogoHeader] = useState<LogoHeaderSettings>(() =>
+    normalizeLogoHeaderSettings(initialLogoHeader),
+  );
   const [pageBackgroundColor, setPageBackgroundColor] = useState(
     initialBackground?.color || "#ffffff",
   );
@@ -507,6 +520,7 @@ export default function SimplePageBuilder({
       logo: pageLogo,
       logoShape: pageLogoShape,
       favicon: pageFavicon,
+      logoHeader,
       backgroundColor: pageBackgroundColor,
       backgroundImage: pageBackgroundImage,
       blocks,
@@ -541,6 +555,7 @@ export default function SimplePageBuilder({
   const [justSaved, setJustSaved] = useState(true);
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [pageMetaOpen, setPageMetaOpen] = useState(false);
+  const [logoHeaderEditorOpen, setLogoHeaderEditorOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -710,6 +725,7 @@ export default function SimplePageBuilder({
         logo: pageLogo,
         logoShape: pageLogoShape,
         favicon: pageFavicon,
+        logoHeader,
         backgroundColor: pageBackgroundColor,
         backgroundImage: pageBackgroundImage,
         blocks,
@@ -724,6 +740,7 @@ export default function SimplePageBuilder({
       pageLogo,
       pageLogoShape,
       pageFavicon,
+      logoHeader,
       pageBackgroundColor,
       pageBackgroundImage,
       blocks,
@@ -1433,6 +1450,7 @@ export default function SimplePageBuilder({
           },
           logo: pageLogo,
           logoShape: pageLogoShape,
+          logoHeader,
           favicon: pageFavicon,
         }),
       });
@@ -1490,6 +1508,7 @@ export default function SimplePageBuilder({
     pageBackgroundImage,
     pageLogo,
     pageLogoShape,
+    logoHeader,
     pageFavicon,
     ensureQrForCreatedPage,
     toast,
@@ -1526,6 +1545,7 @@ export default function SimplePageBuilder({
           },
           logo: pageLogo,
           logoShape: pageLogoShape,
+          logoHeader,
           favicon: pageFavicon,
         }),
       });
@@ -1569,6 +1589,7 @@ export default function SimplePageBuilder({
     pageBackgroundImage,
     pageLogo,
     pageLogoShape,
+    logoHeader,
     pageFavicon,
     createPageOnServer,
     toast,
@@ -1595,6 +1616,7 @@ export default function SimplePageBuilder({
             color: pageBackgroundColor,
             image: pageBackgroundImage,
           },
+          logoHeader,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1618,6 +1640,7 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    logoHeader,
     toast,
   ]);
 
@@ -1644,6 +1667,7 @@ export default function SimplePageBuilder({
             color: pageBackgroundColor,
             image: pageBackgroundImage,
           },
+          logoHeader,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -1669,6 +1693,7 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    logoHeader,
     toast,
   ]);
   const validateBeforeServerSave = useCallback((): string | null => {
@@ -2180,6 +2205,8 @@ export default function SimplePageBuilder({
               }}
               logo={saveMode === "page" ? pageLogo : ""}
               logoShape={pageLogoShape}
+              logoHeader={logoHeader}
+              onEditLogoHeader={() => setLogoHeaderEditorOpen(true)}
               onApplyTemplate={applyTemplate}
               showSmartSuggestions={!suppressSmartSuggestions}
               sortedBlocks={canvasBlocks}
@@ -2208,7 +2235,7 @@ export default function SimplePageBuilder({
                   onEditContact={() => {
                     if (!contactSaveBlock) return;
                     setSelectedBlockId(contactSaveBlock.instanceId);
-                    setSelectedElementId("button");
+                    setSelectedElementId(null);
                   }}
                 />
               }
@@ -2272,6 +2299,7 @@ export default function SimplePageBuilder({
         thumbnail={templateThumbnail}
         logo={pageLogo}
         logoShape={pageLogoShape}
+        logoHeader={logoHeader}
         favicon={pageFavicon}
         backgroundColor={pageBackgroundColor}
         backgroundImage={pageBackgroundImage}
@@ -2285,6 +2313,7 @@ export default function SimplePageBuilder({
         onThumbnailChange={setTemplateThumbnail}
         onLogoChange={setPageLogo}
         onLogoShapeChange={setPageLogoShape}
+        onLogoHeaderChange={setLogoHeader}
         onFaviconChange={setPageFavicon}
         onBackgroundColorChange={setPageBackgroundColor}
         onBackgroundImageChange={setPageBackgroundImage}
@@ -2297,6 +2326,16 @@ export default function SimplePageBuilder({
         onSave={handleMetaSave}
         isSaving={isServerSaving}
         saveError={serverSaveError}
+      />
+
+      <LogoHeaderEditorModal
+        open={logoHeaderEditorOpen}
+        value={logoHeader}
+        logo={saveMode === "page" ? pageLogo : ""}
+        logoShape={pageLogoShape}
+        title={pageTitle}
+        onChange={setLogoHeader}
+        onClose={() => setLogoHeaderEditorOpen(false)}
       />
 
       <PageSaveResultModal
@@ -2313,6 +2352,7 @@ export default function SimplePageBuilder({
         showFloatingActions={canViewFloatingActions}
         logo={saveMode === "page" ? pageLogo : ""}
         logoShape={pageLogoShape}
+        logoHeader={logoHeader}
         background={{
           color: pageBackgroundColor,
           image: pageBackgroundImage,

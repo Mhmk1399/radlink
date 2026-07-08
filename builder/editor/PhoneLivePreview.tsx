@@ -13,6 +13,7 @@ import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { PageLogoPreview } from "@/builder/BuilderCanvas";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import type { PageBlock } from "@/types/blocks/builder.types";
+import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 
 type PhonePreviewModalProps = {
   open: boolean;
@@ -23,6 +24,7 @@ type PhonePreviewModalProps = {
   };
   logo?: string;
   logoShape?: "square" | "circle";
+  logoHeader?: Partial<LogoHeaderSettings>;
   pageUrl?: string;
   showFloatingActions?: boolean;
   onClose: () => void;
@@ -140,11 +142,28 @@ function EmptyPreview() {
   );
 }
 
+function PhonePreviewLoader() {
+  return (
+    <div className="absolute inset-1 z-50 flex items-center justify-center rounded-[46px] bg-white">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <span className="relative flex h-11 w-11 items-center justify-center">
+          <span className="absolute h-full w-full rounded-full border-2 border-slate-200" />
+          <span className="absolute h-full w-full animate-spin rounded-full border-2 border-transparent border-t-slate-900" />
+        </span>
+        <span className="text-[12px] font-bold text-slate-500">
+          در حال آماده‌سازی پیش‌نمایش
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function PhonePreviewContent({
   blocks,
   background,
   logo,
   logoShape,
+  logoHeader,
   pageUrl,
   showFloatingActions,
 }: {
@@ -155,6 +174,7 @@ function PhonePreviewContent({
   };
   logo?: string;
   logoShape?: "square" | "circle";
+  logoHeader?: Partial<LogoHeaderSettings>;
   pageUrl?: string;
   showFloatingActions?: boolean;
 }) {
@@ -188,7 +208,12 @@ function PhonePreviewContent({
           backgroundSize: "cover",
         }}
       />
-      <PageLogoPreview logo={logo} logoShape={logoShape} />
+      <PageLogoPreview
+        logo={logo}
+        logoShape={logoShape}
+        logoHeader={logoHeader}
+        showPlaceholder={Boolean(logoHeader?.enabled)}
+      />
       {contentBlocks.length === 0 ? (
         <EmptyPreview />
       ) : (
@@ -255,6 +280,7 @@ export default function PhonePreviewModal({
   background,
   logo,
   logoShape,
+  logoHeader,
   pageUrl,
   showFloatingActions = false,
   onClose,
@@ -266,13 +292,14 @@ export default function PhonePreviewModal({
 
   const [visible, setVisible] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [previewReady, setPreviewReady] = useState(false);
   const [iframeDocument, setIframeDocument] = useState<Document | null>(null);
-  const phoneRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const prepareIframe = useCallback(() => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
+    setPreviewReady(false);
     doc.open();
     doc.write(buildIframeDocument());
     doc.close();
@@ -288,6 +315,7 @@ export default function PhonePreviewModal({
       );
     } else {
       setAnimating(false);
+      setPreviewReady(false);
       const t = setTimeout(() => {
         setIframeDocument(null);
         setVisible(false);
@@ -301,6 +329,24 @@ export default function PhonePreviewModal({
     const af = requestAnimationFrame(prepareIframe);
     return () => cancelAnimationFrame(af);
   }, [prepareIframe, visible]);
+
+  useEffect(() => {
+    if (!iframeDocument?.getElementById(PREVIEW_ROOT_ID)) {
+      setPreviewReady(false);
+      return;
+    }
+
+    setPreviewReady(false);
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => setPreviewReady(true));
+    });
+
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+    };
+  }, [iframeDocument, sortedBlocks]);
 
   useEffect(() => {
     if (!visible) return;
@@ -322,10 +368,18 @@ export default function PhonePreviewModal({
     return () => window.removeEventListener("keydown", fn);
   }, [stableOnClose, visible]);
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (phoneRef.current && !phoneRef.current.contains(e.target as Node))
-      onClose();
-  };
+  useEffect(() => {
+    if (!visible) return;
+    const previewWindow = iframeDocument?.defaultView;
+    if (!previewWindow) return;
+
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") stableOnClose();
+    };
+
+    previewWindow.addEventListener("keydown", fn);
+    return () => previewWindow.removeEventListener("keydown", fn);
+  }, [iframeDocument, stableOnClose, visible]);
 
   if (!visible) return null;
 
@@ -338,7 +392,6 @@ export default function PhonePreviewModal({
       role="dialog"
       aria-modal="true"
       aria-label="پیش نمایش موبایل"
-      onClick={handleBackdropClick}
     >
       {/* Backdrop */}
       <div
@@ -373,7 +426,6 @@ export default function PhonePreviewModal({
       >
         {/* ── Phone ── */}
         <div
-          ref={phoneRef}
           className="relative shrink-0"
           style={{
             width: "min(350px, calc(100vw - 24px))",
@@ -417,7 +469,7 @@ export default function PhonePreviewModal({
               style={{ background: "#050505" }}
             >
               {/* Screen surface */}
-              <div className="absolute inset-1 overflow-hidden rounded-[46px] bg-white px-1">
+              <div className="absolute inset-1 overflow-hidden rounded-[46px] bg-white">
                 {/* Status bar — always LTR like a real phone */}
                 <div
                   dir="ltr"
@@ -574,6 +626,7 @@ export default function PhonePreviewModal({
                           background={background}
                           logo={logo}
                           logoShape={logoShape}
+                          logoHeader={logoHeader}
                           pageUrl={pageUrl}
                           showFloatingActions={showFloatingActions}
                         />
@@ -581,6 +634,8 @@ export default function PhonePreviewModal({
                       previewRoot,
                     )
                   : null}
+
+                {!previewReady ? <PhonePreviewLoader /> : null}
 
                 {/* Screen glass sheen */}
                 <div

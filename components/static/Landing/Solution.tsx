@@ -16,6 +16,7 @@ import {
   type AccentColor,
   animDelay,
 } from "@/lib/design/design-system";
+import Image from "next/image";
 
 /* ──────────────────────────────────────────────
    SHARED COMPONENTS
@@ -405,45 +406,10 @@ function SolutionVisual() {
           {/* Orb */}
           <div
             className={cn(
-              "relative z-10 flex h-24 w-24 items-center justify-center rounded-full sm:h-28 sm:w-28",
-              borders.strong,
-              gradients.orb,
-              shadows.orb,
-            )}
+              "relative z-10 flex h-24 w-24 items-center justify-center rounded-full sm:h-40 sm:w-54",
+              )}
           >
-            <div
-              className={cn(
-                "absolute inset-0.5 rounded-full",
-                gradients.innerHighlightCircle,
-              )}
-            />
-
-            {/* Scan line — animates transform (compositor-only),
-                not `top` (which forced layout every frame) */}
-            <div className="absolute inset-0 overflow-hidden rounded-full">
-              <div
-                className="absolute left-0 right-0 top-0 h-px bg-linear-to-r from-transparent via-sky-400/30 to-transparent motion-safe:animate-[nf-scan_4s_linear_infinite]"
-                style={{ willChange: "transform" }}
-              />
-            </div>
-
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className={cn(
-                "relative z-10 h-9 w-9 sm:h-10 sm:w-10",
-                accentTokens.sky.text,
-              )}
-            >
-              <path
-                d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.553-4.244a4.5 4.5 0 0 0-1.242-7.244l4.5-4.5"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                transform="translate(0.5 2.5) scale(.88)"
-              />
-            </svg>
+            <Image alt="logo" src="/assets/images/radlinkLogo.png" fill />
           </div>
 
           {/* Connecting line from orb to cards */}
