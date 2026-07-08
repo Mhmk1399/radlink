@@ -16,6 +16,7 @@ import {
   toPersian,
   type AccentColor,
 } from "@/lib/design/design-system";
+import Image from "next/image";
 
 /* ──────────────────────────────────────────────
    1 ─ DATA
@@ -284,131 +285,21 @@ function useCounter(end: number, duration = 1600, start = false) {
    ────────────────────────────────────────────── */
 
 function PhoneMockup() {
-  const { ref, inView } = useInViewOnce<HTMLDivElement>(0.4);
-  const visitors = useCounter(2847, 1600, inView);
-  const clicks = useCounter(1463, 1800, inView);
+  const { ref } = useInViewOnce<HTMLDivElement>(0.4);
+ 
 
   return (
-    <div ref={ref} className="relative mx-auto w-65 sm:w-70 lg:w-75">
+    <div ref={ref} className="relative mx-auto w-65 md:-mt-36  sm:w-70 lg:w-98">
       {/* Outer glow — static (the old pulse animated a blur-2xl
           layer every frame, one of the main lag sources) */}
-      <div
-        className={cn(
-          "absolute -inset-6 rounded-[3rem] blur-2xl",
-          "bg-linear-to-b from-sky-400/20 via-blue-500/10 to-transparent",
-        )}
+  
+      <Image
+        alt="hero"
+        src="/assets/images/hero.jpg"
+        width={1200}
+        height={1200}
+        className="h-fit w-full rounded-[1rem] object-contain  "
       />
-
-      {/* Phone body */}
-      <div className={components.phoneMockup.outer}>
-        <div className={components.phoneMockup.inner}>
-          {/* Notch */}
-          <div className={components.phoneMockup.notch} />
-
-          {/* Screen content */}
-          <div className="space-y-3 p-4 pt-4">
-            {/* Profile card */}
-            <div
-              className={cn(
-                "flex flex-col items-center gap-2 p-4",
-                layout.radius.lg,
-                borders.subtle,
-                backgrounds.surface.glass,
-              )}
-            >
-              <div
-                className={cn(
-                  "flex h-14 w-14 items-center justify-center rounded-full",
-                  borders.sky,
-                  "bg-linear-to-br from-sky-500 to-blue-600",
-                  "shadow-[0_8px_20px_-8px_rgba(56,189,248,0.6)]",
-                )}
-              >
-                <span className="text-xl font-bold text-white">ل</span>
-              </div>
-              <p className={cn(typography.brandName, "text-sm")}>
-                لندینگ‌ساز هوشمند
-              </p>
-              <p className={typography.labelMuted}>smartlanding.ir</p>
-            </div>
-
-            {/* Link items */}
-            {["وب‌سایت اصلی", "اینستاگرام", "تماس با ما"].map((t) => (
-              <div
-                key={t}
-                className={cn(
-                  "group flex items-center justify-between px-3.5 py-2.5",
-                  layout.radius.md,
-                  borders.subtle,
-                  backgrounds.surface.glass,
-                  "transition-colors duration-200",
-                  borders.hoverSky,
-                  "hover:bg-white/[0.07]",
-                )}
-              >
-                <span className="text-xs font-medium text-slate-200">{t}</span>
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className={cn(
-                    "h-3.5 w-3.5 -scale-x-100 text-slate-500",
-                    "transition-transform duration-200",
-                    "group-hover:-translate-x-0.5 group-hover:text-sky-400",
-                  )}
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            ))}
-
-            {/* Stats bar — no infinite pulse; the count-up IS the animation */}
-            <div className={cn(layout.grid.stats, "pt-1")}>
-              {[
-                {
-                  value: visitors,
-                  label: "بازدید",
-                  color: accentTokens.sky.text,
-                },
-                {
-                  value: clicks,
-                  label: "کلیک",
-                  color: accentTokens.cyan.text,
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className={cn(
-                    "p-3 text-center",
-                    layout.radius.md,
-                    borders.subtle,
-                    backgrounds.surface.glass,
-                  )}
-                >
-                  <p
-                    className={cn(
-                      typography.counter,
-                      stat.color,
-                      "tabular-nums",
-                    )}
-                  >
-                    {toPersian(stat.value)}
-                  </p>
-                  <p className={cn("mt-0.5", typography.labelSmall)}>
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Home bar */}
-          <div className={cn(components.phoneMockup.homeBar, "mt-2")} />
-        </div>
-      </div>
     </div>
   );
 }
@@ -514,6 +405,20 @@ export function HeroSection() {
             layout.gap.section,
           )}
         >
+            {/* ── Right — Phone Mockup ──
+              Float animation only on lg+ (and only for users who
+              haven't asked for reduced motion): animating a large
+              layered element on mobile GPUs is a major jank source. */}
+          <div
+            className={cn(
+              animation.classes.fadeUp,
+              "shrink-0",
+              `motion-safe:lg:${animation.classes.floatSlow}`,
+            )}
+            style={{ animationDelay: "200ms" }}
+          >
+            <PhoneMockup />
+          </div>
           {/* ── Left Content ── */}
           <div className="flex-1 text-center lg:text-right">
             {/* Badge */}
@@ -621,20 +526,7 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* ── Right — Phone Mockup ──
-              Float animation only on lg+ (and only for users who
-              haven't asked for reduced motion): animating a large
-              layered element on mobile GPUs is a major jank source. */}
-          <div
-            className={cn(
-              animation.classes.fadeUp,
-              "shrink-0",
-              `motion-safe:lg:${animation.classes.floatSlow}`,
-            )}
-            style={{ animationDelay: "200ms" }}
-          >
-            <PhoneMockup />
-          </div>
+        
         </div>
       </div>
     </section>
