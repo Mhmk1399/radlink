@@ -99,18 +99,13 @@ const StyledTitle = styled.div<{ $styleCss: string }>`
   letter-spacing: -0.02em;
 `;
 
-const TitleDivider = styled.div`
-  width: 46px;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #cbd5e1, #94a3b8, #cbd5e1);
-`;
+ 
 
 const StyledDescription = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-desc`)}
   ${(p) => p.$styleCss}
   text-align: center;
-  line-height: 1.9;
+  line-height: 1.1;
 `;
 
 const StyledItem = styled.div<{ $styleCss: string; $open: boolean }>`
@@ -322,7 +317,7 @@ export function FAQBlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const titleCss = responsiveStyleToCss(
@@ -340,13 +335,13 @@ export function FAQBlock({
   const itemCss = responsiveStyleToCss(
     block.elements.item.style,
     `${PREFIX}-item`,
-    { mobileOnly },
+    { mobileOnly, effect: "card" },
   );
 
   const questionCss = responsiveStyleToCss(
     block.elements.question.style,
     `${PREFIX}-question`,
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   const answerCss = responsiveStyleToCss(
@@ -358,7 +353,7 @@ export function FAQBlock({
   const iconCss = responsiveStyleToCss(
     block.elements.icon.style,
     `${PREFIX}-icon`,
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   return (
@@ -402,8 +397,7 @@ export function FAQBlock({
                   </StyledTitle>
                 </EditablePart>
 
-                <TitleDivider />
-              </HeaderStack>
+               </HeaderStack>
 
               {/* ── Description ── */}
               {Boolean(block.data.showDescription) && (
@@ -498,7 +492,7 @@ export function FAQBlock({
                               onSelectElement={onSelectElement}
                             >
                               <StyledIcon
-                                className="flex h-9 w-9 shrink-0 items-center justify-center shadow-sm"
+                                className="flex h-7 w-7 md:h-9 md:w-9 shrink-0 items-center justify-center shadow-sm"
                                 $styleCss={iconCss}
                                 $open={isOpen}
                               >
@@ -516,7 +510,7 @@ export function FAQBlock({
                               className="min-w-0 flex-1"
                             >
                               <StyledQuestion
-                                className="font-bold leading-[1.6]"
+                                className="font-bold leading-[1.1]"
                                 $styleCss={questionCss}
                               >
                                 <InlineEditableText

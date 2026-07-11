@@ -12,6 +12,7 @@ import {
 import type { PageBlock } from "@/types/blocks/builder.types";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import type { PageBackgroundPattern } from "@/lib/design/page-background";
 
 type PageMetadata = {
   title: string;
@@ -24,6 +25,7 @@ type PageMetadata = {
   background: {
     color: string;
     image: string;
+    pattern?: Partial<PageBackgroundPattern>;
   };
 };
 
@@ -186,6 +188,11 @@ export default function EditPageBuilder() {
               typeof page.background?.image === "string"
                 ? page.background.image
                 : "",
+            pattern:
+              page.background?.pattern &&
+              typeof page.background.pattern === "object"
+                ? page.background.pattern
+                : undefined,
           },
         });
 

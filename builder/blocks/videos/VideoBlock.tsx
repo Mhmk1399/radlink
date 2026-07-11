@@ -125,7 +125,7 @@ export function VideoBlock({
   const containerStyle = responsiveStyleToCss(
     block.elements.container.style,
     "vid-container",
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const titleStyle = responsiveStyleToCss(
@@ -143,13 +143,13 @@ export function VideoBlock({
   const videoStyle = responsiveStyleToCss(
     block.elements.video.style,
     "vid-video",
-    { mobileOnly },
+    { mobileOnly, effect: "media" },
   );
 
   const buttonStyle = responsiveStyleToCss(
     block.elements.button.style,
     "vid-button",
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   const hasVideo = Boolean(String(block.data.videoUrl ?? "").trim());
@@ -230,7 +230,11 @@ export function VideoBlock({
             selectedElementId={selectedElementId}
             onSelectElement={onSelectElement}
           >
-            <StyledVideo className="overflow-hidden" $styleCss={videoStyle}>
+            <StyledVideo
+              className="overflow-hidden"
+              data-media-kind={hasVideo ? "video" : "empty"}
+              $styleCss={videoStyle}
+            >
               {hasVideo ? (
                 <video
                   src={String(block.data.videoUrl ?? "")}

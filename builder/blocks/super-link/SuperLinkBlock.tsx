@@ -231,7 +231,7 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
       responsiveStyleToCss(
         elements.container?.style,
         "super-link-block",
-        responsiveOpts,
+        { ...responsiveOpts, effect: "button" },
       ),
     [elements.container?.style, isEditor],
   );

@@ -127,6 +127,10 @@ const StyledContainer = styled.div<{ $css: string }>`
     }
   }
 
+  &[data-has-image="true"] {
+    background-color: #0f172a;
+  }
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,6 +167,8 @@ const StyledContainer = styled.div<{ $css: string }>`
         transparent 32%
       );
     z-index: 1;
+    opacity: 0.92;
+    transition: opacity 0.28s ease;
   }
 
   /* Always-on bottom gradient for legibility */
@@ -179,6 +185,28 @@ const StyledContainer = styled.div<{ $css: string }>`
       rgba(2, 6, 23, 0.05) 100%
     );
     z-index: 2;
+  }
+
+  &[data-has-image="true"]::before {
+    background:
+      radial-gradient(
+        circle at 16% 8%,
+        rgba(255, 255, 255, 0.22),
+        transparent 26%
+      ),
+      radial-gradient(
+        circle at 88% 88%,
+        rgba(255, 255, 255, 0.13),
+        transparent 34%
+      ),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(2, 6, 23, 0.12));
+    mix-blend-mode: soft-light;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &[data-has-image="true"]:hover::before {
+      opacity: 1;
+    }
   }
 `;
 
@@ -233,18 +261,6 @@ const ContentStack = styled.div`
   text-align: center;
 `;
 
-const TitleDivider = styled.div`
-  width: 48px;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.2),
-    rgba(255, 255, 255, 0.7),
-    rgba(255, 255, 255, 0.2)
-  );
-`;
-
 const StyledTitle = styled.div<{ $css: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-title`)}
   ${(p) => p.$css}
@@ -289,8 +305,8 @@ const StyledArrow = styled.button<{ $css: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -302,6 +318,21 @@ const StyledArrow = styled.button<{ $css: string }>`
     opacity 0.2s ease,
     box-shadow 0.25s ease,
     background-color 0.2s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @media (min-width: 640px) {
+    width: 46px;
+    height: 46px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
 
   &:hover {
     transform: scale(1.06);
@@ -318,8 +349,8 @@ const StyledArrow = styled.button<{ $css: string }>`
 const DotsShell = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 6px 9px;
   border-radius: 999px;
   background: rgba(2, 6, 23, 0.28);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -328,18 +359,28 @@ const DotsShell = styled.div`
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 8px 20px rgba(2, 6, 23, 0.14);
+
+  @media (min-width: 640px) {
+    gap: 8px;
+    padding: 8px 12px;
+  }
 `;
 
 const StyledDot = styled.button<{ $css: string; $active: boolean }>`
   ${sharedBlockKeyframes(`${PREFIX}-dot`)}
   ${(p) => p.$css}
-  width: ${(p) => (p.$active ? "26px" : "10px")};
-  height: 10px;
+  width: ${(p) => (p.$active ? "18px" : "7px")};
+  height: 7px;
   cursor: pointer;
   opacity: ${(p) => (p.$active ? 1 : 0.5)};
   box-shadow: ${(p) =>
     p.$active ? "0 2px 8px rgba(255,255,255,0.22)" : "none"};
   transition: all 0.28s ease;
+
+  @media (min-width: 640px) {
+    width: ${(p) => (p.$active ? "26px" : "10px")};
+    height: 10px;
+  }
 
   &:hover {
     opacity: 1;
@@ -548,7 +589,7 @@ export function SliderBlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const overlayCss = responsiveStyleToCss(
@@ -572,19 +613,19 @@ export function SliderBlock({
   const btnCss = responsiveStyleToCss(
     block.elements.button.style,
     `${PREFIX}-btn`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   const arrowCss = responsiveStyleToCss(
     block.elements.arrow.style,
     `${PREFIX}-arrow`,
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   const dotCss = responsiveStyleToCss(
     block.elements.dot.style,
     `${PREFIX}-dot`,
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   /* ── Has the user set a custom height? ── */
@@ -655,16 +696,15 @@ export function SliderBlock({
         <StyledContainer
           $css={containerCss}
           data-no-image={!hasImage && !hasCustomHeight ? "true" : undefined}
+          data-has-image={hasImage ? "true" : "false"}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
           style={{
-            backgroundImage: hasImage
-              ? `url(${slide.imageUrl})`
-              : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundImage: hasImage ? `url(${slide.imageUrl})` : undefined,
+            backgroundSize: hasImage ? "cover" : undefined,
+            backgroundPosition: hasImage ? "center" : undefined,
             touchAction: "pan-y",
             userSelect: "none",
             ...containerSizeStyle,
@@ -714,8 +754,6 @@ export function SliderBlock({
                   </StyledTitle>
                 </EditablePart>
 
-                <TitleDivider />
-
                 {/* Description */}
                 <EditablePart
                   instanceId={block.instanceId}
@@ -758,7 +796,7 @@ export function SliderBlock({
                       onClick={(e) => {
                         if (isEditor) e.preventDefault();
                       }}
-                      className="mt-2 inline-flex min-w-[160px] items-center justify-center px-7 py-3.5 text-center no-underline"
+                      className="mt-2 inline-flex min-w-[132px] items-center justify-center px-4 py-2.5 text-center text-sm no-underline sm:min-w-[160px] sm:px-7 sm:py-3.5 sm:text-base"
                     >
                       <InlineEditableText
                         value={String(slide.buttonText ?? "")}

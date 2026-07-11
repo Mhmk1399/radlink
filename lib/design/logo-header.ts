@@ -5,6 +5,12 @@ export type LogoHeaderVariant =
   | "wave-soft"
   | "wave-deep"
   | "wave-split"
+  | "wave-aurora"
+  | "wave-cut"
+  | "wave-jagged"
+  | "wave-steps"
+  | "wave-organic"
+  | "wave-slope"
   | "curve-arc"
   | "curve-layer"
   | "blob-center"
@@ -63,6 +69,12 @@ export const LOGO_HEADER_VARIANTS: LogoHeaderVariantOption[] = [
   { id: "wave-soft", label: "موج نرم" },
   { id: "wave-deep", label: "موج عمیق" },
   { id: "wave-split", label: "موج دو لایه" },
+  { id: "wave-aurora", label: "موج شفقی" },
+  { id: "wave-cut", label: "موج برشی" },
+  { id: "wave-jagged", label: "موج نامنظم" },
+  { id: "wave-steps", label: "موج پله‌ای" },
+  { id: "wave-organic", label: "موج ارگانیک" },
+  { id: "wave-slope", label: "موج شیب‌دار" },
   { id: "curve-arc", label: "قوس مرکزی" },
   { id: "curve-layer", label: "قوس لایه‌ای" },
   { id: "blob-center", label: "لکه مرکزی" },
@@ -99,14 +111,14 @@ export const LOGO_HEADER_VARIANTS: LogoHeaderVariantOption[] = [
 ];
 
 export const DEFAULT_LOGO_HEADER: LogoHeaderSettings = {
-  enabled: false,
+  enabled: true,
   variant: "wave-soft",
   primaryColor: "#064789",
   secondaryColor: "#427AA1",
   accentColor: "#EBF2FA",
   backgroundImage: "",
   patternOpacity: 0.38,
-  height: 190,
+  height: 110,
   maxWidth: 860,
   logoSize: 96,
   cornerRadius: 28,
@@ -180,7 +192,7 @@ export function normalizeLogoHeaderSettings(
         5,
         90,
       ) / 100,
-    height: normalizeNumber(raw.height, DEFAULT_LOGO_HEADER.height, 110, 360),
+    height: normalizeNumber(raw.height, DEFAULT_LOGO_HEADER.height, 60, 360),
     maxWidth: normalizeNumber(raw.maxWidth, DEFAULT_LOGO_HEADER.maxWidth, 320, 1920),
     logoSize: normalizeNumber(raw.logoSize, DEFAULT_LOGO_HEADER.logoSize, 56, 180),
     cornerRadius: normalizeNumber(

@@ -285,15 +285,7 @@ const StyledTitle = styled.h2<{ $styleCss: string }>`
     font-size 0.2s ease;
 `;
 
-const TitleDivider = styled.div`
-  width: 48px;
-  height: 3px;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #6366f1, #3b82f6, #06b6d4);
-  background-size: 200% auto;
-  animation: ${shimmer} 3s linear infinite;
-  margin: 4px auto 0;
-`;
+ 
 
 const StyledDescription = styled.p<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
@@ -471,7 +463,7 @@ export default function MessengerLinksBlock({
   const containerStyle = responsiveStyleToCss(
     elements.container?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "surface" },
   );
   const titleStyle = responsiveStyleToCss(elements.title?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
@@ -484,10 +476,11 @@ export default function MessengerLinksBlock({
   const messengerButtonStyle = responsiveStyleToCss(
     elements.messengerButton?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "button" },
   );
   const iconStyle = responsiveStyleToCss(elements.icon?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
+    effect: "tap",
   });
   const labelStyle = responsiveStyleToCss(elements.label?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
@@ -583,8 +576,7 @@ export default function MessengerLinksBlock({
                   {(text) => <>{text}</>}
                 </InlineEditableText>
               </StyledTitle>
-              <TitleDivider />
-            </EditablePart>
+             </EditablePart>
           )}
 
           {showDescription && (

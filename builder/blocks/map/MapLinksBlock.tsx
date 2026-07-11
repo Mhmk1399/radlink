@@ -131,14 +131,7 @@ const StyledTitle = styled.h2<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
 `;
 
-const TitleDivider = styled.div`
-  width: 44px;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #94a3b8, #cbd5e1, #94a3b8);
-  background-size: 200% auto;
-  animation: ${shimmer} 3s linear infinite;
-`;
+ 
 
 const StyledDescription = styled.p<{ $styleCss: string }>`
   margin: 0;
@@ -358,7 +351,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
       responsiveStyleToCss(
         elements.container?.style,
         "map-links-block",
-        responsiveOpts,
+        { ...responsiveOpts, effect: "surface" },
       ),
     [elements.container?.style, isEditor],
   );
@@ -388,7 +381,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
       responsiveStyleToCss(
         elements.mapButton?.style,
         "map-links-block",
-        responsiveOpts,
+        { ...responsiveOpts, effect: "button" },
       ),
     [elements.mapButton?.style, isEditor],
   );
@@ -398,7 +391,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
       responsiveStyleToCss(
         elements.icon?.style,
         "map-links-block",
-        responsiveOpts,
+        { ...responsiveOpts, effect: "tap" },
       ),
     [elements.icon?.style, isEditor],
   );
@@ -481,8 +474,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
                       {(text) => <>{text}</>}
                     </InlineEditableText>
                   </StyledTitle>
-                  <TitleDivider />
-                </EditablePart>
+                 </EditablePart>
               )}
 
               {showDescription && (

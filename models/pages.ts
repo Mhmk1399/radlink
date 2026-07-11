@@ -125,64 +125,72 @@
 
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import type { PageBackgroundSettings } from "@/lib/design/page-background";
 
 /* ================================================================== */
 /*  Shared Builder Types                                               */
 /* ================================================================== */
 
 export type ResponsiveValue<T> = {
-    mobile?: T;
-    tablet?: T;
-    desktop?: T;
+  mobile?: T;
+  tablet?: T;
+  desktop?: T;
 };
 
-export type AnimationType =
-    | "none"
-    | "fade"
-    | "slideUp"
-    | "scale"
-    | "pulse";
+export type AnimationType = "none" | "fade" | "slideUp" | "scale" | "pulse";
 
 export type EditableStyleKey =
-    | "color"
-    | "backgroundColor"
-    | "fontSize"
-    | "height"
-    | "borderRadius"
-    | "borderColor"
-    | "borderWidth"
-    | "animation";
+  | "color"
+  | "backgroundColor"
+  | "fontSize"
+  | "height"
+  | "marginTop"
+  | "marginBottom"
+  | "paddingTop"
+  | "paddingBottom"
+  | "borderRadius"
+  | "borderColor"
+  | "borderWidth"
+  | "shadow"
+  | "animation";
+
+export type ShadowStyleValue = {
+  color?: string;
+  intensity?: number;
+};
 
 export type EditableStyleMap = {
-    color?: ResponsiveValue<string>;
-    backgroundColor?: ResponsiveValue<string>;
-    fontSize?: ResponsiveValue<number>;
-    height?: ResponsiveValue<number>;
-    borderRadius?: ResponsiveValue<number>;
-    borderColor?: ResponsiveValue<string>;
-    borderWidth?: ResponsiveValue<number>;
-    animation?: AnimationType;
+  color?: ResponsiveValue<string>;
+  backgroundColor?: ResponsiveValue<string>;
+  fontSize?: ResponsiveValue<number>;
+  height?: ResponsiveValue<number>;
+  marginTop?: ResponsiveValue<number>;
+  marginBottom?: ResponsiveValue<number>;
+  paddingTop?: ResponsiveValue<number>;
+  paddingBottom?: ResponsiveValue<number>;
+  borderRadius?: ResponsiveValue<number>;
+  borderColor?: ResponsiveValue<string>;
+  borderWidth?: ResponsiveValue<number>;
+  shadow?: ResponsiveValue<ShadowStyleValue>;
+  animation?: AnimationType;
 };
 
 export type PageBlockElement = {
-    label: string;
-    allowedStyleKeys: EditableStyleKey[];
-    style: EditableStyleMap;
+  label: string;
+  allowedStyleKeys: EditableStyleKey[];
+  style: EditableStyleMap;
 };
 
 export type PageBlockData = Record<string, unknown>;
 
 export type PageBlockSettings = {
-    direction?: "rtl" | "ltr";
-    [key: string]: unknown;
+  direction?: "rtl" | "ltr";
+  [key: string]: unknown;
 };
 
 export type PageStyleOverride = Record<string, unknown>;
 
-export type PageBackground = {
-    color: string;
-    image: string;
-};
+export type PageBackground = PageBackgroundSettings;
 
 /* ================================================================== */
 /*  Embedded Page Block                                                */
@@ -191,34 +199,33 @@ export type PageBackground = {
 // A page block is a full snapshot of what the user edited in the builder.
 // It may come from a master Block document, or it may come only from frontend blockRegistry.
 export interface PageBlock {
-    // Frontend unique instance id.
-    // This is what drag/drop, selection, editing, and rendering use.
-    instanceId: string;
-    hidden?: boolean;
+  // Frontend unique instance id.
+  // This is what drag/drop, selection, editing, and rendering use.
+  instanceId: string;
+  hidden?: boolean;
 
+  // Optional reference to master Block.
+  // Not required because many blocks are created from frontend blockRegistry.
+  blockId?: Types.ObjectId;
 
-    // Optional reference to master Block.
-    // Not required because many blocks are created from frontend blockRegistry.
-    blockId?: Types.ObjectId;
+  type: string;
+  version: number;
+  order: number;
+  isActive: boolean;
 
-    type: string;
-    version: number;
-    order: number;
-    isActive: boolean;
+  // Content: texts, images, links, product arrays, story arrays, etc.
+  data: PageBlockData;
 
-    // Content: texts, images, links, product arrays, story arrays, etc.
-    data: PageBlockData;
+  // Behavior/settings: direction, autoplay, loop, controls, etc.
+  settings: PageBlockSettings;
 
-    // Behavior/settings: direction, autoplay, loop, controls, etc.
-    settings: PageBlockSettings;
+  // Editable visual elements:
+  // container, title, description, button, image, icon, etc.
+  elements: Record<string, PageBlockElement>;
 
-    // Editable visual elements:
-    // container, title, description, button, image, icon, etc.
-    elements: Record<string, PageBlockElement>;
-
-    // Optional future override layer.
-    // Keep it for page/template skin overrides if needed later.
-    styleOverride?: PageStyleOverride;
+  // Optional future override layer.
+  // Keep it for page/template skin overrides if needed later.
+  styleOverride?: PageStyleOverride;
 }
 
 /* ================================================================== */
@@ -226,59 +233,59 @@ export interface PageBlock {
 /* ================================================================== */
 
 export interface IPage extends Document {
-    title: string;
+  title: string;
+  description?: string;
+
+  // Unique public slug/url.
+  url: string;
+
+  owner: Types.ObjectId;
+  assignedUser?: Types.ObjectId | null;
+
+  // Optional template reference.
+  template?: Types.ObjectId;
+
+  // Full embedded editable blocks.
+  blocks: PageBlock[];
+
+  // Page-level style overrides.
+  styleOverride?: PageStyleOverride;
+
+  background: PageBackground;
+
+  // Media
+  logo?: string;
+  logoShape: "square" | "circle";
+  logoHeader: LogoHeaderSettings;
+  favicon?: string;
+  thumbnail?: string;
+
+  // SEO
+  seo: {
+    title?: string;
     description?: string;
+    keywords?: string[];
+    canonical?: string;
+    ogImage?: string;
+  };
 
-    // Unique public slug/url.
-    url: string;
+  // Feature flags / integrations / misc settings
+  extraServices?: Record<string, unknown>;
+  subscription?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
 
-    owner: Types.ObjectId;
-    assignedUser?: Types.ObjectId | null;
+  stats: {
+    views: number;
+    visitors: number;
+  };
 
-    // Optional template reference.
-    template?: Types.ObjectId;
+  isPublished: boolean;
+  expiresAt?: Date | null;
 
-    // Full embedded editable blocks.
-    blocks: PageBlock[];
+  publishedAt?: Date;
 
-    // Page-level style overrides.
-    styleOverride?: PageStyleOverride;
-
-    background: PageBackground;
-
-    // Media
-    logo?: string;
-    logoShape: "square" | "circle";
-    logoHeader: LogoHeaderSettings;
-    favicon?: string;
-    thumbnail?: string;
-
-    // SEO
-    seo: {
-        title?: string;
-        description?: string;
-        keywords?: string[];
-        canonical?: string;
-        ogImage?: string;
-    };
-
-    // Feature flags / integrations / misc settings
-    extraServices?: Record<string, unknown>;
-    subscription?: Record<string, unknown>;
-    settings?: Record<string, unknown>;
-
-    stats: {
-        views: number;
-        visitors: number;
-    };
-
-    isPublished: boolean;
-    expiresAt?: Date | null;
-
-    publishedAt?: Date;
-
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /* ================================================================== */
@@ -286,229 +293,233 @@ export interface IPage extends Document {
 /* ================================================================== */
 
 const PageBlockSchema = new Schema<PageBlock>(
-    {
-        instanceId: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-
-        blockId: {
-            type: Schema.Types.ObjectId,
-            ref: "Block",
-            required: false,
-        },
-
-        type: {
-            type: String,
-            required: true,
-            trim: true,
-            index: true,
-        },
-
-        version: {
-            type: Number,
-            required: true,
-            default: 1,
-            min: 1,
-        },
-
-        order: {
-            type: Number,
-            required: true,
-            default: 0,
-            min: 0,
-        },
-
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
-
-        data: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        settings: {
-            type: Schema.Types.Mixed,
-            default: { direction: "rtl" },
-        },
-
-        elements: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        styleOverride: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
+  {
+    instanceId: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    {
-        _id: false,
-    }
+
+    blockId: {
+      type: Schema.Types.ObjectId,
+      ref: "Block",
+      required: false,
+    },
+
+    type: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+
+    version: {
+      type: Number,
+      required: true,
+      default: 1,
+      min: 1,
+    },
+
+    order: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    data: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    settings: {
+      type: Schema.Types.Mixed,
+      default: { direction: "rtl" },
+    },
+
+    elements: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    styleOverride: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+  },
+  {
+    _id: false,
+  },
 );
 
 const PageSchema = new Schema<IPage>(
-    {
-        title: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-
-        description: {
-            type: String,
-            trim: true,
-        },
-
-        url: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true,
-            lowercase: true,
-            index: true,
-        },
-
-        owner: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-            index: true,
-        },
-
-        assignedUser: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            default: null,
-            index: true,
-        },
-
-        template: {
-            type: Schema.Types.ObjectId,
-            ref: "Template",
-        },
-
-        blocks: {
-            type: [PageBlockSchema],
-            default: [],
-        },
-
-        styleOverride: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        background: {
-            color: {
-                type: String,
-                trim: true,
-                default: "#ffffff",
-            },
-            image: {
-                type: String,
-                trim: true,
-                default: "",
-            },
-        },
-
-        logo: {
-            type: String,
-            trim: true,
-        },
-
-        logoShape: {
-            type: String,
-            enum: ["square", "circle"],
-            default: "square",
-        },
-
-        logoHeader: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        favicon: {
-            type: String,
-            trim: true,
-        },
-
-        thumbnail: {
-            type: String,
-            trim: true,
-        },
-
-        seo: {
-            title: {
-                type: String,
-                trim: true,
-            },
-            description: {
-                type: String,
-                trim: true,
-            },
-            keywords: {
-                type: [String],
-                default: [],
-            },
-            canonical: {
-                type: String,
-                trim: true,
-            },
-            ogImage: {
-                type: String,
-                trim: true,
-            },
-        },
-
-        extraServices: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        subscription: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        settings: {
-            type: Schema.Types.Mixed,
-            default: {},
-        },
-
-        stats: {
-            views: {
-                type: Number,
-                default: 0,
-                min: 0,
-            },
-            visitors: {
-                type: Number,
-                default: 0,
-                min: 0,
-            },
-        },
-
-        isPublished: {
-            type: Boolean,
-            default: true,
-            index: true,
-        },
-
-        expiresAt: {
-            type: Date,
-            default: null,
-        },
-
-        publishedAt: {
-            type: Date,
-        },
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    {
-        timestamps: true,
-    }
+
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    url: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    assignedUser: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+
+    template: {
+      type: Schema.Types.ObjectId,
+      ref: "Template",
+    },
+
+    blocks: {
+      type: [PageBlockSchema],
+      default: [],
+    },
+
+    styleOverride: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    background: {
+      color: {
+        type: String,
+        trim: true,
+        default: "#ffffff",
+      },
+      image: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      pattern: {
+        type: Schema.Types.Mixed,
+        default: {},
+      },
+    },
+
+    logo: {
+      type: String,
+      trim: true,
+    },
+
+    logoShape: {
+      type: String,
+      enum: ["square", "circle"],
+      default: "square",
+    },
+
+    logoHeader: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    favicon: {
+      type: String,
+      trim: true,
+    },
+
+    thumbnail: {
+      type: String,
+      trim: true,
+    },
+
+    seo: {
+      title: {
+        type: String,
+        trim: true,
+      },
+      description: {
+        type: String,
+        trim: true,
+      },
+      keywords: {
+        type: [String],
+        default: [],
+      },
+      canonical: {
+        type: String,
+        trim: true,
+      },
+      ogImage: {
+        type: String,
+        trim: true,
+      },
+    },
+
+    extraServices: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    subscription: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    settings: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    stats: {
+      views: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      visitors: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+    },
+
+    isPublished: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
+
+    publishedAt: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+  },
 );
 
 PageSchema.index({ isPublished: 1, expiresAt: 1 });
@@ -521,13 +532,11 @@ PageSchema.index({ owner: 1, "stats.visitors": -1, _id: -1 });
 PageSchema.index({ assignedUser: 1, updatedAt: -1 });
 PageSchema.index({ assignedUser: 1, isPublished: 1, updatedAt: -1 });
 
-
-
 /* ================================================================== */
 /*  Model                                                              */
 /* ================================================================== */
 
 const Page: Model<IPage> =
-    mongoose.models.Page || mongoose.model<IPage>("Page", PageSchema);
+  mongoose.models.Page || mongoose.model<IPage>("Page", PageSchema);
 
 export default Page;

@@ -1,7 +1,14 @@
 // SimplePageBuilder.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -23,6 +30,7 @@ import { pointerWithin } from "@dnd-kit/core";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { DynamicIslandPanel } from "@/builder/editor/DynamicIslandPanel";
 import PhonePreviewModal from "./PhoneLivePreview";
+import { PageThemeStudio } from "./PageThemeStudio";
 
 import type {
   AnimationType,
@@ -30,6 +38,7 @@ import type {
   EditableStyleMap,
   PageBlock,
   ResponsiveValue,
+  ShadowStyleValue,
 } from "@/types/blocks/builder.types";
 
 /* ── Local modules ── */
@@ -76,6 +85,25 @@ import {
   type LogoHeaderSettings,
 } from "@/lib/design/logo-header";
 import {
+  normalizePageBackgroundPattern,
+  type PageBackgroundPattern,
+} from "@/lib/design/page-background";
+import {
+  normalizeBlockSpacingValue,
+  type BlockSpacingKey,
+} from "@/lib/design/block-spacing";
+import {
+  getPageSlugValidationError,
+  sanitizePageSlug,
+} from "@/lib/validation/pageSlug";
+import {
+  applyPageTheme,
+  applyPageThemeProgressively,
+  type AppliedPageTheme,
+  type PageThemeDefinition,
+} from "@/lib/builder/pageThemes";
+import { autoPolishBlocks } from "@/lib/builder/autoPolish";
+import {
   deleteFile,
   extractKeyFromUrl,
   FILE_UPLOADED_EVENT,
@@ -104,6 +132,7 @@ type SimplePageBuilderProps = {
   initialBackground?: {
     color?: string;
     image?: string;
+    pattern?: Partial<PageBackgroundPattern>;
   };
   suppressSmartSuggestions?: boolean;
 };
@@ -201,6 +230,24 @@ function buildClientPageTargetUrl(pageUrl: unknown) {
   return `${origin}/${url.replace(/^\/+/, "")}`;
 }
 
+function escapeBlockSelectorValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function centerCanvasBlock(instanceId: string) {
+  requestAnimationFrame(() => {
+    const block = document.querySelector<HTMLElement>(
+      `[data-block-id="${escapeBlockSelectorValue(instanceId)}"]`,
+    );
+
+    block?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+  });
+}
+
 class PageSaveRequestError extends Error {
   status: number;
 
@@ -209,6 +256,14 @@ class PageSaveRequestError extends Error {
     this.name = "PageSaveRequestError";
     this.status = status;
   }
+}
+
+function isPageSlugRequestError(error: unknown, message: string) {
+  return (
+    error instanceof PageSaveRequestError &&
+    (error.status === 409 ||
+      (error.status === 400 && message.includes("آدرس صفحه")))
+  );
 }
 
 function cloneJson<T>(value: T): T {
@@ -229,6 +284,7 @@ type BuilderSaveSnapshotInput = {
   logoHeader: LogoHeaderSettings;
   backgroundColor: string;
   backgroundImage: string;
+  backgroundPattern: PageBackgroundPattern;
   blocks: PageBlock[];
 };
 
@@ -245,6 +301,7 @@ function serializeBuilderSaveState({
   logoHeader,
   backgroundColor,
   backgroundImage,
+  backgroundPattern,
   blocks,
 }: BuilderSaveSnapshotInput) {
   return JSON.stringify({
@@ -258,7 +315,11 @@ function serializeBuilderSaveState({
     logoShape: saveMode === "page" ? logoShape : "square",
     favicon: saveMode === "page" ? favicon : "",
     logoHeader,
-    background: { color: backgroundColor, image: backgroundImage },
+    background: {
+      color: backgroundColor,
+      image: backgroundImage,
+      pattern: backgroundPattern,
+    },
     blocks,
   });
 }
@@ -287,6 +348,92 @@ function collectStorageUrls(snapshot: string) {
   }
 
   return urls;
+}
+
+type BuilderThemeDraft = {
+  theme: PageThemeDefinition;
+};
+
+function buildThemeDraftStorageKey({
+  saveMode,
+  pageId,
+  templateId,
+  sourceTemplateId,
+}: {
+  saveMode: "page" | "template";
+  pageId: string | null;
+  templateId: string | null;
+  sourceTemplateId?: string;
+}) {
+  const documentId =
+    saveMode === "template"
+      ? (templateId ?? "new-template")
+      : (pageId ?? sourceTemplateId ?? "new-page");
+  return `radlink_builder_theme_draft:${saveMode}:${documentId}`;
+}
+
+function saveThemeDraft(storageKey: string, theme: PageThemeDefinition) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ theme }));
+  } catch {
+    /* local storage may be unavailable */
+  }
+}
+
+function loadThemeDraft(storageKey: string): BuilderThemeDraft | null {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.theme ? (parsed as BuilderThemeDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearThemeDraft(storageKey: string) {
+  try {
+    localStorage.removeItem(storageKey);
+  } catch {
+    /* local storage may be unavailable */
+  }
+}
+
+type ThemeApplyingState = {
+  runId: number;
+  themeName: string;
+  progress: number;
+  label: string;
+  startedAt: number;
+  elapsedMs: number;
+};
+
+function getThemeApplyTime() {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function clampThemeProgress(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function waitForBuilderTurn() {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 0);
+  });
+}
+
+function waitForBuilderPaint() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+function formatThemeApplyElapsed(ms: number) {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)} ثانیه`;
+  return `${Math.max(1, Math.round(ms))} میلی‌ثانیه`;
 }
 
 type LeaveBuilderConfirmModalProps = {
@@ -385,6 +532,77 @@ function LeaveBuilderConfirmModal({
     </div>
   );
 }
+
+function ThemeApplyingOverlay({ state }: { state: ThemeApplyingState | null }) {
+  if (!state) return null;
+
+  const progress = clampThemeProgress(state.progress);
+  const progressDegrees = progress * 3.6;
+
+  return (
+    <div
+      dir="rtl"
+      role="status"
+      aria-live="polite"
+      className="fixed inset-0 z-[560] flex items-center justify-center bg-white/60 px-4 backdrop-blur-md"
+    >
+      <div className="w-full max-w-sm overflow-hidden rounded-[28px] border border-white/75 bg-white/95 text-center shadow-[0_30px_95px_-26px_rgba(15,23,42,0.5)]">
+        <div className="bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.16),transparent_34%)] p-5">
+          <div className="mx-auto flex h-[88px] w-[88px] items-center justify-center rounded-full bg-white/70 p-1 shadow-inner shadow-white">
+            <div
+              className="flex h-full w-full items-center justify-center rounded-full p-1"
+              style={{
+                background: `conic-gradient(#10b981 ${progressDegrees}deg, rgba(148, 163, 184, 0.24) 0deg)`,
+              }}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+            >
+              <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-white text-neutral-950">
+                <span className="font-mono text-[24px] font-black leading-none">
+                  {progress}%
+                </span>
+                <HiOutlineArrowPath
+                  size={16}
+                  className="mt-1 animate-spin text-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <h2 className="mt-4 px-5 text-[15px] font-black text-neutral-950">
+          در حال اعمال تم
+        </h2>
+        <p className="mt-1 px-5 text-[12px] font-bold text-neutral-500">
+          {state.themeName}
+        </p>
+        <div className="px-5 pb-5 pt-4">
+          <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-500">
+            <span className="truncate">{state.label}</span>
+            <span dir="ltr" className="shrink-0 font-mono">
+              {formatThemeApplyElapsed(state.elapsedMs)}
+            </span>
+          </div>
+
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-200/80">
+            <div
+              className="relative h-full rounded-full bg-gradient-to-l from-emerald-400 via-sky-400 to-neutral-900 transition-[width] duration-150 ease-out"
+              style={{ width: `${progress}%` }}
+            >
+              <div className="absolute inset-y-0 left-0 w-1/2 animate-pulse bg-white/35 blur-sm" />
+            </div>
+          </div>
+
+          <p className="mt-3 text-[11px] font-semibold text-neutral-400">
+            صفحه بعد از پایان رندر، خودکار آماده می‌شود.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function createInstanceId(type: string) {
   if (
     typeof crypto !== "undefined" &&
@@ -429,6 +647,86 @@ function createBlockFromMaster(
         : masterBlock.elements) ?? {},
     ),
   };
+}
+
+function mergeAllowedKeys(
+  current: ReadonlyArray<EditableStyleKey> | undefined,
+  schemaKeys: ReadonlyArray<EditableStyleKey> | undefined,
+) {
+  const next = Array.isArray(current) ? [...current] : [];
+  for (const key of schemaKeys ?? []) {
+    if (!next.includes(key)) next.push(key);
+  }
+  return next;
+}
+
+function syncBlockStyleKeysWithRegistry(block: PageBlock): PageBlock {
+  const config = blockRegistry[block.type as keyof typeof blockRegistry];
+  const schemaElements = config?.schema?.elements;
+  if (!schemaElements) return block;
+
+  let changed = false;
+  const nextElements: PageBlock["elements"] = {};
+
+  for (const [elementId, element] of Object.entries(block.elements ?? {})) {
+    const schemaElement =
+      schemaElements[elementId as keyof typeof schemaElements];
+    const allowedStyleKeys = mergeAllowedKeys(
+      element.allowedStyleKeys,
+      schemaElement?.allowedStyleKeys,
+    );
+
+    if (allowedStyleKeys.length === element.allowedStyleKeys?.length) {
+      nextElements[elementId] = element;
+      continue;
+    }
+
+    changed = true;
+    nextElements[elementId] = {
+      ...element,
+      allowedStyleKeys,
+    };
+  }
+
+  return changed ? { ...block, elements: nextElements } : block;
+}
+
+async function syncBlockStyleKeysWithRegistryProgressively(
+  blocks: PageBlock[],
+  onProgress?: (progress: {
+    completedBlocks: number;
+    totalBlocks: number;
+    progress: number;
+  }) => void,
+) {
+  const totalBlocks = blocks.length;
+  if (totalBlocks === 0) {
+    onProgress?.({ completedBlocks: 0, totalBlocks: 0, progress: 100 });
+    return blocks;
+  }
+
+  const nextBlocks = new Array<PageBlock>(totalBlocks);
+  const batchSize = 8;
+
+  for (let start = 0; start < totalBlocks; start += batchSize) {
+    const end = Math.min(start + batchSize, totalBlocks);
+
+    for (let index = start; index < end; index += 1) {
+      nextBlocks[index] = syncBlockStyleKeysWithRegistry(blocks[index]);
+    }
+
+    onProgress?.({
+      completedBlocks: end,
+      totalBlocks,
+      progress: clampThemeProgress((end / totalBlocks) * 100),
+    });
+
+    if (end < totalBlocks) {
+      await waitForBuilderTurn();
+    }
+  }
+
+  return nextBlocks;
 }
 
 /* ================================================================== */
@@ -482,7 +780,9 @@ export default function SimplePageBuilder({
     initialTemplateId || null,
   );
   const [pageTitle, setPageTitle] = useState(initialTitle || "صفحه جدید");
-  const [pageUrl, setPageUrl] = useState(initialUrl || "new-page");
+  const [pageUrl, setPageUrl] = useState(
+    () => sanitizePageSlug(initialUrl || "new-page") || "new-page",
+  );
   const [pageDescription, setPageDescription] = useState(
     initialDescription || "",
   );
@@ -506,6 +806,9 @@ export default function SimplePageBuilder({
   const [pageBackgroundImage, setPageBackgroundImage] = useState(
     initialBackground?.image || "",
   );
+  const [pageBackgroundPattern, setPageBackgroundPattern] = useState(() =>
+    normalizePageBackgroundPattern(initialBackground?.pattern),
+  );
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [leaveAfterMetaSave, setLeaveAfterMetaSave] = useState(false);
 
@@ -523,6 +826,7 @@ export default function SimplePageBuilder({
       logoHeader,
       backgroundColor: pageBackgroundColor,
       backgroundImage: pageBackgroundImage,
+      backgroundPattern: pageBackgroundPattern,
       blocks,
     }),
   );
@@ -556,9 +860,15 @@ export default function SimplePageBuilder({
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [pageMetaOpen, setPageMetaOpen] = useState(false);
   const [logoHeaderEditorOpen, setLogoHeaderEditorOpen] = useState(false);
+  const [themeStudioOpen, setThemeStudioOpen] = useState(false);
+  const [themeApplying, setThemeApplying] = useState<ThemeApplyingState | null>(
+    null,
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const themeDraftHydrated = useRef(false);
+  const themeApplyRunId = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingBuilderUploads = useRef(
     new Map<string, FileUploadedEventDetail>(),
@@ -585,6 +895,13 @@ export default function SimplePageBuilder({
       window.removeEventListener(FILE_UPLOADED_EVENT, trackBuilderUpload);
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      themeApplyRunId.current += 1;
+    };
+  }, []);
+
   const blockLimit =
     saveMode === "template" || isSuperAdmin || !authUser?.limits?.blocks
       ? 0
@@ -592,10 +909,7 @@ export default function SimplePageBuilder({
   const canAddBlockCount = useCallback(
     (count = 1) => {
       if (blockLimit === 0 || blocks.length + count <= blockLimit) return true;
-      toast.show(
-        `سقف مجاز بلاک‌های این صفحه ${blockLimit} عدد است.`,
-        "error",
-      );
+      toast.show(`سقف مجاز بلاک‌های این صفحه ${blockLimit} عدد است.`, "error");
       return false;
     },
     [blockLimit, blocks.length, toast],
@@ -675,10 +989,175 @@ export default function SimplePageBuilder({
     const protectedBlock = blocks.find(
       (block) => !canUseBlockAction(block.type, "update"),
     );
-    return protectedBlock
-      ? requireBlockAction(protectedBlock, "update")
-      : true;
+    return protectedBlock ? requireBlockAction(protectedBlock, "update") : true;
   }, [blocks, canUseBlockAction, requireBlockAction]);
+  const themeDraftStorageKey = useMemo(
+    () =>
+      buildThemeDraftStorageKey({
+        saveMode,
+        pageId,
+        templateId,
+        sourceTemplateId,
+      }),
+    [pageId, saveMode, sourceTemplateId, templateId],
+  );
+  const applyResolvedPageTheme = useCallback(
+    (
+      applied: AppliedPageTheme,
+      options?: {
+        transition?: boolean;
+      },
+    ) => {
+      const updateThemeState = () => {
+        setBlocks(applied.blocks);
+        setPageBackgroundColor(applied.backgroundColor);
+        setPageBackgroundPattern(applied.backgroundPattern);
+        setLogoHeader(applied.logoHeader);
+      };
+
+      if (options?.transition) {
+        startTransition(updateThemeState);
+      } else {
+        updateThemeState();
+      }
+    },
+    [setBlocks],
+  );
+  const commitPageTheme = useCallback(
+    (
+      theme: PageThemeDefinition,
+      options?: {
+        persistDraft?: boolean;
+        silent?: boolean;
+        transition?: boolean;
+      },
+    ) => {
+      const themeReadyBlocks = blocks.map(syncBlockStyleKeysWithRegistry);
+      const applied = applyPageTheme({
+        blocks: themeReadyBlocks,
+        currentLogoHeader: logoHeader,
+        theme,
+      });
+      applyResolvedPageTheme(applied, { transition: options?.transition });
+
+      if (options?.persistDraft !== false) {
+        saveThemeDraft(themeDraftStorageKey, theme);
+      }
+
+      if (!options?.silent) {
+        toast.show("تم روی صفحه اعمال شد", "success");
+      }
+    },
+    [applyResolvedPageTheme, blocks, logoHeader, themeDraftStorageKey, toast],
+  );
+  const handleApplyPageTheme = useCallback(
+    (
+      theme: PageThemeDefinition,
+      options?: { persistDraft?: boolean; silent?: boolean },
+    ) => {
+      if (!requireCanvasUpdateAccess()) return false;
+      commitPageTheme(theme, options);
+      return true;
+    },
+    [commitPageTheme, requireCanvasUpdateAccess],
+  );
+  const handleApplyPageThemeWithFeedback = useCallback(
+    async (theme: PageThemeDefinition) => {
+      if (!requireCanvasUpdateAccess()) return;
+
+      const runId = themeApplyRunId.current + 1;
+      const startedAt = getThemeApplyTime();
+      themeApplyRunId.current = runId;
+
+      const isStaleRun = () => themeApplyRunId.current !== runId;
+      const updateProgress = (progress: number, label: string) => {
+        if (isStaleRun()) return;
+
+        setThemeApplying((current) => {
+          if (!current || current.runId !== runId) return current;
+
+          return {
+            ...current,
+            progress: clampThemeProgress(progress),
+            label,
+            elapsedMs: getThemeApplyTime() - startedAt,
+          };
+        });
+      };
+
+      setThemeStudioOpen(false);
+      setThemeApplying({
+        runId,
+        themeName: theme.name,
+        progress: 1,
+        label: "شروع اعمال تم",
+        startedAt,
+        elapsedMs: 0,
+      });
+
+      await waitForBuilderPaint();
+      if (isStaleRun()) return;
+
+      try {
+        updateProgress(6, "آماده‌سازی بلاک‌ها");
+
+        const themeReadyBlocks =
+          await syncBlockStyleKeysWithRegistryProgressively(
+            blocks,
+            ({ completedBlocks, totalBlocks, progress }) => {
+              updateProgress(
+                6 + progress * 0.1,
+                totalBlocks > 0
+                  ? `آماده‌سازی بلاک‌ها ${completedBlocks}/${totalBlocks}`
+                  : "آماده‌سازی بلاک‌ها",
+              );
+            },
+          );
+
+        if (isStaleRun()) return;
+
+        const applied = await applyPageThemeProgressively({
+          blocks: themeReadyBlocks,
+          currentLogoHeader: logoHeader,
+          theme,
+          onProgress: ({ progress, label }) => {
+            updateProgress(16 + progress * 0.68, label);
+          },
+        });
+
+        if (isStaleRun()) return;
+
+        updateProgress(88, "ثبت تغییرات روی صفحه");
+        applyResolvedPageTheme(applied);
+        saveThemeDraft(themeDraftStorageKey, theme);
+
+        updateProgress(96, "رندر پیش‌نمایش صفحه");
+        await waitForBuilderPaint();
+        if (isStaleRun()) return;
+
+        updateProgress(100, "تم با موفقیت اعمال شد");
+        await waitForBuilderTurn();
+        if (isStaleRun()) return;
+
+        setThemeApplying(null);
+        toast.show("تم روی صفحه اعمال شد", "success");
+      } catch (error) {
+        if (isStaleRun()) return;
+
+        console.error("Failed to apply page theme", error);
+        setThemeApplying(null);
+        toast.show("اعمال تم با خطا مواجه شد", "error");
+      }
+    },
+    [
+      applyResolvedPageTheme,
+      blocks,
+      logoHeader,
+      requireCanvasUpdateAccess,
+      themeDraftStorageKey,
+      toast,
+    ],
+  );
   const catalogBlocks = useMemo(
     () =>
       Object.values(masterBlocks)
@@ -728,6 +1207,7 @@ export default function SimplePageBuilder({
         logoHeader,
         backgroundColor: pageBackgroundColor,
         backgroundImage: pageBackgroundImage,
+        backgroundPattern: pageBackgroundPattern,
         blocks,
       }),
     [
@@ -743,6 +1223,7 @@ export default function SimplePageBuilder({
       logoHeader,
       pageBackgroundColor,
       pageBackgroundImage,
+      pageBackgroundPattern,
       blocks,
     ],
   );
@@ -1050,6 +1531,23 @@ export default function SimplePageBuilder({
     setStorageHydrated(true);
   }, [externalBlocks]);
 
+  useEffect(() => {
+    if (!storageHydrated || themeDraftHydrated.current) return;
+    themeDraftHydrated.current = true;
+
+    const draft = loadThemeDraft(themeDraftStorageKey);
+    if (!draft?.theme) return;
+
+    const timer = window.setTimeout(() => {
+      handleApplyPageTheme(draft.theme, {
+        persistDraft: false,
+        silent: true,
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [handleApplyPageTheme, storageHydrated, themeDraftStorageKey]);
+
   /* ── Sensors ── */
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -1241,9 +1739,16 @@ export default function SimplePageBuilder({
   );
   /* ── Selection ── */
   const handleSelectElement = useCallback(
-    (instanceId: string, elementId: string) => {
+    (
+      instanceId: string,
+      elementId: string,
+      options?: { centerBlock?: boolean },
+    ) => {
       setSelectedBlockId(instanceId);
       setSelectedElementId(elementId);
+      if (options?.centerBlock !== false) {
+        centerCanvasBlock(instanceId);
+      }
     },
     [],
   );
@@ -1251,10 +1756,7 @@ export default function SimplePageBuilder({
   const handleSelectBlock = useCallback((id: string) => {
     setSelectedBlockId(id);
     setSelectedElementId("container");
-    requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-block-id="${id}"]`);
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    centerCanvasBlock(id);
   }, []);
 
   /* ── Content & Style ── */
@@ -1293,7 +1795,7 @@ export default function SimplePageBuilder({
     (
       elementId: string,
       styleKey: EditableStyleKey,
-      value: string | number | AnimationType,
+      value: string | number | AnimationType | ShadowStyleValue,
     ) => {
       if (!selectedBlockId) return;
       const selected = blocks.find((b) => b.instanceId === selectedBlockId);
@@ -1311,10 +1813,20 @@ export default function SimplePageBuilder({
               ...currentStyle,
               animation: normalizedValue as AnimationType,
             };
+          } else if (styleKey === "shadow") {
+            const currentResponsiveValue = currentStyle.shadow as
+              ResponsiveValue<ShadowStyleValue> | undefined;
+            nextStyle = {
+              ...currentStyle,
+              shadow: updateResponsiveValue(
+                currentResponsiveValue,
+                "mobile",
+                normalizedValue as ShadowStyleValue,
+              ),
+            };
           } else {
             const currentResponsiveValue = currentStyle[styleKey] as
-              | ResponsiveValue<string | number>
-              | undefined;
+              ResponsiveValue<string | number> | undefined;
             nextStyle = {
               ...currentStyle,
               [styleKey]: updateResponsiveValue(
@@ -1335,6 +1847,48 @@ export default function SimplePageBuilder({
       );
     },
     [selectedBlockId, blocks, requireBlockAction, setBlocks],
+  );
+
+  const updateBlockContainerSpacing = useCallback(
+    (instanceId: string, styleKey: BlockSpacingKey, value: number) => {
+      const selected = blocks.find((b) => b.instanceId === instanceId);
+      if (!selected || !requireBlockAction(selected, "update")) return;
+
+      setBlocks(
+        blocks.map((block) => {
+          if (block.instanceId !== instanceId) return block;
+
+          const element = block.elements.container;
+          if (!element) return block;
+
+          const nextAllowedStyleKeys = element.allowedStyleKeys.includes(
+            styleKey,
+          )
+            ? element.allowedStyleKeys
+            : [...element.allowedStyleKeys, styleKey];
+
+          return {
+            ...block,
+            elements: {
+              ...block.elements,
+              container: {
+                ...element,
+                allowedStyleKeys: nextAllowedStyleKeys,
+                style: {
+                  ...element.style,
+                  [styleKey]: updateResponsiveValue(
+                    element.style[styleKey],
+                    "mobile",
+                    normalizeBlockSpacingValue(value),
+                  ),
+                },
+              },
+            },
+          };
+        }),
+      );
+    },
+    [blocks, requireBlockAction, setBlocks],
   );
 
   const toggleBlockVisibility = useCallback(
@@ -1374,6 +1928,43 @@ export default function SimplePageBuilder({
     setClearConfirmOpen(false);
     toast.show("همه بلاک‌ها حذف شدند", "success");
   }, [blocks, canUseBlockAction, requireBlockAction, setBlocks, toast]);
+
+  // const handleAutoPolish = useCallback(() => {
+  //   if (blocks.length === 0) {
+  //     toast.show("برای صیقل خودکار، اول چند بلاک به صفحه اضافه کنید.", "info");
+  //     return;
+  //   }
+
+  //   if (!requireCanvasUpdateAccess()) return;
+
+  //   const styleReadyBlocks = blocks.map(syncBlockStyleKeysWithRegistry);
+  //   const { blocks: polishedBlocks, changedBlockCount } =
+  //     autoPolishBlocks(styleReadyBlocks);
+
+  //   if (changedBlockCount === 0) {
+  //     toast.show("صفحه از قبل مرتب است.", "info");
+  //     return;
+  //   }
+
+  //   startTransition(() => {
+  //     setBlocks(polishedBlocks);
+  //     if (!selectedBlockId && polishedBlocks[0]) {
+  //       setSelectedBlockId(polishedBlocks[0].instanceId);
+  //       setSelectedElementId("container");
+  //     }
+  //   });
+
+  //   toast.show(
+  //     `ظاهر ${changedBlockCount} بلاک صیقل داده شد.`,
+  //     "success",
+  //   );
+  // }, [
+  //   blocks,
+  //   requireCanvasUpdateAccess,
+  //   selectedBlockId,
+  //   setBlocks,
+  //   toast,
+  // ]);
 
   /* ════════════════════════════════════════════ */
   /*  Server Save                                 */
@@ -1434,7 +2025,7 @@ export default function SimplePageBuilder({
         },
         body: JSON.stringify({
           title: pageTitle,
-          url: pageUrl,
+          url: sanitizePageSlug(pageUrl),
           description: pageDescription,
           templateId: sourceTemplateId,
           blocks,
@@ -1447,6 +2038,7 @@ export default function SimplePageBuilder({
           background: {
             color: pageBackgroundColor,
             image: pageBackgroundImage,
+            pattern: pageBackgroundPattern,
           },
           logo: pageLogo,
           logoShape: pageLogoShape,
@@ -1485,7 +2077,7 @@ export default function SimplePageBuilder({
       return createdPage;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ساخت صفحه";
-      if (error instanceof PageSaveRequestError && error.status === 409) {
+      if (isPageSlugRequestError(error, msg)) {
         setServerSaveError(null);
         setSlugSaveError(msg);
         setPageSaveResult(null);
@@ -1506,6 +2098,7 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    pageBackgroundPattern,
     pageLogo,
     pageLogoShape,
     logoHeader,
@@ -1529,7 +2122,7 @@ export default function SimplePageBuilder({
         },
         body: JSON.stringify({
           title: pageTitle,
-          url: pageUrl,
+          url: sanitizePageSlug(pageUrl),
           description: pageDescription,
           templateId: sourceTemplateId,
           blocks,
@@ -1542,6 +2135,7 @@ export default function SimplePageBuilder({
           background: {
             color: pageBackgroundColor,
             image: pageBackgroundImage,
+            pattern: pageBackgroundPattern,
           },
           logo: pageLogo,
           logoShape: pageLogoShape,
@@ -1565,7 +2159,7 @@ export default function SimplePageBuilder({
       return json.page;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ذخیره صفحه";
-      if (error instanceof PageSaveRequestError && error.status === 409) {
+      if (isPageSlugRequestError(error, msg)) {
         setServerSaveError(null);
         setSlugSaveError(msg);
         setPageSaveResult(null);
@@ -1587,6 +2181,7 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    pageBackgroundPattern,
     pageLogo,
     pageLogoShape,
     logoHeader,
@@ -1615,6 +2210,7 @@ export default function SimplePageBuilder({
           background: {
             color: pageBackgroundColor,
             image: pageBackgroundImage,
+            pattern: pageBackgroundPattern,
           },
           logoHeader,
         }),
@@ -1640,6 +2236,7 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    pageBackgroundPattern,
     logoHeader,
     toast,
   ]);
@@ -1666,6 +2263,7 @@ export default function SimplePageBuilder({
           background: {
             color: pageBackgroundColor,
             image: pageBackgroundImage,
+            pattern: pageBackgroundPattern,
           },
           logoHeader,
         }),
@@ -1675,8 +2273,7 @@ export default function SimplePageBuilder({
       toast.show("قالب ذخیره شد", "success");
       return json.template;
     } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : "خطا در ذخیره قالب";
+      const msg = error instanceof Error ? error.message : "خطا در ذخیره قالب";
       setServerSaveError(msg);
       toast.show(msg, "error");
       return null;
@@ -1693,6 +2290,7 @@ export default function SimplePageBuilder({
     blocks,
     pageBackgroundColor,
     pageBackgroundImage,
+    pageBackgroundPattern,
     logoHeader,
     toast,
   ]);
@@ -1715,23 +2313,8 @@ export default function SimplePageBuilder({
     }
 
     if (saveMode === "page") {
-      const normalizedUrl = pageUrl.trim().replace(/^\/+/, "");
-
-      if (!normalizedUrl) {
-        return "لطفاً آدرس صفحه را وارد کنید.";
-      }
-
-      if (normalizedUrl.length < 4) {
-        return "آدرس صفحه باید حداقل ۴ کاراکتر باشد.";
-      }
-
-      if (/\s/.test(normalizedUrl)) {
-        return "آدرس صفحه نباید دارای فاصله باشد. به‌جای فاصله از خط تیره استفاده کنید.";
-      }
-
-      if (/[?#]/.test(normalizedUrl)) {
-        return "آدرس صفحه نباید شامل علامت سؤال یا # باشد.";
-      }
+      const slugError = getPageSlugValidationError(pageUrl);
+      if (slugError) return slugError;
     }
 
     return null;
@@ -1794,7 +2377,7 @@ export default function SimplePageBuilder({
     if (validationError) {
       if (
         saveMode === "page" &&
-        pageUrl.trim().replace(/^\/+/, "").length < 4
+        getPageSlugValidationError(pageUrl) === validationError
       ) {
         setSlugSaveError(validationError);
       } else {
@@ -1817,11 +2400,9 @@ export default function SimplePageBuilder({
       return false;
     }
 
-    await reconcileBuilderFiles(
-      lastServerSavedSnapshot,
-      snapshotBeingSaved,
-    );
+    await reconcileBuilderFiles(lastServerSavedSnapshot, snapshotBeingSaved);
     setLastServerSavedSnapshot(snapshotBeingSaved);
+    clearThemeDraft(themeDraftStorageKey);
     setJustSaved(true);
 
     return true;
@@ -1831,6 +2412,7 @@ export default function SimplePageBuilder({
     reconcileBuilderFiles,
     saveMode,
     pageUrl,
+    themeDraftStorageKey,
     toast,
     updatePageOnServer,
     updateTemplateOnServer,
@@ -1867,7 +2449,7 @@ export default function SimplePageBuilder({
       setServerSaveError(null);
       if (
         saveMode === "page" &&
-        pageUrl.trim().replace(/^\/+/, "").length < 4
+        getPageSlugValidationError(pageUrl) === validationError
       ) {
         setSlugSaveError(validationError);
       } else {
@@ -1925,8 +2507,9 @@ export default function SimplePageBuilder({
   const applyTemplate = useCallback(
     (blockTypes: string[]) => {
       const newBlocks: PageBlock[] = [];
-      const allowedTypes = blockTypes.filter((type) =>
-        allowedBlockTypes.has(type) && canUseBlockAction(type, "create"),
+      const allowedTypes = blockTypes.filter(
+        (type) =>
+          allowedBlockTypes.has(type) && canUseBlockAction(type, "create"),
       );
 
       const protectedBlock = blocks.find(
@@ -2149,6 +2732,8 @@ export default function SimplePageBuilder({
             toast.show("بعدی", "info");
           }}
           onPreview={() => setIsPhonePreviewOpen(true)}
+          // onAutoPolish={handleAutoPolish}
+          onOpenThemeStudio={() => setThemeStudioOpen(true)}
           onOpenMeta={() => {
             setLeaveAfterMetaSave(false);
             setServerSaveError(null);
@@ -2202,6 +2787,7 @@ export default function SimplePageBuilder({
               background={{
                 color: pageBackgroundColor,
                 image: pageBackgroundImage,
+                pattern: pageBackgroundPattern,
               }}
               logo={saveMode === "page" ? pageLogo : ""}
               logoShape={pageLogoShape}
@@ -2218,6 +2804,7 @@ export default function SimplePageBuilder({
               isOverCanvas={isOverCanvas}
               onSelectElement={handleSelectElement}
               onUpdateContent={handleInlineUpdateContent}
+              onUpdateBlockSpacing={updateBlockContainerSpacing}
               onMoveBlock={moveBlock}
               onDuplicateBlock={(id) => duplicateBlockById(id)}
               onDeleteBlock={(id) => removeBlockById(id)}
@@ -2303,10 +2890,11 @@ export default function SimplePageBuilder({
         favicon={pageFavicon}
         backgroundColor={pageBackgroundColor}
         backgroundImage={pageBackgroundImage}
+        backgroundPattern={pageBackgroundPattern}
         onTitleChange={setPageTitle}
         onDescriptionChange={setPageDescription}
         onUrlChange={(value) => {
-          setPageUrl(value);
+          setPageUrl(sanitizePageSlug(value));
           setSlugSaveError(null);
         }}
         onCategoryIdChange={setTemplateCategoryId}
@@ -2317,6 +2905,7 @@ export default function SimplePageBuilder({
         onFaviconChange={setPageFavicon}
         onBackgroundColorChange={setPageBackgroundColor}
         onBackgroundImageChange={setPageBackgroundImage}
+        onBackgroundPatternChange={setPageBackgroundPattern}
         onClose={() => {
           setPageMetaOpen(false);
           setLeaveAfterMetaSave(false);
@@ -2338,6 +2927,18 @@ export default function SimplePageBuilder({
         onClose={() => setLogoHeaderEditorOpen(false)}
       />
 
+      <PageThemeStudio
+        open={themeStudioOpen}
+        logo={saveMode === "page" ? pageLogo : ""}
+        logoShape={pageLogoShape}
+        logoHeader={logoHeader}
+        title={pageTitle}
+        onApply={handleApplyPageThemeWithFeedback}
+        onClose={() => setThemeStudioOpen(false)}
+      />
+
+      <ThemeApplyingOverlay state={themeApplying} />
+
       <PageSaveResultModal
         result={pageSaveResult}
         onClose={() => setPageSaveResult(null)}
@@ -2356,6 +2957,7 @@ export default function SimplePageBuilder({
         background={{
           color: pageBackgroundColor,
           image: pageBackgroundImage,
+          pattern: pageBackgroundPattern,
         }}
         onClose={() => setIsPhonePreviewOpen(false)}
       />

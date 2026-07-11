@@ -10,9 +10,11 @@ import {
   HiOutlineArrowUturnLeft,
   HiOutlineQuestionMarkCircle,
   HiOutlineArrowRight,
+  HiOutlinePaintBrush,
+  HiOutlineSparkles,
 } from "react-icons/hi2";
 import { HiOutlineEye } from "react-icons/hi2";
-import { SaveIndicator, BlockCountBadge } from "./BuilderOverlays";
+import { SaveIndicator } from "./BuilderOverlays";
 
 interface BuilderHeaderProps {
   blocksCount: number;
@@ -27,7 +29,9 @@ interface BuilderHeaderProps {
   onUndo: () => void;
   onRedo: () => void;
   onPreview: () => void;
+  // onAutoPolish: () => void;
   onOpenMeta: () => void;
+  onOpenThemeStudio: () => void;
   onOpenCatalog: () => void;
   onClearAll: () => void;
   onStartTour: () => void;
@@ -46,7 +50,9 @@ export function BuilderHeader({
   onUndo,
   onRedo,
   onPreview,
+  // onAutoPolish,
   onOpenMeta,
+  onOpenThemeStudio,
   onOpenCatalog,
   onClearAll,
   onStartTour,
@@ -152,6 +158,31 @@ export function BuilderHeader({
                 پیش‌نمایش
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={onOpenThemeStudio}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+              title="تم صفحه"
+            >
+              <HiOutlinePaintBrush size={16} />
+              <span className="hidden text-[12px] font-semibold sm:inline">
+                تم
+              </span>
+            </button>
+
+            {/* <button
+              type="button"
+              onClick={onAutoPolish}
+              disabled={blocksCount === 0 || isServerSaving}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-600 transition-all hover:bg-amber-100 hover:text-amber-700 hover:shadow-sm active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:gap-2 sm:px-4"
+              title="صیقل خودکار ظاهر صفحه"
+            >
+              <HiOutlineSparkles size={16} />
+              <span className="hidden text-[12px] font-semibold sm:inline">
+                صیقل
+              </span>
+            </button> */}
 
             {/* Save / Create */}
             <button

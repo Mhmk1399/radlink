@@ -4,6 +4,81 @@ import type {
 } from "@/lib/design/logo-header";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 
+const EDGE_WAVE_VARIANTS = new Set<LogoHeaderVariant>([
+  "wave-jagged",
+  "wave-steps",
+  "wave-organic",
+  "wave-slope",
+]);
+
+function isEdgeWaveVariant(variant: LogoHeaderVariant) {
+  return EDGE_WAVE_VARIANTS.has(variant);
+}
+
+function edgeWaveForVariant(
+  variant: LogoHeaderVariant,
+  secondary: string,
+  accent: string,
+  opacity: number,
+) {
+  const fillOpacity = Math.min(1, Math.max(0.38, opacity + 0.32));
+  const softOpacity = Math.min(0.44, Math.max(0.12, opacity * 0.55));
+
+  switch (variant) {
+    case "wave-steps":
+      return (
+        <>
+          <path
+            fill={accent}
+            fillOpacity={fillOpacity}
+            d="M0,64L0,128L90,128L90,160L180,160L180,160L270,160L270,96L360,96L360,224L450,224L450,256L540,256L540,224L630,224L630,96L720,96L720,192L810,192L810,96L900,96L900,224L990,224L990,160L1080,160L1080,96L1170,96L1170,0L1260,0L1260,128L1350,128L1350,128L1440,128L1440,0L1350,0L1350,0L1260,0L1260,0L1170,0L1170,0L1080,0L1080,0L990,0L990,0L900,0L900,0L810,0L810,0L720,0L720,0L630,0L630,0L540,0L540,0L450,0L450,0L360,0L360,0L270,0L270,0L180,0L180,0L90,0L90,0L0,0L0,0Z"
+          />
+          <path
+            fill={secondary}
+            fillOpacity={softOpacity}
+            d="M0,112L0,168L120,168L120,196L240,196L240,132L360,132L360,244L480,244L480,270L600,270L600,176L720,176L720,228L840,228L840,136L960,136L960,244L1080,244L1080,176L1200,176L1200,72L1320,72L1320,158L1440,158L1440,0L0,0Z"
+          />
+        </>
+      );
+    case "wave-organic":
+      return (
+        <>
+          <path
+            fill={accent}
+            fillOpacity={fillOpacity}
+            d="M0,224L6.2,202.7C12.3,181,25,139,37,154.7C49.2,171,62,245,74,277.3C86.2,309,98,299,111,288C123.1,277,135,267,148,245.3C160,224,172,192,185,176C196.9,160,209,160,222,176C233.8,192,246,224,258,213.3C270.8,203,283,149,295,149.3C307.7,149,320,203,332,186.7C344.6,171,357,85,369,53.3C381.5,21,394,43,406,48C418.5,53,431,43,443,48C455.4,53,468,75,480,101.3C492.3,128,505,160,517,160C529.2,160,542,128,554,122.7C566.2,117,578,139,591,122.7C603.1,107,615,53,628,42.7C640,32,652,64,665,101.3C676.9,139,689,181,702,192C713.8,203,726,181,738,197.3C750.8,213,763,267,775,272C787.7,277,800,235,812,213.3C824.6,192,837,192,849,176C861.5,160,874,128,886,96C898.5,64,911,32,923,58.7C935.4,85,948,171,960,208C972.3,245,985,235,997,208C1009.2,181,1022,139,1034,128C1046.2,117,1058,139,1071,122.7C1083.1,107,1095,53,1108,74.7C1120,96,1132,192,1145,224C1156.9,256,1169,224,1182,186.7C1193.8,149,1206,107,1218,122.7C1230.8,139,1243,213,1255,213.3C1267.7,213,1280,139,1292,133.3C1304.6,128,1317,192,1329,192C1341.5,192,1354,128,1366,90.7C1378.5,53,1391,43,1403,58.7C1415.4,75,1428,117,1434,138.7L1440,160L1440,0L1433.8,0C1427.7,0,1415,0,1403,0C1390.8,0,1378,0,1366,0C1353.8,0,1342,0,1329,0C1316.9,0,1305,0,1292,0C1280,0,1268,0,1255,0C1243.1,0,1231,0,1218,0C1206.2,0,1194,0,1182,0C1169.2,0,1157,0,1145,0C1132.3,0,1120,0,1108,0C1095.4,0,1083,0,1071,0C1058.5,0,1046,0,1034,0C1021.5,0,1009,0,997,0C984.6,0,972,0,960,0C947.7,0,935,0,923,0C910.8,0,898,0,886,0C873.8,0,862,0,849,0C836.9,0,825,0,812,0C800,0,788,0,775,0C763.1,0,751,0,738,0C726.2,0,714,0,702,0C689.2,0,677,0,665,0C652.3,0,640,0,628,0C615.4,0,603,0,591,0C578.5,0,566,0,554,0C541.5,0,529,0,517,0C504.6,0,492,0,480,0C467.7,0,455,0,443,0C430.8,0,418,0,406,0C393.8,0,382,0,369,0C356.9,0,345,0,332,0C320,0,308,0,295,0C283.1,0,271,0,258,0C246.2,0,234,0,222,0C209.2,0,197,0,185,0C172.3,0,160,0,148,0C135.4,0,123,0,111,0C98.5,0,86,0,74,0C61.5,0,49,0,37,0C24.6,0,12,0,6,0L0,0Z"
+          />
+        </>
+      );
+    case "wave-slope":
+      return (
+        <>
+          <path
+            fill={accent}
+            fillOpacity={fillOpacity}
+            d="M0,320L40,320C80,320,160,320,240,320C320,320,400,320,480,293.3C560,267,640,213,720,192C800,171,880,181,960,176C1040,171,1120,149,1200,133.3C1280,117,1360,107,1400,101.3L1440,96L1440,0L1400,0C1360,0,1280,0,1200,0C1120,0,1040,0,960,0C880,0,800,0,720,0C640,0,560,0,480,0C400,0,320,0,240,0C160,0,80,0,40,0L0,0Z"
+          />
+          <path
+            fill={secondary}
+            fillOpacity={softOpacity}
+            d="M0,304L60,304C120,304,240,304,360,288C480,272,600,224,720,202C840,181,960,186,1080,160C1200,134,1320,76,1380,48L1440,20L1440,0L0,0Z"
+          />
+        </>
+      );
+    case "wave-jagged":
+    default:
+      return (
+        <>
+          <path
+            fill={accent}
+            fillOpacity={fillOpacity}
+            d="M0,96L36.9,0L73.8,192L110.8,224L147.7,256L184.6,96L221.5,192L258.5,160L295.4,256L332.3,288L369.2,224L406.2,96L443.1,288L480,224L516.9,192L553.8,192L590.8,160L627.7,160L664.6,96L701.5,96L738.5,192L775.4,96L812.3,192L849.2,64L886.2,0L923.1,160L960,256L996.9,32L1033.8,96L1070.8,96L1107.7,32L1144.6,288L1181.5,64L1218.5,192L1255.4,192L1292.3,128L1329.2,288L1366.2,288L1403.1,32L1440,224L1440,320L1403.1,320L1366.2,320L1329.2,320L1292.3,320L1255.4,320L1218.5,320L1181.5,320L1144.6,320L1107.7,320L1070.8,320L1033.8,320L996.9,320L960,320L923.1,320L886.2,320L849.2,320L812.3,320L775.4,320L738.5,320L701.5,320L664.6,320L627.7,320L590.8,320L553.8,320L516.9,320L480,320L443.1,320L406.2,320L369.2,320L332.3,320L295.4,320L258.5,320L221.5,320L184.6,320L147.7,320L110.8,320L73.8,320L36.9,320L0,320Z"
+          />
+        </>
+      );
+  }
+}
+
 function patternForVariant(
   variant: LogoHeaderVariant,
   primary: string,
@@ -27,6 +102,79 @@ function patternForVariant(
         <>
           <path d="M0 78 C144 128 248 28 388 84 C548 148 690 44 960 82 V0 H0 Z" fill={secondary} opacity={opacity} />
           <path d="M0 154 C170 108 274 196 458 150 C640 104 744 192 960 126 V240 H0 Z" fill={accent} opacity={opacity} />
+        </>
+      );
+    case "wave-aurora":
+      return (
+        <>
+          <circle
+            cx="670"
+            cy="72"
+            r="210"
+            fill={accent}
+            opacity={Math.min(0.34, opacity * 0.7)}
+            style={{ filter: "blur(18px)" }}
+          />
+          <circle
+            cx="250"
+            cy="40"
+            r="170"
+            fill={secondary}
+            opacity={Math.min(0.24, opacity * 0.56)}
+            style={{ filter: "blur(22px)" }}
+          />
+          <path
+            d="M0 168 C132 196 244 232 398 224 C558 216 642 172 746 96 C822 40 890 36 960 54 V240 H0 Z"
+            fill={primary}
+            opacity={Math.min(0.5, opacity + 0.08)}
+          />
+          <path
+            d="M0 142 C154 188 288 222 444 210 C608 198 704 126 790 62 C858 12 910 8 960 24 V240 H0 Z"
+            fill={secondary}
+            opacity={Math.min(0.72, opacity + 0.16)}
+          />
+          <path
+            d="M0 204 C166 234 342 246 512 232 C674 218 770 166 864 126 C902 110 932 104 960 108 V240 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.84, opacity + 0.22)}
+          />
+          <path
+            d="M438 86 H522"
+            stroke={soft}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="4 14"
+            opacity={Math.min(0.9, opacity + 0.28)}
+          />
+          <circle cx="558" cy="106" r="3" fill={accent} opacity={Math.min(0.95, opacity + 0.32)} />
+        </>
+      );
+    case "wave-cut":
+      return (
+        <>
+          <path
+            d="M0 0 H960 V58 C902 46 860 48 812 74 C766 100 724 94 684 64 C642 32 606 38 566 68 C528 96 480 94 438 66 C398 38 360 34 318 60 C278 84 236 82 198 58 C160 34 118 44 76 66 C42 84 18 82 0 72 Z"
+            fill={secondary}
+            opacity={Math.min(0.9, opacity + 0.2)}
+          />
+          <path
+            d="M0 122 C72 94 128 98 190 130 C260 166 338 144 412 118 C500 86 586 106 668 132 C758 160 850 156 960 116 V240 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.58, opacity + 0.1)}
+          />
+          <path
+            d="M0 184 C86 216 144 202 208 154 C294 90 398 92 506 122 C598 148 660 142 742 102 C826 62 894 62 960 88 V240 H0 Z"
+            fill={secondary}
+            opacity={Math.min(0.5, opacity + 0.04)}
+          />
+          <path
+            d="M84 224 C120 190 144 190 176 224 C206 256 252 258 284 224 C326 180 362 180 404 224 C442 264 508 260 548 224 C590 186 622 184 664 224 C704 262 766 260 806 224 C850 184 890 182 936 224"
+            fill="none"
+            stroke={soft}
+            strokeWidth="15"
+            strokeLinecap="round"
+            opacity={Math.min(0.42, opacity * 0.72)}
+          />
         </>
       );
     case "curve-arc":
@@ -425,6 +573,7 @@ export function LogoHeaderFrame({
     Math.max(48, normalized.height - 32),
   );
   const hasBackgroundImage = Boolean(normalized.backgroundImage.trim());
+  const hasEdgeWave = isEdgeWaveVariant(normalized.variant);
 
   if (!normalized.enabled || (normalized.variant === "none" && !hasBackgroundImage)) {
     if (!hasLogo && !showPlaceholder) return null;
@@ -443,9 +592,9 @@ export function LogoHeaderFrame({
   }
 
   return (
-    <div className="flex w-full justify-center px-2 pb-6 pt-3">
+    <div className="relative flex w-full justify-center px-2 pb-6 pt-3">
       <div
-        className="relative w-full overflow-hidden shadow-sm"
+        className="relative w-full shadow-sm"
         style={{
           maxWidth: normalized.maxWidth,
           height: normalized.height,
@@ -453,32 +602,56 @@ export function LogoHeaderFrame({
           background: `linear-gradient(135deg, ${normalized.primaryColor}, ${normalized.secondaryColor})`,
         }}
       >
-        {hasBackgroundImage ? (
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url(${JSON.stringify(normalized.backgroundImage)})`,
-            }}
-            aria-hidden="true"
-          />
-        ) : null}
-        {normalized.variant !== "none" ? (
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{ borderRadius: "inherit" }}
+        >
+          {hasBackgroundImage ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url(${JSON.stringify(normalized.backgroundImage)})`,
+              }}
+              aria-hidden="true"
+            />
+          ) : null}
+          {normalized.variant !== "none" && !hasEdgeWave ? (
+            <svg
+              className="absolute inset-0 h-full w-full"
+              viewBox="0 0 960 240"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              {patternForVariant(
+                normalized.variant,
+                normalized.primaryColor,
+                normalized.secondaryColor,
+                normalized.accentColor,
+                normalized.patternOpacity,
+              )}
+            </svg>
+          ) : null}
+        </div>
+        {hasEdgeWave ? (
           <svg
-            className="absolute inset-0 h-full w-full"
-            viewBox="0 0 960 240"
+            className="pointer-events-none absolute inset-x-0 -bottom-16 h-40 w-full"
+            style={{
+              filter: "drop-shadow(0 18px 26px rgba(15, 23, 42, 0.14))",
+              zIndex: 1,
+            }}
+            viewBox="0 0 1440 320"
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            {patternForVariant(
+            {edgeWaveForVariant(
               normalized.variant,
-              normalized.primaryColor,
               normalized.secondaryColor,
               normalized.accentColor,
               normalized.patternOpacity,
             )}
           </svg>
         ) : null}
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 2 }}>
           <LogoSlot
             logo={logo}
             logoShape={logoShape}

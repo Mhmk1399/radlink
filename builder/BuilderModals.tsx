@@ -33,6 +33,13 @@ import {
   normalizeLogoHeaderSettings,
   type LogoHeaderSettings,
 } from "@/lib/design/logo-header";
+import {
+  PAGE_BACKGROUND_PATTERNS,
+  createPageBackgroundPattern,
+  getPageBackgroundStyle,
+  normalizePageBackgroundPattern,
+  type PageBackgroundPattern,
+} from "@/lib/design/page-background";
 import { RgbaColorInput } from "@/builder/editor/form/RgbaColorInput";
 
 type CatalogBlock = {
@@ -48,6 +55,22 @@ type PageSaveResult = {
   message: string;
   pageUrl?: string;
 };
+
+const TWO_COLOR_BACKGROUND_PATTERNS = new Set<PageBackgroundPattern["id"]>([
+  "duotone-blur",
+  "halftone-gradient",
+  "gradient-dots",
+  "orbital-circles",
+  "blurred-dots",
+  "aurora-mesh",
+  "soft-spotlight",
+  "premium-rings",
+  "silk-waves",
+]);
+
+function supportsSecondPatternColor(patternId: PageBackgroundPattern["id"]) {
+  return TWO_COLOR_BACKGROUND_PATTERNS.has(patternId);
+}
 
 export function PageSaveResultModal({
   result,
@@ -405,23 +428,196 @@ export function BlockCatalogModal({
 /*  Page Meta Modal                                                    */
 /* ================================================================== */
 
+function PageBackgroundPatternSettings({
+  baseColor,
+  pattern,
+  onChange,
+}: {
+  baseColor: string;
+  pattern?: Partial<PageBackgroundPattern>;
+  onChange?: (value: PageBackgroundPattern) => void;
+}) {
+  const currentPattern = normalizePageBackgroundPattern(pattern);
+  const patternDisabled = !onChange;
+
+  const updatePattern = (patch: Partial<PageBackgroundPattern>) => {
+    onChange?.(
+      normalizePageBackgroundPattern(
+        {
+          ...currentPattern,
+          ...patch,
+        },
+        currentPattern,
+      ),
+    );
+  };
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12px] font-black text-neutral-700">
+            پترن آماده بکگراند
+          </p>
+          <p className="mt-1 text-[10px] leading-5 text-neutral-400">
+            همین طرح روی خروجی صفحه و قالب ذخیره می‌شود.
+          </p>
+        </div>
+        <span
+          className="h-12 w-16 shrink-0 overflow-hidden rounded-xl border border-neutral-100 shadow-sm"
+          style={getPageBackgroundStyle({
+            color: baseColor,
+            image: "",
+            pattern: currentPattern,
+          })}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {PAGE_BACKGROUND_PATTERNS.map((option) => {
+          const active = currentPattern.id === option.id;
+          const previewPattern = createPageBackgroundPattern(option.id, {
+            color: option.defaultColor,
+            secondaryColor:
+              option.defaultSecondaryColor ?? currentPattern.secondaryColor,
+            opacity: option.defaultOpacity,
+            size: option.defaultSize,
+          });
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              disabled={patternDisabled}
+              onClick={() => onChange?.(previewPattern)}
+              className={[
+                "overflow-hidden rounded-xl border bg-white text-right transition hover:border-neutral-300 disabled:cursor-not-allowed disabled:opacity-60",
+                active
+                  ? "border-neutral-900 ring-2 ring-neutral-900/10"
+                  : "border-neutral-200",
+              ].join(" ")}
+              title={option.description}
+            >
+              <span
+                className="block h-11"
+                style={getPageBackgroundStyle({
+                  color: baseColor,
+                  image: "",
+                  pattern: previewPattern,
+                })}
+              />
+              <span className="block truncate px-2 py-2 text-[10px] font-black text-neutral-600">
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {currentPattern.id !== "none" ? (
+        <div className="space-y-3 rounded-xl bg-neutral-50 p-3">
+          <div>
+            <label className="mb-2 block text-[11px] font-bold text-neutral-600">
+              رنگ پترن
+            </label>
+            <RgbaColorInput
+              value={currentPattern.color}
+              onChange={(value) => updatePattern({ color: value })}
+              disabled={patternDisabled}
+              className="min-w-0"
+              swatchClassName="h-10 w-12 rounded-xl"
+              inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 font-mono text-[12px] text-neutral-800 outline-none transition focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100"
+              panelClassName="right-0 w-72"
+              label="انتخاب رنگ پترن"
+            />
+          </div>
+
+          {supportsSecondPatternColor(currentPattern.id) ? (
+            <div>
+              <label className="mb-2 block text-[11px] font-bold text-neutral-600">
+                رنگ دوم گرادینت
+              </label>
+              <RgbaColorInput
+                value={currentPattern.secondaryColor || baseColor}
+                onChange={(value) => updatePattern({ secondaryColor: value })}
+                disabled={patternDisabled}
+                className="min-w-0"
+                swatchClassName="h-10 w-12 rounded-xl"
+                inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 font-mono text-[12px] text-neutral-800 outline-none transition focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100"
+                panelClassName="right-0 w-72"
+                label="انتخاب رنگ دوم گرادینت"
+              />
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-600">
+                شدت پترن
+                <span className="font-mono text-neutral-400">
+                  {Math.round(currentPattern.opacity * 100)}%
+                </span>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={28}
+                value={Math.round(currentPattern.opacity * 100)}
+                onChange={(event) =>
+                  updatePattern({ opacity: Number(event.target.value) / 100 })
+                }
+                disabled={patternDisabled}
+                className="w-full accent-neutral-900 disabled:opacity-50"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-600">
+                اندازه پترن
+                <span className="font-mono text-neutral-400">
+                  {currentPattern.size}px
+                </span>
+              </span>
+              <input
+                type="range"
+                min={10}
+                max={96}
+                value={currentPattern.size}
+                onChange={(event) =>
+                  updatePattern({ size: Number(event.target.value) })
+                }
+                disabled={patternDisabled}
+                className="w-full accent-neutral-900 disabled:opacity-50"
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TemplateBackgroundSettings({
   color,
   image,
+  pattern,
   isUploading,
   uploadError,
   inputRef,
   onColorChange,
   onImageChange,
+  onPatternChange,
   onFile,
 }: {
   color: string;
   image: string;
+  pattern?: Partial<PageBackgroundPattern>;
   isUploading: boolean;
   uploadError: string | null;
   inputRef: RefObject<HTMLInputElement | null>;
   onColorChange?: (value: string) => void;
   onImageChange?: (value: string) => void;
+  onPatternChange?: (value: PageBackgroundPattern) => void;
   onFile: (file: File | null | undefined) => void;
 }) {
   return (
@@ -449,6 +645,12 @@ function TemplateBackgroundSettings({
           />
         </div>
       </div>
+
+      <PageBackgroundPatternSettings
+        baseColor={color}
+        pattern={pattern}
+        onChange={onPatternChange}
+      />
 
       <div>
         <label className="mb-2 block text-[12px] font-bold text-neutral-600">
@@ -560,9 +762,7 @@ function LogoHeaderSettingsPanel({
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        setLogoHeaderBgUploadError(
-          "حجم تصویر باید کمتر از ۱۰ مگابایت باشد.",
-        );
+        setLogoHeaderBgUploadError("حجم تصویر باید کمتر از ۱۰ مگابایت باشد.");
         return;
       }
 
@@ -632,7 +832,7 @@ function LogoHeaderSettingsPanel({
           </span>
           <input
             type="range"
-            min={110}
+            min={60}
             max={360}
             value={settings.height}
             onChange={(event) =>
@@ -753,23 +953,23 @@ function LogoHeaderSettingsPanel({
           </div>
 
           <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 sm:grid-cols-3">
-            {LOGO_HEADER_VARIANTS.filter((variant) => variant.id !== "none").map(
-              (variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  onClick={() => update({ variant: variant.id, enabled: true })}
-                  className={[
-                    "rounded-xl border px-2 py-2 text-[11px] font-bold transition",
-                    settings.variant === variant.id
-                      ? "border-[#064789] bg-[#064789] text-white shadow-sm"
-                      : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:bg-white",
-                  ].join(" ")}
-                >
-                  {variant.label}
-                </button>
-              ),
-            )}
+            {LOGO_HEADER_VARIANTS.filter(
+              (variant) => variant.id !== "none",
+            ).map((variant) => (
+              <button
+                key={variant.id}
+                type="button"
+                onClick={() => update({ variant: variant.id, enabled: true })}
+                className={[
+                  "rounded-xl border px-2 py-2 text-[11px] font-bold transition",
+                  settings.variant === variant.id
+                    ? "border-[#064789] bg-[#064789] text-white shadow-sm"
+                    : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:bg-white",
+                ].join(" ")}
+              >
+                {variant.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -983,6 +1183,7 @@ export function PageMetaModal({
   favicon,
   backgroundColor = "#ffffff",
   backgroundImage = "",
+  backgroundPattern,
   onTitleChange,
   onDescriptionChange,
   onUrlChange,
@@ -994,6 +1195,7 @@ export function PageMetaModal({
   onFaviconChange,
   onBackgroundColorChange,
   onBackgroundImageChange,
+  onBackgroundPatternChange,
   onClose,
   onSave,
   isSaving,
@@ -1015,6 +1217,7 @@ export function PageMetaModal({
   favicon?: string;
   backgroundColor?: string;
   backgroundImage?: string;
+  backgroundPattern?: Partial<PageBackgroundPattern>;
   onTitleChange: (v: string) => void;
   onDescriptionChange: (v: string) => void;
   onUrlChange: (v: string) => void;
@@ -1026,6 +1229,7 @@ export function PageMetaModal({
   onFaviconChange?: (v: string) => void;
   onBackgroundColorChange?: (v: string) => void;
   onBackgroundImageChange?: (v: string) => void;
+  onBackgroundPatternChange?: (v: PageBackgroundPattern) => void;
   onClose: () => void;
   onSave: () => void;
   isSaving: boolean;
@@ -1051,6 +1255,10 @@ export function PageMetaModal({
   const [pageImageUploadError, setPageImageUploadError] = useState<
     string | null
   >(null);
+  const normalizedBackgroundPattern = useMemo(
+    () => normalizePageBackgroundPattern(backgroundPattern),
+    [backgroundPattern],
+  );
 
   const handleThumbnailFile = useCallback(
     async (file: File | null | undefined) => {
@@ -1432,6 +1640,10 @@ export function PageMetaModal({
                     onChange={(e) => onUrlChange(slugify(e.target.value))}
                     placeholder="my-page"
                     minLength={4}
+                    inputMode="url"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    pattern="[a-z0-9-]*"
                     aria-invalid={Boolean(urlError)}
                     aria-describedby={urlError ? "page-slug-error" : undefined}
                     className="block min-w-0 max-w-full flex-1 bg-transparent px-3 py-3.5 font-mono text-[14px] text-neutral-900 outline-none placeholder:text-neutral-300 sm:text-[15px]"
@@ -1632,6 +1844,12 @@ export function PageMetaModal({
                     />
                   </div>
                 </div>
+
+                <PageBackgroundPatternSettings
+                  baseColor={backgroundColor}
+                  pattern={normalizedBackgroundPattern}
+                  onChange={onBackgroundPatternChange}
+                />
 
                 <div>
                   <label className="mb-2 block text-[12px] font-bold text-neutral-600">
@@ -1863,11 +2081,13 @@ export function PageMetaModal({
               <TemplateBackgroundSettings
                 color={backgroundColor}
                 image={backgroundImage}
+                pattern={normalizedBackgroundPattern}
                 isUploading={isBackgroundUploading}
                 uploadError={backgroundUploadError}
                 inputRef={backgroundInputRef}
                 onColorChange={onBackgroundColorChange}
                 onImageChange={onBackgroundImageChange}
+                onPatternChange={onBackgroundPatternChange}
                 onFile={(file) => void handleBackgroundFile(file)}
               />
             </>

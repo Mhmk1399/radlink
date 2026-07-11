@@ -331,7 +331,7 @@ export function SeparatorBlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const lineCss = responsiveStyleToCss(
@@ -343,7 +343,7 @@ export function SeparatorBlock({
   const ornamentCss = responsiveStyleToCss(
     block.elements.ornament.style,
     `${PREFIX}-ornament`,
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   return (

@@ -194,14 +194,7 @@ const StyledTitle = styled.h2<{ $styleCss: string }>`
     font-size 0.2s ease;
 `;
 
-const TitleDivider = styled.div`
-  width: 44px;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #94a3b8, #cbd5e1, #94a3b8);
-  background-size: 200% auto;
-  animation: ${shimmer} 3s linear infinite;
-`;
+ 
 
 const StyledDescription = styled.p<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
@@ -273,6 +266,7 @@ const StyledImageWrap = styled.div<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease;
@@ -286,8 +280,32 @@ const ImagePlaceholder = styled.div`
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.85), transparent 24%),
+    radial-gradient(circle at 88% 82%, rgba(148, 163, 184, 0.16), transparent 30%),
+    linear-gradient(135deg, #f8fafc, #eef2f7);
   border-radius: inherit;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(
+      circle,
+      rgba(148, 163, 184, 0.22) 1px,
+      transparent 1.5px
+    );
+    background-size: 14px 14px;
+    opacity: 0.35;
+  }
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 const PlaceholderIcon = styled.div`
@@ -474,7 +492,7 @@ export default function ProductCardsBlock({
   const containerStyle = responsiveStyleToCss(
     elements.container?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "surface" },
   );
   const titleStyle = responsiveStyleToCss(elements.title?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
@@ -491,12 +509,15 @@ export default function ProductCardsBlock({
   );
   const cardStyle = responsiveStyleToCss(elements.card?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
+    effect: "card",
   });
   const imageStyle = responsiveStyleToCss(elements.image?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
+    effect: "media",
   });
   const badgeStyle = responsiveStyleToCss(elements.badge?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
+    effect: "tap",
   });
   const productNameStyle = responsiveStyleToCss(
     elements.productName?.style ?? {},
@@ -519,7 +540,7 @@ export default function ProductCardsBlock({
   const buttonStyle = responsiveStyleToCss(
     elements.button?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "button" },
   );
 
   // ── Safe data ─────────────────────────────────────────────────────────────
@@ -594,8 +615,7 @@ export default function ProductCardsBlock({
                       {(text) => <>{text}</>}
                     </InlineEditableText>
                   </StyledTitle>
-                  <TitleDivider />
-                </EditablePart>
+                 </EditablePart>
               )}
 
               {showDescription && (
@@ -737,6 +757,8 @@ export default function ProductCardsBlock({
                                         alt={product.altText || product.name}
                                         className="w-full h-full object-cover rounded-[inherit]"
                                         draggable={false}
+                                        loading="lazy"
+                                        decoding="async"
                                       />
                                     ) : (
                                       <ImagePlaceholder>

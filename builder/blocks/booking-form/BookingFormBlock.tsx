@@ -293,7 +293,7 @@ export default function BookingFormBlock({
   const containerStyle = responsiveStyleToCss(
     elements.container?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "surface" },
   );
   const titleStyle = responsiveStyleToCss(elements.title?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
@@ -305,6 +305,7 @@ export default function BookingFormBlock({
   );
   const formStyle = responsiveStyleToCss(elements.form?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
+    effect: "card",
   });
   const fieldLabelStyle = responsiveStyleToCss(
     elements.fieldLabel?.style ?? {},
@@ -317,17 +318,17 @@ export default function BookingFormBlock({
   const calendarStyle = responsiveStyleToCss(
     elements.calendar?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "card" },
   );
   const timeSlotStyle = responsiveStyleToCss(
     elements.timeSlot?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "button" },
   );
   const submitButtonStyle = responsiveStyleToCss(
     elements.submitButton?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "button" },
   );
   const messageStyle = responsiveStyleToCss(
     elements.message?.style ?? {},
@@ -651,7 +652,7 @@ export default function BookingFormBlock({
         >
           <StyledForm
             $styleCss={formStyle}
-            className="p-4 md:p-6 space-y-5"
+            className="p-4 md:p-6 space-y-5 mt-6"
             onSubmit={handleSubmit}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

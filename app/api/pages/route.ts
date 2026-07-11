@@ -119,6 +119,13 @@ import {
 } from "@/lib/pages/pageExpiryAlertsCache";
 import { PAGE_EXPIRY_DAY_MS } from "@/lib/pages/pageExpiryStatus";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
+import {
+    getPageSlugValidationError,
+    normalizePageSlugInput,
+    PAGE_SLUG_RULE_MESSAGE,
+    sanitizePageSlug,
+} from "@/lib/validation/pageSlug";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -276,28 +283,8 @@ function getTemplateBlocks(template: Record<string, unknown> | null) {
     return [];
 }
 
-function slugifyUrl(value: string) {
-    return value
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^\w\u0600-\u06FF-]/g, "")
-        .replace(/-+/g, "-");
-}
-
 function normalizePageBackground(value: unknown) {
-    const background = isObject(value) ? value : {};
-    const rawColor =
-        typeof background.color === "string" ? background.color.trim() : "";
-    const rawImage =
-        typeof background.image === "string" ? background.image.trim() : "";
-
-    return {
-        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
-            ? rawColor
-            : "#ffffff",
-        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
-    };
+    return normalizePageBackgroundSettings(value);
 }
 
 export const POST = compose(
@@ -314,14 +301,25 @@ export const POST = compose(
             ? body.title.trim()
             : "صفحه جدید";
 
-    const url =
-        typeof body.url === "string" && body.url.trim()
-            ? slugifyUrl(body.url)
-            : slugifyUrl(title);
+    const rawUrl = typeof body.url === "string" ? body.url : "";
+    const hasExplicitUrl = Boolean(rawUrl.trim());
+    const urlSource = hasExplicitUrl ? rawUrl : title;
+    const url = sanitizePageSlug(urlSource);
 
-    if (url.length < 4) {
+    if (
+        hasExplicitUrl &&
+        normalizePageSlugInput(rawUrl) !== sanitizePageSlug(rawUrl)
+    ) {
         return NextResponse.json(
-            { message: "آدرس صفحه باید حداقل ۴ کاراکتر باشد." },
+            { message: PAGE_SLUG_RULE_MESSAGE },
+            { status: 400 }
+        );
+    }
+
+    const urlError = getPageSlugValidationError(url);
+    if (urlError) {
+        return NextResponse.json(
+            { message: urlError },
             { status: 400 }
         );
     }

@@ -117,6 +117,8 @@ function AvatarDisplay({
         src={url}
         alt={name}
         className={className}
+        loading="lazy"
+        decoding="async"
         style={{
           width: 56,
           height: 56,
@@ -165,7 +167,7 @@ export function TestimonialBlock({
   const containerStyle = responsiveStyleToCss(
     block.elements.container.style,
     "testi-container",
-    { mobileOnly },
+    { mobileOnly, effect: "card" },
   );
 
   const quoteStyle = responsiveStyleToCss(
@@ -189,13 +191,13 @@ export function TestimonialBlock({
   const avatarStyle = responsiveStyleToCss(
     block.elements.avatar.style,
     "testi-avatar",
-    { mobileOnly },
+    { mobileOnly, effect: "media" },
   );
 
   const ratingStyle = responsiveStyleToCss(
     block.elements.rating.style,
     "testi-rating",
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   return (

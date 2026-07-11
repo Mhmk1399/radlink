@@ -120,6 +120,7 @@ const StyledContainer = styled.div<{ $styleCss: string }>`
   position: relative;
   width: 100%;
   overflow: hidden;
+  isolation: isolate;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
@@ -130,6 +131,44 @@ const StyledContainer = styled.div<{ $styleCss: string }>`
     box-shadow 0.3s ease,
     background-color 0.3s ease;
   ${(props) => props.$styleCss}
+
+  &[data-has-image="true"] {
+    background-color: #0f172a;
+  }
+
+  &[data-has-image="true"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(
+        circle at 18% 8%,
+        rgba(255, 255, 255, 0.22),
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at 86% 96%,
+        rgba(255, 255, 255, 0.12),
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.08),
+        rgba(2, 6, 23, 0.16)
+      );
+    mix-blend-mode: soft-light;
+    opacity: 0.56;
+    transition: opacity 0.28s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &[data-has-image="true"]:hover::before {
+      opacity: 0.7;
+    }
+  }
 `;
 
 const StyledOverlay = styled.div<{ $styleCss: string }>`
@@ -422,6 +461,7 @@ export function BannerBlock({
     >
       <StyledContainer
         dir={direction}
+        data-has-image={data.imageUrl ? "true" : "false"}
         className={
           data.imageUrl
             ? `relative w-full ${
@@ -458,6 +498,7 @@ export function BannerBlock({
           "banner-block",
           {
             mobileOnly: mode === "editor",
+            effect: "surface",
           }
         )}
       >
@@ -575,7 +616,7 @@ export function BannerBlock({
                     $styleCss={responsiveStyleToCss(
                       buttonElement.style,
                       "banner-button",
-                      { mobileOnly: mode === "editor" }
+                      { mobileOnly: mode === "editor", effect: "button" }
                     )}
                   >
                     <InlineEditableText

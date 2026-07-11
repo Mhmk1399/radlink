@@ -36,6 +36,7 @@ import type {
   EditableStyleMap,
   ResponsiveValue,
   AnimationType,
+  ShadowStyleValue,
 } from "@/types/blocks/builder.types";
 import { DynamicContentForm } from "./form/DynamicContentForm";
 import { DynamicStyleForm } from "./form/DynamicStyleForm";
@@ -67,7 +68,7 @@ type DynamicIslandPanelProps = {
   onUpdateStyle: (
     elementId: string,
     styleKey: EditableStyleKey,
-    value: string | number | AnimationType,
+    value: string | number | AnimationType | ShadowStyleValue,
   ) => void;
   onClose: () => void;
   onDeleteBlock: () => void;
@@ -79,17 +80,22 @@ type DynamicIslandPanelProps = {
 /*  Constants                                                          */
 /* ================================================================== */
 
-const STYLE_LABELS: Record<EditableStyleKey, string> = {
+const STYLE_LABELS: Partial<Record<EditableStyleKey, string>> = {
   color: "رنگ متن",
   backgroundColor: "پس‌زمینه",
   fontSize: "سایز فونت",
   height: "ارتفاع",
+  marginTop: "فاصله بالا",
+  marginBottom: "فاصله پایین",
+  paddingTop: "فضای داخلی بالا",
+  paddingBottom: "فضای داخلی پایین",
   borderRadius: "گردی",
   borderColor: "رنگ بوردر",
   borderWidth: "ضخامت بوردر",
   gridColumns: "تعداد ستون‌های گرید",
   animation: "انیمیشن",
 };
+STYLE_LABELS.shadow = "سایه";
 
 const NUMERIC_CONFIG: Record<
   string,
@@ -97,6 +103,10 @@ const NUMERIC_CONFIG: Record<
 > = {
   fontSize: { min: 8, max: 120, step: 1, unit: "px" },
   height: { min: 80, max: 1200, step: 10, unit: "px" },
+  marginTop: { min: 0, max: 160, step: 4, unit: "px" },
+  marginBottom: { min: 0, max: 160, step: 4, unit: "px" },
+  paddingTop: { min: 0, max: 160, step: 4, unit: "px" },
+  paddingBottom: { min: 0, max: 160, step: 4, unit: "px" },
   borderRadius: { min: 0, max: 64, step: 1, unit: "px" },
   borderWidth: { min: 0, max: 20, step: 1, unit: "px" },
   gridColumns: { min: 1, max: 4, step: 1, unit: " ستون" },
@@ -250,6 +260,13 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function isColorPopoverTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest('[data-radlink-color-popover="true"]'))
+  );
+}
+
 function FloatingPortalPanel({
   open,
   onClose,
@@ -379,6 +396,7 @@ function FloatingPortalPanel({
 
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
+      if (isColorPopoverTarget(e.target)) return;
       if (panelRef.current?.contains(target)) return;
       if (anchorEl.contains(target)) return;
       onClose();
@@ -603,13 +621,13 @@ function CustomColorPicker({
             placeholder="rgba(0, 0, 0, 0.4)"
           />
           <div className="flex gap-2 px-1 font-mono text-[10px] text-neutral-400">
-              <span>R {parsedColor.r}</span>
-              <span>·</span>
-              <span>G {parsedColor.g}</span>
-              <span>·</span>
-              <span>B {parsedColor.b}</span>
-              <span>Â·</span>
-              <span>A {Math.round(parsedColor.a * 100)}%</span>
+            <span>R {parsedColor.r}</span>
+            <span>·</span>
+            <span>G {parsedColor.g}</span>
+            <span>·</span>
+            <span>B {parsedColor.b}</span>
+            <span>Â·</span>
+            <span>A {Math.round(parsedColor.a * 100)}%</span>
           </div>
           <input
             type="range"
@@ -806,7 +824,7 @@ type ToolbarProps = {
   onUpdateStyle: (
     elementId: string,
     styleKey: EditableStyleKey,
-    value: string | number | AnimationType,
+    value: string | number | AnimationType | ShadowStyleValue,
   ) => void;
   onClose: () => void;
   onDeleteBlock: () => void;
@@ -885,6 +903,10 @@ function DesktopToolbar({
 
   const numericIcons: Record<string, React.ReactNode> = {
     fontSize: <RxFontSize size={13} />,
+    marginTop: <RxBorderWidth size={13} />,
+    marginBottom: <RxBorderWidth size={13} />,
+    paddingTop: <RxBorderWidth size={13} />,
+    paddingBottom: <RxBorderWidth size={13} />,
     borderRadius: <RxCornerBottomRight size={13} />,
     borderWidth: <RxBorderWidth size={13} />,
     gridColumns: <HiOutlineSwatch size={13} />,
@@ -892,6 +914,10 @@ function DesktopToolbar({
 
   const numericKeys: EditableStyleKey[] = [
     "fontSize",
+    "marginTop",
+    "marginBottom",
+    "paddingTop",
+    "paddingBottom",
     "borderRadius",
     "borderWidth",
     "gridColumns",
@@ -904,7 +930,7 @@ function DesktopToolbar({
   // ── fire: update style + local micro-feedback (NO toast) ──
   const fire = (
     key: EditableStyleKey,
-    val: string | number | AnimationType,
+    val: string | number | AnimationType | ShadowStyleValue,
   ) => {
     if (!selectedElementId) return;
     onUpdateStyle(selectedElementId, key, val);
@@ -1077,8 +1103,7 @@ function DesktopToolbar({
                   {activeColors.map((key) => {
                     const raw = getResp(
                       style![key] as
-                        | ResponsiveValue<string | number>
-                        | undefined,
+                        ResponsiveValue<string | number> | undefined,
                       breakpoint,
                     );
                     return (
@@ -1109,8 +1134,7 @@ function DesktopToolbar({
                     if (!cfg) return null;
                     const raw = getResp(
                       style![key] as
-                        | ResponsiveValue<string | number>
-                        | undefined,
+                        ResponsiveValue<string | number> | undefined,
                       breakpoint,
                     );
                     const isOpen = openNumericDropdown === key;
@@ -1783,7 +1807,8 @@ export function DynamicIslandPanel({
           <HiOutlineLockClosed size={18} />
         </div>
         <p className="min-w-0 flex-1 text-[12px] font-semibold leading-6 text-neutral-700">
-          این بلاک فقط قابل مشاهده است. برای تغییر محتوا، استایل، ترتیب یا حذف آن به دسترسی «ویرایش» نیاز دارید.
+          این بلاک فقط قابل مشاهده است. برای تغییر محتوا، استایل، ترتیب یا حذف
+          آن به دسترسی «ویرایش» نیاز دارید.
         </p>
         <button
           type="button"

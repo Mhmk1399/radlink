@@ -126,17 +126,7 @@ const StyledTitle = styled.div<{ $styleCss: string }>`
   letter-spacing: -0.02em;
 `;
 
-const TitleDivider = styled.div`
-  width: 46px;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.2),
-    rgba(255,255,255,0.7),
-    rgba(255,255,255,0.2)
-  );
-`;
+ 
 
 const StyledDescription = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-desc`)}
@@ -345,7 +335,7 @@ export function CountdownBlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const titleCss = responsiveStyleToCss(
@@ -363,7 +353,7 @@ export function CountdownBlock({
   const timerBoxCss = responsiveStyleToCss(
     block.elements.timerBox.style,
     `${PREFIX}-tbox`,
-    { mobileOnly },
+    { mobileOnly, effect: "card" },
   );
 
   const timerNumCss = responsiveStyleToCss(
@@ -381,7 +371,7 @@ export function CountdownBlock({
   const btnCss = responsiveStyleToCss(
     block.elements.button.style,
     `${PREFIX}-btn`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   const expCss = responsiveStyleToCss(
@@ -445,8 +435,7 @@ export function CountdownBlock({
                 </StyledTitle>
               </EditablePart>
 
-              <TitleDivider />
-            </HeaderStack>
+             </HeaderStack>
 
             {/* ── Description ── */}
             {Boolean(block.data.showDescription) && (

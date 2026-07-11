@@ -15,7 +15,11 @@ type EditablePartProps = {
   elementId: string;
   mode: EditorMode;
   selectedElementId?: string | null;
-  onSelectElement?: (instanceId: string, elementId: string) => void;
+  onSelectElement?: (
+    instanceId: string,
+    elementId: string,
+    options?: { centerBlock?: boolean },
+  ) => void;
   children: React.ReactNode;
   className?: string;
 };

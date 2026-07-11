@@ -3,52 +3,84 @@
 import type {
     AnimationType,
     EditableStyleMap,
+    ShadowStyleValue,
 } from "@/types/blocks/builder.types";
 
+export type BlockInteractionEffect =
+    | "surface"
+    | "card"
+    | "button"
+    | "media"
+    | "tap"
+    | "none";
+
 function animationToCss(animation?: AnimationType, prefix = "block"): string {
+    let value: string | null = null;
+
     switch (animation) {
         case "fade":
-            return `animation: ${prefix}-fade 0.6s ease both;`;
+            value = `${prefix}-fade 0.6s ease both`;
+            break;
         case "slideUp":
-            return `animation: ${prefix}-slide-up 0.6s ease both;`;
+            value = `${prefix}-slide-up 0.6s ease both`;
+            break;
         case "slideLeft":
-            return `animation: ${prefix}-slide-left 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-slide-left 0.6s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "slideRight":
-            return `animation: ${prefix}-slide-right 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-slide-right 0.6s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "scale":
-            return `animation: ${prefix}-scale 0.45s ease both;`;
+            value = `${prefix}-scale 0.45s ease both`;
+            break;
         case "pulse":
-            return `animation: ${prefix}-pulse 1.8s ease-in-out infinite;`;
+            value = `${prefix}-pulse 1.8s ease-in-out infinite`;
+            break;
         case "bounceIn":
-            return `animation: ${prefix}-bounce-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;`;
+            value = `${prefix}-bounce-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both`;
+            break;
         case "rotateIn":
-            return `animation: ${prefix}-rotate-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-rotate-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "blurIn":
-            return `animation: ${prefix}-blur-in 0.65s ease both;`;
+            value = `${prefix}-blur-in 0.65s ease both`;
+            break;
         case "slideDown":
-            return `animation: ${prefix}-slide-down 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-slide-down 0.6s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "zoomOut":
-            return `animation: ${prefix}-zoom-out 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-zoom-out 0.6s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "flipUp":
-            return `animation: ${prefix}-flip-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-flip-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "flipSide":
-            return `animation: ${prefix}-flip-side 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-flip-side 0.7s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "swingIn":
-            return `animation: ${prefix}-swing-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;`;
+            value = `${prefix}-swing-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both`;
+            break;
         case "elasticIn":
-            return `animation: ${prefix}-elastic-in 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) both;`;
+            value = `${prefix}-elastic-in 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) both`;
+            break;
         case "riseSoft":
-            return `animation: ${prefix}-rise-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;`;
+            value = `${prefix}-rise-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both`;
+            break;
         case "dropSoft":
-            return `animation: ${prefix}-drop-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;`;
+            value = `${prefix}-drop-soft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both`;
+            break;
         case "focusIn":
-            return `animation: ${prefix}-focus-in 0.75s ease both;`;
+            value = `${prefix}-focus-in 0.75s ease both`;
+            break;
         case "glowIn":
-            return `animation: ${prefix}-glow-in 0.9s ease both;`;
+            value = `${prefix}-glow-in 0.9s ease both`;
+            break;
         case "none":
         default:
             return "animation: none;";
     }
+
+    return `animation: ${value} !important;`;
 }
 
 export function sharedBlockKeyframes(prefix = "block"): string {
@@ -178,11 +210,281 @@ function addCss(
     buffer.push(`${property}: ${value};`);
 }
 
+function clamp(value: number, min: number, max: number) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function addResponsivePxCss(
+    buffer: string[],
+    property: string,
+    value:
+        | {
+              mobile?: number;
+              tablet?: number;
+              desktop?: number;
+          }
+        | undefined,
+    mobileOnly?: boolean,
+) {
+    addCss(buffer, property, toPx(value?.mobile));
+
+    if (mobileOnly) return;
+
+    if (value?.tablet !== undefined) {
+        const tabletValue = toPx(value.tablet);
+        if (tabletValue) {
+            buffer.push(
+                `@media (min-width: 768px) { ${property}: ${tabletValue}; }`,
+            );
+        }
+    }
+    if (value?.desktop !== undefined) {
+        const desktopValue = toPx(value.desktop);
+        if (desktopValue) {
+            buffer.push(
+                `@media (min-width: 1024px) { ${property}: ${desktopValue}; }`,
+            );
+        }
+    }
+}
+
+function parseShadowValue(value: ShadowStyleValue | undefined) {
+    if (!value) return null;
+    const intensity = clamp(Number(value.intensity ?? 0), 0, 100);
+    if (intensity <= 0) return null;
+    const color =
+        typeof value.color === "string" && value.color.trim()
+            ? value.color.trim()
+            : "rgba(15,23,42,0.22)";
+    return { color, intensity };
+}
+
+function shadowToCss(value: ShadowStyleValue | undefined, mode: "box" | "text") {
+    const shadow = parseShadowValue(value);
+    if (!shadow) return null;
+
+    const ratio = shadow.intensity / 100;
+    if (mode === "text") {
+        const y = Math.round(1 + ratio * 2);
+        const blur = Math.round(2 + ratio * 10);
+        return `0 ${y}px ${blur}px ${shadow.color}`;
+    }
+
+    const y = Math.round(4 + ratio * 18);
+    const blur = Math.round(10 + ratio * 42);
+    const spread = Math.round(-4 - ratio * 12);
+    return `0 ${y}px ${blur}px ${spread}px ${shadow.color}`;
+}
+
+function interactionEffectToCss(effect: BlockInteractionEffect | undefined) {
+    if (!effect || effect === "none") return "";
+
+    const shared = `
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      will-change: transform, filter;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition-duration: 0.01ms !important;
+        &:hover,
+        &:active {
+          transform: none !important;
+          filter: none !important;
+        }
+      }
+    `;
+
+    if (effect === "button") {
+        return `
+          ${shared}
+          transition:
+            transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+            filter 0.18s ease,
+            box-shadow 0.22s ease,
+            opacity 0.18s ease,
+            background-color 0.18s ease,
+            border-color 0.18s ease;
+
+          @media (hover: hover) and (pointer: fine) {
+            &:hover {
+              transform: translateY(-2px) scale(1.01);
+              filter: saturate(1.08) brightness(1.035);
+            }
+          }
+
+          &:active {
+            transform: translateY(1px) scale(0.985);
+            filter: saturate(1.02) brightness(0.985);
+          }
+        `;
+    }
+
+    if (effect === "card") {
+        return `
+          ${shared}
+          transition:
+            transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+            filter 0.2s ease,
+            box-shadow 0.24s ease,
+            background-color 0.2s ease,
+            border-color 0.2s ease;
+
+          @media (hover: hover) and (pointer: fine) {
+            &:hover {
+              transform: translateY(-3px);
+              filter: saturate(1.04) brightness(1.015);
+            }
+          }
+
+          &:active {
+            transform: scale(0.992);
+            filter: brightness(0.99);
+          }
+        `;
+    }
+
+    if (effect === "media") {
+        return `
+          ${shared}
+          position: relative;
+          overflow: hidden;
+          isolation: isolate;
+          transition:
+            transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+            filter 0.24s ease,
+            box-shadow 0.24s ease;
+
+          &::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            border-radius: inherit;
+            background:
+              linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.16),
+                rgba(15, 23, 42, 0.08)
+              ),
+              radial-gradient(
+                circle at 18% 0%,
+                rgba(255, 255, 255, 0.2),
+                transparent 38%
+              );
+            mix-blend-mode: soft-light;
+            opacity: 0.48;
+            transition: opacity 0.24s ease;
+          }
+
+          &[data-media-kind="video"]::after {
+            opacity: 0.12;
+          }
+
+          & > img,
+          & img,
+          & > video,
+          & video {
+            border-radius: inherit;
+            transform-origin: center;
+            transition:
+              transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.26s ease;
+            will-change: transform, filter;
+          }
+
+          & > :not(img):not(video):not(iframe) {
+            position: relative;
+            z-index: 2;
+          }
+
+          @media (hover: hover) and (pointer: fine) {
+            &:hover {
+              transform: scale(1.012);
+              filter: saturate(1.06) contrast(1.015);
+            }
+
+            &:hover::after {
+              opacity: 0.62;
+            }
+
+            &[data-media-kind="video"]:hover::after {
+              opacity: 0.16;
+            }
+
+            &:hover > img,
+            &:hover img,
+            &:hover > video,
+            &:hover video {
+              transform: scale(1.035);
+              filter: saturate(1.08) contrast(1.025);
+            }
+          }
+
+          &:active {
+            transform: scale(0.992);
+            filter: brightness(0.985);
+          }
+
+          &:active > img,
+          &:active img,
+          &:active > video,
+          &:active video {
+            transform: scale(1.012);
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            & > img,
+            & img,
+            & > video,
+            & video {
+              transition-duration: 0.01ms !important;
+              transform: none !important;
+            }
+          }
+        `;
+    }
+
+    if (effect === "tap") {
+        return `
+          ${shared}
+          transition:
+            transform 0.16s ease,
+            filter 0.16s ease,
+            opacity 0.16s ease;
+
+          &:active {
+            transform: scale(0.97);
+            filter: brightness(0.98);
+          }
+        `;
+    }
+
+    return `
+      ${shared}
+      transition:
+        transform 0.22s ease,
+        filter 0.2s ease,
+        box-shadow 0.24s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+
+      @media (hover: hover) and (pointer: fine) {
+        &:hover {
+          transform: translateY(-1px);
+          filter: saturate(1.02);
+        }
+      }
+    `;
+}
+
 export function responsiveStyleToCss(
     style: EditableStyleMap | undefined,
     animationPrefix = "block",
-    _options?: {
+    options?: {
         mobileOnly?: boolean;
+        shadowMode?: "box" | "text";
+        effect?: BlockInteractionEffect;
     },
 ): string {
     if (!style) return "";
@@ -193,14 +495,33 @@ export function responsiveStyleToCss(
     const backgroundColor = style.backgroundColor?.mobile;
     const fontSize = toPx(style.fontSize?.mobile);
     const height = toPx(style.height?.mobile);
+    const paddingTop = style.paddingTop;
+    const paddingBottom = style.paddingBottom;
     const borderRadius = toPx(style.borderRadius?.mobile);
     const borderColor = style.borderColor?.mobile;
     const borderWidth = toPx(style.borderWidth?.mobile);
+    const inferredShadowMode =
+        options?.shadowMode ??
+        ((style.color || style.fontSize) &&
+        !style.backgroundColor &&
+        !style.borderColor &&
+        !style.borderWidth &&
+        !style.borderRadius
+            ? "text"
+            : "box");
+    const shadow = shadowToCss(style.shadow?.mobile, inferredShadowMode);
 
     addCss(css, "color", color);
     addCss(css, "background-color", backgroundColor);
     addCss(css, "font-size", fontSize);
     addCss(css, "height", height);
+    addResponsivePxCss(css, "padding-top", paddingTop, options?.mobileOnly);
+    addResponsivePxCss(
+        css,
+        "padding-bottom",
+        paddingBottom,
+        options?.mobileOnly,
+    );
     addCss(css, "border-radius", borderRadius);
 
     if (borderColor || borderWidth) {
@@ -209,6 +530,11 @@ export function responsiveStyleToCss(
 
     addCss(css, "border-color", borderColor);
     addCss(css, "border-width", borderWidth);
+    addCss(
+        css,
+        inferredShadowMode === "text" ? "text-shadow" : "box-shadow",
+        shadow ? `${shadow} !important` : shadow,
+    );
 
     if (style.height?.tablet !== undefined) {
         css.push(
@@ -221,6 +547,7 @@ export function responsiveStyleToCss(
         );
     }
 
+    css.push(interactionEffectToCss(options?.effect));
     css.push(animationToCss(style.animation, animationPrefix));
 
     return css.join("\n");

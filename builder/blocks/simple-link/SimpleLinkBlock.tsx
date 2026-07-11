@@ -205,6 +205,7 @@ export function SimpleLinkBlock({
         className="p-4"
         $styleCss={responsiveStyleToCss(container.style, "simple-link", {
           mobileOnly: mode === "editor",
+          effect: "button",
         })}
       >
         <EditablePart
@@ -217,6 +218,7 @@ export function SimpleLinkBlock({
           <StyledIcon
             $styleCss={responsiveStyleToCss(icon.style, "simple-link", {
               mobileOnly: mode === "editor",
+              effect: "tap",
             })}
           >
             🔗

@@ -174,7 +174,7 @@ export default function StoryHighlightsBlock({
   const containerStyle = responsiveStyleToCss(
     elements.container?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "surface" },
   );
   const titleStyle = responsiveStyleToCss(elements.title?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
@@ -182,12 +182,12 @@ export default function StoryHighlightsBlock({
   const thumbnailStyle = responsiveStyleToCss(
     elements.thumbnail?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "media" },
   );
   const thumbnailLabelStyle = responsiveStyleToCss(
     elements.thumbnailLabel?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "surface" },
   );
   const viewerElementStyle = elements.viewer?.style ?? {};
   const viewerStyle = responsiveStyleToCss(
@@ -208,7 +208,7 @@ export default function StoryHighlightsBlock({
   const storyImageStyle = responsiveStyleToCss(
     elements.storyImage?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "media" },
   );
   const captionStyle = responsiveStyleToCss(
     elements.caption?.style ?? {},
@@ -218,12 +218,12 @@ export default function StoryHighlightsBlock({
   const navButtonStyle = responsiveStyleToCss(
     elements.navButton?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "tap" },
   );
   const closeButtonStyle = responsiveStyleToCss(
     elements.closeButton?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor" },
+    { mobileOnly: mode === "editor", effect: "tap" },
   );
 
   // ── Safe data extraction ──────────────────────────────────────────────────
@@ -379,7 +379,7 @@ export default function StoryHighlightsBlock({
           )}
 
           {stories.length > 0 && (
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex gap-4 overflow-x-auto pb-2 mt-4 scrollbar-none">
               {stories.map((story, idx) => {
                 const thumbSrc = getThumbnailSrc(story);
                 return (
@@ -410,6 +410,8 @@ export default function StoryHighlightsBlock({
                             alt={story.altText || story.title}
                             className="w-full h-full object-cover"
                             draggable={false}
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-200">
@@ -540,6 +542,7 @@ export default function StoryHighlightsBlock({
                       alt={activeStory.altText || activeStory.title}
                       className="w-full h-full object-cover rounded-[inherit]"
                       draggable={false}
+                      decoding="async"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-[inherit]">

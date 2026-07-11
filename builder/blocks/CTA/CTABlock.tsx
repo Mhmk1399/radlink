@@ -289,7 +289,7 @@ export function CTABlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const titleCss = responsiveStyleToCss(
@@ -307,13 +307,13 @@ export function CTABlock({
   const priBtnCss = responsiveStyleToCss(
     block.elements.primaryButton.style,
     `${PREFIX}-pribtn`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   const secBtnCss = responsiveStyleToCss(
     block.elements.secondaryButton.style,
     `${PREFIX}-secbtn`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   /* ── Link helpers ── */

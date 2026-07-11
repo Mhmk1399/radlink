@@ -109,13 +109,7 @@ const StyledTitle = styled.div<{ $styleCss: string }>`
   line-height: 1.4;
   letter-spacing: -0.02em;
 `;
-
-const TitleDivider = styled.div`
-  width: 44px;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #cbd5e1, #94a3b8, #cbd5e1);
-`;
+ 
 
 const StyledDescription = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-desc`)}
@@ -426,7 +420,7 @@ export function ContactInfoBlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
 
   const titleCss = responsiveStyleToCss(
@@ -444,19 +438,19 @@ export function ContactInfoBlock({
   const itemCss = responsiveStyleToCss(
     block.elements.item.style,
     `${PREFIX}-item`,
-    { mobileOnly },
+    { mobileOnly, effect: "card" },
   );
 
   const btnPriCss = responsiveStyleToCss(
     block.elements.buttonPrimary.style,
     `${PREFIX}-btnpri`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   const btnSecCss = responsiveStyleToCss(
     block.elements.buttonSecondary.style,
     `${PREFIX}-btnsec`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
 
   const phone = String(block.data.phone ?? "").trim();
@@ -511,8 +505,7 @@ export function ContactInfoBlock({
                 </StyledTitle>
               </EditablePart>
 
-              <TitleDivider />
-            </HeaderStack>
+             </HeaderStack>
 
             {/* Description */}
             {Boolean(block.data.showDescription) && (

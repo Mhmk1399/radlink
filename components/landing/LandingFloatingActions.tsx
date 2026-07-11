@@ -23,7 +23,8 @@ function normalizeTargetUrl(value?: string) {
   if (url) {
     if (/^https?:\/\//i.test(url)) return url;
     if (typeof window !== "undefined") {
-      return new URL(`/${url.replace(/^\/+/, "")}`, window.location.origin).href;
+      return new URL(`/${url.replace(/^\/+/, "")}`, window.location.origin)
+        .href;
     }
   }
   return "";
@@ -67,9 +68,7 @@ export default function LandingFloatingActions({
   const [dismissedHelpFor, setDismissedHelpFor] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const targetUrl = useMemo(() => normalizeTargetUrl(pageUrl), [pageUrl]);
-  const contactData = contactBlock
-    ? getContactSaveData(contactBlock)
-    : null;
+  const contactData = contactBlock ? getContactSaveData(contactBlock) : null;
   const contactBlockId = contactBlock?.instanceId ?? null;
   const canSaveContact = Boolean(
     contactData?.phoneNumber.trim() && contactBlock && !contactBlock.hidden,
@@ -159,7 +158,7 @@ export default function LandingFloatingActions({
         ref={rootRef}
         data-floating-mode={mode}
         className={[
-          "fixed bottom-5 z-[9000] flex flex-col items-end gap-2.5",
+          "pointer-events-none fixed bottom-5 z-[90] flex flex-col items-end gap-2.5",
           mode === "editor" ? "right-5 lg:right-[290px]" : "-right-30",
         ].join(" ")}
         dir="rtl"
@@ -177,20 +176,16 @@ export default function LandingFloatingActions({
           className={[
             "w-48 origin-bottom-right  overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_18px_55px_rgba(15,23,42,0.22)] backdrop-blur-xl transition duration-200 sm:w-52",
             open
-              ? "translate-y-0 -translate-x-36 scale-100 opacity-100"
-              : "pointer-events-none translate-y-2 scale-95 opacity-0",
+              ? "pointer-events-auto translate-y-0 -translate-x-36 scale-100 opacity-100"
+              : "pointer-events-none  translate-y-2 scale-95 opacity-0",
           ].join(" ")}
           aria-hidden={!open}
         >
           {canSaveContact && contactData && (
             <a
-              href={
-                mode === "editor" ? undefined : buildVCardHref(contactData)
-              }
+              href={mode === "editor" ? undefined : buildVCardHref(contactData)}
               download={
-                mode === "editor"
-                  ? undefined
-                  : buildVCardFileName(contactData)
+                mode === "editor" ? undefined : buildVCardFileName(contactData)
               }
               onClick={(event) => {
                 if (mode === "editor") {
@@ -246,9 +241,7 @@ export default function LandingFloatingActions({
               <HiOutlineShare className="h-5 w-5" />
             </span>
             <span className="min-w-0">
-              <span className="block text-xs font-extrabold">
-                اشتراک صفحه
-              </span>
+              <span className="block text-xs font-extrabold">اشتراک صفحه</span>
               <span className="mt-0.5 block truncate text-[10px] text-slate-400">
                 ارسال یا کپی لینک
               </span>
@@ -262,7 +255,7 @@ export default function LandingFloatingActions({
             setFeedback("");
             setOpen((current) => !current);
           }}
-          className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-slate-950 text-white shadow-[0_12px_36px_rgba(15,23,42,0.3)] transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300"
+          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-slate-950 text-white shadow-[0_12px_36px_rgba(15,23,42,0.3)] transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300"
           aria-label={open ? "بستن ابزارهای صفحه" : "باز کردن ابزارهای صفحه"}
           aria-expanded={open}
         >
@@ -317,8 +310,8 @@ export default function LandingFloatingActions({
             </div>
 
             <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-6 text-blue-800">
-              در صفحه‌ساز دکمه کمی از راست فاصله دارد تا بیرون از سایدبار
-              بماند؛ در صفحه منتشر شده، کامل در پایین راست صفحه قرار می‌گیرد.
+              در صفحه‌ساز دکمه کمی از راست فاصله دارد تا بیرون از سایدبار بماند؛
+              در صفحه منتشر شده، کامل در پایین راست صفحه قرار می‌گیرد.
             </div>
 
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

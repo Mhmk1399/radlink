@@ -12,6 +12,10 @@ import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import {
+  getPageBackgroundStyle,
+  normalizePageBackgroundSettings,
+} from "@/lib/design/page-background";
 import PageNotificationModal, {
   type PublicPageNotification,
 } from "./PageNotificationModal";
@@ -63,28 +67,6 @@ function toClientValue(value: unknown): unknown {
   }
 
   return String(value);
-}
-function isValidBackgroundColor(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-
-  const color = value.trim();
-
-  const isHex =
-    /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(
-      color,
-    );
-
-  const isRgb =
-    /^rgb\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*\)$/i.test(
-      color,
-    );
-
-  const isRgba =
-    /^rgba\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:0|1|0?\.\d+)\s*\)$/i.test(
-      color,
-    );
-
-  return isHex || isRgb || isRgba;
 }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { url } = await params;
@@ -147,14 +129,8 @@ export default async function PageRoute({ params }: Props) {
     );
   }
 
-  const backgroundColor = isValidBackgroundColor(page.background?.color)
-    ? page.background.color.trim()
-    : "#ffffff";
-  const backgroundImage =
-    typeof page.background?.image === "string" &&
-    /^https?:\/\//i.test(page.background.image)
-      ? page.background.image
-      : "";
+  const pageBackground = normalizePageBackgroundSettings(page.background);
+  const backgroundStyle = getPageBackgroundStyle(pageBackground);
   const logoHeader = normalizeLogoHeaderSettings(page.logoHeader);
 
   if (page.isPublished !== true || pageExpired) {
@@ -167,15 +143,7 @@ export default async function PageRoute({ params }: Props) {
         <div
           aria-hidden="true"
           className="pointer-events-none fixed inset-0 -z-10 scale-105 transition-transform duration-700"
-          style={{
-            backgroundColor: backgroundColor || "#f3f4f6",
-            backgroundImage: backgroundImage
-              ? `url(${JSON.stringify(backgroundImage)})`
-              : undefined,
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "cover",
-          }}
+          style={backgroundStyle}
         />
 
         {/* Overlay & Content */}
@@ -272,8 +240,8 @@ export default async function PageRoute({ params }: Props) {
       : null;
   const showFloatingActions = Boolean(
     owner &&
-      (owner.role === "superAdmin" ||
-        ownerAccess?.components["landing.floatingActions"]?.has("view")),
+    (owner.role === "superAdmin" ||
+      ownerAccess?.components["landing.floatingActions"]?.has("view")),
   );
   const notifications: PublicPageNotification[] = rawNotifications
     .map((notification) => ({
@@ -303,21 +271,10 @@ export default async function PageRoute({ params }: Props) {
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          backgroundColor,
-          backgroundImage: backgroundImage
-            ? `url(${JSON.stringify(backgroundImage)})`
-            : undefined,
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "cover",
-        }}
+        style={backgroundStyle}
       />
       <PageNotificationModal notifications={notifications} />
-      <header
-        className="flex flex-col items-center justify-center "
-        dir="rtl"
-      >
+      <header className="flex flex-col items-center justify-center " dir="rtl">
         <LogoHeaderFrame
           settings={logoHeader}
           logo={typeof page.logo === "string" ? page.logo : ""}
@@ -348,7 +305,7 @@ export default async function PageRoute({ params }: Props) {
         )} */}
       </header>
 
-      <section className="space-y-6 overflow-hidden">
+      <section className="overflow-hidden">
         <PageRenderer
           pageId={String(page._id)}
           blocks={clientBlocks}

@@ -215,17 +215,17 @@ export function ContactSaveBlock({
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
-    { mobileOnly },
+    { mobileOnly, effect: "surface" },
   );
   const buttonCss = responsiveStyleToCss(
     block.elements.button.style,
     `${PREFIX}-button`,
-    { mobileOnly },
+    { mobileOnly, effect: "button" },
   );
   const iconCss = responsiveStyleToCss(
     block.elements.icon.style,
     `${PREFIX}-icon`,
-    { mobileOnly },
+    { mobileOnly, effect: "tap" },
   );
 
   return (

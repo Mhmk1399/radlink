@@ -109,6 +109,13 @@ import {
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
 import { deleteFileByIdentifier } from "@/lib/fileDeletion";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
+import {
+    getPageSlugValidationError,
+    normalizePageSlugInput,
+    PAGE_SLUG_RULE_MESSAGE,
+    sanitizePageSlug,
+} from "@/lib/validation/pageSlug";
 
 type RouteContext = {
     params: Promise<{
@@ -173,28 +180,8 @@ function normalizeBlocks(blocks: unknown) {
     });
 }
 
-function normalizeUrl(value: string) {
-    return value
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^\w\u0600-\u06FF-]/g, "")
-        .replace(/-+/g, "-");
-}
-
 function normalizePageBackground(value: unknown) {
-    const background = isObject(value) ? value : {};
-    const rawColor =
-        typeof background.color === "string" ? background.color.trim() : "";
-    const rawImage =
-        typeof background.image === "string" ? background.image.trim() : "";
-
-    return {
-        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
-            ? rawColor
-            : "#ffffff",
-        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
-    };
+    return normalizePageBackgroundSettings(value);
 }
 
 export const GET = compose(
@@ -334,11 +321,18 @@ export const PATCH = compose(
     }
 
     if (typeof body.url === "string" && body.url.trim()) {
-        const nextUrl = normalizeUrl(body.url);
-
-        if (nextUrl.length < 4) {
+        if (normalizePageSlugInput(body.url) !== sanitizePageSlug(body.url)) {
             return NextResponse.json(
-                { message: "آدرس صفحه باید حداقل ۴ کاراکتر باشد." },
+                { message: PAGE_SLUG_RULE_MESSAGE },
+                { status: 400 }
+            );
+        }
+
+        const nextUrl = sanitizePageSlug(body.url);
+        const urlError = getPageSlugValidationError(nextUrl);
+        if (urlError) {
+            return NextResponse.json(
+                { message: urlError },
                 { status: 400 }
             );
         }

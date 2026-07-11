@@ -14,6 +14,11 @@ import { PageLogoPreview } from "@/builder/BuilderCanvas";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import { getBlockSpacingStyle } from "@/lib/design/block-spacing";
+import {
+  getPageBackgroundStyle,
+  type PageBackgroundPattern,
+} from "@/lib/design/page-background";
 
 type PhonePreviewModalProps = {
   open: boolean;
@@ -21,6 +26,7 @@ type PhonePreviewModalProps = {
   background?: {
     color?: string;
     image?: string;
+    pattern?: Partial<PageBackgroundPattern>;
   };
   logo?: string;
   logoShape?: "square" | "circle";
@@ -171,6 +177,7 @@ function PhonePreviewContent({
   background?: {
     color?: string;
     image?: string;
+    pattern?: Partial<PageBackgroundPattern>;
   };
   logo?: string;
   logoShape?: "square" | "circle";
@@ -178,10 +185,7 @@ function PhonePreviewContent({
   pageUrl?: string;
   showFloatingActions?: boolean;
 }) {
-  const color =
-    typeof background?.color === "string" ? background.color : "#ffffff";
-  const image =
-    typeof background?.image === "string" ? background.image : "";
+  const backgroundStyle = getPageBackgroundStyle(background);
   const contactBlock =
     blocks.find(
       (block) =>
@@ -189,24 +193,14 @@ function PhonePreviewContent({
         block.isActive !== false &&
         !block.hidden,
     ) ?? null;
-  const contentBlocks = blocks.filter(
-    (block) => block.type !== "contactSave",
-  );
+  const contentBlocks = blocks.filter((block) => block.type !== "contactSave");
 
   return (
     <div className="relative isolate min-h-full">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          backgroundColor: color,
-          backgroundImage: image
-            ? `url(${JSON.stringify(image)})`
-            : undefined,
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "cover",
-        }}
+        style={backgroundStyle}
       />
       <PageLogoPreview
         logo={logo}
@@ -217,34 +211,34 @@ function PhonePreviewContent({
       {contentBlocks.length === 0 ? (
         <EmptyPreview />
       ) : (
-      <div className="space-y-6">
-        {contentBlocks.map((block) => {
-          const config =
-            blockRegistry[block.type as keyof typeof blockRegistry];
+        <div>
+          {contentBlocks.map((block) => {
+            const config =
+              blockRegistry[block.type as keyof typeof blockRegistry];
 
-          if (!config) {
+            if (!config) {
+              return (
+                <div
+                  key={block.instanceId}
+                  className="mx-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600"
+                >
+                  بلاک «{block.type}» ثبت نشده است
+                </div>
+              );
+            }
+
+            const BlockComponent = config.component as React.ComponentType<{
+              block: PageBlock;
+              mode: "preview";
+            }>;
+
             return (
-              <div
-                key={block.instanceId}
-                className="mx-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-600"
-              >
-                بلاک «{block.type}» ثبت نشده است
+              <div key={block.instanceId} style={getBlockSpacingStyle(block)}>
+                <BlockComponent block={block} mode="preview" />
               </div>
             );
-          }
-
-          const BlockComponent = config.component as React.ComponentType<{
-            block: PageBlock;
-            mode: "preview";
-          }>;
-
-          return (
-            <div key={block.instanceId}>
-              <BlockComponent block={block} mode="preview" />
-            </div>
-          );
-        })}
-      </div>
+          })}
+        </div>
       )}
       <LandingFloatingActions
         contactBlock={contactBlock}

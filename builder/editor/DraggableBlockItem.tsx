@@ -1,14 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import {
+  BLOCK_SPACING_MAX,
+  BLOCK_SPACING_MIN,
+  BLOCK_SPACING_STEP,
+  getBlockSpacingValue,
+  normalizeBlockSpacingValue,
+  type BlockSpacingKey,
+} from "@/lib/design/block-spacing";
+import {
   HiOutlineChevronUp,
   HiOutlineChevronDown,
   HiOutlinePlus,
+  HiOutlineMinus,
 } from "react-icons/hi2";
 import { RiDraggable } from "react-icons/ri";
 
@@ -76,8 +86,17 @@ type DraggableBlockItemProps = {
 
   selectedBlockId: string | null;
   selectedElementId: string | null;
-  onSelectElement: (instanceId: string, elementId: string) => void;
+  onSelectElement: (
+    instanceId: string,
+    elementId: string,
+    options?: { centerBlock?: boolean },
+  ) => void;
   onUpdateContent: (instanceId: string, key: string, value: string) => void;
+  onUpdateBlockSpacing?: (
+    instanceId: string,
+    key: BlockSpacingKey,
+    value: number,
+  ) => void;
   onMoveBlock?: (id: string, direction: "up" | "down") => void;
   onDuplicateBlock?: (id: string) => void;
   onDeleteBlock?: (id: string) => void;
@@ -85,12 +104,162 @@ type DraggableBlockItemProps = {
   isLast?: boolean;
 };
 
+function BlockSpacingControls({
+  block,
+  visible,
+  onSelectContainer,
+  onUpdateBlockSpacing,
+}: {
+  block: PageBlock;
+  visible: boolean;
+  onSelectContainer: () => void;
+  onUpdateBlockSpacing?: (
+    instanceId: string,
+    key: BlockSpacingKey,
+    value: number,
+  ) => void;
+}) {
+  const [activeMode, setActiveMode] = useState<"margin" | "padding">("margin");
+
+  if (!onUpdateBlockSpacing || !visible) return null;
+
+  const top = getBlockSpacingValue(block, "marginTop");
+  const bottom = getBlockSpacingValue(block, "marginBottom");
+  const paddingTop = getBlockSpacingValue(block, "paddingTop");
+  const paddingBottom = getBlockSpacingValue(block, "paddingBottom");
+
+  const update = (key: BlockSpacingKey, value: number) => {
+    onSelectContainer();
+    onUpdateBlockSpacing(
+      block.instanceId,
+      key,
+      normalizeBlockSpacingValue(value),
+    );
+  };
+
+  const isMarginMode = activeMode === "margin";
+  const activeColorClass = isMarginMode
+    ? "bg-amber-500 text-white shadow-sm shadow-amber-500/25"
+    : "bg-blue-600 text-white shadow-sm shadow-blue-500/25";
+  const inactiveColorClass =
+    "text-neutral-500 hover:bg-white hover:text-neutral-900";
+  const activeRows: Array<{
+    key: BlockSpacingKey;
+    label: string;
+    value: number;
+  }> = isMarginMode
+    ? [
+        { key: "marginTop", label: "بالا", value: top },
+        { key: "marginBottom", label: "پایین", value: bottom },
+      ]
+    : [
+        { key: "paddingTop", label: "بالا", value: paddingTop },
+        { key: "paddingBottom", label: "پایین", value: paddingBottom },
+      ];
+  const resetActiveRows = () => {
+    activeRows.forEach((row) => update(row.key, 0));
+  };
+
+  const renderRow = (key: BlockSpacingKey, label: string, value: number) => (
+    <div
+      key={key}
+      className="rounded-xl border border-neutral-200 bg-white/95 px-2 py-1.5 shadow-sm"
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="w-8 shrink-0 text-[10px] font-black text-neutral-600">
+          {label}
+        </span>
+        <button
+          type="button"
+          onClick={() => update(key, value - BLOCK_SPACING_STEP)}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"
+          aria-label={`${label} کمتر`}
+        >
+          <HiOutlineMinus size={12} />
+        </button>
+        <input
+          type="range"
+          min={BLOCK_SPACING_MIN}
+          max={BLOCK_SPACING_MAX}
+          step={BLOCK_SPACING_STEP}
+          value={value}
+          onChange={(event) => update(key, Number(event.target.value))}
+          className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-neutral-200 accent-neutral-900 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-neutral-900 [&::-webkit-slider-thumb]:shadow"
+          aria-label={label}
+        />
+        <button
+          type="button"
+          onClick={() => update(key, value + BLOCK_SPACING_STEP)}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-900"
+          aria-label={`${label} بیشتر`}
+        >
+          <HiOutlinePlus size={12} />
+        </button>
+        <input
+          type="number"
+          min={BLOCK_SPACING_MIN}
+          max={BLOCK_SPACING_MAX}
+          step={BLOCK_SPACING_STEP}
+          value={value}
+          onChange={(event) => update(key, Number(event.target.value))}
+          onFocus={(event) => event.currentTarget.select()}
+          className="h-7 w-11 rounded-lg border border-neutral-200 bg-neutral-50 px-1 text-center font-mono text-[10px] font-black text-neutral-800 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
+          aria-label={`${label} به پیکسل`}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      className="absolute bottom-2 left-2 z-30 w-[258px] max-w-[calc(100%-1rem)] rounded-2xl border border-neutral-200 bg-white/95 p-2 shadow-[0_14px_36px_rgba(15,23,42,0.16)] backdrop-blur-xl"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      dir="rtl"
+    >
+      <div className="mb-2 flex items-center gap-1 rounded-xl bg-neutral-100 p-1">
+        <button
+          type="button"
+          onClick={() => setActiveMode("margin")}
+          className={[
+            "h-7 flex-1 rounded-lg text-[10px] font-black transition",
+            isMarginMode ? activeColorClass : inactiveColorClass,
+          ].join(" ")}
+        >
+          بیرونی
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMode("padding")}
+          className={[
+            "h-7 flex-1 rounded-lg text-[10px] font-black transition",
+            !isMarginMode ? activeColorClass : inactiveColorClass,
+          ].join(" ")}
+        >
+          داخلی
+        </button>
+        <button
+          type="button"
+          onClick={resetActiveRows}
+          className="h-7 rounded-lg px-2 text-[10px] font-black text-neutral-400 transition hover:bg-white hover:text-neutral-800"
+        >
+          صفر
+        </button>
+      </div>
+      <div className="space-y-1.5">
+        {activeRows.map((row) => renderRow(row.key, row.label, row.value))}
+      </div>
+    </div>
+  );
+}
+
 export function DraggableBlockItem({
   block,
   selectedBlockId,
   selectedElementId,
   onSelectElement,
   onUpdateContent,
+  onUpdateBlockSpacing,
   onMoveBlock,
   isFirst,
   isLast,
@@ -223,12 +392,24 @@ export function DraggableBlockItem({
         )}
       </div>
 
+      <BlockSpacingControls
+        block={block}
+        visible={isSelected}
+        onSelectContainer={() =>
+          onSelectElement(block.instanceId, "container", {
+            centerBlock: false,
+          })
+        }
+        onUpdateBlockSpacing={onUpdateBlockSpacing}
+      />
+
       {/* ── Block Content ── */}
       <div
         className={[
           "transition-opacity duration-200",
           isDragging ? "opacity-50" : "opacity-100",
         ].join(" ")}
+        onClick={() => onSelectElement(block.instanceId, "container")}
       >
         <BlockComponent
           block={block}

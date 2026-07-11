@@ -13,6 +13,10 @@ import { SmartSuggestions } from "@/builder/SmartSuggestions";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import {
+  normalizePageBackgroundSettings,
+  type PageBackgroundPattern,
+} from "@/lib/design/page-background";
 
 type BuilderMode = "page" | "template";
 
@@ -36,6 +40,7 @@ type BuilderState = {
   initialBackground?: {
     color: string;
     image: string;
+    pattern?: Partial<PageBackgroundPattern>;
   };
   requiresStartChoice?: boolean;
   suppressSmartSuggestions?: boolean;
@@ -168,12 +173,11 @@ function getTemplateBackground(template: Record<string, unknown>) {
   const rawColor = String(background.color ?? colors.background ?? "").trim();
   const rawImage = String(background.image ?? style.bgImage ?? "").trim();
 
-  return {
-    color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
-      ? rawColor
-      : "#ffffff",
-    image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
-  };
+  return normalizePageBackgroundSettings({
+    ...background,
+    color: rawColor,
+    image: rawImage,
+  });
 }
 
 function getTemplateLogoHeader(template: Record<string, unknown>) {

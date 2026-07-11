@@ -14,11 +14,9 @@ import type {
   ResponsiveValue,
   AnimationType,
   BlockElement,
+  ShadowStyleValue,
 } from "@/types/blocks/builder.types";
-import {
-  ANIMATION_OPTIONS,
-  previewAnimation,
-} from "../animationOptions";
+import { ANIMATION_OPTIONS, previewAnimation } from "../animationOptions";
 import { RgbaColorInput } from "./RgbaColorInput";
 
 /* ================================================================== */
@@ -35,30 +33,43 @@ type DynamicStyleFormProps = {
   onBreakpointChange: (breakpoint: Breakpoint) => void;
   onChange: (
     styleKey: EditableStyleKey,
-    value: string | number | AnimationType,
+    value: string | number | AnimationType | ShadowStyleValue,
   ) => void;
 };
 
 type NumericStyleKey = Extract<
   EditableStyleKey,
-  "fontSize" | "height" | "borderRadius" | "borderWidth" | "gridColumns"
+  | "fontSize"
+  | "height"
+  | "marginTop"
+  | "marginBottom"
+  | "paddingTop"
+  | "paddingBottom"
+  | "borderRadius"
+  | "borderWidth"
+  | "gridColumns"
 >;
 
 /* ================================================================== */
 /*  Constants                                                          */
 /* ================================================================== */
 
-const styleLabels: Record<EditableStyleKey, string> = {
+const styleLabels: Partial<Record<EditableStyleKey, string>> = {
   color: "رنگ متن",
   backgroundColor: "رنگ پس‌زمینه",
   fontSize: "اندازه متن",
   height: "ارتفاع",
+  marginTop: "فاصله بالا",
+  marginBottom: "فاصله پایین",
+  paddingTop: "فضای داخلی بالا",
+  paddingBottom: "فضای داخلی پایین",
   borderRadius: "گردی گوشه‌ها",
   borderColor: "رنگ بوردر",
   borderWidth: "ضخامت بوردر",
   gridColumns: "تعداد ستون‌های گرید",
   animation: "انیمیشن",
 };
+styleLabels.shadow = "سایه";
 
 const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
   color: <HiOutlineEyeDropper size={15} />,
@@ -66,11 +77,16 @@ const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
   borderColor: <HiOutlineSwatch size={15} />,
   fontSize: <RxFontSize size={15} />,
   height: <RxFontSize size={15} />,
+  marginTop: <RxBorderWidth size={15} />,
+  marginBottom: <RxBorderWidth size={15} />,
+  paddingTop: <RxBorderWidth size={15} />,
+  paddingBottom: <RxBorderWidth size={15} />,
   borderRadius: <RxCornerBottomRight size={15} />,
   borderWidth: <RxBorderWidth size={15} />,
   gridColumns: <HiOutlineSwatch size={15} />,
   animation: <HiOutlineSparkles size={15} />,
 };
+styleIcons.shadow = <HiOutlineSparkles size={15} />;
 
 const numberFieldConfig: Record<
   NumericStyleKey,
@@ -78,6 +94,10 @@ const numberFieldConfig: Record<
 > = {
   fontSize: { min: 8, max: 120, step: 1, unit: "px" },
   height: { min: 80, max: 1200, step: 10, unit: "px" },
+  marginTop: { min: 0, max: 160, step: 4, unit: "px" },
+  marginBottom: { min: 0, max: 160, step: 4, unit: "px" },
+  paddingTop: { min: 0, max: 160, step: 4, unit: "px" },
+  paddingBottom: { min: 0, max: 160, step: 4, unit: "px" },
   borderRadius: { min: 0, max: 64, step: 1, unit: "px" },
   borderWidth: { min: 0, max: 20, step: 1, unit: "px" },
   gridColumns: { min: 1, max: 4, step: 1, unit: " ستون" },
@@ -108,10 +128,24 @@ function isNumericStyleKey(k: EditableStyleKey): k is NumericStyleKey {
   return (
     k === "fontSize" ||
     k === "height" ||
+    k === "marginTop" ||
+    k === "marginBottom" ||
+    k === "paddingTop" ||
+    k === "paddingBottom" ||
     k === "borderRadius" ||
     k === "borderWidth" ||
     k === "gridColumns"
   );
+}
+
+function isShadowStyleKey(
+  k: EditableStyleKey,
+): k is Extract<EditableStyleKey, "shadow"> {
+  return k === "shadow";
+}
+
+function getStyleLabel(styleKey: EditableStyleKey) {
+  return styleLabels[styleKey] ?? styleKey;
 }
 
 function getNumericValue(value: string | number | undefined): number {
@@ -121,6 +155,24 @@ function getNumericValue(value: string | number | undefined): number {
     if (Number.isFinite(p)) return p;
   }
   return 0;
+}
+
+function getShadowValue(value: unknown): Required<ShadowStyleValue> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { color: "rgba(15,23,42,0.22)", intensity: 0 };
+  }
+
+  const raw = value as ShadowStyleValue;
+  const intensity = Number(raw.intensity ?? 0);
+  return {
+    color:
+      typeof raw.color === "string" && raw.color.trim()
+        ? raw.color
+        : "rgba(15,23,42,0.22)",
+    intensity: Number.isFinite(intensity)
+      ? Math.min(100, Math.max(0, intensity))
+      : 0,
+  };
 }
 
 /* ================================================================== */
@@ -205,7 +257,7 @@ export function DynamicStyleForm({
         <FormNotice
           icon={<HiOutlinePaintBrush size={26} />}
           title="استایل قابل ویرایش ندارد"
-          description="برای این المنت style key قابل ویرایشی تعریف نشده."
+          description="برای این المنت کلید استایل قابل ویرایشی تعریف نشده."
         />
       </section>
     );
@@ -232,7 +284,7 @@ export function DynamicStyleForm({
                 <div className="mb-3 flex items-center gap-2">
                   <span className="text-neutral-500">{icon}</span>
                   <span className="text-[13px] font-semibold text-neutral-700">
-                    {styleLabels[styleKey]}
+                    {getStyleLabel(styleKey)}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -273,9 +325,71 @@ export function DynamicStyleForm({
           }
 
           const value = getResponsiveValue(
-            s[styleKey] as ResponsiveValue<string | number> | undefined,
+            s[styleKey] as
+              ResponsiveValue<string | number | ShadowStyleValue> | undefined,
             breakpoint,
           );
+
+          /* Shadow */
+          if (isShadowStyleKey(styleKey)) {
+            const shadow = getShadowValue(value);
+
+            return (
+              <div
+                key={styleKey}
+                className="rounded-2xl border border-neutral-100 bg-neutral-50 p-3.5"
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-500">{icon}</span>
+                    <span className="text-[13px] font-semibold text-neutral-700">
+                      {getStyleLabel(styleKey)}
+                    </span>
+                  </div>
+                  <span className="rounded-lg bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-neutral-600 shadow-sm">
+                    {shadow.intensity}%
+                  </span>
+                </div>
+
+                <div className="mb-4 flex items-center gap-2.5">
+                  <RgbaColorInput
+                    value={shadow.color}
+                    label="رنگ سایه"
+                    onChange={(newColor) =>
+                      onChange(styleKey, { ...shadow, color: newColor })
+                    }
+                    className="min-w-0 flex-1"
+                    swatchClassName="h-11 w-11 rounded-xl"
+                    inputClassName="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100"
+                  />
+                </div>
+
+                <div className="relative mb-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={shadow.intensity}
+                    onChange={(event) =>
+                      onChange(styleKey, {
+                        ...shadow,
+                        intensity: Number(event.target.value),
+                      })
+                    }
+                    className="relative z-10 h-8 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
+                    aria-label="شدت سایه"
+                  />
+                  <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[4px] -translate-y-1/2 rounded-full bg-neutral-200">
+                    <div
+                      className="h-full rounded-full bg-neutral-400 transition-all"
+                      style={{ width: `${shadow.intensity}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          }
 
           /* Color */
           if (isColorStyleKey(styleKey)) {
@@ -290,7 +404,7 @@ export function DynamicStyleForm({
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-500">{icon}</span>
                     <span className="text-[13px] font-semibold text-neutral-700">
-                      {styleLabels[styleKey]}
+                      {getStyleLabel(styleKey)}
                     </span>
                   </div>
                 </div>
@@ -299,7 +413,7 @@ export function DynamicStyleForm({
                   {/* text-base = 16px → no iOS zoom */}
                   <RgbaColorInput
                     value={textValue}
-                    label={styleLabels[styleKey]}
+                    label={getStyleLabel(styleKey)}
                     onChange={(newColor) => onChange(styleKey, newColor)}
                     className="min-w-0 flex-1"
                     swatchClassName="h-11 w-11 rounded-xl"
@@ -313,7 +427,9 @@ export function DynamicStyleForm({
           /* Numeric */
           if (isNumericStyleKey(styleKey)) {
             const cfg = numberFieldConfig[styleKey];
-            const num = getNumericValue(value);
+            const num = getNumericValue(
+              typeof value === "object" ? undefined : value,
+            );
             const pct = ((num - cfg.min) / (cfg.max - cfg.min)) * 100;
 
             return (
@@ -325,7 +441,7 @@ export function DynamicStyleForm({
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-500">{icon}</span>
                     <span className="text-[13px] font-semibold text-neutral-700">
-                      {styleLabels[styleKey]}
+                      {getStyleLabel(styleKey)}
                     </span>
                   </div>
                   <span className="rounded-lg bg-white px-2.5 py-1 font-mono text-[11px] font-bold text-neutral-600 shadow-sm">
@@ -344,7 +460,7 @@ export function DynamicStyleForm({
                     value={num}
                     onChange={(e) => onChange(styleKey, Number(e.target.value))}
                     className="relative z-10 h-8 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-neutral-300 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
-                    aria-label={styleLabels[styleKey]}
+                    aria-label={getStyleLabel(styleKey)}
                   />
                   <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[4px] -translate-y-1/2 rounded-full bg-neutral-200">
                     <div

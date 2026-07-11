@@ -9,6 +9,7 @@ import Template from "@/models/template";
 import Category from "@/models/category";
 import "@/models/blocks";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,12 +46,11 @@ function normalizeTemplateBackground(value: unknown, style?: Record<string, unkn
     const rawColor = String(background.color ?? colors.background ?? "").trim();
     const rawImage = String(background.image ?? style?.bgImage ?? "").trim();
 
-    return {
-        color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(rawColor)
-            ? rawColor
-            : "#ffffff",
-        image: /^https?:\/\//i.test(rawImage) ? rawImage : "",
-    };
+    return normalizePageBackgroundSettings({
+        ...background,
+        color: rawColor,
+        image: rawImage,
+    });
 }
 
 async function syncCategoryLink(

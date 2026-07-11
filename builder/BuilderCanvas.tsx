@@ -20,6 +20,14 @@ import {
 } from "@/builder/editor/DraggableBlockItem";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import {
+  getPageBackgroundStyle,
+  type PageBackgroundPattern,
+} from "@/lib/design/page-background";
+import {
+  getBlockSpacingStyle,
+  type BlockSpacingKey,
+} from "@/lib/design/block-spacing";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
 import { LegacySmartSuggestions } from "./SmartSuggestions";
 
@@ -285,6 +293,7 @@ export function CanvasContent({
   isOverCanvas,
   onSelectElement,
   onUpdateContent,
+  onUpdateBlockSpacing,
   onMoveBlock,
   onDuplicateBlock,
   onDeleteBlock,
@@ -297,6 +306,7 @@ export function CanvasContent({
   background?: {
     color?: string;
     image?: string;
+    pattern?: Partial<PageBackgroundPattern>;
   };
   logo?: string;
   logoShape?: "square" | "circle";
@@ -308,8 +318,17 @@ export function CanvasContent({
   selectedElementId: string | null;
   activePaletteType: string | null;
   isOverCanvas: boolean;
-  onSelectElement: (instanceId: string, elementId: string) => void;
+  onSelectElement: (
+    instanceId: string,
+    elementId: string,
+    options?: { centerBlock?: boolean },
+  ) => void;
   onUpdateContent: (instanceId: string, key: string, value: string) => void;
+  onUpdateBlockSpacing?: (
+    instanceId: string,
+    key: BlockSpacingKey,
+    value: number,
+  ) => void;
   onMoveBlock: (id: string, direction: "up" | "down") => void;
   onDuplicateBlock: (id: string) => void;
   onDeleteBlock: (id: string) => void;
@@ -322,16 +341,9 @@ export function CanvasContent({
   const { setNodeRef, isOver } = useDroppable({ id: "canvas-drop-zone" });
   const isPaletteDragging = activePaletteType !== null;
   const isActive = isOver || isOverCanvas;
-  const backgroundStyle: React.CSSProperties = {
-    backgroundColor: background?.color || "#ffffff",
-    backgroundImage: background?.image
-      ? `url(${JSON.stringify(background.image)})`
-      : undefined,
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-    backgroundSize: "cover",
-    backgroundAttachment: "fixed",
-  };
+  const backgroundStyle = getPageBackgroundStyle(background, {
+    fixedImage: true,
+  });
 
   // ── Empty state ──
   if (sortedBlocks.length === 0) {
@@ -408,7 +420,7 @@ export function CanvasContent({
       />
       <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
         {sortedBlocks.map((block, index) => (
-          <div key={block.instanceId}>
+          <div key={block.instanceId} style={getBlockSpacingStyle(block)}>
             {/* ── Gap قبل از هر بلاک (فقط وقتی palette drag فعاله) ── */}
             {isPaletteDragging && (
               <DropGap id={`gap-before-${block.instanceId}`} isActive={false} />
@@ -445,6 +457,7 @@ export function CanvasContent({
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                   onUpdateContent={onUpdateContent}
+                  onUpdateBlockSpacing={onUpdateBlockSpacing}
                   onMoveBlock={onMoveBlock}
                   onDuplicateBlock={onDuplicateBlock}
                   onDeleteBlock={onDeleteBlock}
@@ -458,11 +471,6 @@ export function CanvasContent({
             {/* ── Gap بعد از آخرین بلاک ── */}
             {isPaletteDragging && index === sortedBlocks.length - 1 && (
               <DropGap id={`gap-after-${block.instanceId}`} isActive={false} />
-            )}
-
-            {/* ── فاصله بین بلاک‌ها (وقتی drag نیست) ── */}
-            {!isPaletteDragging && index < sortedBlocks.length - 1 && (
-              <div className="h-5" />
             )}
           </div>
         ))}
