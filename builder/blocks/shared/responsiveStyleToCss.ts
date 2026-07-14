@@ -2,8 +2,10 @@
 
 import type {
     AnimationType,
+    ContentAlignValue,
     EditableStyleMap,
     ShadowStyleValue,
+    TextAlignValue,
 } from "@/types/blocks/builder.types";
 
 export type BlockInteractionEffect =
@@ -245,6 +247,149 @@ function addResponsivePxCss(
                 `@media (min-width: 1024px) { ${property}: ${desktopValue}; }`,
             );
         }
+    }
+}
+
+function normalizeTextAlign(
+    value: TextAlignValue | undefined,
+): TextAlignValue | null {
+    if (value === "left" || value === "center" || value === "right") {
+        return value;
+    }
+    return null;
+}
+
+function normalizeContentAlign(
+    value: ContentAlignValue | undefined,
+): ContentAlignValue | null {
+    if (value === "left" || value === "center" || value === "right") {
+        return value;
+    }
+    return null;
+}
+
+function textAlignToCss(value: TextAlignValue | undefined) {
+    const align = normalizeTextAlign(value);
+    if (!align) return null;
+
+    if (align === "center") {
+        return `
+          text-align: center !important;
+          align-self: center !important;
+          justify-self: center !important;
+          justify-content: center !important;
+          --radlink-text-align: center;
+          --radlink-item-align: center;
+        `;
+    }
+
+    const ltrFlex = align === "left" ? "flex-start" : "flex-end";
+    const rtlFlex = align === "left" ? "flex-end" : "flex-start";
+    const ltrJustifySelf = align === "left" ? "start" : "end";
+    const rtlJustifySelf = align === "left" ? "end" : "start";
+
+    return `
+      text-align: ${align} !important;
+      align-self: ${ltrFlex} !important;
+      justify-self: ${ltrJustifySelf} !important;
+      justify-content: ${ltrFlex} !important;
+      --radlink-text-align: ${align};
+      --radlink-item-align: ${ltrFlex};
+
+      [dir="rtl"] & {
+        align-self: ${rtlFlex} !important;
+        justify-self: ${rtlJustifySelf} !important;
+        justify-content: ${rtlFlex} !important;
+        --radlink-item-align: ${rtlFlex};
+      }
+    `;
+}
+
+function addResponsiveTextAlignCss(
+    buffer: string[],
+    value:
+        | {
+              mobile?: TextAlignValue;
+              tablet?: TextAlignValue;
+              desktop?: TextAlignValue;
+          }
+        | undefined,
+    mobileOnly?: boolean,
+) {
+    const mobileCss = textAlignToCss(value?.mobile);
+    if (mobileCss) buffer.push(mobileCss);
+
+    if (mobileOnly) return;
+
+    const tabletCss = textAlignToCss(value?.tablet);
+    if (tabletCss) {
+        buffer.push(`@media (min-width: 768px) { ${tabletCss} }`);
+    }
+
+    const desktopCss = textAlignToCss(value?.desktop);
+    if (desktopCss) {
+        buffer.push(`@media (min-width: 1024px) { ${desktopCss} }`);
+    }
+}
+
+function contentAlignToCss(value: ContentAlignValue | undefined) {
+    const align = normalizeContentAlign(value);
+    if (!align) return null;
+
+    if (align === "center") {
+        return `
+          text-align: center !important;
+          align-items: center !important;
+          justify-items: center !important;
+          --radlink-content-align: center;
+          --radlink-content-text-align: center;
+        `;
+    }
+
+    const ltrFlex = align === "left" ? "flex-start" : "flex-end";
+    const rtlFlex = align === "left" ? "flex-end" : "flex-start";
+    const ltrJustifyItems = align === "left" ? "start" : "end";
+    const rtlJustifyItems = align === "left" ? "end" : "start";
+
+    return `
+      text-align: ${align} !important;
+      align-items: ${ltrFlex} !important;
+      justify-items: ${ltrJustifyItems} !important;
+      --radlink-content-align: ${ltrFlex};
+      --radlink-content-text-align: ${align};
+
+      [dir="rtl"] & {
+        align-items: ${rtlFlex} !important;
+        justify-items: ${rtlJustifyItems} !important;
+        --radlink-content-align: ${rtlFlex};
+      }
+    `;
+}
+
+function addResponsiveContentAlignCss(
+    buffer: string[],
+    value:
+        | {
+              mobile?: ContentAlignValue;
+              tablet?: ContentAlignValue;
+              desktop?: ContentAlignValue;
+          }
+        | undefined,
+    mobileOnly?: boolean,
+) {
+    const mobileCss = contentAlignToCss(value?.mobile);
+    if (mobileCss) buffer.push(mobileCss);
+
+    if (mobileOnly) return;
+
+    const tabletCss = contentAlignToCss(value?.tablet);
+    if (tabletCss) {
+        buffer.push(`@media (min-width: 768px) { ${tabletCss} }`);
+    }
+
+    const desktopCss = contentAlignToCss(value?.desktop);
+    if (desktopCss) {
+        buffer.push(`@media (min-width: 1024px) { ${desktopCss} }`);
     }
 }
 
@@ -495,6 +640,8 @@ export function responsiveStyleToCss(
     const backgroundColor = style.backgroundColor?.mobile;
     const fontSize = toPx(style.fontSize?.mobile);
     const height = toPx(style.height?.mobile);
+    const textAlign = style.textAlign;
+    const contentAlign = style.contentAlign;
     const paddingTop = style.paddingTop;
     const paddingBottom = style.paddingBottom;
     const borderRadius = toPx(style.borderRadius?.mobile);
@@ -515,6 +662,8 @@ export function responsiveStyleToCss(
     addCss(css, "background-color", backgroundColor);
     addCss(css, "font-size", fontSize);
     addCss(css, "height", height);
+    addResponsiveTextAlignCss(css, textAlign, options?.mobileOnly);
+    addResponsiveContentAlignCss(css, contentAlign, options?.mobileOnly);
     addResponsivePxCss(css, "padding-top", paddingTop, options?.mobileOnly);
     addResponsivePxCss(
         css,

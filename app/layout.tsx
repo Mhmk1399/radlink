@@ -30,12 +30,17 @@ export default function RootLayout({
       className={`${estedad.className}   h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/web-app-manifest-192x192.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+      </head>
       <body className="min-h-full flex flex-col">
         {" "}
         <ToastProvider />
         <Toaster position="top-right" maxToasts={5} />
         {/* <Navbar /> */}
-        <ThemeProvider defaultTheme="dark" >
+        <ThemeProvider defaultTheme="dark">
           {" "}
           <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
         </ThemeProvider>

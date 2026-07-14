@@ -91,7 +91,7 @@ type DraggableBlockItemProps = {
     elementId: string,
     options?: { centerBlock?: boolean },
   ) => void;
-  onUpdateContent: (instanceId: string, key: string, value: string) => void;
+  onUpdateContent: (instanceId: string, key: string, value: unknown) => void;
   onUpdateBlockSpacing?: (
     instanceId: string,
     key: BlockSpacingKey,

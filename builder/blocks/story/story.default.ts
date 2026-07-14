@@ -59,20 +59,23 @@ export function createDefaultStoryHighlightsBlock(order: number): PageBlock {
                     "borderColor",
                     "borderWidth",
                     "animation",
+                    "contentAlign",
                 ],
                 style: {
                     backgroundColor: { mobile: "#EBF2FA" },
                     borderRadius: { mobile: 20 },
                     borderColor: { mobile: "#427AA1" },
                     borderWidth: { mobile: 1 },
+                    contentAlign: { mobile: "center" },
                 },
             },
             title: {
                 label: "عنوان بخش",
-                allowedStyleKeys: ["color", "fontSize", "animation"],
+                allowedStyleKeys: ["color", "fontSize", "animation", "textAlign"],
                 style: {
                     color: { mobile: "#064789" },
                     fontSize: { mobile: 20, tablet: 24, desktop: 28 },
+                    textAlign: { mobile: "center" },
                 },
             },
             thumbnail: {
@@ -93,10 +96,11 @@ export function createDefaultStoryHighlightsBlock(order: number): PageBlock {
             },
             thumbnailLabel: {
                 label: "عنوان تصویر بندانگشتی",
-                allowedStyleKeys: ["color", "fontSize"],
+                allowedStyleKeys: ["color", "fontSize", "textAlign"],
                 style: {
                     color: { mobile: "#064789" },
                     fontSize: { mobile: 12, tablet: 13, desktop: 14 },
+                    textAlign: { mobile: "center" },
                 },
             },
             viewer: {
@@ -146,6 +150,7 @@ export function createDefaultStoryHighlightsBlock(order: number): PageBlock {
                     "borderColor",
                     "borderWidth",
                     "animation",
+                    "textAlign",
                 ],
                 style: {
                     color: { mobile: "#ffffff" },
@@ -154,6 +159,7 @@ export function createDefaultStoryHighlightsBlock(order: number): PageBlock {
                     borderRadius: { mobile: 18 },
                     borderColor: { mobile: "rgba(235,242,250,0.12)" },
                     borderWidth: { mobile: 1 },
+                    textAlign: { mobile: "center" },
                 },
             },
             navButton: {

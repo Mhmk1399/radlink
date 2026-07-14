@@ -55,6 +55,11 @@ export const contactSaveSchema: BlockSchema = {
       label: "نام سازمان یا مجموعه",
       type: "text",
     },
+    {
+      key: "photoUrl",
+      label: "عکس مخاطب",
+      type: "image",
+    },
 
   ],
 };

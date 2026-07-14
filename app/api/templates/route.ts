@@ -10,6 +10,7 @@ import Category from "@/models/category";
 import "@/models/blocks";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
+import { normalizePageFooterSettings } from "@/lib/design/page-footer";
 
 const DEFAULT_TEMPLATE_STYLE = {
     fontFamily: "inherit",
@@ -95,6 +96,7 @@ export const POST = compose(
         builderBlocks,
         background,
         logoHeader,
+        footer,
     } = await req.json();
 
     if (!name) {
@@ -139,6 +141,7 @@ export const POST = compose(
             style && typeof style === "object" ? style : undefined
         ),
         logoHeader: normalizeLogoHeaderSettings(logoHeader),
+        footer: normalizePageFooterSettings({ ...(footer ?? {}), logo: "" }),
     });
 
     if (normalizedCategory) {

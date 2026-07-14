@@ -81,6 +81,8 @@ type DynamicIslandPanelProps = {
 /* ================================================================== */
 
 const STYLE_LABELS: Partial<Record<EditableStyleKey, string>> = {
+  textAlign: "چینش متن",
+  contentAlign: "چینش کانتینر",
   color: "رنگ متن",
   backgroundColor: "پس‌زمینه",
   fontSize: "سایز فونت",

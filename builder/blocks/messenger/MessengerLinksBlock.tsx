@@ -23,6 +23,8 @@ import type { BlockComponentProps } from "@/types/blocks/builder.types";
 import {
   buildPresetMessengerUrl,
   getMessengerPresetForDataKey,
+  isMessengerLinkPreset,
+  type MessengerLinkPreset,
 } from "@/lib/messengerLinks";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -109,9 +111,23 @@ const BRAND_COLORS: Record<string, string> = {
 interface ServiceDef {
   urlKey: string;
   showKey: string;
-  label: string;
+  labelKey: string;
+  fallbackLabel: string;
   Icon: React.FC;
 }
+
+type RenderService = {
+  id: string;
+  label: string;
+  Icon: React.FC;
+  url: string;
+  brandColor: string;
+  labelKey?: string;
+  repeaterKey?: "messengerItems";
+  repeaterItemId?: string;
+  repeaterIndex?: number;
+  buttonStyle?: React.CSSProperties;
+};
 
 function resolveServiceUrl(key: string, value: unknown) {
   const rawValue = typeof value === "string" ? value.trim() : "";
@@ -123,88 +139,170 @@ const services: ServiceDef[] = [
   {
     urlKey: "telegramUrl",
     showKey: "showTelegram",
-    label: "تلگرام",
+    labelKey: "telegramLabel",
+    fallbackLabel: "تلگرام",
     Icon: SiTelegram,
   },
   {
     urlKey: "whatsappUrl",
     showKey: "showWhatsapp",
-    label: "واتساپ",
+    labelKey: "whatsappLabel",
+    fallbackLabel: "واتساپ",
     Icon: SiWhatsapp,
   },
   {
     urlKey: "instagramUrl",
     showKey: "showInstagram",
-    label: "اینستاگرام",
+    labelKey: "instagramLabel",
+    fallbackLabel: "اینستاگرام",
     Icon: SiInstagram,
   },
   {
     urlKey: "eitaaUrl",
     showKey: "showEitaa",
-    label: "ایتا",
+    labelKey: "eitaaLabel",
+    fallbackLabel: "ایتا",
     Icon: EitaaIcon,
   },
   {
     urlKey: "soroushUrl",
     showKey: "showSoroush",
-    label: "سروش",
+    labelKey: "soroushLabel",
+    fallbackLabel: "سروش",
     Icon: SoroushIcon,
   },
   {
     urlKey: "rubikaUrl",
     showKey: "showRubika",
-    label: "روبیکا",
+    labelKey: "rubikaLabel",
+    fallbackLabel: "روبیکا",
     Icon: RubikaIcon,
   },
   {
     urlKey: "baleUrl",
     showKey: "showBale",
-    label: "بله",
+    labelKey: "baleLabel",
+    fallbackLabel: "بله",
     Icon: BaleIcon,
   },
   {
     urlKey: "igapUrl",
     showKey: "showIgap",
-    label: "آی‌گپ",
+    labelKey: "igapLabel",
+    fallbackLabel: "آی‌گپ",
     Icon: IgapIcon,
   },
   {
     urlKey: "signalUrl",
     showKey: "showSignal",
-    label: "سیگنال",
+    labelKey: "signalLabel",
+    fallbackLabel: "سیگنال",
     Icon: SiSignal,
   },
   {
     urlKey: "messengerUrl",
     showKey: "showMessenger",
-    label: "مسنجر",
+    labelKey: "messengerLabel",
+    fallbackLabel: "مسنجر",
     Icon: SiMessenger,
   },
   {
     urlKey: "discordUrl",
     showKey: "showDiscord",
-    label: "دیسکورد",
+    labelKey: "discordLabel",
+    fallbackLabel: "دیسکورد",
     Icon: SiDiscord,
   },
   {
     urlKey: "xUrl",
     showKey: "showX",
-    label: "ایکس",
+    labelKey: "xLabel",
+    fallbackLabel: "ایکس",
     Icon: XIcon,
   },
   {
     urlKey: "youtubeUrl",
     showKey: "showYoutube",
-    label: "یوتیوب",
+    labelKey: "youtubeLabel",
+    fallbackLabel: "یوتیوب",
     Icon: SiYoutube,
   },
   {
     urlKey: "linkedinUrl",
     showKey: "showLinkedin",
-    label: "لینکدین",
+    labelKey: "linkedinLabel",
+    fallbackLabel: "لینکدین",
     Icon: FiLinkedin,
   },
 ];
+
+const SERVICE_BY_PRESET: Partial<Record<MessengerLinkPreset, ServiceDef>> = {
+  telegram: services.find((service) => service.urlKey === "telegramUrl"),
+  whatsapp: services.find((service) => service.urlKey === "whatsappUrl"),
+  instagram: services.find((service) => service.urlKey === "instagramUrl"),
+  eitaa: services.find((service) => service.urlKey === "eitaaUrl"),
+  soroush: services.find((service) => service.urlKey === "soroushUrl"),
+  rubika: services.find((service) => service.urlKey === "rubikaUrl"),
+  bale: services.find((service) => service.urlKey === "baleUrl"),
+  igap: services.find((service) => service.urlKey === "igapUrl"),
+  signal: services.find((service) => service.urlKey === "signalUrl"),
+  messenger: services.find((service) => service.urlKey === "messengerUrl"),
+  discord: services.find((service) => service.urlKey === "discordUrl"),
+  x: services.find((service) => service.urlKey === "xUrl"),
+  youtube: services.find((service) => service.urlKey === "youtubeUrl"),
+  linkedin: services.find((service) => service.urlKey === "linkedinUrl"),
+};
+
+function getString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getExtraMessengerServices(
+  items: unknown,
+  { includeEmpty }: { includeEmpty: boolean },
+): RenderService[] {
+  if (!Array.isArray(items)) return [];
+
+  return items.flatMap((item, index): RenderService[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    if (record.enabled === false) return [];
+
+    const platform = record.platform;
+    if (!isMessengerLinkPreset(platform)) return [];
+
+    const baseService = SERVICE_BY_PRESET[platform];
+    if (!baseService) return [];
+
+    const identifier = getString(record.identifier);
+    const url = buildPresetMessengerUrl(identifier, platform);
+    if (!includeEmpty && !url) return [];
+
+    const brandColor =
+      getString(record.brandColor) ||
+      BRAND_COLORS[baseService.urlKey] ||
+      "#64748b";
+    const backgroundColor = getString(record.backgroundColor);
+    const textColor = getString(record.textColor);
+
+    return [
+      {
+        id: `custom-${getString(record.id) || index}-${platform}`,
+        label: getString(record.label) || baseService.fallbackLabel,
+        Icon: baseService.Icon,
+        url,
+        brandColor,
+        repeaterKey: "messengerItems",
+        repeaterItemId: getString(record.id) || undefined,
+        repeaterIndex: index,
+        buttonStyle: {
+          ...(backgroundColor ? { backgroundColor } : {}),
+          ...(textColor ? { color: textColor } : {}),
+        },
+      },
+    ];
+  });
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Animations
@@ -519,14 +617,26 @@ export default function MessengerLinksBlock({
   const isEditor = mode === "editor";
   const isBuilderPreview = mode === "preview";
 
-  // Filter visible services
-  const visibleServices = services.filter((s) => {
-    const shouldShow = data[s.showKey] !== false;
-    if (!shouldShow) return false;
-    if (isEditor || isBuilderPreview) return true;
-    const url = resolveServiceUrl(s.urlKey, data[s.urlKey]);
-    return url.length > 0;
+  const baseVisibleServices: RenderService[] = services
+    .filter((service) => {
+      const shouldShow = data[service.showKey] !== false;
+      if (!shouldShow) return false;
+      if (isEditor || isBuilderPreview) return true;
+      const url = resolveServiceUrl(service.urlKey, data[service.urlKey]);
+      return url.length > 0;
+    })
+    .map((service) => ({
+      id: service.urlKey,
+      label: getString(data[service.labelKey]) || service.fallbackLabel,
+      labelKey: service.labelKey,
+      Icon: service.Icon,
+      url: resolveServiceUrl(service.urlKey, data[service.urlKey]),
+      brandColor: BRAND_COLORS[service.urlKey] || "#64748b",
+    }));
+  const extraVisibleServices = getExtraMessengerServices(data.messengerItems, {
+    includeEmpty: isEditor || isBuilderPreview,
   });
+  const visibleServices = [...baseVisibleServices, ...extraVisibleServices];
 
   // Public pages must not render enabled services that have no destination.
   if (mode === "public" && visibleServices.length === 0) {
@@ -540,6 +650,21 @@ export default function MessengerLinksBlock({
       target: openInNewTab ? ("_blank" as const) : undefined,
       rel: openInNewTab ? "noopener noreferrer" : undefined,
     };
+  };
+
+  const updateRepeaterLabel = (service: RenderService, label: unknown) => {
+    if (!service.repeaterKey) return;
+    const currentItems = Array.isArray(data[service.repeaterKey])
+      ? (data[service.repeaterKey] as Array<Record<string, unknown>>)
+      : [];
+    const nextItems = currentItems.map((item, index) => {
+      const itemId = getString(item.id);
+      const isTarget = service.repeaterItemId
+        ? itemId === service.repeaterItemId
+        : index === service.repeaterIndex;
+      return isTarget ? { ...item, label: String(label ?? "") } : item;
+    });
+    onUpdateContent?.(block.instanceId, service.repeaterKey, nextItems);
   };
 
   return (
@@ -633,13 +758,10 @@ export default function MessengerLinksBlock({
             }`}
           >
             {visibleServices.map((service, index) => {
-              const url = resolveServiceUrl(
-                service.urlKey,
-                data[service.urlKey],
-              );
+              const url = service.url;
               const isEmpty = url.length === 0;
               const ServiceIcon = service.Icon;
-              const brandColor = BRAND_COLORS[service.urlKey] || "#64748b";
+              const brandColor = service.brandColor;
 
               const buttonContent = (
                 <EditablePart
@@ -653,6 +775,7 @@ export default function MessengerLinksBlock({
                     $styleCss={messengerButtonStyle}
                     $isEmpty={isEmpty}
                     $brandColor={brandColor}
+                    style={service.buttonStyle}
                     className={`flex cursor-pointer items-center justify-center overflow-hidden ${cardLayoutClass}`}
                   >
                     <EditablePart
@@ -685,7 +808,31 @@ export default function MessengerLinksBlock({
                           $styleCss={labelStyle}
                           className="block max-w-full text-center leading-tight"
                         >
-                          {service.label}
+                          {service.labelKey ? (
+                            <InlineEditableText
+                              value={service.label}
+                              dataKey={service.labelKey}
+                              instanceId={block.instanceId}
+                              mode={mode}
+                              onUpdateContent={onUpdateContent}
+                            >
+                              {(text) => <>{text}</>}
+                            </InlineEditableText>
+                          ) : service.repeaterKey ? (
+                            <InlineEditableText
+                              value={service.label}
+                              dataKey="label"
+                              instanceId={block.instanceId}
+                              mode={mode}
+                              onUpdateContent={(_, __, value) =>
+                                updateRepeaterLabel(service, value)
+                              }
+                            >
+                              {(text) => <>{text}</>}
+                            </InlineEditableText>
+                          ) : (
+                            service.label
+                          )}
                         </StyledLabel>
                       </EditablePart>
                     )}
@@ -705,7 +852,7 @@ export default function MessengerLinksBlock({
               if (isEditor || isEmpty) {
                 return (
                   <GridItem
-                    key={service.urlKey}
+                    key={service.id}
                     $index={index}
                     className="min-w-0"
                   >
@@ -716,7 +863,7 @@ export default function MessengerLinksBlock({
 
               return (
                 <GridLink
-                  key={service.urlKey}
+                  key={service.id}
                   $index={index}
                   {...linkProps(url)}
                   className="min-w-0 no-underline"

@@ -12,8 +12,10 @@ import { StyleSheetManager } from "styled-components";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { PageLogoPreview } from "@/builder/BuilderCanvas";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
+import LandingFooter from "@/components/landing/LandingFooter";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import type { PageFooterSettings } from "@/lib/design/page-footer";
 import { getBlockSpacingStyle } from "@/lib/design/block-spacing";
 import {
   getPageBackgroundStyle,
@@ -30,7 +32,10 @@ type PhonePreviewModalProps = {
   };
   logo?: string;
   logoShape?: "square" | "circle";
+  fontClassName?: string;
+  fontStyle?: React.CSSProperties;
   logoHeader?: Partial<LogoHeaderSettings>;
+  footer?: Partial<PageFooterSettings>;
   pageUrl?: string;
   showFloatingActions?: boolean;
   onClose: () => void;
@@ -169,7 +174,10 @@ function PhonePreviewContent({
   background,
   logo,
   logoShape,
+  fontClassName,
+  fontStyle,
   logoHeader,
+  footer,
   pageUrl,
   showFloatingActions,
 }: {
@@ -181,7 +189,10 @@ function PhonePreviewContent({
   };
   logo?: string;
   logoShape?: "square" | "circle";
+  fontClassName?: string;
+  fontStyle?: React.CSSProperties;
   logoHeader?: Partial<LogoHeaderSettings>;
+  footer?: Partial<PageFooterSettings>;
   pageUrl?: string;
   showFloatingActions?: boolean;
 }) {
@@ -196,7 +207,10 @@ function PhonePreviewContent({
   const contentBlocks = blocks.filter((block) => block.type !== "contactSave");
 
   return (
-    <div className="relative isolate min-h-full">
+    <div
+      className={["relative isolate min-h-full", fontClassName].join(" ")}
+      style={fontStyle}
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10"
@@ -240,6 +254,7 @@ function PhonePreviewContent({
           })}
         </div>
       )}
+      <LandingFooter settings={footer} pageLogo={logo} compact />
       <LandingFloatingActions
         contactBlock={contactBlock}
         pageUrl={pageUrl}
@@ -274,7 +289,10 @@ export default function PhonePreviewModal({
   background,
   logo,
   logoShape,
+  fontClassName,
+  fontStyle,
   logoHeader,
+  footer,
   pageUrl,
   showFloatingActions = false,
   onClose,
@@ -620,7 +638,10 @@ export default function PhonePreviewModal({
                           background={background}
                           logo={logo}
                           logoShape={logoShape}
+                          fontClassName={fontClassName}
+                          fontStyle={fontStyle}
                           logoHeader={logoHeader}
+                          footer={footer}
                           pageUrl={pageUrl}
                           showFloatingActions={showFloatingActions}
                         />

@@ -76,6 +76,7 @@ import {
   ClearAllConfirmModal,
   PageMetaModal,
   LogoHeaderEditorModal,
+  PageFooterEditorModal,
 } from "../BuilderModals";
 import { BuilderTour } from "../BuilderTour";
 import { useAccess } from "@/hook/auth/useAccess";
@@ -85,9 +86,21 @@ import {
   type LogoHeaderSettings,
 } from "@/lib/design/logo-header";
 import {
+  normalizeLandingFontId,
+  type LandingFontId,
+} from "@/lib/design/landing-fonts";
+import {
+  getLandingFontClassName,
+  getLandingFontStyle,
+} from "@/lib/design/landing-fonts.next";
+import {
   normalizePageBackgroundPattern,
   type PageBackgroundPattern,
 } from "@/lib/design/page-background";
+import {
+  normalizePageFooterSettings,
+  type PageFooterSettings,
+} from "@/lib/design/page-footer";
 import {
   normalizeBlockSpacingValue,
   type BlockSpacingKey,
@@ -128,7 +141,9 @@ type SimplePageBuilderProps = {
   initialLogo?: string;
   initialLogoShape?: "square" | "circle";
   initialFavicon?: string;
+  initialFont?: string;
   initialLogoHeader?: Partial<LogoHeaderSettings>;
+  initialFooter?: Partial<PageFooterSettings>;
   initialBackground?: {
     color?: string;
     image?: string;
@@ -281,7 +296,9 @@ type BuilderSaveSnapshotInput = {
   logo: string;
   logoShape: "square" | "circle";
   favicon: string;
+  font: LandingFontId;
   logoHeader: LogoHeaderSettings;
+  footer: PageFooterSettings;
   backgroundColor: string;
   backgroundImage: string;
   backgroundPattern: PageBackgroundPattern;
@@ -298,7 +315,9 @@ function serializeBuilderSaveState({
   logo,
   logoShape,
   favicon,
+  font,
   logoHeader,
+  footer,
   backgroundColor,
   backgroundImage,
   backgroundPattern,
@@ -314,7 +333,9 @@ function serializeBuilderSaveState({
     logo: saveMode === "page" ? logo : "",
     logoShape: saveMode === "page" ? logoShape : "square",
     favicon: saveMode === "page" ? favicon : "",
+    font: saveMode === "page" ? font : "",
     logoHeader,
+    footer,
     background: {
       color: backgroundColor,
       image: backgroundImage,
@@ -747,7 +768,9 @@ export default function SimplePageBuilder({
   initialLogo,
   initialLogoShape = "square",
   initialFavicon,
+  initialFont,
   initialLogoHeader,
+  initialFooter,
   initialBackground,
   suppressSmartSuggestions = false,
 }: SimplePageBuilderProps = {}) {
@@ -797,8 +820,14 @@ export default function SimplePageBuilder({
     initialLogoShape,
   );
   const [pageFavicon, setPageFavicon] = useState(initialFavicon || "");
+  const [pageFont, setPageFont] = useState<LandingFontId>(() =>
+    normalizeLandingFontId(initialFont),
+  );
   const [logoHeader, setLogoHeader] = useState<LogoHeaderSettings>(() =>
     normalizeLogoHeaderSettings(initialLogoHeader),
+  );
+  const [pageFooter, setPageFooter] = useState<PageFooterSettings>(() =>
+    normalizePageFooterSettings(initialFooter),
   );
   const [pageBackgroundColor, setPageBackgroundColor] = useState(
     initialBackground?.color || "#ffffff",
@@ -823,7 +852,9 @@ export default function SimplePageBuilder({
       logo: pageLogo,
       logoShape: pageLogoShape,
       favicon: pageFavicon,
+      font: pageFont,
       logoHeader,
+      footer: pageFooter,
       backgroundColor: pageBackgroundColor,
       backgroundImage: pageBackgroundImage,
       backgroundPattern: pageBackgroundPattern,
@@ -860,6 +891,7 @@ export default function SimplePageBuilder({
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [pageMetaOpen, setPageMetaOpen] = useState(false);
   const [logoHeaderEditorOpen, setLogoHeaderEditorOpen] = useState(false);
+  const [footerEditorOpen, setFooterEditorOpen] = useState(false);
   const [themeStudioOpen, setThemeStudioOpen] = useState(false);
   const [themeApplying, setThemeApplying] = useState<ThemeApplyingState | null>(
     null,
@@ -1013,6 +1045,7 @@ export default function SimplePageBuilder({
         setPageBackgroundColor(applied.backgroundColor);
         setPageBackgroundPattern(applied.backgroundPattern);
         setLogoHeader(applied.logoHeader);
+        setPageFooter(applied.footer);
       };
 
       if (options?.transition) {
@@ -1036,6 +1069,7 @@ export default function SimplePageBuilder({
       const applied = applyPageTheme({
         blocks: themeReadyBlocks,
         currentLogoHeader: logoHeader,
+        currentFooter: pageFooter,
         theme,
       });
       applyResolvedPageTheme(applied, { transition: options?.transition });
@@ -1048,7 +1082,14 @@ export default function SimplePageBuilder({
         toast.show("تم روی صفحه اعمال شد", "success");
       }
     },
-    [applyResolvedPageTheme, blocks, logoHeader, themeDraftStorageKey, toast],
+    [
+      applyResolvedPageTheme,
+      blocks,
+      logoHeader,
+      pageFooter,
+      themeDraftStorageKey,
+      toast,
+    ],
   );
   const handleApplyPageTheme = useCallback(
     (
@@ -1119,6 +1160,7 @@ export default function SimplePageBuilder({
         const applied = await applyPageThemeProgressively({
           blocks: themeReadyBlocks,
           currentLogoHeader: logoHeader,
+          currentFooter: pageFooter,
           theme,
           onProgress: ({ progress, label }) => {
             updateProgress(16 + progress * 0.68, label);
@@ -1153,6 +1195,7 @@ export default function SimplePageBuilder({
       applyResolvedPageTheme,
       blocks,
       logoHeader,
+      pageFooter,
       requireCanvasUpdateAccess,
       themeDraftStorageKey,
       toast,
@@ -1204,7 +1247,9 @@ export default function SimplePageBuilder({
         logo: pageLogo,
         logoShape: pageLogoShape,
         favicon: pageFavicon,
+        font: pageFont,
         logoHeader,
+        footer: pageFooter,
         backgroundColor: pageBackgroundColor,
         backgroundImage: pageBackgroundImage,
         backgroundPattern: pageBackgroundPattern,
@@ -1220,7 +1265,9 @@ export default function SimplePageBuilder({
       pageLogo,
       pageLogoShape,
       pageFavicon,
+      pageFont,
       logoHeader,
+      pageFooter,
       pageBackgroundColor,
       pageBackgroundImage,
       pageBackgroundPattern,
@@ -1230,6 +1277,14 @@ export default function SimplePageBuilder({
 
   const hasUnsavedServerChanges =
     currentServerSnapshot !== lastServerSavedSnapshot;
+  const landingFontClassName = useMemo(
+    () => getLandingFontClassName(pageFont),
+    [pageFont],
+  );
+  const landingFontStyle = useMemo(
+    () => getLandingFontStyle(pageFont),
+    [pageFont],
+  );
   const selectedConfig = selectedBlock
     ? (blockRegistry[selectedBlock.type as keyof typeof blockRegistry] ?? null)
     : null;
@@ -1777,7 +1832,7 @@ export default function SimplePageBuilder({
   );
 
   const handleInlineUpdateContent = useCallback(
-    (instanceId: string, key: string, value: string) => {
+    (instanceId: string, key: string, value: unknown) => {
       const selected = blocks.find((b) => b.instanceId === instanceId);
       if (!selected || !requireBlockAction(selected, "update")) return;
       setBlocks(
@@ -2040,9 +2095,11 @@ export default function SimplePageBuilder({
             image: pageBackgroundImage,
             pattern: pageBackgroundPattern,
           },
+          font: pageFont,
           logo: pageLogo,
           logoShape: pageLogoShape,
           logoHeader,
+          footer: pageFooter,
           favicon: pageFavicon,
         }),
       });
@@ -2099,9 +2156,11 @@ export default function SimplePageBuilder({
     pageBackgroundColor,
     pageBackgroundImage,
     pageBackgroundPattern,
+    pageFont,
     pageLogo,
     pageLogoShape,
     logoHeader,
+    pageFooter,
     pageFavicon,
     ensureQrForCreatedPage,
     toast,
@@ -2137,9 +2196,11 @@ export default function SimplePageBuilder({
             image: pageBackgroundImage,
             pattern: pageBackgroundPattern,
           },
+          font: pageFont,
           logo: pageLogo,
           logoShape: pageLogoShape,
           logoHeader,
+          footer: pageFooter,
           favicon: pageFavicon,
         }),
       });
@@ -2182,9 +2243,11 @@ export default function SimplePageBuilder({
     pageBackgroundColor,
     pageBackgroundImage,
     pageBackgroundPattern,
+    pageFont,
     pageLogo,
     pageLogoShape,
     logoHeader,
+    pageFooter,
     pageFavicon,
     createPageOnServer,
     toast,
@@ -2213,6 +2276,7 @@ export default function SimplePageBuilder({
             pattern: pageBackgroundPattern,
           },
           logoHeader,
+          footer: pageFooter,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -2238,6 +2302,7 @@ export default function SimplePageBuilder({
     pageBackgroundImage,
     pageBackgroundPattern,
     logoHeader,
+    pageFooter,
     toast,
   ]);
 
@@ -2266,6 +2331,7 @@ export default function SimplePageBuilder({
             pattern: pageBackgroundPattern,
           },
           logoHeader,
+          footer: pageFooter,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -2292,6 +2358,7 @@ export default function SimplePageBuilder({
     pageBackgroundImage,
     pageBackgroundPattern,
     logoHeader,
+    pageFooter,
     toast,
   ]);
   const validateBeforeServerSave = useCallback((): string | null => {
@@ -2791,8 +2858,13 @@ export default function SimplePageBuilder({
               }}
               logo={saveMode === "page" ? pageLogo : ""}
               logoShape={pageLogoShape}
+              fontClassName={landingFontClassName}
+              fontStyle={landingFontStyle}
               logoHeader={logoHeader}
+              pageTitle={pageTitle}
+              footer={pageFooter}
               onEditLogoHeader={() => setLogoHeaderEditorOpen(true)}
+              onEditFooter={() => setFooterEditorOpen(true)}
               onApplyTemplate={applyTemplate}
               showSmartSuggestions={!suppressSmartSuggestions}
               sortedBlocks={canvasBlocks}
@@ -2886,8 +2958,8 @@ export default function SimplePageBuilder({
         thumbnail={templateThumbnail}
         logo={pageLogo}
         logoShape={pageLogoShape}
-        logoHeader={logoHeader}
         favicon={pageFavicon}
+        font={pageFont}
         backgroundColor={pageBackgroundColor}
         backgroundImage={pageBackgroundImage}
         backgroundPattern={pageBackgroundPattern}
@@ -2901,8 +2973,8 @@ export default function SimplePageBuilder({
         onThumbnailChange={setTemplateThumbnail}
         onLogoChange={setPageLogo}
         onLogoShapeChange={setPageLogoShape}
-        onLogoHeaderChange={setLogoHeader}
         onFaviconChange={setPageFavicon}
+        onFontChange={setPageFont}
         onBackgroundColorChange={setPageBackgroundColor}
         onBackgroundImageChange={setPageBackgroundImage}
         onBackgroundPatternChange={setPageBackgroundPattern}
@@ -2925,6 +2997,15 @@ export default function SimplePageBuilder({
         title={pageTitle}
         onChange={setLogoHeader}
         onClose={() => setLogoHeaderEditorOpen(false)}
+      />
+
+      <PageFooterEditorModal
+        open={footerEditorOpen}
+        value={pageFooter}
+        logo={saveMode === "page" ? pageLogo : ""}
+        title={pageTitle}
+        onChange={setPageFooter}
+        onClose={() => setFooterEditorOpen(false)}
       />
 
       <PageThemeStudio
@@ -2953,7 +3034,10 @@ export default function SimplePageBuilder({
         showFloatingActions={canViewFloatingActions}
         logo={saveMode === "page" ? pageLogo : ""}
         logoShape={pageLogoShape}
+        fontClassName={landingFontClassName}
+        fontStyle={landingFontStyle}
         logoHeader={logoHeader}
+        footer={pageFooter}
         background={{
           color: pageBackgroundColor,
           image: pageBackgroundImage,

@@ -109,7 +109,9 @@ import {
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
 import { deleteFileByIdentifier } from "@/lib/fileDeletion";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import { normalizeLandingFontId } from "@/lib/design/landing-fonts";
 import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
+import { normalizePageFooterSettings } from "@/lib/design/page-footer";
 import {
     getPageSlugValidationError,
     normalizePageSlugInput,
@@ -236,6 +238,7 @@ export const PATCH = compose(
 
     const body = await req.json();
     const update: Record<string, unknown> = {};
+    const requestedFooter = isObject(body.footer) ? body.footer : null;
 
     const isAdmin = hasGlobalOwnerScope(user);
 
@@ -407,6 +410,10 @@ export const PATCH = compose(
         update.background = normalizePageBackground(body.background);
     }
 
+    if (Object.prototype.hasOwnProperty.call(body, "font")) {
+        update.font = normalizeLandingFontId(body.font);
+    }
+
     if (typeof body.logo === "string") {
         update.logo = body.logo.trim();
     }
@@ -455,7 +462,7 @@ export const PATCH = compose(
 
     const query = await withPageAccessScope(user, { _id: id }, "update");
     const currentPage = await Page.findOne(query)
-        .select("owner assignedUser blocks url logo favicon seo expiresAt")
+        .select("owner assignedUser blocks url logo favicon footer seo expiresAt")
         .lean();
 
     if (!currentPage) {
@@ -488,6 +495,21 @@ export const PATCH = compose(
     if (isPageExpired(effectiveExpiration)) {
         update.isPublished = false;
         update.publishedAt = undefined;
+    }
+
+    if (requestedFooter) {
+        const footerPatch: Record<string, unknown> = { ...requestedFooter };
+        footerPatch.logo = "";
+
+        if (user.role !== "superAdmin") {
+            delete footerPatch.showRadlinkBranding;
+            delete footerPatch.brandingText;
+        }
+
+        update.footer = normalizePageFooterSettings(
+            footerPatch,
+            isObject(currentPage.footer) ? currentPage.footer : {},
+        );
     }
 
     if (body.blocks !== undefined) {
@@ -555,6 +577,10 @@ export const PATCH = compose(
         blocks: page.blocks,
     });
 
+    const currentFooter = normalizePageFooterSettings(currentPage.footer);
+    const nextFooter = update.footer
+        ? normalizePageFooterSettings(update.footer, currentFooter)
+        : currentFooter;
     const replacedImageUrls = [
         typeof update.logo === "string" &&
         String(currentPage.logo ?? "") &&
@@ -565,6 +591,16 @@ export const PATCH = compose(
         String(currentPage.favicon ?? "") &&
         update.favicon !== String(currentPage.favicon ?? "")
             ? String(currentPage.favicon)
+            : "",
+        update.footer &&
+        currentFooter.logo &&
+        currentFooter.logo !== nextFooter.logo
+            ? currentFooter.logo
+            : "",
+        update.footer &&
+        currentFooter.trustBadgeImage &&
+        currentFooter.trustBadgeImage !== nextFooter.trustBadgeImage
+            ? currentFooter.trustBadgeImage
             : "",
     ].filter(Boolean);
     await Promise.allSettled(
@@ -621,6 +657,10 @@ export const DELETE = compose(
     const fileIdentifiers = [
         page.logo ? { url: String(page.logo) } : null,
         page.favicon ? { url: String(page.favicon) } : null,
+        page.footer?.logo ? { url: String(page.footer.logo) } : null,
+        page.footer?.trustBadgeImage
+            ? { url: String(page.footer.trustBadgeImage) }
+            : null,
         ...builderProducts.map((product) =>
             product.imageFile
                 ? { fileId: String(product.imageFile) }

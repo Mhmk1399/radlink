@@ -13,6 +13,11 @@ import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "../ui/CustomToast";
 import { deleteFile, uploadFile } from "@/lib/fileUtils";
+import {
+  normalizePageFooterSettings,
+  type PageFooterSettings,
+} from "@/lib/design/page-footer";
+import { RgbaColorInput } from "@/builder/editor/form/RgbaColorInput";
 import Image from "next/image";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 import { isPageExpired } from "@/lib/pages/pageExpiration";
@@ -23,6 +28,58 @@ import type { PageExpiryAlertsData } from "@/lib/pages/pageExpiryAlertsCache";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
+}
+
+function getTableModalTheme(isDark: boolean) {
+  if (isDark) {
+    return {
+      modalBg: "bg-[#1a1a20]",
+      inputBg: "bg-[#1e1e26]",
+      hoverBg: "hover:bg-[#ffffff08]",
+      textPrimary: "text-[#e8e6e3]",
+      textSecondary: "text-[#9e9a93]",
+      textMuted: "text-[#706c65]",
+      textDisabled: "text-[#4a4740]",
+      textOnAccent: "text-[#1a1a1f]",
+      borderSubtle: "border-[#2a2a32]",
+      borderInput: "border-[#2e2e38]",
+      borderFocus: "focus:border-[#c9a84c]/40",
+      divider: "border-[#2a2a32]/60",
+      badgeBg: "bg-white/10",
+      badgeText: "text-[#9e9a93]",
+      successBg: "bg-[#2a6e4e]/[0.12]",
+      successText: "text-[#6ec99a]",
+      errorBg: "bg-[#8c3a3a]/[0.12]",
+      errorText: "text-[#e87c7c]",
+      checkboxAccent: "accent-[#c9a84c]",
+      primaryButton:
+        "bg-gradient-to-r from-[#a0833a] via-[#c9a84c] to-[#dfc06a] text-[#1a1a1f] hover:brightness-110",
+    };
+  }
+
+  return {
+    modalBg: "bg-[#ffffff]",
+    inputBg: "bg-[#f3f4f6]",
+    hoverBg: "hover:bg-black/[0.04]",
+    textPrimary: "text-[#18181b]",
+    textSecondary: "text-[#52525b]",
+    textMuted: "text-[#71717a]",
+    textDisabled: "text-[#a1a1aa]",
+    textOnAccent: "text-white",
+    borderSubtle: "border-[#e4e4e7]",
+    borderInput: "border-[#d4d4d8]",
+    borderFocus: "focus:border-[#71717a]",
+    divider: "border-[#e4e4e7]/80",
+    badgeBg: "bg-black/[0.05]",
+    badgeText: "text-[#52525b]",
+    successBg: "bg-[#f0f0f2]",
+    successText: "text-[#3f3f46]",
+    errorBg: "bg-[#e8e8eb]",
+    errorText: "text-[#27272a]",
+    checkboxAccent: "accent-[#18181b]",
+    primaryButton:
+      "bg-gradient-to-r from-[#18181b] via-[#3f3f46] to-[#52525b] text-white hover:brightness-110",
+  };
 }
 
 function formatFaDate(value?: string) {
@@ -46,6 +103,8 @@ type AdminPageRow = Page & {
   viewCount?: number;
   visitorCount?: number;
 };
+
+type BrandingImageKind = "logo" | "favicon" | "trustBadge";
 
 type UserOptionSource = {
   _id?: unknown;
@@ -390,6 +449,7 @@ function buildColumns(
         { label: "دایره‌ای", value: "circle" },
       ],
       defaultValue: "square",
+    
       hideOnMobile: true,
       render: (value) => (
         <span className={cn("text-xs font-semibold", t.textMuted)}>
@@ -529,6 +589,21 @@ export default function PagesSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
+  const brandingModalTheme = useMemo(
+    () => getTableModalTheme(isDark),
+    [isDark],
+  );
+  const brandingColorInputClassName = useMemo(
+    () =>
+      cn(
+        "min-w-0 flex-1 rounded-xl border px-3 py-2.5 font-mono text-xs outline-none transition",
+        brandingModalTheme.inputBg,
+        brandingModalTheme.borderInput,
+        brandingModalTheme.borderFocus,
+        brandingModalTheme.textPrimary,
+      ),
+    [brandingModalTheme],
+  );
   const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
   const canManageOwners =
     user?.role === "agent" ||
@@ -536,6 +611,7 @@ export default function PagesSection({
     user?.role === "superAdmin";
   const canViewExpiryAlerts =
     user?.role === "admin" || user?.role === "superAdmin";
+  const canEditRadlinkBranding = user?.role === "superAdmin";
   const expiryAlertsUserId = user?.id ?? "";
 
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
@@ -553,12 +629,18 @@ export default function PagesSection({
   const [brandingPage, setBrandingPage] = useState<AdminPageRow | null>(null);
   const [brandingLogo, setBrandingLogo] = useState("");
   const [brandingFavicon, setBrandingFavicon] = useState("");
-  const [uploadingBranding, setUploadingBranding] = useState<
-    "logo" | "favicon" | null
-  >(null);
-  const [deletingBranding, setDeletingBranding] = useState<
-    "logo" | "favicon" | null
-  >(null);
+  const [brandingTrustBadge, setBrandingTrustBadge] = useState("");
+  const [brandingFooterDescription, setBrandingFooterDescription] =
+    useState("");
+  const [brandingFooterBg, setBrandingFooterBg] = useState("");
+  const [brandingFooterText, setBrandingFooterText] = useState("");
+  const [brandingFooterAccent, setBrandingFooterAccent] = useState("");
+  const [brandingFooterBorder, setBrandingFooterBorder] = useState("");
+  const [brandingShowRadlink, setBrandingShowRadlink] = useState(true);
+  const [uploadingBranding, setUploadingBranding] =
+    useState<BrandingImageKind | null>(null);
+  const [deletingBranding, setDeletingBranding] =
+    useState<BrandingImageKind | null>(null);
   const [savingBranding, setSavingBranding] = useState(false);
   const [expiryAlerts, setExpiryAlerts] = useState<PageExpiryAlertsData | null>(
     null,
@@ -847,13 +929,52 @@ export default function PagesSection({
     }
   }
 
+  function getBrandingFooter(page: AdminPageRow | null = brandingPage) {
+    return normalizePageFooterSettings(page?.footer);
+  }
+
+  function getCurrentBrandingImage(kind: BrandingImageKind) {
+    if (kind === "logo") return brandingLogo;
+    if (kind === "favicon") return brandingFavicon;
+    return brandingTrustBadge;
+  }
+
+  function getOriginalBrandingImage(kind: BrandingImageKind) {
+    if (kind === "logo") {
+      return typeof brandingPage?.logo === "string" ? brandingPage.logo : "";
+    }
+    if (kind === "favicon") {
+      return typeof brandingPage?.favicon === "string"
+        ? brandingPage.favicon
+        : "";
+    }
+
+    const footer = getBrandingFooter();
+    return footer.trustBadgeImage;
+  }
+
+  function setBrandingImage(kind: BrandingImageKind, url: string) {
+    if (kind === "logo") setBrandingLogo(url);
+    else if (kind === "favicon") setBrandingFavicon(url);
+    else setBrandingTrustBadge(url);
+  }
+
   function openBrandingModal(row: AdminPageRow) {
+    const footer = getBrandingFooter(row);
+
     setBrandingPage(row);
     setBrandingLogo(typeof row.logo === "string" ? row.logo : "");
     setBrandingFavicon(typeof row.favicon === "string" ? row.favicon : "");
+    setBrandingTrustBadge(footer.trustBadgeImage);
+    setBrandingFooterDescription(footer.description);
+    setBrandingFooterBg(footer.backgroundColor);
+    setBrandingFooterText(footer.textColor);
+    setBrandingFooterAccent(footer.accentColor);
+    setBrandingFooterBorder(footer.borderColor);
+    setBrandingShowRadlink(footer.showRadlinkBranding);
   }
 
-  async function uploadBrandingImage(kind: "logo" | "favicon", file?: File) {
+  async function uploadBrandingImage(kind: BrandingImageKind, file?: File) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("فقط فایل تصویر قابل آپلود است.");
@@ -864,15 +985,13 @@ export default function PagesSection({
       return;
     }
 
-    const currentUrl = kind === "logo" ? brandingLogo : brandingFavicon;
-    const originalUrl =
-      typeof brandingPage?.[kind] === "string" ? brandingPage[kind] : "";
+    const currentUrl = getCurrentBrandingImage(kind);
+    const originalUrl = getOriginalBrandingImage(kind);
 
     try {
       setUploadingBranding(kind);
       const uploaded = await uploadFile(file);
-      if (kind === "logo") setBrandingLogo(uploaded.url);
-      else setBrandingFavicon(uploaded.url);
+      setBrandingImage(kind, uploaded.url);
       if (currentUrl && currentUrl !== originalUrl) {
         deleteFile({ url: currentUrl }).catch(() => {
           console.warn("Temporary branding image cleanup failed.");
@@ -887,10 +1006,9 @@ export default function PagesSection({
     }
   }
 
-  async function removeBrandingImage(kind: "logo" | "favicon") {
-    const currentUrl = kind === "logo" ? brandingLogo : brandingFavicon;
-    const originalUrl =
-      typeof brandingPage?.[kind] === "string" ? brandingPage[kind] : "";
+  async function removeBrandingImage(kind: BrandingImageKind) {
+    const currentUrl = getCurrentBrandingImage(kind);
+    const originalUrl = getOriginalBrandingImage(kind);
     if (!currentUrl || deletingBranding) return;
 
     try {
@@ -898,8 +1016,7 @@ export default function PagesSection({
       if (currentUrl !== originalUrl) {
         await deleteFile({ url: currentUrl });
       }
-      if (kind === "logo") setBrandingLogo("");
-      else setBrandingFavicon("");
+      setBrandingImage(kind, "");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "حذف تصویر انجام نشد.",
@@ -918,6 +1035,10 @@ export default function PagesSection({
       brandingLogo && brandingLogo !== originalLogo ? brandingLogo : "",
       brandingFavicon && brandingFavicon !== originalFavicon
         ? brandingFavicon
+        : "",
+      brandingTrustBadge &&
+      brandingTrustBadge !== getBrandingFooter().trustBadgeImage
+        ? brandingTrustBadge
         : "",
     ].filter(Boolean);
 
@@ -945,6 +1066,18 @@ export default function PagesSection({
         body: JSON.stringify({
           logo: brandingLogo,
           favicon: brandingFavicon,
+          footer: {
+            logo: "",
+            trustBadgeImage: brandingTrustBadge,
+            description: brandingFooterDescription,
+            backgroundColor: brandingFooterBg,
+            textColor: brandingFooterText,
+            accentColor: brandingFooterAccent,
+            borderColor: brandingFooterBorder,
+            ...(canEditRadlinkBranding
+              ? { showRadlinkBranding: brandingShowRadlink }
+              : {}),
+          } satisfies Partial<PageFooterSettings>,
         }),
       });
       const json = await response.json().catch(() => null);
@@ -952,7 +1085,7 @@ export default function PagesSection({
         throw new Error(json?.message ?? "ذخیره تصاویر صفحه انجام نشد.");
       }
 
-      toast.success("لوگو و فاوآیکون صفحه ذخیره شدند.");
+      toast.success("برندینگ و فوتر صفحه ذخیره شدند.");
       setBrandingPage(null);
       setRefreshToken((value) => value + 1);
     } catch (error) {
@@ -1159,7 +1292,7 @@ export default function PagesSection({
                     event.stopPropagation();
                     openBrandingModal(row);
                   }}
-                  title="مدیریت لوگو و فاوآیکون"
+                  title="مدیریت برندینگ و فوتر"
                   className={cn(
                     "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
                     isDark
@@ -1168,7 +1301,7 @@ export default function PagesSection({
                   )}
                 >
                   <FaImage className="h-4 w-4" />
-                  <span className="sr-only">مدیریت لوگو و فاوآیکون</span>
+                  <span className="sr-only">مدیریت برندینگ و فوتر</span>
                 </button>
               )}
 
@@ -1229,7 +1362,7 @@ export default function PagesSection({
           className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-5"
           role="dialog"
           aria-modal="true"
-          aria-label="مدیریت لوگو و فاوآیکون صفحه"
+          aria-label="مدیریت برندینگ و فوتر صفحه"
           onMouseDown={(event) => {
             if (
               event.target === event.currentTarget &&
@@ -1243,104 +1376,327 @@ export default function PagesSection({
         >
           <div
             className={cn(
-              "w-full max-w-xl overflow-hidden rounded-t-2xl border shadow-2xl sm:rounded-2xl",
-              t.modalBg,
-              t.borderSubtle,
+              "flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border shadow-2xl sm:rounded-2xl",
+              brandingModalTheme.modalBg,
+              brandingModalTheme.borderSubtle,
             )}
           >
-            <div className={cn("border-b px-5 py-4", t.divider)}>
-              <h2 className={cn("text-base font-black", t.textPrimary)}>
-                لوگو و فاوآیکون صفحه
+            <div
+              className={cn("border-b px-5 py-4", brandingModalTheme.divider)}
+            >
+              <h2
+                className={cn(
+                  "text-base font-black",
+                  brandingModalTheme.textPrimary,
+                )}
+              >
+                برندینگ و فوتر صفحه
               </h2>
-              <p className={cn("mt-1 text-xs", t.textMuted)}>
+              <p className={cn("mt-1 text-xs", brandingModalTheme.textMuted)}>
                 {String(brandingPage.title || "صفحه")}
               </p>
             </div>
 
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              {(
-                [
-                  {
-                    kind: "logo" as const,
-                    label: "لوگوی صفحه",
-                    value: brandingLogo,
-                  },
-                  {
-                    kind: "favicon" as const,
-                    label: "آیکون مرورگر",
-                    value: brandingFavicon,
-                  },
-                ] as const
-              ).map((item) => (
-                <div key={item.kind}>
-                  <label
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(
+                  [
+                    {
+                      kind: "logo" as const,
+                      label: "لوگوی صفحه",
+                      value: brandingLogo,
+                    },
+                    {
+                      kind: "favicon" as const,
+                      label: "آیکون مرورگر",
+                      value: brandingFavicon,
+                    },
+                    {
+                      kind: "trustBadge" as const,
+                      label: "تصویر نماد",
+                      value: brandingTrustBadge,
+                    },
+                  ] as const
+                ).map((item) => (
+                  <div key={item.kind}>
+                    <label
+                      className={cn(
+                        "mb-2 block text-xs font-bold",
+                        brandingModalTheme.textSecondary,
+                      )}
+                    >
+                      {item.label}
+                    </label>
+                    <label
+                      className={cn(
+                        "relative flex min-h-40 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition",
+                        brandingModalTheme.inputBg,
+                        brandingModalTheme.borderInput,
+                        uploadingBranding || deletingBranding
+                          ? "pointer-events-none opacity-70"
+                          : brandingModalTheme.hoverBg,
+                      )}
+                    >
+                      {item.value ? (
+                        <Image
+                          src={item.value}
+                          alt={item.label}
+                          fill
+                          unoptimized
+                          sizes="(max-width: 640px) 100vw, 280px"
+                          className="absolute inset-0 h-full w-full object-contain p-5"
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            "text-xs font-medium",
+                            brandingModalTheme.textMuted,
+                          )}
+                        >
+                          انتخاب تصویر
+                        </span>
+                      )}
+                      {(uploadingBranding === item.kind ||
+                        deletingBranding === item.kind) && (
+                        <span
+                          className={cn(
+                            "relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent",
+                            brandingModalTheme.textSecondary,
+                          )}
+                        />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          void uploadBrandingImage(
+                            item.kind,
+                            event.target.files?.[0],
+                          );
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {item.value && (
+                      <button
+                        type="button"
+                        onClick={() => void removeBrandingImage(item.kind)}
+                        disabled={
+                          Boolean(uploadingBranding) ||
+                          Boolean(deletingBranding)
+                        }
+                        className={cn(
+                          "mt-2 text-xs font-bold disabled:opacity-50",
+                          brandingModalTheme.errorText,
+                        )}
+                      >
+                        {deletingBranding === item.kind
+                          ? "در حال حذف..."
+                          : "حذف تصویر"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div
+                  className={cn(
+                    "rounded-xl border px-4 py-3 text-xs leading-6",
+                    brandingModalTheme.inputBg,
+                    brandingModalTheme.borderInput,
+                    brandingModalTheme.textMuted,
+                  )}
+                >
+                  لوگوی فوتر به صورت خودکار از لوگوی اصلی صفحه استفاده می‌کند.
+                </div>
+
+                <label className="block">
+                  <span
                     className={cn(
                       "mb-2 block text-xs font-bold",
-                      t.textSecondary,
+                      brandingModalTheme.textSecondary,
                     )}
                   >
-                    {item.label}
-                  </label>
+                    متن زیر لوگوی فوتر
+                  </span>
+                  <textarea
+                    value={brandingFooterDescription}
+                    onChange={(event) =>
+                      setBrandingFooterDescription(event.target.value)
+                    }
+                    rows={3}
+                    className={cn(
+                      "w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition",
+                      brandingModalTheme.inputBg,
+                      brandingModalTheme.borderInput,
+                      brandingModalTheme.borderFocus,
+                      brandingModalTheme.textPrimary,
+                    )}
+                    placeholder="مثلا: همراه شما برای تجربه‌ای بهتر"
+                  />
+                </label>
+
+                <div>
+                  <h3
+                    className={cn(
+                      "text-sm font-black",
+                      brandingModalTheme.textPrimary,
+                    )}
+                  >
+                    رنگ‌های فوتر
+                  </h3>
+                  <p
+                    className={cn(
+                      "mt-1 text-xs leading-6",
+                      brandingModalTheme.textMuted,
+                    )}
+                  >
+                    این رنگ‌ها مستقل از رنگ لوگوی صفحه ذخیره می‌شوند و در خروجی
+                    لندینگ نمایش داده می‌شوند.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    {
+                      label: "پس‌زمینه فوتر",
+                      element: "بدنه فوتر",
+                      helper: "رنگ سطح اصلی فوتر و فضای پشت لوگو و نماد.",
+                      value: brandingFooterBg,
+                      onChange: setBrandingFooterBg,
+                    },
+                    {
+                      label: "متن‌های فوتر",
+                      element: "توضیحات و کپی‌رایت",
+                      helper: "رنگ متن زیر لوگو و نوشته پایین فوتر.",
+                      value: brandingFooterText,
+                      onChange: setBrandingFooterText,
+                    },
+                    {
+                      label: "رنگ تاکید",
+                      element: "عنوان و جزئیات برجسته",
+                      helper: "رنگ نام صفحه، حرف جایگزین لوگو و تاکیدهای کوچک.",
+                      value: brandingFooterAccent,
+                      onChange: setBrandingFooterAccent,
+                    },
+                    {
+                      label: "خط و حاشیه",
+                      element: "کادرها و جداکننده",
+                      helper: "رنگ دور فوتر، خط جداکننده و کادر نماد اعتماد.",
+                      value: brandingFooterBorder,
+                      onChange: setBrandingFooterBorder,
+                    },
+                  ].map((field) => (
+                    <div
+                      key={field.label}
+                      className={cn(
+                        "rounded-xl border p-3",
+                        brandingModalTheme.inputBg,
+                        brandingModalTheme.borderInput,
+                      )}
+                    >
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p
+                            className={cn(
+                              "text-xs font-black",
+                              brandingModalTheme.textPrimary,
+                            )}
+                          >
+                            {field.label}
+                          </p>
+                          <p
+                            className={cn(
+                              "mt-1 text-[11px] leading-5",
+                              brandingModalTheme.textMuted,
+                            )}
+                          >
+                            {field.helper}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold",
+                            brandingModalTheme.badgeBg,
+                            brandingModalTheme.badgeText,
+                          )}
+                        >
+                          {field.element}
+                        </span>
+                      </div>
+                      <RgbaColorInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        label={field.label}
+                        swatchClassName="h-10 w-12 rounded-xl"
+                        className="min-w-0"
+                        inputClassName={brandingColorInputClassName}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {canEditRadlinkBranding ? (
                   <label
                     className={cn(
-                      "relative flex min-h-40 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition",
-                      t.inputBg,
-                      t.borderInput,
-                      uploadingBranding || deletingBranding
-                        ? "pointer-events-none opacity-70"
-                        : t.hoverBg,
+                      "flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3",
+                      brandingModalTheme.inputBg,
+                      brandingModalTheme.borderInput,
                     )}
                   >
-                    {item.value ? (
-                      <Image
-                        src={item.value}
-                        alt={item.label}
-                        fill
-                        unoptimized
-                        sizes="(max-width: 640px) 100vw, 280px"
-                        className="absolute inset-0 h-full w-full object-contain p-5"
-                      />
-                    ) : (
-                      <span className={cn("text-xs font-medium", t.textMuted)}>
-                        انتخاب تصویر
+                    <span>
+                      <span
+                        className={cn(
+                          "flex items-center gap-2 text-sm font-bold",
+                          brandingModalTheme.textPrimary,
+                        )}
+                      >
+                        نمایش متن ساخته شده با رادلینک
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px]",
+                            brandingShowRadlink
+                              ? `${brandingModalTheme.successBg} ${brandingModalTheme.successText}`
+                              : `${brandingModalTheme.errorBg} ${brandingModalTheme.errorText}`,
+                          )}
+                        >
+                          {brandingShowRadlink ? "فعال" : "خاموش"}
+                        </span>
                       </span>
-                    )}
-                    {(uploadingBranding === item.kind ||
-                      deletingBranding === item.kind) && (
-                      <span className="relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
-                    )}
+                      <span
+                        className={cn(
+                          "mt-1 block text-xs",
+                          brandingModalTheme.textMuted,
+                        )}
+                      >
+                        فقط سوپر ادمین می‌تواند این متن را برای هر صفحه خاموش یا
+                        روشن کند. حالت پیش‌فرض فعال است.
+                      </span>
+                    </span>
                     <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => {
-                        void uploadBrandingImage(
-                          item.kind,
-                          event.target.files?.[0],
-                        );
-                        event.target.value = "";
-                      }}
+                      type="checkbox"
+                      checked={brandingShowRadlink}
+                      onChange={(event) =>
+                        setBrandingShowRadlink(event.target.checked)
+                      }
+                      className={cn(
+                        "h-5 w-5 rounded border-neutral-300 focus:ring-0",
+                        brandingModalTheme.checkboxAccent,
+                      )}
                     />
                   </label>
-                  {item.value && (
-                    <button
-                      type="button"
-                      onClick={() => void removeBrandingImage(item.kind)}
-                      disabled={
-                        Boolean(uploadingBranding) || Boolean(deletingBranding)
-                      }
-                      className="mt-2 text-xs font-bold text-red-500 disabled:opacity-50"
-                    >
-                      {deletingBranding === item.kind
-                        ? "در حال حذف..."
-                        : "حذف تصویر"}
-                    </button>
-                  )}
-                </div>
-              ))}
+                ) : null}
+              </div>
             </div>
 
-            <div className={cn("flex gap-3 border-t p-4", t.divider)}>
+            <div
+              className={cn(
+                "flex gap-3 border-t p-4",
+                brandingModalTheme.divider,
+              )}
+            >
               <button
                 type="button"
                 onClick={closeBrandingModal}
@@ -1351,9 +1707,9 @@ export default function PagesSection({
                 }
                 className={cn(
                   "flex-1 rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50",
-                  t.borderInput,
-                  t.textSecondary,
-                  t.hoverBg,
+                  brandingModalTheme.borderInput,
+                  brandingModalTheme.textSecondary,
+                  brandingModalTheme.hoverBg,
                 )}
               >
                 انصراف
@@ -1366,9 +1722,12 @@ export default function PagesSection({
                   Boolean(uploadingBranding) ||
                   Boolean(deletingBranding)
                 }
-                className="flex-1 rounded-xl bg-sky-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                className={cn(
+                  "flex-1 rounded-xl px-4 py-3 text-sm font-bold transition disabled:opacity-50",
+                  brandingModalTheme.primaryButton,
+                )}
               >
-                {savingBranding ? "در حال ذخیره..." : "ذخیره تصاویر"}
+                {savingBranding ? "در حال ذخیره..." : "ذخیره برندینگ و فوتر"}
               </button>
             </div>
           </div>

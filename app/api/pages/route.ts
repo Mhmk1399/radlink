@@ -119,7 +119,9 @@ import {
 } from "@/lib/pages/pageExpiryAlertsCache";
 import { PAGE_EXPIRY_DAY_MS } from "@/lib/pages/pageExpiryStatus";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import { normalizeLandingFontId } from "@/lib/design/landing-fonts";
 import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
+import { normalizePageFooterSettings } from "@/lib/design/page-footer";
 import {
     getPageSlugValidationError,
     normalizePageSlugInput,
@@ -443,6 +445,7 @@ export const POST = compose(
 
     let blocks = Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [];
     let templateLogoHeader: unknown;
+    let templateFooter: unknown;
 
     if (templateId) {
         const templateQuery = await withTemplateAccessScope(user, {
@@ -460,6 +463,7 @@ export const POST = compose(
             );
         }
         templateLogoHeader = template.logoHeader;
+        templateFooter = template.footer;
 
         if (
             template.category &&
@@ -527,11 +531,26 @@ export const POST = compose(
                 ? body.styleOverride
                 : {},
         background: normalizePageBackground(body.background),
+        font: normalizeLandingFontId(body.font),
         logo,
         logoShape: body.logoShape === "circle" ? "circle" : "square",
         logoHeader: normalizeLogoHeaderSettings(
             body.logoHeader ?? templateLogoHeader,
         ),
+        footer: normalizePageFooterSettings({
+            ...(isObject(body.footer)
+                ? body.footer
+                : isObject(templateFooter)
+                  ? templateFooter
+                  : {}),
+            logo: "",
+            showRadlinkBranding:
+                user.role === "superAdmin"
+                    ? (isObject(body.footer)
+                        ? body.footer.showRadlinkBranding
+                        : undefined)
+                    : true,
+        }),
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
         expiresAt,
         isPublished: effectivePublished,

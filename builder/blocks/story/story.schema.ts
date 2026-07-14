@@ -34,11 +34,12 @@ export const storyHighlightsSchema: BlockSchema = {
                 "borderColor",
                 "borderWidth",
                 "animation",
+                "contentAlign",
             ],
         },
         title: {
             label: "عنوان بخش",
-            allowedStyleKeys: ["color", "fontSize", "animation"],
+            allowedStyleKeys: ["color", "fontSize", "animation", "textAlign"],
         },
         thumbnail: {
             label: "تصویر بندانگشتی",
@@ -52,7 +53,7 @@ export const storyHighlightsSchema: BlockSchema = {
         },
         thumbnailLabel: {
             label: "عنوان تصویر بندانگشتی",
-            allowedStyleKeys: ["color", "fontSize"],
+            allowedStyleKeys: ["color", "fontSize", "textAlign"],
         },
         viewer: {
             label: "نمایشگر استوری",
@@ -86,6 +87,7 @@ export const storyHighlightsSchema: BlockSchema = {
                 "borderColor",
                 "borderWidth",
                 "animation",
+                "textAlign",
             ],
         },
         navButton: {

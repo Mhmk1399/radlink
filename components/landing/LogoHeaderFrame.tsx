@@ -568,25 +568,36 @@ export function LogoHeaderFrame({
 }) {
   const normalized = normalizeLogoHeaderSettings(settings);
   const hasLogo = Boolean(logo?.trim());
+  const headerTitle = normalized.title.trim();
+  const headerDescription = normalized.description.trim();
+  const hasHeaderText = Boolean(headerTitle || headerDescription);
   const framedLogoSize = Math.min(
     normalized.logoSize,
-    Math.max(48, normalized.height - 32),
+    Math.max(44, normalized.height - (hasHeaderText ? 86 : 32)),
   );
   const hasBackgroundImage = Boolean(normalized.backgroundImage.trim());
   const hasEdgeWave = isEdgeWaveVariant(normalized.variant);
 
   if (!normalized.enabled || (normalized.variant === "none" && !hasBackgroundImage)) {
-    if (!hasLogo && !showPlaceholder) return null;
+    if (!hasLogo && !showPlaceholder && !hasHeaderText) return null;
 
     return (
       <div className="flex w-full justify-center px-4 pb-5 pt-6">
-        <LogoSlot
-          logo={logo}
-          logoShape={logoShape}
-          logoSize={normalized.logoSize}
-          title={title}
-          showPlaceholder={showPlaceholder}
-        />
+        <div className="flex flex-col items-center text-center">
+          <LogoSlot
+            logo={logo}
+            logoShape={logoShape}
+            logoSize={normalized.logoSize}
+            title={title}
+            showPlaceholder={showPlaceholder}
+          />
+          <HeaderText
+            title={headerTitle}
+            description={headerDescription}
+            titleColor={normalized.textColor}
+            descriptionColor={normalized.descriptionColor}
+          />
+        </div>
       </div>
     );
   }
@@ -651,7 +662,10 @@ export function LogoHeaderFrame({
             )}
           </svg>
         ) : null}
-        <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 2 }}>
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
+          style={{ zIndex: 2 }}
+        >
           <LogoSlot
             logo={logo}
             logoShape={logoShape}
@@ -659,8 +673,49 @@ export function LogoHeaderFrame({
             title={title}
             showPlaceholder={showPlaceholder}
           />
+          <HeaderText
+            title={headerTitle}
+            description={headerDescription}
+            titleColor={normalized.textColor}
+            descriptionColor={normalized.descriptionColor}
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeaderText({
+  title,
+  description,
+  titleColor,
+  descriptionColor,
+}: {
+  title: string;
+  description: string;
+  titleColor: string;
+  descriptionColor: string;
+}) {
+  if (!title && !description) return null;
+
+  return (
+    <div className="mt-3 max-w-[min(28rem,90%)]">
+      {title ? (
+        <p
+          className="line-clamp-1 text-[15px] font-black leading-6 sm:text-base"
+          style={{ color: titleColor }}
+        >
+          {title}
+        </p>
+      ) : null}
+      {description ? (
+        <p
+          className="mt-0.5 line-clamp-2 text-[11px] font-semibold leading-5 sm:text-xs"
+          style={{ color: descriptionColor }}
+        >
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }

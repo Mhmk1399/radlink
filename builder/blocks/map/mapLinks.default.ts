@@ -21,15 +21,22 @@ export function createDefaultMapLinksBlock(order = 0): PageBlock {
             description:
                 "برای مشاهده آدرس و مسیریابی، یکی از نقشه‌های زیر را انتخاب کنید.",
 
+            googleMapsLabel: "گوگل مپ",
             googleMapsUrl: "",
+            neshanLabel: "نشان",
             neshanUrl: "",
+            baladLabel: "بلد",
             baladUrl: "",
+            wazeLabel: "ویز",
+            wazeUrl: "",
+            mapItems: [],
 
             showTitle: true,
             showDescription: true,
             showGoogleMaps: true,
             showNeshan: true,
             showBalad: true,
+            showWaze: true,
             openInNewTab: true,
         },
 

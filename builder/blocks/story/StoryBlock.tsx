@@ -379,7 +379,10 @@ export default function StoryHighlightsBlock({
           )}
 
           {stories.length > 0 && (
-            <div className="flex gap-4 overflow-x-auto pb-2 mt-4 scrollbar-none">
+            <div
+              className="flex gap-4 overflow-x-auto pb-2 mt-4 scrollbar-none"
+              style={{ justifyContent: "var(--radlink-content-align, center)" }}
+            >
               {stories.map((story, idx) => {
                 const thumbSrc = getThumbnailSrc(story);
                 return (

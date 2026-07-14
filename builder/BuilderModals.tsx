@@ -27,6 +27,7 @@ import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { slugify } from "@/helper/builder.helpers";
 import { uploadFile } from "@/lib/fileUtils";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
+import LandingFooter from "@/components/landing/LandingFooter";
 import {
   DEFAULT_LOGO_HEADER,
   LOGO_HEADER_VARIANTS,
@@ -34,12 +35,25 @@ import {
   type LogoHeaderSettings,
 } from "@/lib/design/logo-header";
 import {
+  LANDING_FONT_OPTIONS,
+  normalizeLandingFontId,
+  type LandingFontId,
+} from "@/lib/design/landing-fonts";
+import {
+  getLandingFontClassName,
+  getLandingFontStyle,
+} from "@/lib/design/landing-fonts.next";
+import {
   PAGE_BACKGROUND_PATTERNS,
   createPageBackgroundPattern,
   getPageBackgroundStyle,
   normalizePageBackgroundPattern,
   type PageBackgroundPattern,
 } from "@/lib/design/page-background";
+import {
+  normalizePageFooterSettings,
+  type PageFooterSettings,
+} from "@/lib/design/page-footer";
 import { RgbaColorInput } from "@/builder/editor/form/RgbaColorInput";
 
 type CatalogBlock = {
@@ -823,6 +837,37 @@ function LogoHeaderSettingsPanel({
           showPlaceholder
         />
 
+        <div className="mb-3 grid grid-cols-1 gap-3 rounded-2xl border border-neutral-200 bg-white p-3">
+          <label>
+            <span className="mb-2 block text-[11px] font-bold text-neutral-600">
+              عنوان زیر لوگو
+            </span>
+            <input
+              type="text"
+              value={settings.title}
+              onChange={(event) =>
+                update({ title: event.target.value, enabled: true })
+              }
+              placeholder="مثلا: کلینیک زیبایی آوینا"
+              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[13px] text-neutral-800 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+            />
+          </label>
+          <label>
+            <span className="mb-2 block text-[11px] font-bold text-neutral-600">
+              توضیح کوتاه زیر عنوان
+            </span>
+            <textarea
+              value={settings.description}
+              onChange={(event) =>
+                update({ description: event.target.value, enabled: true })
+              }
+              rows={2}
+              placeholder="مثلا: رزرو سریع خدمات و مشاهده اطلاعات تماس"
+              className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[13px] leading-6 text-neutral-800 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+            />
+          </label>
+        </div>
+
         <label className="mb-3 block rounded-2xl border border-[#064789]/15 bg-white p-3 shadow-sm">
           <span className="flex items-center justify-between gap-3 text-[11px] font-black text-neutral-700">
             ارتفاع قاب لوگو
@@ -974,12 +1019,14 @@ function LogoHeaderSettingsPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(
           [
             ["primaryColor", "رنگ اصلی"],
             ["secondaryColor", "رنگ شکل"],
             ["accentColor", "رنگ جزئیات"],
+            ["textColor", "رنگ عنوان"],
+            ["descriptionColor", "رنگ توضیح"],
           ] as const
         ).map(([key, label]) => (
           <div key={key}>
@@ -1166,6 +1213,297 @@ export function LogoHeaderEditorModal({
   );
 }
 
+export function PageFooterEditorModal({
+  open,
+  value,
+  logo,
+  title,
+  onChange,
+  onClose,
+}: {
+  open: boolean;
+  value?: Partial<PageFooterSettings>;
+  logo?: string;
+  title: string;
+  onChange: (value: PageFooterSettings) => void;
+  onClose: () => void;
+}) {
+  const settings = normalizePageFooterSettings(value);
+  const trustBadgeInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const update = useCallback(
+    (patch: Partial<PageFooterSettings>) => {
+      onChange(
+        normalizePageFooterSettings({
+          ...settings,
+          ...patch,
+          logo: "",
+        }),
+      );
+    },
+    [onChange, settings],
+  );
+
+  const handleTrustBadgeFile = useCallback(
+    async (file: File | null | undefined) => {
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setUploadError("فقط فایل تصویر قابل آپلود است.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+        return;
+      }
+
+      try {
+        setIsUploading(true);
+        setUploadError(null);
+        const uploaded = await uploadFile(file);
+        update({ trustBadgeImage: uploaded.url });
+      } catch (error) {
+        setUploadError(
+          error instanceof Error
+            ? error.message
+            : "آپلود تصویر نماد انجام نشد.",
+        );
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [update],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isUploading) onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isUploading, onClose, open]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[420] flex items-end justify-center bg-black/5 p-0 sm:items-center sm:p-5"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="page-footer-editor-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isUploading) onClose();
+      }}
+    >
+      <section className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-white/90 shadow-2xl backdrop-blur-sm sm:rounded-[28px]">
+        <header className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
+          <div>
+            <h2
+              id="page-footer-editor-title"
+              className="text-[15px] font-black text-neutral-900"
+            >
+              ویرایش فوتر لندینگ
+            </h2>
+            <p className="mt-1 text-[11px] text-neutral-400">
+              لوگوی فوتر از لوگوی اصلی صفحه استفاده می‌کند.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isUploading}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200 disabled:opacity-50"
+            aria-label="بستن"
+          >
+            <HiOutlineXMark className="h-5 w-5" />
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <LandingFooter
+            settings={settings}
+            pageLogo={logo}
+            pageTitle={title}
+            compact
+          />
+
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-neutral-600 ring-1 ring-neutral-200">
+            <input
+              type="checkbox"
+              checked={settings.enabled}
+              onChange={(event) => update({ enabled: event.target.checked })}
+              className="h-4 w-4 rounded border-neutral-300 accent-[#064789]"
+            />
+            نمایش فوتر
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-[12px] font-bold text-neutral-600">
+              متن زیر لوگو
+            </span>
+            <textarea
+              value={settings.description}
+              onChange={(event) =>
+                update({ description: event.target.value })
+              }
+              rows={3}
+              placeholder="مثلا: همراه شما برای تجربه‌ای بهتر"
+              className="w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[13px] leading-6 text-neutral-800 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100"
+            />
+          </label>
+
+          <div className="rounded-2xl border border-neutral-200 bg-white p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[12px] font-black text-neutral-700">
+                  تصویر نماد اعتماد
+                </p>
+                <p className="mt-1 text-[10px] leading-5 text-neutral-400">
+                  مثل اینماد، مجوز صنفی یا نشان اعتماد.
+                </p>
+              </div>
+              {settings.trustBadgeImage ? (
+                <button
+                  type="button"
+                  onClick={() => update({ trustBadgeImage: "" })}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100"
+                  title="حذف تصویر نماد"
+                >
+                  <HiOutlineTrash className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => trustBadgeInputRef.current?.click()}
+              disabled={isUploading}
+              className="relative flex min-h-[128px] w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 text-neutral-500 transition hover:border-[#064789]/45 hover:bg-[#064789]/5 hover:text-[#064789] disabled:cursor-wait disabled:opacity-70"
+            >
+              {settings.trustBadgeImage ? (
+                <Image
+                  src={settings.trustBadgeImage}
+                  alt={settings.trustBadgeAlt || "نماد اعتماد"}
+                  fill
+                  unoptimized
+                  sizes="320px"
+                  className="object-contain p-5"
+                />
+              ) : (
+                <span className="flex flex-col items-center text-center text-[11px] font-bold">
+                  <HiOutlineCloudArrowUp className="mb-2 h-8 w-8" />
+                  انتخاب تصویر نماد
+                </span>
+              )}
+              {isUploading ? (
+                <span className="relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : null}
+            </button>
+            <input
+              ref={trustBadgeInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                void handleTrustBadgeFile(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+
+            {uploadError ? (
+              <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[11px] font-bold text-red-500">
+                {uploadError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {(
+              [
+                {
+                  key: "backgroundColor",
+                  label: "پس‌زمینه فوتر",
+                  element: "بدنه فوتر",
+                  helper: "رنگ سطح اصلی فوتر و فضای پشت لوگو و نماد.",
+                },
+                {
+                  key: "textColor",
+                  label: "متن‌های فوتر",
+                  element: "توضیحات و کپی‌رایت",
+                  helper: "رنگ متن زیر لوگو و نوشته پایین فوتر.",
+                },
+                {
+                  key: "accentColor",
+                  label: "رنگ تاکید",
+                  element: "عنوان و جزئیات برجسته",
+                  helper: "رنگ نام صفحه، حرف جایگزین لوگو و تاکیدهای کوچک.",
+                },
+                {
+                  key: "borderColor",
+                  label: "خط و حاشیه",
+                  element: "کادرها و جداکننده",
+                  helper: "رنگ دور فوتر، خط جداکننده و کادر نماد اعتماد.",
+                },
+              ] as const
+            ).map((field) => (
+              <div
+                key={field.key}
+                className="rounded-2xl border border-neutral-200 bg-white p-3"
+              >
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-black text-neutral-700">
+                      {field.label}
+                    </p>
+                    <p className="mt-1 text-[10px] leading-5 text-neutral-400">
+                      {field.helper}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-bold text-neutral-500">
+                    {field.element}
+                  </span>
+                </div>
+                <RgbaColorInput
+                  value={settings[field.key]}
+                  onChange={(value) => update({ [field.key]: value })}
+                  label={field.label}
+                  swatchClassName="h-10 w-12 rounded-xl"
+                  className="min-w-0"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <footer className="border-t border-neutral-100 bg-neutral-50/70 p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isUploading}
+            className="w-full rounded-2xl bg-neutral-900 px-4 py-3 text-[13px] font-bold text-white transition hover:bg-neutral-800 disabled:opacity-50"
+          >
+            انجام شد
+          </button>
+        </footer>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 export function PageMetaModal({
   open,
   mode = "page",
@@ -1179,8 +1517,8 @@ export function PageMetaModal({
   thumbnail,
   logo,
   logoShape = "square",
-  logoHeader,
   favicon,
+  font,
   backgroundColor = "#ffffff",
   backgroundImage = "",
   backgroundPattern,
@@ -1191,8 +1529,8 @@ export function PageMetaModal({
   onThumbnailChange,
   onLogoChange,
   onLogoShapeChange,
-  onLogoHeaderChange,
   onFaviconChange,
+  onFontChange,
   onBackgroundColorChange,
   onBackgroundImageChange,
   onBackgroundPatternChange,
@@ -1213,8 +1551,8 @@ export function PageMetaModal({
   thumbnail?: string;
   logo?: string;
   logoShape?: "square" | "circle";
-  logoHeader?: Partial<LogoHeaderSettings>;
   favicon?: string;
+  font?: string;
   backgroundColor?: string;
   backgroundImage?: string;
   backgroundPattern?: Partial<PageBackgroundPattern>;
@@ -1225,8 +1563,8 @@ export function PageMetaModal({
   onThumbnailChange?: (v: string) => void;
   onLogoChange?: (v: string) => void;
   onLogoShapeChange?: (v: "square" | "circle") => void;
-  onLogoHeaderChange?: (v: LogoHeaderSettings) => void;
   onFaviconChange?: (v: string) => void;
+  onFontChange?: (v: LandingFontId) => void;
   onBackgroundColorChange?: (v: string) => void;
   onBackgroundImageChange?: (v: string) => void;
   onBackgroundPatternChange?: (v: PageBackgroundPattern) => void;
@@ -1259,6 +1597,7 @@ export function PageMetaModal({
     () => normalizePageBackgroundPattern(backgroundPattern),
     [backgroundPattern],
   );
+  const selectedLandingFont = normalizeLandingFontId(font);
 
   const handleThumbnailFile = useCallback(
     async (file: File | null | undefined) => {
@@ -1664,6 +2003,65 @@ export function PageMetaModal({
                   (-) استفاده کنید.
                 </p>
               </div>
+
+              <section className="space-y-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
+                <div>
+                  <h3 className="text-[13px] font-black text-neutral-800">
+                    فونت لندینگ
+                  </h3>
+                  <p className="mt-1 text-[11px] leading-5 text-neutral-400">
+                    فونت فقط برای همین لندینگ اعمال می‌شود و قبل از ذخیره در
+                    کانواس قابل مشاهده است.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {LANDING_FONT_OPTIONS.map((option) => {
+                    const active = selectedLandingFont === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => onFontChange?.(option.id)}
+                        className={[
+                          "group flex min-h-24 flex-col rounded-2xl border bg-white p-3 text-right transition-all",
+                          active
+                            ? "border-[#064789] ring-4 ring-[#064789]/10"
+                            : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50",
+                        ].join(" ")}
+                      >
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="text-[12px] font-black text-neutral-800">
+                            {option.label}
+                          </span>
+                          <span
+                            className={[
+                              "h-4 w-4 rounded-full border transition",
+                              active
+                                ? "border-[#064789] bg-[#064789] shadow-[inset_0_0_0_3px_white]"
+                                : "border-neutral-300 bg-white",
+                            ].join(" ")}
+                            aria-hidden="true"
+                          />
+                        </span>
+                        <span className="mt-1 text-[10px] leading-5 text-neutral-400">
+                          {option.description}
+                        </span>
+                        <span
+                          className={[
+                            "mt-auto pt-3 text-[15px] leading-7 text-neutral-900",
+                            getLandingFontClassName(option.id),
+                          ].join(" ")}
+                          style={getLandingFontStyle(option.id)}
+                        >
+                          {option.previewText}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
 
               <section className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4">
                 <div>
@@ -2092,13 +2490,6 @@ export function PageMetaModal({
               />
             </>
           )}
-          <LogoHeaderSettingsPanel
-            value={logoHeader}
-            logo={mode === "page" ? logo : ""}
-            logoShape={logoShape}
-            title={title}
-            onChange={onLogoHeaderChange}
-          />
           <div>
             <label className="mb-2 block text-[13px] font-bold text-neutral-700">
               توضیح کوتاه

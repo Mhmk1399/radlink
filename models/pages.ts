@@ -126,6 +126,8 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 import type { PageBackgroundSettings } from "@/lib/design/page-background";
+import type { PageFooterSettings } from "@/lib/design/page-footer";
+import { DEFAULT_LANDING_FONT_ID } from "@/lib/design/landing-fonts";
 
 /* ================================================================== */
 /*  Shared Builder Types                                               */
@@ -144,6 +146,8 @@ export type EditableStyleKey =
   | "backgroundColor"
   | "fontSize"
   | "height"
+  | "textAlign"
+  | "contentAlign"
   | "marginTop"
   | "marginBottom"
   | "paddingTop"
@@ -159,11 +163,16 @@ export type ShadowStyleValue = {
   intensity?: number;
 };
 
+export type TextAlignValue = "left" | "center" | "right";
+export type ContentAlignValue = "left" | "center" | "right";
+
 export type EditableStyleMap = {
   color?: ResponsiveValue<string>;
   backgroundColor?: ResponsiveValue<string>;
   fontSize?: ResponsiveValue<number>;
   height?: ResponsiveValue<number>;
+  textAlign?: ResponsiveValue<TextAlignValue>;
+  contentAlign?: ResponsiveValue<ContentAlignValue>;
   marginTop?: ResponsiveValue<number>;
   marginBottom?: ResponsiveValue<number>;
   paddingTop?: ResponsiveValue<number>;
@@ -191,6 +200,7 @@ export type PageBlockSettings = {
 export type PageStyleOverride = Record<string, unknown>;
 
 export type PageBackground = PageBackgroundSettings;
+export type PageFooter = PageFooterSettings;
 
 /* ================================================================== */
 /*  Embedded Page Block                                                */
@@ -252,11 +262,13 @@ export interface IPage extends Document {
   styleOverride?: PageStyleOverride;
 
   background: PageBackground;
+  font: string;
 
   // Media
   logo?: string;
   logoShape: "square" | "circle";
   logoHeader: LogoHeaderSettings;
+  footer: PageFooter;
   favicon?: string;
   thumbnail?: string;
 
@@ -425,6 +437,12 @@ const PageSchema = new Schema<IPage>(
       },
     },
 
+    font: {
+      type: String,
+      trim: true,
+      default: DEFAULT_LANDING_FONT_ID,
+    },
+
     logo: {
       type: String,
       trim: true,
@@ -437,6 +455,11 @@ const PageSchema = new Schema<IPage>(
     },
 
     logoHeader: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+
+    footer: {
       type: Schema.Types.Mixed,
       default: {},
     },

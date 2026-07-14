@@ -1,7 +1,7 @@
 // builder/components/BuilderCanvas.tsx
 "use client";
 
-import React from "react";
+import React, { type CSSProperties } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -25,10 +25,15 @@ import {
   type PageBackgroundPattern,
 } from "@/lib/design/page-background";
 import {
+  normalizePageFooterSettings,
+  type PageFooterSettings,
+} from "@/lib/design/page-footer";
+import {
   getBlockSpacingStyle,
   type BlockSpacingKey,
 } from "@/lib/design/block-spacing";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
+import LandingFooter from "@/components/landing/LandingFooter";
 import { LegacySmartSuggestions } from "./SmartSuggestions";
 
 /* ================================================================== */
@@ -213,12 +218,14 @@ export function PageLogoPreview({
   logo,
   logoShape = "square",
   logoHeader,
+  title,
   showPlaceholder = false,
   onEdit,
 }: {
   logo?: string;
   logoShape?: "square" | "circle";
   logoHeader?: Partial<LogoHeaderSettings> | null;
+  title?: string;
   showPlaceholder?: boolean;
   onEdit?: () => void;
 }) {
@@ -228,6 +235,7 @@ export function PageLogoPreview({
         settings={logoHeader}
         logo={logo}
         logoShape={logoShape}
+        title={title}
         showPlaceholder={showPlaceholder}
       />
     );
@@ -283,7 +291,11 @@ export function CanvasContent({
   background,
   logo,
   logoShape,
+  fontClassName,
+  fontStyle,
   logoHeader,
+  pageTitle,
+  footer,
   sortedBlocks,
   availableBlockTypes,
   blockIds,
@@ -300,6 +312,7 @@ export function CanvasContent({
   onOpenCatalog,
   onApplyTemplate,
   onEditLogoHeader,
+  onEditFooter,
   floatingActions,
   showSmartSuggestions = true,
 }: {
@@ -310,7 +323,11 @@ export function CanvasContent({
   };
   logo?: string;
   logoShape?: "square" | "circle";
+  fontClassName?: string;
+  fontStyle?: CSSProperties;
   logoHeader?: Partial<LogoHeaderSettings> | null;
+  pageTitle?: string;
+  footer?: Partial<PageFooterSettings> | null;
   sortedBlocks: PageBlock[];
   availableBlockTypes?: string[];
   blockIds: string[];
@@ -323,7 +340,7 @@ export function CanvasContent({
     elementId: string,
     options?: { centerBlock?: boolean },
   ) => void;
-  onUpdateContent: (instanceId: string, key: string, value: string) => void;
+  onUpdateContent: (instanceId: string, key: string, value: unknown) => void;
   onUpdateBlockSpacing?: (
     instanceId: string,
     key: BlockSpacingKey,
@@ -335,6 +352,7 @@ export function CanvasContent({
   onOpenCatalog: () => void;
   onApplyTemplate: (blockTypes: string[]) => void;
   onEditLogoHeader?: () => void;
+  onEditFooter?: () => void;
   floatingActions?: React.ReactNode;
   showSmartSuggestions?: boolean;
 }) {
@@ -355,13 +373,15 @@ export function CanvasContent({
           isActive
             ? "border-blue-400 bg-blue-50/50 shadow-[inset_0_0_40px_rgba(59,130,246,0.06)]"
             : "border-neutral-200/60 bg-white/80",
+          fontClassName,
         ].join(" ")}
-        style={backgroundStyle}
+        style={{ ...backgroundStyle, ...fontStyle }}
       >
         <PageLogoPreview
           logo={logo}
           logoShape={logoShape}
           logoHeader={logoHeader}
+          title={pageTitle}
           showPlaceholder={Boolean(logoHeader?.enabled)}
           onEdit={onEditLogoHeader}
         />
@@ -375,11 +395,7 @@ export function CanvasContent({
             <p className="mt-2 text-[13px] text-blue-500">بلاک اضافه می‌شه</p>
           </div>
         ) : showSmartSuggestions ? (
-          <LegacySmartSuggestions
-            onApplyTemplate={onApplyTemplate}
-            onOpenCatalog={onOpenCatalog}
-            availableBlockTypes={availableBlockTypes}
-          />
+          <div></div>
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-2xl">
@@ -400,6 +416,12 @@ export function CanvasContent({
             </button>
           </div>
         )}
+        <FooterPreview
+          footer={footer}
+          logo={logo}
+          title={pageTitle}
+          onEdit={onEditFooter}
+        />
         {floatingActions}
       </div>
     );
@@ -408,13 +430,16 @@ export function CanvasContent({
   return (
     <div
       ref={setNodeRef}
-      className="relative min-h-[420px] rounded-3xl"
-      style={backgroundStyle}
+      className={["relative min-h-[420px] rounded-3xl", fontClassName].join(
+        " ",
+      )}
+      style={{ ...backgroundStyle, ...fontStyle }}
     >
       <PageLogoPreview
         logo={logo}
         logoShape={logoShape}
         logoHeader={logoHeader}
+        title={pageTitle}
         showPlaceholder={Boolean(logoHeader?.enabled)}
         onEdit={onEditLogoHeader}
       />
@@ -475,7 +500,61 @@ export function CanvasContent({
           </div>
         ))}
       </SortableContext>
+      <FooterPreview
+        footer={footer}
+        logo={logo}
+        title={pageTitle}
+        onEdit={onEditFooter}
+      />
       {floatingActions}
     </div>
+  );
+}
+
+function FooterPreview({
+  footer,
+  logo,
+  title,
+  onEdit,
+}: {
+  footer?: Partial<PageFooterSettings> | null;
+  logo?: string;
+  title?: string;
+  onEdit?: () => void;
+}) {
+  const normalizedFooter = normalizePageFooterSettings(footer);
+
+  if (onEdit && !normalizedFooter.enabled) {
+    return (
+      <button
+        type="button"
+        onClick={onEdit}
+        className="mx-3 mt-8 block w-[calc(100%-1.5rem)] rounded-[24px] border border-dashed border-neutral-300 bg-white/75 px-4 py-5 text-center text-xs font-bold text-neutral-500 outline-none transition hover:border-[#064789]/35 hover:bg-white focus-visible:ring-2 focus-visible:ring-[#064789]/35"
+      >
+        ویرایش فوتر لندینگ
+      </button>
+    );
+  }
+
+  const node = (
+    <LandingFooter
+      settings={normalizedFooter}
+      pageLogo={logo}
+      pageTitle={title}
+      compact
+    />
+  );
+
+  if (!onEdit) return node;
+
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      className="block w-full rounded-[32px] text-start outline-none transition hover:opacity-95 focus-visible:ring-2 focus-visible:ring-[#064789]/35"
+      aria-label="Edit landing footer"
+    >
+      {node}
+    </button>
   );
 }

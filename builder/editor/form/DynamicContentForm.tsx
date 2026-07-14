@@ -35,6 +35,7 @@ import { uploadFile } from "@/lib/fileUtils";
 import { LinkTypeHelp } from "./LinkTypeHelp";
 import {
   getMessengerPresetConfig,
+  getMessengerPresetForDataKey,
   normalizeMessengerIdentifier,
 } from "@/lib/messengerLinks";
 /* ================================================================== */
@@ -1005,8 +1006,11 @@ export function DynamicContentForm({
             );
           }
 
-          if (field.linkPreset) {
-            const preset = field.linkPreset;
+          const linkPreset =
+            field.linkPreset ?? getMessengerPresetForDataKey(field.key);
+
+          if (linkPreset) {
+            const preset = linkPreset;
             const presetConfig = getMessengerPresetConfig(preset);
             const identifier = normalizeMessengerIdentifier(value, preset);
 
@@ -1033,8 +1037,8 @@ export function DynamicContentForm({
                         normalizeMessengerIdentifier(event.target.value, preset),
                       )
                     }
-                    inputMode={preset === "whatsapp" ? "tel" : "text"}
-                    maxLength={preset === "whatsapp" ? 15 : 30}
+                    inputMode={presetConfig.inputMode ?? "text"}
+                    maxLength={presetConfig.maxLength ?? 50}
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}

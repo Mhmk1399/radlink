@@ -1,10 +1,12 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
 import type { PageBackgroundSettings } from "@/lib/design/page-background";
+import type { PageFooterSettings } from "@/lib/design/page-footer";
 
 type StyleMap = Record<string, unknown>;
 
 export type TemplateBackground = PageBackgroundSettings;
+export type TemplateFooter = PageFooterSettings;
 
 // Full design token set — the visual skin of the template.
 // Consumed by styled-components on the frontend.
@@ -57,6 +59,7 @@ export interface ITemplate extends Document {
     style: TemplateStyle;
     background: TemplateBackground;
     logoHeader: LogoHeaderSettings;
+    footer: TemplateFooter;
 
     category?: Types.ObjectId;
 
@@ -127,6 +130,7 @@ const TemplateSchema = new Schema<ITemplate>(
             },
         },
         logoHeader: { type: Schema.Types.Mixed, default: {} },
+        footer: { type: Schema.Types.Mixed, default: {} },
 
         category: { type: Schema.Types.ObjectId, ref: "Category", index: true },
 

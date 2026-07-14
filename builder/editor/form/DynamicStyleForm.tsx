@@ -6,7 +6,17 @@ import {
   HiOutlineSwatch,
   HiOutlineEyeDropper,
 } from "react-icons/hi2";
-import { RxBorderWidth, RxCornerBottomRight, RxFontSize } from "react-icons/rx";
+import {
+  RxAlignCenterHorizontally,
+  RxAlignLeft,
+  RxAlignRight,
+  RxBorderWidth,
+  RxCornerBottomRight,
+  RxFontSize,
+  RxTextAlignCenter,
+  RxTextAlignLeft,
+  RxTextAlignRight,
+} from "react-icons/rx";
 
 import type {
   EditableStyleKey,
@@ -15,6 +25,8 @@ import type {
   AnimationType,
   BlockElement,
   ShadowStyleValue,
+  TextAlignValue,
+  ContentAlignValue,
 } from "@/types/blocks/builder.types";
 import { ANIMATION_OPTIONS, previewAnimation } from "../animationOptions";
 import { RgbaColorInput } from "./RgbaColorInput";
@@ -55,6 +67,8 @@ type NumericStyleKey = Extract<
 /* ================================================================== */
 
 const styleLabels: Partial<Record<EditableStyleKey, string>> = {
+  textAlign: "چینش متن",
+  contentAlign: "چینش کانتینر",
   color: "رنگ متن",
   backgroundColor: "رنگ پس‌زمینه",
   fontSize: "اندازه متن",
@@ -72,6 +86,8 @@ const styleLabels: Partial<Record<EditableStyleKey, string>> = {
 styleLabels.shadow = "سایه";
 
 const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
+  textAlign: <RxTextAlignRight size={15} />,
+  contentAlign: <RxAlignCenterHorizontally size={15} />,
   color: <HiOutlineEyeDropper size={15} />,
   backgroundColor: <HiOutlinePaintBrush size={15} />,
   borderColor: <HiOutlineSwatch size={15} />,
@@ -106,6 +122,30 @@ const numberFieldConfig: Record<
 /* ================================================================== */
 /*  Helpers                                                            */
 /* ================================================================== */
+
+const textAlignOptions: Array<{
+  value: TextAlignValue;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  { value: "left", label: "چپ", icon: <RxTextAlignLeft size={15} /> },
+  { value: "center", label: "وسط", icon: <RxTextAlignCenter size={15} /> },
+  { value: "right", label: "راست", icon: <RxTextAlignRight size={15} /> },
+];
+
+const contentAlignOptions: Array<{
+  value: ContentAlignValue;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  { value: "left", label: "چپ", icon: <RxAlignLeft size={15} /> },
+  {
+    value: "center",
+    label: "وسط",
+    icon: <RxAlignCenterHorizontally size={15} />,
+  },
+  { value: "right", label: "راست", icon: <RxAlignRight size={15} /> },
+];
 
 function getResponsiveValue<T>(
   value: ResponsiveValue<T> | undefined,
@@ -142,6 +182,30 @@ function isShadowStyleKey(
   k: EditableStyleKey,
 ): k is Extract<EditableStyleKey, "shadow"> {
   return k === "shadow";
+}
+
+function isTextAlignStyleKey(
+  k: EditableStyleKey,
+): k is Extract<EditableStyleKey, "textAlign"> {
+  return k === "textAlign";
+}
+
+function isContentAlignStyleKey(
+  k: EditableStyleKey,
+): k is Extract<EditableStyleKey, "contentAlign"> {
+  return k === "contentAlign";
+}
+
+function getTextAlignValue(value: unknown): TextAlignValue {
+  return value === "left" || value === "center" || value === "right"
+    ? value
+    : "right";
+}
+
+function getContentAlignValue(value: unknown): ContentAlignValue {
+  return value === "left" || value === "center" || value === "right"
+    ? value
+    : "right";
 }
 
 function getStyleLabel(styleKey: EditableStyleKey) {
@@ -329,6 +393,65 @@ export function DynamicStyleForm({
               ResponsiveValue<string | number | ShadowStyleValue> | undefined,
             breakpoint,
           );
+
+          if (
+            isTextAlignStyleKey(styleKey) ||
+            isContentAlignStyleKey(styleKey)
+          ) {
+            const options = isTextAlignStyleKey(styleKey)
+              ? textAlignOptions
+              : contentAlignOptions;
+            const currentValue = isTextAlignStyleKey(styleKey)
+              ? getTextAlignValue(value)
+              : getContentAlignValue(value);
+            const description = isTextAlignStyleKey(styleKey)
+              ? "جهت قرارگیری خود متن"
+              : "جهت قرارگیری آیتم‌های داخل کانتینر";
+
+            return (
+              <div
+                key={styleKey}
+                className="rounded-2xl border border-neutral-100 bg-neutral-50 p-3.5"
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-500">{icon}</span>
+                    <div>
+                      <span className="block text-[13px] font-semibold text-neutral-700">
+                        {getStyleLabel(styleKey)}
+                      </span>
+                      <span className="block text-[10px] font-medium text-neutral-400">
+                        {description}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1 shadow-sm">
+                  {options.map((option) => {
+                    const active = option.value === currentValue;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => onChange(styleKey, option.value)}
+                        className={[
+                          "flex h-10 items-center justify-center gap-1.5 rounded-lg text-[12px] font-bold transition-all",
+                          active
+                            ? "bg-neutral-900 text-white shadow-sm"
+                            : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800",
+                        ].join(" ")}
+                        aria-pressed={active}
+                      >
+                        {option.icon}
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
 
           /* Shadow */
           if (isShadowStyleKey(styleKey)) {

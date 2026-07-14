@@ -22,6 +22,7 @@ export type ContactSaveData = {
   address: string;
   url: string;
   organization: string;
+  photoUrl: string;
   buttonText: string;
   showIcon: boolean;
 };
@@ -34,6 +35,7 @@ const DEFAULT_DATA: ContactSaveData = {
   address: "",
   url: "",
   organization: "",
+  photoUrl: "",
   buttonText: "ذخیره در مخاطبین",
   showIcon: true,
 };
@@ -80,7 +82,15 @@ const IconBox = styled.span<{ $styleCss: string }>`
   flex: 0 0 34px;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   ${(props) => props.$styleCss}
+`;
+
+const ContactPhoto = styled.img`
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 export function getContactSaveData(block: PageBlock): ContactSaveData {
@@ -105,6 +115,8 @@ export function getContactSaveData(block: PageBlock): ContactSaveData {
       typeof raw.organization === "string"
         ? raw.organization
         : DEFAULT_DATA.organization,
+    photoUrl:
+      typeof raw.photoUrl === "string" ? raw.photoUrl : DEFAULT_DATA.photoUrl,
     buttonText:
       typeof raw.buttonText === "string"
         ? raw.buttonText
@@ -161,6 +173,7 @@ function buildVCard(data: ContactSaveData) {
   const email = normalizeEmail(data.email);
   const address = data.address.trim();
   const url = normalizeUrl(data.url);
+  const photoUrl = normalizeUrl(data.photoUrl);
 
   const lines = [
     "BEGIN:VCARD",
@@ -173,6 +186,7 @@ function buildVCard(data: ContactSaveData) {
   if (phoneNumber) lines.push(`TEL;TYPE=CELL,VOICE:${phoneNumber}`);
   if (email) lines.push(`EMAIL;TYPE=INTERNET,HOME:${email}`);
   if (url) lines.push(`URL:${url}`);
+  if (photoUrl) lines.push(`PHOTO;VALUE=URI:${escapeVCardValue(photoUrl)}`);
   if (address)
     lines.push(
       `ADR;TYPE=HOME;CHARSET=UTF-8:;;${escapeVCardValue(address)};;;;`,
@@ -209,6 +223,7 @@ export function ContactSaveBlock({
   const isEditor = mode === "editor";
   const mobileOnly = isEditor;
   const hasPhoneNumber = Boolean(normalizePhoneNumber(data.phoneNumber));
+  const photoUrl = normalizeUrl(data.photoUrl);
   const disabled = isEditor || !hasPhoneNumber;
   const direction = block.settings.direction === "ltr" ? "ltr" : "rtl";
 
@@ -271,7 +286,11 @@ export function ContactSaveBlock({
                 onSelectElement={onSelectElement}
               >
                 <IconBox $styleCss={iconCss}>
-                  <HiOutlineUserPlus className="h-5 w-5" />
+                  {photoUrl ? (
+                    <ContactPhoto src={photoUrl} alt="" draggable={false} />
+                  ) : (
+                    <HiOutlineUserPlus className="h-5 w-5" />
+                  )}
                 </IconBox>
               </EditablePart>
             )}

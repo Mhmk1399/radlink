@@ -31,6 +31,8 @@ export type EditableStyleKey =
   | "backgroundColor"
   | "fontSize"
   | "height"
+  | "textAlign"
+  | "contentAlign"
   | "marginTop"
   | "marginBottom"
   | "paddingTop"
@@ -47,11 +49,16 @@ export type ShadowStyleValue = {
   intensity?: number;
 };
 
+export type TextAlignValue = "left" | "center" | "right";
+export type ContentAlignValue = "left" | "center" | "right";
+
 export type EditableStyleMap = {
   color?: ResponsiveValue<string>;
   backgroundColor?: ResponsiveValue<string>;
   fontSize?: ResponsiveValue<number>;
   height?: ResponsiveValue<number>;
+  textAlign?: ResponsiveValue<TextAlignValue>;
+  contentAlign?: ResponsiveValue<ContentAlignValue>;
   marginTop?: ResponsiveValue<number>;
   marginBottom?: ResponsiveValue<number>;
   paddingTop?: ResponsiveValue<number>;
@@ -111,7 +118,21 @@ export type SelectFieldConfig = {
   }>;
 };
 
-export type MessengerLinkPreset = "telegram" | "instagram" | "whatsapp";
+export type MessengerLinkPreset =
+  | "telegram"
+  | "instagram"
+  | "whatsapp"
+  | "eitaa"
+  | "soroush"
+  | "rubika"
+  | "bale"
+  | "igap"
+  | "signal"
+  | "messenger"
+  | "discord"
+  | "x"
+  | "youtube"
+  | "linkedin";
 
 // اضافه کن — تایپ فیلد repeater
 export type RepeaterFieldConfig = {
@@ -124,17 +145,31 @@ export type RepeaterFieldConfig = {
   fields: ReadonlyArray<{
     key: string;
     label: string;
-    type: "text" | "textarea" | "boolean" | "url" | "image" | "color";
+    type:
+      | "text"
+      | "textarea"
+      | "boolean"
+      | "url"
+      | "image"
+      | "color"
+      | "select";
+    options?: ReadonlyArray<{
+      value: string;
+      label: string;
+    }>;
+    defaultValue?: unknown;
+    linkPreset?: MessengerLinkPreset;
+    linkPresetFromField?: string;
   }>;
 };
 
 export type ContentField =
   | {
-      key: string;
-      label: string;
-      type: Exclude<ContentFieldType, "repeater" | "select">;
-      linkPreset?: MessengerLinkPreset;
-    }
+    key: string;
+    label: string;
+    type: Exclude<ContentFieldType, "repeater" | "select">;
+    linkPreset?: MessengerLinkPreset;
+  }
   | RepeaterFieldConfig
   | SelectFieldConfig;
 
@@ -161,5 +196,5 @@ export type BlockComponentProps = {
     elementId: string,
     options?: { centerBlock?: boolean },
   ) => void;
-  onUpdateContent?: (instanceId: string, key: string, value: string) => void;
+  onUpdateContent?: (instanceId: string, key: string, value: unknown) => void;
 };

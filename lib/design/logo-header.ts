@@ -48,6 +48,10 @@ export type LogoHeaderVariant =
 export type LogoHeaderSettings = {
   enabled: boolean;
   variant: LogoHeaderVariant;
+  title: string;
+  description: string;
+  textColor: string;
+  descriptionColor: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -113,6 +117,10 @@ export const LOGO_HEADER_VARIANTS: LogoHeaderVariantOption[] = [
 export const DEFAULT_LOGO_HEADER: LogoHeaderSettings = {
   enabled: true,
   variant: "wave-soft",
+  title: "",
+  description: "",
+  textColor: "#ffffff",
+  descriptionColor: "rgba(255,255,255,0.78)",
   primaryColor: "#064789",
   secondaryColor: "#427AA1",
   accentColor: "#EBF2FA",
@@ -173,6 +181,17 @@ export function normalizeLogoHeaderSettings(
     variant: isLogoHeaderVariant(raw.variant)
       ? raw.variant
       : DEFAULT_LOGO_HEADER.variant,
+    title:
+      typeof raw.title === "string" ? raw.title.trim() : DEFAULT_LOGO_HEADER.title,
+    description:
+      typeof raw.description === "string"
+        ? raw.description.trim()
+        : DEFAULT_LOGO_HEADER.description,
+    textColor: normalizeColor(raw.textColor, DEFAULT_LOGO_HEADER.textColor),
+    descriptionColor: normalizeColor(
+      raw.descriptionColor,
+      DEFAULT_LOGO_HEADER.descriptionColor,
+    ),
     primaryColor: normalizeColor(
       raw.primaryColor,
       DEFAULT_LOGO_HEADER.primaryColor,

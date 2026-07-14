@@ -10,6 +10,7 @@ import Category from "@/models/category";
 import "@/models/blocks";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
+import { normalizePageFooterSettings } from "@/lib/design/page-footer";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -128,6 +129,12 @@ export const PATCH = compose(
     }
     if (body.logoHeader && typeof body.logoHeader === "object") {
         template.logoHeader = normalizeLogoHeaderSettings(body.logoHeader);
+    }
+    if (body.footer && typeof body.footer === "object") {
+        template.footer = normalizePageFooterSettings({
+            ...body.footer,
+            logo: "",
+        });
     }
     if (body.blocks !== undefined) template.set("blocks", normalizeObjectIdArray(body.blocks));
     if (body.builderBlocks !== undefined) template.builderBlocks = normalizeBuilderBlocks(body.builderBlocks);

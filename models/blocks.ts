@@ -96,6 +96,8 @@ export type EditableStyleKey =
   | "backgroundColor"
   | "fontSize"
   | "height"
+  | "textAlign"
+  | "contentAlign"
   | "marginTop"
   | "marginBottom"
   | "paddingTop"
@@ -111,11 +113,16 @@ export type ShadowStyleValue = {
   intensity?: number;
 };
 
+export type TextAlignValue = "left" | "center" | "right";
+export type ContentAlignValue = "left" | "center" | "right";
+
 export type EditableStyleMap = {
   color?: ResponsiveValue<string>;
   backgroundColor?: ResponsiveValue<string>;
   fontSize?: ResponsiveValue<number>;
   height?: ResponsiveValue<number>;
+  textAlign?: ResponsiveValue<TextAlignValue>;
+  contentAlign?: ResponsiveValue<ContentAlignValue>;
   marginTop?: ResponsiveValue<number>;
   marginBottom?: ResponsiveValue<number>;
   paddingTop?: ResponsiveValue<number>;

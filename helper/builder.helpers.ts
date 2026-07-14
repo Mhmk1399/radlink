@@ -2,10 +2,12 @@
 
 import type {
   AnimationType,
+  ContentAlignValue,
   EditableStyleKey,
   PageBlock,
   ResponsiveValue,
   ShadowStyleValue,
+  TextAlignValue,
 } from "@/types/blocks/builder.types";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
 import { normalizeBlockSpacingValue } from "@/lib/design/block-spacing";
@@ -18,10 +20,30 @@ export const MAX_SUGGESTED_BLOCKS = 12;
 export type Breakpoint = "mobile" | "tablet" | "desktop";
 
 /* ── Style helpers ── */
+const TEXT_ALIGN_VALUES = new Set<TextAlignValue>([
+  "left",
+  "center",
+  "right",
+]);
+
+const CONTENT_ALIGN_VALUES = new Set<ContentAlignValue>([
+  "left",
+  "center",
+  "right",
+]);
+
 export function normalizeStyleValue(
   styleKey: EditableStyleKey,
   value: string | number | AnimationType | ShadowStyleValue,
 ): string | number | AnimationType | ShadowStyleValue {
+  if (styleKey === "textAlign") {
+    const normalized = String(value) as TextAlignValue;
+    return TEXT_ALIGN_VALUES.has(normalized) ? normalized : "right";
+  }
+  if (styleKey === "contentAlign") {
+    const normalized = String(value) as ContentAlignValue;
+    return CONTENT_ALIGN_VALUES.has(normalized) ? normalized : "right";
+  }
   if (
     styleKey === "marginTop" ||
     styleKey === "marginBottom" ||

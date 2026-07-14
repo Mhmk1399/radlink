@@ -1,10 +1,12 @@
 import type {
   AnimationType,
+  ContentAlignValue,
   EditableStyleKey,
   EditableStyleMap,
   PageBlock,
   ResponsiveValue,
   ShadowStyleValue,
+  TextAlignValue,
 } from "@/types/blocks/builder.types";
 import {
   normalizeLogoHeaderSettings,
@@ -17,6 +19,10 @@ import {
   type PageBackgroundPattern,
   type PageBackgroundPatternId,
 } from "@/lib/design/page-background";
+import {
+  normalizePageFooterSettings,
+  type PageFooterSettings,
+} from "@/lib/design/page-footer";
 
 export type PageThemePalette = {
   base: string;
@@ -58,6 +64,7 @@ export type AppliedPageTheme = {
   backgroundColor: string;
   backgroundPattern: PageBackgroundPattern;
   logoHeader: LogoHeaderSettings;
+  footer: PageFooterSettings;
 };
 
 export type PageThemeApplyProgress = {
@@ -941,6 +948,15 @@ export const BUILDER_PAGE_THEMES: PageThemeDefinition[] = [
 ];
 
 const HERO_BLOCK_TYPES = new Set(["banner", "slider", "cta"]);
+const CENTERED_ALIGNMENT_BLOCK_TYPES = new Set([
+  "banner",
+  "slider",
+  "cta",
+  "countdown",
+  "testimonial",
+  "video",
+  "contactSave",
+]);
 const TIGHT_SPACING_BLOCK_TYPES = new Set([
   "simpleLink",
   "superLink",
@@ -1257,6 +1273,16 @@ function writeStyleValue(
     return;
   }
 
+  if (key === "textAlign") {
+    style.textAlign = responsive(value as TextAlignValue);
+    return;
+  }
+
+  if (key === "contentAlign") {
+    style.contentAlign = responsive(value as ContentAlignValue);
+    return;
+  }
+
   if (key === "marginTop") {
     style.marginTop = responsive(Number(value));
     return;
@@ -1421,6 +1447,103 @@ function writeShadow(
   if (canSet(allowed, "shadow")) writeStyleValue(style, "shadow", value);
 }
 
+function writeTextAlign(
+  style: EditableStyleMap,
+  allowed: EditableStyleKey[],
+  value: TextAlignValue,
+) {
+  if (canSet(allowed, "textAlign")) writeStyleValue(style, "textAlign", value);
+}
+
+function writeContentAlign(
+  style: EditableStyleMap,
+  allowed: EditableStyleKey[],
+  value: ContentAlignValue,
+) {
+  if (canSet(allowed, "contentAlign")) {
+    writeStyleValue(style, "contentAlign", value);
+  }
+}
+
+function getThemeTextAlign({
+  role,
+  blockType,
+  isHero,
+  recipe,
+}: {
+  role: ThemeElementRole;
+  blockType: string;
+  isHero: boolean;
+  recipe: PageThemeRecipe;
+}): TextAlignValue | null {
+  if (role === "overlay" || role === "media" || role === "separator") {
+    return null;
+  }
+  if (
+    role === "buttonPrimary" ||
+    role === "buttonSecondary" ||
+    role === "accent" ||
+    role === "price"
+  ) {
+    return "center";
+  }
+  if (
+    isHero ||
+    CENTERED_ALIGNMENT_BLOCK_TYPES.has(blockType) ||
+    recipe.density === "airy"
+  ) {
+    return "center";
+  }
+  return "right";
+}
+
+function getThemeContentAlign({
+  blockType,
+  isHero,
+  recipe,
+}: {
+  blockType: string;
+  isHero: boolean;
+  recipe: PageThemeRecipe;
+}): ContentAlignValue {
+  if (
+    isHero ||
+    CENTERED_ALIGNMENT_BLOCK_TYPES.has(blockType) ||
+    recipe.density === "airy"
+  ) {
+    return "center";
+  }
+  return "right";
+}
+
+function writeThemeAlignment({
+  style,
+  allowed,
+  role,
+  blockType,
+  isHero,
+  recipe,
+}: {
+  style: EditableStyleMap;
+  allowed: EditableStyleKey[];
+  role: ThemeElementRole;
+  blockType: string;
+  isHero: boolean;
+  recipe: PageThemeRecipe;
+}) {
+  if (role === "container") {
+    writeContentAlign(
+      style,
+      allowed,
+      getThemeContentAlign({ blockType, isHero, recipe }),
+    );
+    return;
+  }
+
+  const textAlign = getThemeTextAlign({ role, blockType, isHero, recipe });
+  if (textAlign) writeTextAlign(style, allowed, textAlign);
+}
+
 function getThemeAnimation({
   role,
   recipe,
@@ -1558,6 +1681,15 @@ function styleElement({
   const panelSurface = recipePanelColor(tones, recipe);
   const lineColor = recipeLineColor(tones, recipe);
   const nextStyle: EditableStyleMap = { ...style };
+
+  writeThemeAlignment({
+    style: nextStyle,
+    allowed,
+    role,
+    blockType,
+    isHero,
+    recipe,
+  });
 
   if (role === "container") {
     const background = isHero ? tones.heroBg : blockSurface;
@@ -1907,12 +2039,15 @@ export async function applyPageThemeToBlocksProgressively(
 
 function createAppliedPageThemeFrame({
   currentLogoHeader,
+  currentFooter,
   theme,
 }: {
   currentLogoHeader?: Partial<LogoHeaderSettings>;
+  currentFooter?: Partial<PageFooterSettings>;
   theme: PageThemeDefinition;
 }): Omit<AppliedPageTheme, "blocks"> {
   const { base, surface, accent } = theme.palette;
+  const tones = resolveTheme(theme);
   const logoHeader = normalizeLogoHeaderSettings({
     ...currentLogoHeader,
     enabled: true,
@@ -1920,29 +2055,51 @@ function createAppliedPageThemeFrame({
     primaryColor: accent,
     secondaryColor: surface,
     accentColor: base,
+    textColor: textOn(accent),
+    descriptionColor: mutedOn(accent),
     patternOpacity: 0.42,
     height: clamp(theme.scale.logoHeaderHeight, 110, 360),
     logoSize: clamp(theme.scale.logoSize, 56, 180),
     cornerRadius: clamp(theme.scale.radius + 4, 0, 80),
   });
+  const footer = normalizePageFooterSettings(
+    {
+      logo: "",
+      backgroundColor:
+        theme.recipe.surfaceMode === "solid"
+          ? surface
+          : alpha(surface, theme.recipe.surfaceMode === "glass" ? 0.84 : 0.9),
+      textColor: tones.surfaceMuted,
+      accentColor: tones.accentStrong,
+      borderColor: alpha(accent, theme.recipe.contrast === "bold" ? 0.26 : 0.16),
+    },
+    currentFooter,
+  );
 
   return {
     backgroundColor: base,
     backgroundPattern: theme.backgroundPattern,
     logoHeader,
+    footer,
   };
 }
 
 export function applyPageTheme({
   blocks,
   currentLogoHeader,
+  currentFooter,
   theme,
 }: {
   blocks: PageBlock[];
   currentLogoHeader?: Partial<LogoHeaderSettings>;
+  currentFooter?: Partial<PageFooterSettings>;
   theme: PageThemeDefinition;
 }): AppliedPageTheme {
-  const frame = createAppliedPageThemeFrame({ currentLogoHeader, theme });
+  const frame = createAppliedPageThemeFrame({
+    currentLogoHeader,
+    currentFooter,
+    theme,
+  });
 
   return {
     blocks: applyPageThemeToBlocks(blocks, theme),
@@ -1953,11 +2110,13 @@ export function applyPageTheme({
 export async function applyPageThemeProgressively({
   blocks,
   currentLogoHeader,
+  currentFooter,
   theme,
   onProgress,
 }: {
   blocks: PageBlock[];
   currentLogoHeader?: Partial<LogoHeaderSettings>;
+  currentFooter?: Partial<PageFooterSettings>;
   theme: PageThemeDefinition;
   onProgress?: (progress: PageThemeApplyProgress) => void;
 }): Promise<AppliedPageTheme> {
@@ -1976,9 +2135,13 @@ export async function applyPageThemeProgressively({
   report(8, "آماده‌سازی پالت رنگی");
   await waitForThemeApplyTurn();
 
-  const frame = createAppliedPageThemeFrame({ currentLogoHeader, theme });
+  const frame = createAppliedPageThemeFrame({
+    currentLogoHeader,
+    currentFooter,
+    theme,
+  });
 
-  report(16, "هماهنگ‌سازی هدر و پس‌زمینه");
+  report(16, "هماهنگ‌سازی هدر، فوتر و پس‌زمینه");
   await waitForThemeApplyTurn();
 
   const themedBlocks = await applyPageThemeToBlocksProgressively(

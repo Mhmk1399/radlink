@@ -10,8 +10,14 @@ import QR from "@/models/qr";
 import User from "@/models/users";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
+import LandingFooter from "@/components/landing/LandingFooter";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import { normalizePageFooterSettings } from "@/lib/design/page-footer";
+import {
+  getLandingFontClassName,
+  getLandingFontStyle,
+} from "@/lib/design/landing-fonts.next";
 import {
   getPageBackgroundStyle,
   normalizePageBackgroundSettings,
@@ -132,13 +138,21 @@ export default async function PageRoute({ params }: Props) {
   const pageBackground = normalizePageBackgroundSettings(page.background);
   const backgroundStyle = getPageBackgroundStyle(pageBackground);
   const logoHeader = normalizeLogoHeaderSettings(page.logoHeader);
+  const footer = normalizePageFooterSettings(page.footer);
+  const landingFontClassName = getLandingFontClassName(page.font);
+  const landingFontStyle = getLandingFontStyle(page.font);
 
   if (page.isPublished !== true || pageExpired) {
     // Replace with your actual support phone number
     const supportPhoneNumber = "02112345678";
 
     return (
-      <main className="relative isolate min-h-screen  overflow-hidden">
+      <main
+        className={["relative isolate min-h-screen overflow-hidden", landingFontClassName].join(
+          " ",
+        )}
+        style={landingFontStyle}
+      >
         {/* Background Layer */}
         <div
           aria-hidden="true"
@@ -267,7 +281,13 @@ export default async function PageRoute({ params }: Props) {
         block.hidden !== true,
     ) ?? null;
   return (
-    <div className="relative isolate min-h-screen max-w-4xl mx-auto w-full px-2 pb-10  ">
+    <div
+      className={[
+        "relative isolate min-h-screen max-w-4xl mx-auto w-full px-2 pb-10",
+        landingFontClassName,
+      ].join(" ")}
+      style={landingFontStyle}
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10"
@@ -326,6 +346,11 @@ export default async function PageRoute({ params }: Props) {
           }}
         />
       </section>
+      <LandingFooter
+        settings={footer}
+        pageLogo={typeof page.logo === "string" ? page.logo : ""}
+        pageTitle={String(page.title || "")}
+      />
       <LandingFloatingActions
         contactBlock={contactSaveBlock as PageBlock | null}
         pageUrl={String(qr?.targetUrl || page.url)}

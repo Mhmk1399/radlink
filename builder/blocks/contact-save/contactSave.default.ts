@@ -28,6 +28,7 @@ export function createDefaultContactSaveBlock(order = 0): PageBlock {
       address: "",
       url: "",
       organization: "",
+      photoUrl: "",
       buttonText: "ذخیره در مخاطبین",
       showIcon: true,
     },

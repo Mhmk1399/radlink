@@ -12,6 +12,7 @@ import {
 import type { PageBlock } from "@/types/blocks/builder.types";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import type { PageFooterSettings } from "@/lib/design/page-footer";
 import type { PageBackgroundPattern } from "@/lib/design/page-background";
 
 type PageMetadata = {
@@ -20,7 +21,9 @@ type PageMetadata = {
   url: string;
   logo: string;
   logoShape: "square" | "circle";
+  font: string;
   logoHeader?: Partial<LogoHeaderSettings>;
+  footer?: Partial<PageFooterSettings>;
   favicon: string;
   background: {
     color: string;
@@ -174,9 +177,14 @@ export default function EditPageBuilder() {
           url: page.url || "new-page",
           logo: typeof page.logo === "string" ? page.logo : "",
           logoShape: page.logoShape === "circle" ? "circle" : "square",
+          font: typeof page.font === "string" ? page.font : "",
           logoHeader:
             page.logoHeader && typeof page.logoHeader === "object"
               ? page.logoHeader
+              : undefined,
+          footer:
+            page.footer && typeof page.footer === "object"
+              ? page.footer
               : undefined,
           favicon: typeof page.favicon === "string" ? page.favicon : "",
           background: {
@@ -256,7 +264,9 @@ export default function EditPageBuilder() {
       initialUrl={pageMetadata?.url}
       initialLogo={pageMetadata?.logo}
       initialLogoShape={pageMetadata?.logoShape}
+      initialFont={pageMetadata?.font}
       initialLogoHeader={pageMetadata?.logoHeader}
+      initialFooter={pageMetadata?.footer}
       initialFavicon={pageMetadata?.favicon}
       initialBackground={pageMetadata?.background}
     />

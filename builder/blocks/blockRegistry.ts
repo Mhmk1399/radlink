@@ -95,6 +95,8 @@ import {
 } from "react-icons/hi2";
 
 const SHADOW_STYLE_KEY: EditableStyleKey = "shadow";
+const TEXT_ALIGN_STYLE_KEY: EditableStyleKey = "textAlign";
+const CONTENT_ALIGN_STYLE_KEY: EditableStyleKey = "contentAlign";
 const CONTAINER_SPACING_STYLE_KEYS: EditableStyleKey[] = [
   "marginTop",
   "marginBottom",
@@ -102,7 +104,61 @@ const CONTAINER_SPACING_STYLE_KEYS: EditableStyleKey[] = [
   "paddingBottom",
 ];
 
-function withShadowKeys(
+const TEXT_ALIGN_ELEMENT_HINTS = [
+  "title",
+  "heading",
+  "description",
+  "subtitle",
+  "caption",
+  "content",
+  "text",
+  "label",
+  "name",
+  "role",
+  "quote",
+  "message",
+  "question",
+  "answer",
+  "price",
+  "number",
+  "value",
+  "button",
+  "submit",
+  "link",
+  "expired",
+];
+
+function isNonTextVisualElement(elementId?: string) {
+  const id = elementId?.toLowerCase() ?? "";
+  return (
+    !id ||
+    id === "container" ||
+    id.includes("overlay") ||
+    id.includes("image") ||
+    id.includes("video") ||
+    id.includes("avatar") ||
+    id.includes("thumbnail") ||
+    id.includes("icon") ||
+    id.includes("progress") ||
+    id.includes("separator") ||
+    id.includes("ornament") ||
+    id.includes("line") ||
+    id.includes("dot") ||
+    id.includes("arrow")
+  );
+}
+
+function isTextLikeElement(
+  keys: ReadonlyArray<EditableStyleKey>,
+  elementId?: string,
+) {
+  if (isNonTextVisualElement(elementId)) return false;
+  const id = elementId?.toLowerCase() ?? "";
+  const hasTextStyle = keys.includes("color") || keys.includes("fontSize");
+  return hasTextStyle || TEXT_ALIGN_ELEMENT_HINTS.some((hint) => id.includes(hint));
+}
+
+function withBuilderStyleKeys(
   keys: ReadonlyArray<EditableStyleKey> | undefined,
   elementId?: string,
 ): EditableStyleKey[] {
@@ -112,17 +168,29 @@ function withShadowKeys(
     CONTAINER_SPACING_STYLE_KEYS.forEach((key) => {
       if (!next.includes(key)) next.push(key);
     });
+    if (!next.includes(CONTENT_ALIGN_STYLE_KEY)) {
+      next.push(CONTENT_ALIGN_STYLE_KEY);
+    }
+  }
+  if (
+    isTextLikeElement(next, elementId) &&
+    !next.includes(TEXT_ALIGN_STYLE_KEY)
+  ) {
+    next.push(TEXT_ALIGN_STYLE_KEY);
   }
   return next;
 }
 
-function withShadowSchema<T extends BlockSchema>(schema: T): T {
+function withBuilderStyleSchema<T extends BlockSchema>(schema: T): T {
   const elements = Object.fromEntries(
     Object.entries(schema.elements).map(([elementId, element]) => [
       elementId,
       {
         ...element,
-        allowedStyleKeys: withShadowKeys(element.allowedStyleKeys, elementId),
+        allowedStyleKeys: withBuilderStyleKeys(
+          element.allowedStyleKeys,
+          elementId,
+        ),
       },
     ]),
   ) as T["elements"];
@@ -130,7 +198,7 @@ function withShadowSchema<T extends BlockSchema>(schema: T): T {
   return { ...schema, elements };
 }
 
-function withShadowDefaultBlock<T extends (order: number) => PageBlock>(
+function withBuilderStyleDefaultBlock<T extends (order: number) => PageBlock>(
   createBlock: T,
 ): T {
   return ((order: number) => {
@@ -140,7 +208,10 @@ function withShadowDefaultBlock<T extends (order: number) => PageBlock>(
         elementId,
         {
           ...element,
-          allowedStyleKeys: withShadowKeys(element.allowedStyleKeys, elementId),
+          allowedStyleKeys: withBuilderStyleKeys(
+            element.allowedStyleKeys,
+            elementId,
+          ),
         },
       ]),
     ) as PageBlock["elements"];
@@ -160,8 +231,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlinePhoto, { size: 18 }),
     category: "hero",
     component: BannerBlock,
-    schema: withShadowSchema(bannerSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultBannerBlock),
+    schema: withBuilderStyleSchema(bannerSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultBannerBlock),
   },
 
   slider: {
@@ -171,8 +242,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineRectangleGroup, { size: 18 }),
     category: "hero",
     component: SliderBlock,
-    schema: withShadowSchema(sliderSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultSliderBlock),
+    schema: withBuilderStyleSchema(sliderSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSliderBlock),
   },
 
   simpleLink: {
@@ -182,8 +253,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineLink, { size: 18 }),
     category: "link",
     component: SimpleLinkBlock,
-    schema: withShadowSchema(simpleLinkSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultSimpleLinkBlock),
+    schema: withBuilderStyleSchema(simpleLinkSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSimpleLinkBlock),
   },
 
   superLink: {
@@ -193,8 +264,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineBolt, { size: 18 }),
     category: "link",
     component: SuperLinkBlock,
-    schema: withShadowSchema(superLinkSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultSuperLinkBlock),
+    schema: withBuilderStyleSchema(superLinkSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSuperLinkBlock),
   },
 
   video: {
@@ -204,8 +275,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineFilm, { size: 18 }),
     category: "media",
     component: VideoBlock,
-    schema: withShadowSchema(videoSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultVideoBlock),
+    schema: withBuilderStyleSchema(videoSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultVideoBlock),
   },
 
   richText: {
@@ -215,8 +286,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineDocumentText, { size: 18 }),
     category: "content",
     component: RichTextBlock,
-    schema: withShadowSchema(richTextSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultRichTextBlock),
+    schema: withBuilderStyleSchema(richTextSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultRichTextBlock),
   },
 
   testimonial: {
@@ -226,8 +297,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineStar, { size: 18 }),
     category: "content",
     component: TestimonialBlock,
-    schema: withShadowSchema(testimonialSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultTestimonialBlock),
+    schema: withBuilderStyleSchema(testimonialSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultTestimonialBlock),
   },
 
   faq: {
@@ -237,8 +308,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineQuestionMarkCircle, { size: 18 }),
     category: "content",
     component: FAQBlock,
-    schema: withShadowSchema(faqSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultFAQBlock),
+    schema: withBuilderStyleSchema(faqSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultFAQBlock),
   },
 
   contactInfo: {
@@ -248,8 +319,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlinePhone, { size: 18 }),
     category: "contact",
     component: ContactInfoBlock,
-    schema: withShadowSchema(contactInfoSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultContactInfoBlock),
+    schema: withBuilderStyleSchema(contactInfoSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultContactInfoBlock),
   },
 
   contactSave: {
@@ -260,8 +331,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineUserPlus, { size: 18 }),
     category: "contact",
     component: ContactSaveBlock,
-    schema: withShadowSchema(contactSaveSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultContactSaveBlock),
+    schema: withBuilderStyleSchema(contactSaveSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultContactSaveBlock),
   },
 
   mapLinks: {
@@ -271,8 +342,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineMapPin, { size: 18 }),
     category: "contact",
     component: MapLinksBlock,
-    schema: withShadowSchema(mapLinksSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultMapLinksBlock),
+    schema: withBuilderStyleSchema(mapLinksSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultMapLinksBlock),
   },
 
   cta: {
@@ -282,8 +353,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineRocketLaunch, { size: 18 }),
     category: "conversion",
     component: CTABlock,
-    schema: withShadowSchema(ctaSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultCtaBlock),
+    schema: withBuilderStyleSchema(ctaSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultCtaBlock),
   },
 
   countdown: {
@@ -293,8 +364,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineClock, { size: 18 }),
     category: "conversion",
     component: CountdownBlock,
-    schema: withShadowSchema(countdownSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultCountdownBlock),
+    schema: withBuilderStyleSchema(countdownSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultCountdownBlock),
   },
 
   separator: {
@@ -304,8 +375,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineMinus, { size: 18 }),
     category: "utility",
     component: SeparatorBlock,
-    schema: withShadowSchema(separatorSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultSeparatorBlock),
+    schema: withBuilderStyleSchema(separatorSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSeparatorBlock),
   },
 
   messengerLinks: {
@@ -316,8 +387,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineChatBubbleLeftRight, { size: 18 }),
     category: "contact",
     component: MessengerLinksBlock,
-    schema: withShadowSchema(messengerLinksSchema),
-    createDefaultBlock: withShadowDefaultBlock(
+    schema: withBuilderStyleSchema(messengerLinksSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(
       createDefaultMessengerLinksBlock,
     ),
   },
@@ -330,8 +401,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlinePlayCircle, { size: 18 }),
     category: "media",
     component: StoryHighlightsBlock,
-    schema: withShadowSchema(storyHighlightsSchema),
-    createDefaultBlock: withShadowDefaultBlock(
+    schema: withBuilderStyleSchema(storyHighlightsSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(
       createDefaultStoryHighlightsBlock,
     ),
   },
@@ -344,8 +415,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineShoppingBag, { size: 18 }),
     category: "conversion",
     component: ProductCardsBlock,
-    schema: withShadowSchema(productCardsSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultProductCardsBlock),
+    schema: withBuilderStyleSchema(productCardsSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultProductCardsBlock),
   },
 
   bookingForm: {
@@ -356,8 +427,8 @@ export const blockRegistry = {
     icon: React.createElement(HiOutlineCalendarDays, { size: 18 }),
     category: "conversion",
     component: BookingFormBlock,
-    schema: withShadowSchema(bookingFormSchema),
-    createDefaultBlock: withShadowDefaultBlock(createDefaultBookingFormBlock),
+    schema: withBuilderStyleSchema(bookingFormSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultBookingFormBlock),
   },
 } as const;
 

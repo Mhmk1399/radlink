@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 
 import {
   HiOutlinePlus,
+  HiOutlineDocumentDuplicate,
   HiOutlineTrash,
   HiOutlineChevronUp,
   HiOutlineChevronDown,
@@ -25,6 +26,12 @@ import {
 import { uploadFile } from "@/lib/fileUtils";
 import { LinkTypeHelp } from "./LinkTypeHelp";
 import { RgbaColorInput } from "./RgbaColorInput";
+import {
+  getMessengerPresetConfig,
+  isMessengerLinkPreset,
+  normalizeMessengerIdentifier,
+  type MessengerLinkPreset,
+} from "@/lib/messengerLinks";
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -33,7 +40,14 @@ import { RgbaColorInput } from "./RgbaColorInput";
 type RepeaterSubField = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "boolean" | "url" | "image" | "color";
+  type: "text" | "textarea" | "boolean" | "url" | "image" | "color" | "select";
+  options?: ReadonlyArray<{
+    value: string;
+    label: string;
+  }>;
+  defaultValue?: unknown;
+  linkPreset?: MessengerLinkPreset;
+  linkPresetFromField?: string;
 };
 
 type RepeaterItem = Record<string, unknown> & { id: string };
@@ -64,8 +78,12 @@ function createEmptyItem(
   const item: RepeaterItem = { id: generateItemId(prefix) };
 
   for (const field of fields) {
-    if (field.type === "boolean") {
+    if (field.defaultValue !== undefined) {
+      item[field.key] = field.defaultValue;
+    } else if (field.type === "boolean") {
       item[field.key] = false;
+    } else if (field.type === "select") {
+      item[field.key] = field.options?.[0]?.value ?? "";
     } else {
       item[field.key] = "";
     }
@@ -325,6 +343,19 @@ export function RepeaterField({
     updateItems([...safeItems, newItem]);
   }, [canAdd, dataKey, fields, safeItems, updateItems]);
 
+  const duplicateItem = useCallback(
+    (id: string) => {
+      if (!canAdd) return;
+      const source = safeItems.find((item) => item.id === id);
+      if (!source) return;
+      updateItems([
+        ...safeItems,
+        { ...source, id: generateItemId(`${dataKey}-copy`) },
+      ]);
+    },
+    [canAdd, dataKey, safeItems, updateItems],
+  );
+
   const removeItem = useCallback(
     (id: string) => {
       updateItems(safeItems.filter((item) => item.id !== id));
@@ -408,6 +439,15 @@ export function RepeaterField({
                     title="پایین"
                   >
                     <HiOutlineChevronDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateItem(item.id)}
+                    disabled={!canAdd}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600 disabled:opacity-30"
+                    title="کپی"
+                  >
+                    <HiOutlineDocumentDuplicate size={14} />
                   </button>
                   <button
                     type="button"
@@ -546,6 +586,29 @@ export function RepeaterField({
                     );
                   }
 
+                  if (field.type === "select") {
+                    return (
+                      <div key={field.key}>
+                        <label className="mb-1 block text-[11px] font-semibold text-neutral-500">
+                          {field.label}
+                        </label>
+                        <select
+                          value={String(fieldValue ?? "")}
+                          onChange={(e) =>
+                            updateItemField(item.id, field.key, e.target.value)
+                          }
+                          className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-base text-neutral-800 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+                        >
+                          {(field.options ?? []).map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+
                   if (field.type === "url") {
                     return (
                       <div key={field.key}>
@@ -580,6 +643,61 @@ export function RepeaterField({
                   }
 
                   /* ── Text (default) ── */
+                  const dynamicPresetValue = field.linkPresetFromField
+                    ? item[field.linkPresetFromField]
+                    : undefined;
+                  const dynamicPreset = isMessengerLinkPreset(
+                    dynamicPresetValue,
+                  )
+                    ? dynamicPresetValue
+                    : undefined;
+                  const linkPreset = field.linkPreset ?? dynamicPreset;
+
+                  if (linkPreset) {
+                    const presetConfig = getMessengerPresetConfig(linkPreset);
+                    const identifier = normalizeMessengerIdentifier(
+                      fieldValue,
+                      linkPreset,
+                    );
+
+                    return (
+                      <div key={field.key}>
+                        <label className="mb-1 block text-[11px] font-semibold text-neutral-500">
+                          {field.label}
+                        </label>
+                        <div
+                          className="flex min-w-0 items-stretch overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 transition focus-within:border-neutral-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-neutral-100"
+                          dir="ltr"
+                        >
+                          <span className="flex shrink-0 select-none items-center border-r border-neutral-200 bg-neutral-100 px-2.5 font-mono text-[11px] font-semibold text-neutral-500">
+                            {presetConfig.prefix}
+                          </span>
+                          <input
+                            type="text"
+                            value={identifier}
+                            onChange={(e) =>
+                              updateItemField(
+                                item.id,
+                                field.key,
+                                normalizeMessengerIdentifier(
+                                  e.target.value,
+                                  linkPreset,
+                                ),
+                              )
+                            }
+                            inputMode={presetConfig.inputMode ?? "text"}
+                            maxLength={presetConfig.maxLength ?? 50}
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
+                            className="min-w-0 flex-1 bg-transparent px-3 py-2.5 font-mono text-base text-neutral-800 outline-none placeholder:text-neutral-400"
+                            placeholder={presetConfig.placeholder}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const identityInputProps = getIdentityInputProps(field.key);
                   const identityError = validateIdentityField(
                     field.key,

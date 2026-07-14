@@ -13,6 +13,7 @@ import { SmartSuggestions } from "@/builder/SmartSuggestions";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import type { PageBlock } from "@/types/blocks/builder.types";
 import type { LogoHeaderSettings } from "@/lib/design/logo-header";
+import type { PageFooterSettings } from "@/lib/design/page-footer";
 import {
   normalizePageBackgroundSettings,
   type PageBackgroundPattern,
@@ -37,6 +38,7 @@ type BuilderState = {
   initialCategoryId?: string;
   initialThumbnail?: string;
   initialLogoHeader?: Partial<LogoHeaderSettings>;
+  initialFooter?: Partial<PageFooterSettings>;
   initialBackground?: {
     color: string;
     image: string;
@@ -186,6 +188,12 @@ function getTemplateLogoHeader(template: Record<string, unknown>) {
     : undefined;
 }
 
+function getTemplateFooter(template: Record<string, unknown>) {
+  return isObject(template.footer)
+    ? (template.footer as Partial<PageFooterSettings>)
+    : undefined;
+}
+
 async function fetchTemplate(templateId: string) {
   const token = getBuilderAuthToken();
   const res = await fetch(`/api/templates/${templateId}`, {
@@ -293,6 +301,7 @@ export default function BuilderPage() {
           initialThumbnail:
             typeof template.thumbnail === "string" ? template.thumbnail : "",
           initialLogoHeader: getTemplateLogoHeader(template),
+          initialFooter: getTemplateFooter(template),
           initialBackground: getTemplateBackground(template),
         });
       } catch (error) {
@@ -369,6 +378,7 @@ export default function BuilderPage() {
             initialThumbnail:
               typeof template.thumbnail === "string" ? template.thumbnail : "",
             initialLogoHeader: getTemplateLogoHeader(template),
+            initialFooter: getTemplateFooter(template),
             initialBackground: getTemplateBackground(template),
           }));
         }}
@@ -388,6 +398,7 @@ export default function BuilderPage() {
       initialCategoryId={state.initialCategoryId}
       initialThumbnail={state.initialThumbnail}
       initialLogoHeader={state.initialLogoHeader}
+      initialFooter={state.initialFooter}
       initialBackground={state.initialBackground}
       suppressSmartSuggestions={state.suppressSmartSuggestions}
     />

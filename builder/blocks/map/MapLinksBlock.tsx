@@ -14,9 +14,10 @@ import type { BlockComponentProps } from "@/types/blocks/builder.types";
 /*  Map service icon asset paths                                       */
 /* ================================================================== */
 
-const GoogleMapIcon = "/assets/svg/google.svg";
-const NeshanIcon = "/assets/svg/neshan.svg";
-const BaladIcon = "/assets/svg/balad.svg";
+const GoogleMapIcon = "/assets/svg/Google.svg";
+const NeshanIcon = "/assets/svg/Neshan.svg";
+const BaladIcon = "/assets/svg/Balad.svg";
+const WazeIcon = "/assets/svg/Waze.svg";
 
 /* ================================================================== */
 /*  Brand colors per service                                           */
@@ -26,6 +27,7 @@ const BRAND_COLORS: Record<string, string> = {
   googleMapsUrl: "#4285F4",
   neshanUrl: "#00C853",
   baladUrl: "#FF6D00",
+  wazeUrl: "#33CCFF",
 };
 
 /* ================================================================== */
@@ -35,30 +37,107 @@ const BRAND_COLORS: Record<string, string> = {
 interface MapService {
   key: string;
   showKey: string;
+  labelKey: string;
+  fallbackLabel: string;
+  Icon: string;
+}
+
+interface RenderMapService {
+  id: string;
   label: string;
   Icon: string;
+  url: string;
+  brandColor: string;
+  labelKey?: string;
+  repeaterKey?: "mapItems";
+  repeaterItemId?: string;
+  repeaterIndex?: number;
+  buttonStyle?: React.CSSProperties;
 }
 
 const services: MapService[] = [
   {
     key: "googleMapsUrl",
     showKey: "showGoogleMaps",
-    label: "گوگل مپ",
+    labelKey: "googleMapsLabel",
+    fallbackLabel: "گوگل مپ",
     Icon: GoogleMapIcon,
   },
   {
     key: "neshanUrl",
     showKey: "showNeshan",
-    label: "نشان",
+    labelKey: "neshanLabel",
+    fallbackLabel: "نشان",
     Icon: NeshanIcon,
   },
   {
     key: "baladUrl",
     showKey: "showBalad",
-    label: "بلد",
+    labelKey: "baladLabel",
+    fallbackLabel: "بلد",
     Icon: BaladIcon,
   },
+  {
+    key: "wazeUrl",
+    showKey: "showWaze",
+    labelKey: "wazeLabel",
+    fallbackLabel: "ویز",
+    Icon: WazeIcon,
+  },
 ];
+
+const SERVICE_BY_PROVIDER: Record<string, MapService> = {
+  googleMaps: services[0],
+  neshan: services[1],
+  balad: services[2],
+  waze: services[3],
+};
+
+function getString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getExtraMapServices(
+  items: unknown,
+  { includeEmpty }: { includeEmpty: boolean },
+): RenderMapService[] {
+  if (!Array.isArray(items)) return [];
+
+  return items.flatMap((item, index): RenderMapService[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    if (record.enabled === false) return [];
+
+    const provider = getString(record.provider) || "googleMaps";
+    const service = SERVICE_BY_PROVIDER[provider];
+    if (!service) return [];
+
+    const url = getString(record.url);
+    if (!includeEmpty && !url) return [];
+
+    const brandColor =
+      getString(record.brandColor) || BRAND_COLORS[service.key] || "#64748b";
+    const backgroundColor = getString(record.backgroundColor);
+    const textColor = getString(record.textColor);
+
+    return [
+      {
+        id: `custom-${getString(record.id) || index}-${provider}`,
+        label: getString(record.label) || service.fallbackLabel,
+        Icon: service.Icon,
+        url,
+        brandColor,
+        repeaterKey: "mapItems",
+        repeaterItemId: getString(record.id) || undefined,
+        repeaterIndex: index,
+        buttonStyle: {
+          ...(backgroundColor ? { backgroundColor } : {}),
+          ...(textColor ? { color: textColor } : {}),
+        },
+      },
+    ];
+  });
+}
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -420,22 +499,53 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
   const showTitle = data.showTitle !== false;
   const showDescription = data.showDescription !== false;
   const openInNewTab = data.openInNewTab !== false;
+  const includeEmptyServices = isEditor || mode === "preview";
 
   /* ---------- visible services ---------- */
   const visibleServices = useMemo(() => {
-    return services.filter((s) => {
-      const shouldShow = data[s.showKey] !== false;
-      const url =
-        typeof data[s.key] === "string" ? (data[s.key] as string) : "";
+    const baseServices: RenderMapService[] = services
+      .filter((service) => {
+        const shouldShow = data[service.showKey] !== false;
+        const url = getString(data[service.key]);
 
-      if (isEditor) {
-        return shouldShow;
-      }
-      return shouldShow && url.length > 0;
-    });
-  }, [data, isEditor]);
+        if (includeEmptyServices) {
+          return shouldShow;
+        }
+        return shouldShow && url.length > 0;
+      })
+      .map((service) => ({
+        id: service.key,
+        label: getString(data[service.labelKey]) || service.fallbackLabel,
+        labelKey: service.labelKey,
+        Icon: service.Icon,
+        url: getString(data[service.key]),
+        brandColor: BRAND_COLORS[service.key] || "#64748b",
+      }));
+
+    return [
+      ...baseServices,
+      ...getExtraMapServices(data.mapItems, {
+        includeEmpty: includeEmptyServices,
+      }),
+    ];
+  }, [data, includeEmptyServices]);
 
   const hasAnyVisible = visibleServices.length > 0;
+
+  const updateRepeaterLabel = (service: RenderMapService, label: unknown) => {
+    if (!service.repeaterKey) return;
+    const currentItems = Array.isArray(data[service.repeaterKey])
+      ? (data[service.repeaterKey] as Array<Record<string, unknown>>)
+      : [];
+    const nextItems = currentItems.map((item, index) => {
+      const itemId = getString(item.id);
+      const isTarget = service.repeaterItemId
+        ? itemId === service.repeaterItemId
+        : index === service.repeaterIndex;
+      return isTarget ? { ...item, label: String(label ?? "") } : item;
+    });
+    onUpdateContent?.(block.instanceId, service.repeaterKey, nextItems);
+  };
 
   /* ---------- render ---------- */
   return (
@@ -509,15 +619,11 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
           {hasAnyVisible ? (
             <GridWrapper $columns={gridColumns} className="mt-1">
               {visibleServices.map((service, index) => {
-                const url =
-                  typeof data[service.key] === "string"
-                    ? (data[service.key] as string)
-                    : "";
+                const url = service.url;
                 const hasUrl = url.length > 0;
                 const isDisabled = !hasUrl;
                 const IconSrc = service.Icon;
-                const brandColor =
-                  BRAND_COLORS[service.key] || "#64748b";
+                const brandColor = service.brandColor;
 
                 const handleClick = (e: React.MouseEvent) => {
                   if (isEditor) {
@@ -536,6 +642,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
                     $disabled={isEditor && isDisabled}
                     $brandColor={brandColor}
                     $index={index}
+                    style={service.buttonStyle}
                   >
                     <EditablePart
                       instanceId={block.instanceId}
@@ -568,7 +675,31 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
                       onSelectElement={onSelectElement}
                     >
                       <StyledLabel $styleCss={labelStyle}>
-                        {service.label}
+                        {service.labelKey ? (
+                          <InlineEditableText
+                            value={service.label}
+                            dataKey={service.labelKey}
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={onUpdateContent}
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        ) : service.repeaterKey ? (
+                          <InlineEditableText
+                            value={service.label}
+                            dataKey="label"
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={(_, __, value) =>
+                              updateRepeaterLabel(service, value)
+                            }
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        ) : (
+                          service.label
+                        )}
                       </StyledLabel>
                     </EditablePart>
 
@@ -584,7 +715,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
                 if (isEditor) {
                   return (
                     <EditablePart
-                      key={service.key}
+                      key={service.id}
                       instanceId={block.instanceId}
                       elementId="mapButton"
                       mode={mode}
@@ -600,7 +731,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
 
                 return (
                   <a
-                    key={service.key}
+                    key={service.id}
                     href={url}
                     target={openInNewTab ? "_blank" : undefined}
                     rel={openInNewTab ? "noopener noreferrer" : undefined}

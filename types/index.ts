@@ -372,6 +372,13 @@ export interface Template extends BaseDocument {
     description?: string;
     font?: string;
     colors: TemplateColors;
+    background?: {
+        color?: string;
+        image?: string;
+        pattern?: Record<string, unknown>;
+    };
+    logoHeader?: Record<string, unknown>;
+    footer?: PageFooter;
     bgImage?: string;
     btnSettings?: Record<string, unknown>;
     cardSettings?: Record<string, unknown>;
@@ -386,6 +393,13 @@ export interface CreateTemplatePayload {
     description?: string;
     font?: string;
     colors?: TemplateColors;
+    background?: {
+        color?: string;
+        image?: string;
+        pattern?: Record<string, unknown>;
+    };
+    logoHeader?: Record<string, unknown>;
+    footer?: PageFooter;
     bgImage?: string;
     btnSettings?: Record<string, unknown>;
     cardSettings?: Record<string, unknown>;
@@ -463,6 +477,20 @@ export interface PageSettings {
     [key: string]: unknown;
 }
 
+export interface PageFooter {
+    enabled?: boolean;
+    logo?: string;
+    trustBadgeImage?: string;
+    trustBadgeAlt?: string;
+    description?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    accentColor?: string;
+    borderColor?: string;
+    showRadlinkBranding?: boolean;
+    brandingText?: string;
+}
+
 export interface Page extends BaseDocument {
     title: string;
     description?: string;
@@ -478,6 +506,7 @@ export interface Page extends BaseDocument {
     blocks: Record<string, unknown>[];
     logo?: string;
     logoShape?: "square" | "circle";
+    footer?: PageFooter;
     favicon?: string;
     expiresAt?: string | null;
     isPublished?: boolean;
@@ -500,6 +529,7 @@ export interface CreatePagePayload {
     blocks?: Record<string, unknown>[];
     logo?: string;
     logoShape?: "square" | "circle";
+    footer?: PageFooter;
     favicon?: string;
     expiresAt?: string | null;
     pageData?: Record<string, unknown>;

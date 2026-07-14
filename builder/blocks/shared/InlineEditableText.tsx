@@ -12,7 +12,7 @@ type InlineEditableTextProps = {
   instanceId: string;
   mode: EditorMode;
   multiline?: boolean;
-  onUpdateContent?: (instanceId: string, key: string, value: string) => void;
+  onUpdateContent?: (instanceId: string, key: string, value: unknown) => void;
   children: (value: string) => React.ReactNode;
 };
 

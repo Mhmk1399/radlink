@@ -28,10 +28,15 @@ const PREFIX = "cinfo";
 type ContactInfoData = {
   title: string;
   description: string;
+  phoneLabel?: string;
   phone: string;
+  whatsappLabel?: string;
   whatsapp: string;
+  emailLabel?: string;
   email: string;
+  addressLabel?: string;
   address: string;
+  contactItems?: ContactInfoItem[];
   primaryButtonText: string;
   secondaryButtonText: string;
   showDescription: boolean;
@@ -46,7 +51,17 @@ type ContactInfoBlockProps = BlockComponentProps & {
   block: PageBlock & { data: ContactInfoData };
 };
 
-type IconTone = "phone" | "whatsapp" | "email" | "address";
+type IconTone = "phone" | "whatsapp" | "email" | "address" | "link";
+
+type ContactInfoItem = {
+  id?: string;
+  type?: "phone" | "whatsapp" | "email" | "address" | "link";
+  label?: string;
+  value?: string;
+  enabled?: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+};
 
 /* ================================================================== */
 /*  Styled                                                             */
@@ -183,6 +198,11 @@ const IconShell = styled.span<{ $tone: IconTone }>`
         return `
           background: rgba(99, 102, 241, 0.12);
           color: #4F46E5;
+        `;
+      case "link":
+        return `
+          background: rgba(14, 165, 233, 0.12);
+          color: #0284C7;
         `;
       case "address":
       default:
@@ -356,6 +376,24 @@ function AddressIcon() {
   );
 }
 
+function LinkIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
 /* ================================================================== */
 /*  Contact item wrapper                                               */
 /* ================================================================== */
@@ -369,7 +407,7 @@ function ContactItemRow({
   tone,
 }: {
   icon: React.ReactNode;
-  label: string;
+  label: React.ReactNode;
   href: string | undefined;
   isEditor: boolean;
   children: React.ReactNode;
@@ -400,6 +438,95 @@ function ContactItemRow({
       </ItemText>
     </ContactRow>
   );
+}
+
+function getString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getContactItemHref(type: IconTone, value: string) {
+  if (!value) return undefined;
+
+  switch (type) {
+    case "phone":
+      return `tel:${value}`;
+    case "whatsapp":
+      return `https://wa.me/${value.replace(/[^\d]/g, "")}`;
+    case "email":
+      return `mailto:${value}`;
+    case "link":
+      return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    case "address":
+    default:
+      return undefined;
+  }
+}
+
+function getContactItemIcon(type: IconTone) {
+  switch (type) {
+    case "phone":
+      return <PhoneIcon />;
+    case "whatsapp":
+      return <WhatsappIcon />;
+    case "email":
+      return <EmailIcon />;
+    case "link":
+      return <LinkIcon />;
+    case "address":
+    default:
+      return <AddressIcon />;
+  }
+}
+
+function getExtraContactItems(
+  items: unknown,
+  { includeEmpty }: { includeEmpty: boolean },
+) {
+  if (!Array.isArray(items)) return [];
+
+  return items.flatMap((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    if (record.enabled === false) return [];
+
+    const rawType = getString(record.type);
+    const type: IconTone =
+      rawType === "phone" ||
+      rawType === "whatsapp" ||
+      rawType === "email" ||
+      rawType === "address" ||
+      rawType === "link"
+        ? rawType
+        : "phone";
+    const value = getString(record.value);
+    if (!includeEmpty && !value) return [];
+
+    const fallbackLabel =
+      type === "phone"
+        ? "تلفن"
+        : type === "whatsapp"
+          ? "واتساپ"
+          : type === "email"
+            ? "ایمیل"
+            : type === "link"
+              ? "لینک"
+              : "آدرس";
+
+    return [
+      {
+        id: getString(record.id) || `contact-${index}`,
+        type,
+        label: getString(record.label) || fallbackLabel,
+        value,
+        href: getContactItemHref(type, value),
+        repeaterKey: "contactItems" as const,
+        repeaterItemId: getString(record.id) || undefined,
+        repeaterIndex: index,
+        backgroundColor: getString(record.backgroundColor),
+        textColor: getString(record.textColor),
+      },
+    ];
+  });
 }
 
 /* ================================================================== */
@@ -457,6 +584,32 @@ export function ContactInfoBlock({
   const whatsapp = String(block.data.whatsapp ?? "").trim();
   const email = String(block.data.email ?? "").trim();
   const address = String(block.data.address ?? "").trim();
+  const phoneLabel = String(block.data.phoneLabel ?? "تلفن").trim() || "تلفن";
+  const whatsappLabel =
+    String(block.data.whatsappLabel ?? "واتساپ").trim() || "واتساپ";
+  const emailLabel = String(block.data.emailLabel ?? "ایمیل").trim() || "ایمیل";
+  const addressLabel =
+    String(block.data.addressLabel ?? "آدرس").trim() || "آدرس";
+  const extraContactItems = getExtraContactItems(block.data.contactItems, {
+    includeEmpty: isEditor,
+  });
+
+  const updateRepeaterLabel = (
+    item: (typeof extraContactItems)[number],
+    label: unknown,
+  ) => {
+    const currentItems = Array.isArray(block.data.contactItems)
+      ? (block.data.contactItems as Array<Record<string, unknown>>)
+      : [];
+    const nextItems = currentItems.map((currentItem, index) => {
+      const itemId = getString(currentItem.id);
+      const isTarget = item.repeaterItemId
+        ? itemId === item.repeaterItemId
+        : index === item.repeaterIndex;
+      return isTarget ? { ...currentItem, label: String(label ?? "") } : currentItem;
+    });
+    onUpdateContent?.(block.instanceId, item.repeaterKey, nextItems);
+  };
 
   const phoneHref = phone ? `tel:${phone}` : undefined;
   const whatsappHref = whatsapp ? `https://wa.me/${whatsapp}` : undefined;
@@ -466,7 +619,8 @@ export function ContactInfoBlock({
     (Boolean(block.data.showPhone) && phone) ||
     (Boolean(block.data.showWhatsapp) && whatsapp) ||
     (Boolean(block.data.showEmail) && email) ||
-    (Boolean(block.data.showAddress) && address);
+    (Boolean(block.data.showAddress) && address) ||
+    extraContactItems.length > 0;
 
   return (
     <ContactRoot dir="rtl">
@@ -548,7 +702,17 @@ export function ContactInfoBlock({
                     <StyledItem $styleCss={itemCss}>
                       <ContactItemRow
                         icon={<PhoneIcon />}
-                        label="تلفن"
+                        label={
+                          <InlineEditableText
+                            value={phoneLabel}
+                            dataKey="phoneLabel"
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={onUpdateContent}
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        }
                         href={phoneHref}
                         isEditor={isEditor}
                         tone="phone"
@@ -570,12 +734,30 @@ export function ContactInfoBlock({
                     <StyledItem $styleCss={itemCss}>
                       <ContactItemRow
                         icon={<WhatsappIcon />}
-                        label="واتساپ"
+                        label={
+                          <InlineEditableText
+                            value={whatsappLabel}
+                            dataKey="whatsappLabel"
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={onUpdateContent}
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        }
                         href={whatsappHref}
                         isEditor={isEditor}
                         tone="whatsapp"
                       >
-                        <span dir="ltr">{whatsapp}</span>
+                        <InlineEditableText
+                          value={String(block.data.whatsapp ?? "")}
+                          dataKey="whatsapp"
+                          instanceId={block.instanceId}
+                          mode={mode}
+                          onUpdateContent={onUpdateContent}
+                        >
+                          {(text) => <span dir="ltr">{text}</span>}
+                        </InlineEditableText>
                       </ContactItemRow>
                     </StyledItem>
                   )}
@@ -584,7 +766,17 @@ export function ContactInfoBlock({
                     <StyledItem $styleCss={itemCss}>
                       <ContactItemRow
                         icon={<EmailIcon />}
-                        label="ایمیل"
+                        label={
+                          <InlineEditableText
+                            value={emailLabel}
+                            dataKey="emailLabel"
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={onUpdateContent}
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        }
                         href={emailHref}
                         isEditor={isEditor}
                         tone="email"
@@ -606,7 +798,17 @@ export function ContactInfoBlock({
                     <StyledItem $styleCss={itemCss}>
                       <ContactItemRow
                         icon={<AddressIcon />}
-                        label="آدرس"
+                        label={
+                          <InlineEditableText
+                            value={addressLabel}
+                            dataKey="addressLabel"
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={onUpdateContent}
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        }
                         href={undefined}
                         isEditor={isEditor}
                         tone="address"
@@ -624,6 +826,43 @@ export function ContactInfoBlock({
                       </ContactItemRow>
                     </StyledItem>
                   )}
+
+                  {extraContactItems.map((item) => (
+                    <StyledItem
+                      key={item.id}
+                      $styleCss={itemCss}
+                      style={{
+                        ...(item.backgroundColor
+                          ? { backgroundColor: item.backgroundColor }
+                          : {}),
+                        ...(item.textColor ? { color: item.textColor } : {}),
+                      }}
+                    >
+                      <ContactItemRow
+                        icon={getContactItemIcon(item.type)}
+                        label={
+                          <InlineEditableText
+                            value={item.label}
+                            dataKey="label"
+                            instanceId={block.instanceId}
+                            mode={mode}
+                            onUpdateContent={(_, __, value) =>
+                              updateRepeaterLabel(item, value)
+                            }
+                          >
+                            {(text) => <>{text}</>}
+                          </InlineEditableText>
+                        }
+                        href={item.href}
+                        isEditor={isEditor}
+                        tone={item.type}
+                      >
+                        <span dir={item.type === "address" ? "rtl" : "ltr"}>
+                          {item.value || "بدون مقدار"}
+                        </span>
+                      </ContactItemRow>
+                    </StyledItem>
+                  ))}
                 </ItemsStack>
               </EditablePart>
             )}
