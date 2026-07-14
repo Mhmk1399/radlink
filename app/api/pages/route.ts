@@ -128,6 +128,7 @@ import {
     PAGE_SLUG_RULE_MESSAGE,
     sanitizePageSlug,
 } from "@/lib/validation/pageSlug";
+import { CUSTOM_HOME_SCREEN_ICON_SETTING_KEY } from "@/lib/design/landing-icons";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -497,6 +498,27 @@ export const POST = compose(
     });
     if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
 
+    const pageSettings =
+        body.settings && typeof body.settings === "object"
+            ? { ...body.settings }
+            : {
+                direction: "rtl",
+            };
+
+    if (user.role === "superAdmin") {
+        if (
+            Object.prototype.hasOwnProperty.call(
+                body,
+                CUSTOM_HOME_SCREEN_ICON_SETTING_KEY,
+            )
+        ) {
+            pageSettings[CUSTOM_HOME_SCREEN_ICON_SETTING_KEY] =
+                body[CUSTOM_HOME_SCREEN_ICON_SETTING_KEY] !== false;
+        }
+    } else {
+        delete pageSettings[CUSTOM_HOME_SCREEN_ICON_SETTING_KEY];
+    }
+
     const page = await Page.create({
         title,
         description,
@@ -520,12 +542,7 @@ export const POST = compose(
             canonical: buildPageTargetUrl(url, req.url),
             ogImage: logo,
         },
-        settings:
-            body.settings && typeof body.settings === "object"
-                ? body.settings
-                : {
-                    direction: "rtl",
-                },
+        settings: pageSettings,
         styleOverride:
             body.styleOverride && typeof body.styleOverride === "object"
                 ? body.styleOverride

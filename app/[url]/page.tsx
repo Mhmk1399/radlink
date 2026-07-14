@@ -11,6 +11,8 @@ import User from "@/models/users";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import LandingFooter from "@/components/landing/LandingFooter";
+import LandingIconHeadSync from "@/components/landing/LandingIconHeadSync";
+import LandingInstallPrompt from "@/components/landing/LandingInstallPrompt";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 import { normalizePageFooterSettings } from "@/lib/design/page-footer";
@@ -22,6 +24,11 @@ import {
   getPageBackgroundStyle,
   normalizePageBackgroundSettings,
 } from "@/lib/design/page-background";
+import {
+  getLandingIconConfig,
+  getLandingGeneratedIconUrl,
+  withIconVersion,
+} from "@/lib/design/landing-icons";
 import PageNotificationModal, {
   type PublicPageNotification,
 } from "./PageNotificationModal";
@@ -40,6 +47,17 @@ const getPublicPage = cache(async (url: string) => {
   await connectDB();
   return Page.findOne({ url }).lean();
 });
+
+function getPageIconVersion(page: Record<string, unknown>) {
+  const updatedAt = page.updatedAt;
+  if (updatedAt instanceof Date) return String(updatedAt.getTime());
+  if (typeof updatedAt === "string" && updatedAt.trim()) {
+    const timestamp = new Date(updatedAt).getTime();
+    return Number.isNaN(timestamp) ? updatedAt : String(timestamp);
+  }
+
+  return String(page._id ?? page.id ?? Date.now());
+}
 
 function toClientValue(value: unknown): unknown {
   if (
@@ -91,25 +109,49 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const favicon = String(
-    page.settings?.favicon || page.favicon || "/favicon.ico",
+  const iconConfig = getLandingIconConfig({
+    favicon: page.favicon,
+    settings: page.settings,
+  });
+  const iconVersion = getPageIconVersion(page as Record<string, unknown>);
+  const browserIcon = withIconVersion(iconConfig.browserIcon, iconVersion);
+  const generatedIcon180 = getLandingGeneratedIconUrl(url, 180, iconVersion);
+  const generatedIcon192 = getLandingGeneratedIconUrl(url, 192, iconVersion);
+  const manifest = `/api/landing-manifest/${encodeURIComponent(url)}?v=${encodeURIComponent(iconVersion)}`;
+  const pageTitle = String(page.seo?.title || page.title || "صفحه");
+  const pageDescription = String(
+    page.seo?.description || page.description || "",
   );
-  const appleIcon = String(page.settings?.appleTouchIcon || favicon);
 
   return {
-    title: String(page.seo?.title || page.title || "صفحه"),
-    description: String(page.seo?.description || page.description || ""),
+    title: pageTitle,
+    description: pageDescription,
     keywords: Array.isArray(page.seo?.keywords)
       ? (page.seo.keywords as string[])
       : [],
+    manifest,
     icons: {
-      icon: favicon,
-      shortcut: favicon,
-      apple: appleIcon,
+      icon: [
+        { url: generatedIcon192, sizes: "192x192", type: "image/png" },
+        { url: browserIcon, sizes: "any" },
+      ],
+      shortcut: generatedIcon192,
+      apple: [
+        {
+          url: generatedIcon180,
+          sizes: "180x180",
+          type: "image/png",
+        },
+      ],
+    },
+    appleWebApp: {
+      capable: true,
+      title: pageTitle,
+      statusBarStyle: "default",
     },
     openGraph: {
-      title: String(page.seo?.title || page.title || ""),
-      description: String(page.seo?.description || page.description || ""),
+      title: pageTitle,
+      description: pageDescription,
       images:
         page.seo?.ogImage || page.thumbnail
           ? [String(page.seo?.ogImage || page.thumbnail)]
@@ -141,6 +183,15 @@ export default async function PageRoute({ params }: Props) {
   const footer = normalizePageFooterSettings(page.footer);
   const landingFontClassName = getLandingFontClassName(page.font);
   const landingFontStyle = getLandingFontStyle(page.font);
+  const iconConfig = getLandingIconConfig({
+    favicon: page.favicon,
+    settings: page.settings,
+  });
+  const iconVersion = getPageIconVersion(page as Record<string, unknown>);
+  const browserIcon = withIconVersion(iconConfig.browserIcon, iconVersion);
+  const generatedIcon180 = getLandingGeneratedIconUrl(url, 180, iconVersion);
+  const generatedIcon192 = getLandingGeneratedIconUrl(url, 192, iconVersion);
+  const manifestUrl = `/api/landing-manifest/${encodeURIComponent(url)}?v=${encodeURIComponent(iconVersion)}`;
 
   if (page.isPublished !== true || pageExpired) {
     // Replace with your actual support phone number
@@ -293,6 +344,21 @@ export default async function PageRoute({ params }: Props) {
         className="pointer-events-none fixed inset-0 -z-10"
         style={backgroundStyle}
       />
+      <LandingIconHeadSync
+        iconHref={generatedIcon192}
+        shortcutHref={generatedIcon192}
+        appleIconHref={generatedIcon180}
+        manifestHref={manifestUrl}
+      />
+      <LandingInstallPrompt
+        pageId={String(page._id)}
+        pageTitle={String(page.title || "")}
+        pageUrl={String(page.url || url)}
+        iconSrc={generatedIcon180}
+        backgroundColor={pageBackground.color}
+        accentColor={pageBackground.pattern.color}
+        secondaryColor={pageBackground.pattern.secondaryColor}
+      />
       <PageNotificationModal notifications={notifications} />
       <header className="flex flex-col items-center justify-center " dir="rtl">
         <LogoHeaderFrame
@@ -329,21 +395,6 @@ export default async function PageRoute({ params }: Props) {
         <PageRenderer
           pageId={String(page._id)}
           blocks={clientBlocks}
-          pageData={{
-            title: page.title,
-            description: page.description,
-            favicon: page.favicon,
-            settings: {
-              favicon:
-                typeof page.settings?.favicon === "string"
-                  ? page.settings.favicon
-                  : undefined,
-              appleTouchIcon:
-                typeof page.settings?.appleTouchIcon === "string"
-                  ? page.settings.appleTouchIcon
-                  : undefined,
-            },
-          }}
         />
       </section>
       <LandingFooter

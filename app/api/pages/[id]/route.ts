@@ -118,6 +118,7 @@ import {
     PAGE_SLUG_RULE_MESSAGE,
     sanitizePageSlug,
 } from "@/lib/validation/pageSlug";
+import { CUSTOM_HOME_SCREEN_ICON_SETTING_KEY } from "@/lib/design/landing-icons";
 
 type RouteContext = {
     params: Promise<{
@@ -239,6 +240,11 @@ export const PATCH = compose(
     const body = await req.json();
     const update: Record<string, unknown> = {};
     const requestedFooter = isObject(body.footer) ? body.footer : null;
+    const hasCustomHomeScreenIconFlag =
+        Object.prototype.hasOwnProperty.call(
+            body,
+            CUSTOM_HOME_SCREEN_ICON_SETTING_KEY,
+        );
 
     const isAdmin = hasGlobalOwnerScope(user);
 
@@ -399,7 +405,18 @@ export const PATCH = compose(
     }
 
     if (isObject(body.settings)) {
-        update.settings = body.settings;
+        const settingsPatch: Record<string, unknown> = { ...body.settings };
+        if (user.role !== "superAdmin") {
+            delete settingsPatch[CUSTOM_HOME_SCREEN_ICON_SETTING_KEY];
+        }
+        update.settings = settingsPatch;
+    }
+
+    if (hasCustomHomeScreenIconFlag && user.role !== "superAdmin") {
+        return NextResponse.json(
+            { message: "فقط سوپر ادمین می‌تواند آیکون اختصاصی هوم‌اسکرین را مدیریت کند." },
+            { status: 403 },
+        );
     }
 
     if (isObject(body.styleOverride)) {
@@ -462,7 +479,7 @@ export const PATCH = compose(
 
     const query = await withPageAccessScope(user, { _id: id }, "update");
     const currentPage = await Page.findOne(query)
-        .select("owner assignedUser blocks url logo favicon footer seo expiresAt")
+        .select("owner assignedUser blocks url logo favicon footer seo settings expiresAt")
         .lean();
 
     if (!currentPage) {
@@ -510,6 +527,15 @@ export const PATCH = compose(
             footerPatch,
             isObject(currentPage.footer) ? currentPage.footer : {},
         );
+    }
+
+    if (hasCustomHomeScreenIconFlag) {
+        update.settings = {
+            ...(isObject(currentPage.settings) ? currentPage.settings : {}),
+            ...(isObject(update.settings) ? update.settings : {}),
+            [CUSTOM_HOME_SCREEN_ICON_SETTING_KEY]:
+                body[CUSTOM_HOME_SCREEN_ICON_SETTING_KEY] !== false,
+        };
     }
 
     if (body.blocks !== undefined) {

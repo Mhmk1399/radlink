@@ -25,6 +25,10 @@ import PageExpiryAlertsPanel, {
   PageExpiryBadge,
 } from "@/components/admin/PageExpiryAlertsPanel";
 import type { PageExpiryAlertsData } from "@/lib/pages/pageExpiryAlertsCache";
+import {
+  CUSTOM_HOME_SCREEN_ICON_SETTING_KEY,
+  isCustomHomeScreenIconEnabled,
+} from "@/lib/design/landing-icons";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -612,6 +616,7 @@ export default function PagesSection({
   const canViewExpiryAlerts =
     user?.role === "admin" || user?.role === "superAdmin";
   const canEditRadlinkBranding = user?.role === "superAdmin";
+  const canEditHomeScreenIcon = user?.role === "superAdmin";
   const expiryAlertsUserId = user?.id ?? "";
 
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
@@ -637,6 +642,8 @@ export default function PagesSection({
   const [brandingFooterAccent, setBrandingFooterAccent] = useState("");
   const [brandingFooterBorder, setBrandingFooterBorder] = useState("");
   const [brandingShowRadlink, setBrandingShowRadlink] = useState(true);
+  const [brandingCustomHomeScreenIcon, setBrandingCustomHomeScreenIcon] =
+    useState(true);
   const [uploadingBranding, setUploadingBranding] =
     useState<BrandingImageKind | null>(null);
   const [deletingBranding, setDeletingBranding] =
@@ -972,6 +979,9 @@ export default function PagesSection({
     setBrandingFooterAccent(footer.accentColor);
     setBrandingFooterBorder(footer.borderColor);
     setBrandingShowRadlink(footer.showRadlinkBranding);
+    setBrandingCustomHomeScreenIcon(
+      isCustomHomeScreenIconEnabled(row.settings),
+    );
   }
 
   async function uploadBrandingImage(kind: BrandingImageKind, file?: File) {
@@ -1066,6 +1076,12 @@ export default function PagesSection({
         body: JSON.stringify({
           logo: brandingLogo,
           favicon: brandingFavicon,
+          ...(canEditHomeScreenIcon
+            ? {
+                [CUSTOM_HOME_SCREEN_ICON_SETTING_KEY]:
+                  brandingCustomHomeScreenIcon,
+              }
+            : {}),
           footer: {
             logo: "",
             trustBadgeImage: brandingTrustBadge,
@@ -1637,6 +1653,58 @@ export default function PagesSection({
                     </div>
                   ))}
                 </div>
+
+                {canEditHomeScreenIcon ? (
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3",
+                      brandingModalTheme.inputBg,
+                      brandingModalTheme.borderInput,
+                    )}
+                  >
+                    <span>
+                      <span
+                        className={cn(
+                          "flex items-center gap-2 text-sm font-bold",
+                          brandingModalTheme.textPrimary,
+                        )}
+                      >
+                        استفاده از فاوآیکون صفحه برای آیکون موبایل
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px]",
+                            brandingCustomHomeScreenIcon
+                              ? `${brandingModalTheme.successBg} ${brandingModalTheme.successText}`
+                              : `${brandingModalTheme.errorBg} ${brandingModalTheme.errorText}`,
+                          )}
+                        >
+                          {brandingCustomHomeScreenIcon ? "فعال" : "رادلینک"}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "mt-1 block text-xs leading-6",
+                          brandingModalTheme.textMuted,
+                        )}
+                      >
+                        اگر خاموش باشد، تب مرورگر و Add to Home Screen از آیکون
+                        رادلینک استفاده می‌کنند؛ حتی اگر فاوآیکون صفحه آپلود شده
+                        باشد.
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={brandingCustomHomeScreenIcon}
+                      onChange={(event) =>
+                        setBrandingCustomHomeScreenIcon(event.target.checked)
+                      }
+                      className={cn(
+                        "h-5 w-5 rounded border-neutral-300 focus:ring-0",
+                        brandingModalTheme.checkboxAccent,
+                      )}
+                    />
+                  </label>
+                ) : null}
 
                 {canEditRadlinkBranding ? (
                   <label
