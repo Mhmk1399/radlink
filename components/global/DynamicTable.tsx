@@ -3380,16 +3380,25 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                 >
                                   {col.label}
                                 </p>
-                                <p
-                                  className={cn(
-                                    "text-sm font-semibold",
-                                    t.textPrimary,
-                                  )}
-                                >
-                                  {typeof display === "string"
-                                    ? truncate(display, 40)
-                                    : display}
-                                </p>
+                                {typeof display === "string" ? (
+                                  <p
+                                    className={cn(
+                                      "text-sm font-semibold",
+                                      t.textPrimary,
+                                    )}
+                                  >
+                                    {truncate(display, 40)}
+                                  </p>
+                                ) : (
+                                  <div
+                                    className={cn(
+                                      "text-sm font-semibold",
+                                      t.textPrimary,
+                                    )}
+                                  >
+                                    {display}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -3422,11 +3431,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                               >
                                 {col.label}
                               </p>
-                              <p className={cn("text-xs", t.textSecondary)}>
-                                {typeof display === "string"
-                                  ? truncate(display, 30)
-                                  : display}
-                              </p>
+                              {typeof display === "string" ? (
+                                <p className={cn("text-xs", t.textSecondary)}>
+                                  {truncate(display, 30)}
+                                </p>
+                              ) : (
+                                <div className={cn("text-xs", t.textSecondary)}>
+                                  {display}
+                                </div>
+                              )}
                             </div>
                           );
                         })}

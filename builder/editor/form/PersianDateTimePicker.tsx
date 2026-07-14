@@ -240,7 +240,7 @@ export function PersianDateTimePicker({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute inset-x-0 top-full z-[500] mt-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.12)]">
+        <div className="absolute inset-x-0 top-full z-[1200] mt-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.12)]">
           {/* Month nav */}
           <div className="mb-3 flex items-center justify-between">
             <button

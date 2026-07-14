@@ -33,6 +33,7 @@ const ProductsSection = lazy(
   () => import("@/components/admin/ProductsSection"),
 );
 const TicketsSection = lazy(() => import("@/components/admin/TicketsSection"));
+const BookingsSection = lazy(() => import("@/components/admin/BookingsSection"));
 const NotificationsSection = lazy(
   () => import("@/components/admin/NotificationsSection"),
 );
@@ -106,6 +107,8 @@ function SectionRouter({
       return <ProductsSection navigate={navigate} />;
     case "tickets":
       return <TicketsSection navigate={navigate} />;
+    case "bookings":
+      return <BookingsSection navigate={navigate} />;
     case "notifications":
       return <NotificationsSection navigate={navigate} />;
     case "contactMessages":

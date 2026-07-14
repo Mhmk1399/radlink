@@ -21,7 +21,16 @@ type FormState = {
   note: string;
 };
 
-type FieldErrors = Partial<Record<keyof FormState, string>>;
+type FieldErrors = Record<string, string | undefined>;
+
+type BookingCustomField = {
+  id: string;
+  key: string;
+  label: string;
+  value: string;
+  required: boolean;
+  enabled: boolean;
+};
 
 type FeedbackState = {
   type: "success" | "error";
@@ -162,6 +171,54 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getText(value: unknown): string {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "";
+}
+
+function normalizeCustomFields(value: unknown): BookingCustomField[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(isRecord)
+    .map((item, index) => {
+      const key = getText(item.key).trim();
+      const label = getText(item.label).trim();
+      const id =
+        getText(item.id).trim() ||
+        key ||
+        label ||
+        `custom-field-${index + 1}`;
+
+      return {
+        id,
+        key,
+        label,
+        value: getText(item.value),
+        required: item.required === true,
+        enabled: item.enabled !== false,
+      };
+    })
+    .filter((item) => item.enabled && (item.key || item.label));
+}
+
+function getCurrentPageSlug(): string {
+  if (typeof window === "undefined") return "";
+
+  try {
+    return decodeURIComponent(
+      window.location.pathname.split("/").filter(Boolean)[0] ?? "",
+    );
+  } catch {
+    return window.location.pathname.split("/").filter(Boolean)[0] ?? "";
+  }
+}
+
 // ─── Styled Components ──────────────────────────────────────────────────────────
 
 const StyledContainer = styled.div<{ $styleCss: string }>`
@@ -220,6 +277,9 @@ const StyledInput = styled.input<{ $styleCss: string }>`
 
 const StyledCalendarWrap = styled.div<{ $styleCss: string }>`
   ${({ $styleCss }) => $styleCss}
+  position: relative;
+  z-index: 30;
+  overflow: visible;
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease,
     font-size 0.2s ease;
 `;
@@ -366,6 +426,10 @@ export default function BookingFormBlock({
     typeof data.disabledDates === "string" ? data.disabledDates : "";
   const minDateRaw = typeof data.minDate === "string" ? data.minDate : "";
   const maxDateRaw = typeof data.maxDate === "string" ? data.maxDate : "";
+  const customFields = useMemo(
+    () => normalizeCustomFields(data.customFields),
+    [data.customFields],
+  );
 
   const [formValues, setFormValues] = useState<FormState>({
     fullName: "",
@@ -379,6 +443,9 @@ export default function BookingFormBlock({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customFieldValues, setCustomFieldValues] = useState<
+    Record<string, string>
+  >({});
 
   const availableTimes = useMemo(() => {
     return availableTimesRaw
@@ -428,7 +495,42 @@ export default function BookingFormBlock({
     }
   }, [availableTimes, formValues.selectedTime]);
 
- 
+  useEffect(() => {
+    setCustomFieldValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      customFields.forEach((field) => {
+        if (next[field.id] === undefined) {
+          next[field.id] = field.value;
+          changed = true;
+        }
+      });
+
+      Object.keys(next).forEach((key) => {
+        if (!customFields.some((field) => field.id === key)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [customFields]);
+
+  const calendarValue = useMemo(
+    () =>
+      combineDateWithSelectedTime(
+        formValues.selectedDate,
+        formValues.selectedTime,
+      ),
+    [formValues.selectedDate, formValues.selectedTime],
+  );
+
+  const handleCalendarChange = (value: string) => {
+    updateField("selectedDate", value);
+  };
+
 
   const getDateAvailabilityError = (selectedIso: string): string | null => {
     if (!selectedIso) return "لطفاً تاریخ رزرو را انتخاب کنید.";
@@ -465,6 +567,20 @@ export default function BookingFormBlock({
     setFieldErrors((prev) => ({
       ...prev,
       [field]: undefined,
+    }));
+
+    setFeedback(null);
+  };
+
+  const updateCustomField = (fieldId: string, value: string) => {
+    setCustomFieldValues((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      [`custom:${fieldId}`]: undefined,
     }));
 
     setFeedback(null);
@@ -509,6 +625,13 @@ export default function BookingFormBlock({
       nextErrors.note = "لطفاً توضیحات را وارد کنید.";
     }
 
+    customFields.forEach((field) => {
+      const value = customFieldValues[field.id] ?? "";
+      if (field.required && !value.trim()) {
+        nextErrors[`custom:${field.id}`] = `لطفاً ${field.label || field.key} را وارد کنید.`;
+      }
+    });
+
     return nextErrors;
   };
  
@@ -528,6 +651,12 @@ export default function BookingFormBlock({
       return;
     }
 
+    const customFieldsPayload = customFields.map((field) => ({
+      key: field.key || field.id,
+      label: field.label || field.key,
+      value: (customFieldValues[field.id] ?? field.value).trim(),
+    }));
+
     const payload = {
       fullName: formValues.fullName.trim(),
       phone: formValues.phone.trim(),
@@ -535,6 +664,11 @@ export default function BookingFormBlock({
       selectedDate: formValues.selectedDate,
       selectedTime: formValues.selectedTime,
       note: formValues.note.trim(),
+      customFields: customFieldsPayload,
+      pageUrl: getCurrentPageSlug(),
+      sourceUrl:
+        typeof window !== "undefined" ? window.location.href : undefined,
+      blockInstanceId: block.instanceId,
       blockType: "bookingForm",
       submittedAt: new Date().toISOString(),
     };
@@ -543,22 +677,26 @@ export default function BookingFormBlock({
     setFeedback(null);
 
     try {
-      if (endpointUrl.trim()) {
-        const response = await fetch(endpointUrl.trim(), {
+      if (mode !== "public") {
+        setFeedback({
+          type: "success",
+          text: successMessage,
+        });
+        setFieldErrors({});
+        return;
+      }
+
+      const targetEndpoint = endpointUrl.trim() || "/api/bookings";
+      const response = await fetch(targetEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        });
+      });
 
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
-      } else {
-        if (!isEditor) {
-          console.log("Booking form demo submission:", payload);
-        }
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
       }
 
       setFeedback({
@@ -649,6 +787,7 @@ export default function BookingFormBlock({
           mode={mode}
           selectedElementId={selectedElementId}
           onSelectElement={onSelectElement}
+          className="cursor-default"
         >
           <StyledForm
             $styleCss={formStyle}
@@ -786,7 +925,7 @@ export default function BookingFormBlock({
               </div>
             )}
 
-            {/* <div>
+            <div>
               <EditablePart
                 instanceId={block.instanceId}
                 elementId="fieldLabel"
@@ -884,7 +1023,65 @@ export default function BookingFormBlock({
                   {fieldErrors.selectedTime}
                 </p>
               )}
-            </div> */}
+            </div>
+
+            {customFields.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {customFields.map((field) => {
+                  const customInputId = `${block.instanceId}-booking-custom-${field.id}`;
+                  const errorKey = `custom:${field.id}`;
+
+                  return (
+                    <div key={field.id}>
+                      <EditablePart
+                        instanceId={block.instanceId}
+                        elementId="fieldLabel"
+                        mode={mode}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={onSelectElement}
+                      >
+                        <StyledFieldLabel
+                          $styleCss={fieldLabelStyle}
+                          htmlFor={customInputId}
+                          className="mb-2"
+                        >
+                          {field.label || field.key}{" "}
+                          {field.required && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </StyledFieldLabel>
+                      </EditablePart>
+
+                      <EditablePart
+                        instanceId={block.instanceId}
+                        elementId="input"
+                        mode={mode}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={onSelectElement}
+                      >
+                        <StyledInput
+                          $styleCss={inputStyle}
+                          id={customInputId}
+                          type="text"
+                          value={customFieldValues[field.id] ?? field.value}
+                          onChange={(e) =>
+                            updateCustomField(field.id, e.target.value)
+                          }
+                          placeholder={field.label || field.key}
+                          className="px-3.5 py-3"
+                        />
+                      </EditablePart>
+
+                      {fieldErrors[errorKey] && (
+                        <p className="mt-2 text-sm text-red-600" role="alert">
+                          {fieldErrors[errorKey]}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {showNote && (
               <div>

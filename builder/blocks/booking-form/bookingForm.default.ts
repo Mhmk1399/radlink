@@ -32,6 +32,7 @@ export function createDefaultBookingFormBlock(order: number): PageBlock {
             disabledDates: "",
             minDate: "",
             maxDate: "",
+            customFields: [],
         },
         elements: {
             container: {

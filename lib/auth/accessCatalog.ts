@@ -38,6 +38,7 @@ export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.qrcodes", label: "QR کدها" },
   { key: "admin.products", label: "محصولات" },
   { key: "admin.tickets", label: "تیکت‌ها" },
+  { key: "admin.bookings", label: "رزروها" },
   { key: "admin.notifications", label: "اعلانات" },
   { key: "builder.page", label: "ساخت صفحه از ادمین" },
   { key: "builder.template", label: "صفحه‌ساز قالب‌ها" },

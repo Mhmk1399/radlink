@@ -47,8 +47,9 @@ export function EditablePart({
     <div
       data-editable-element={elementId}
       className={cn(
+        "transition-all duration-200",
+        className?.includes("cursor-") ? false : "cursor-pointer",
         className,
-        "cursor-pointer transition-all duration-200",
         isSelected &&
           "shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_12px_-2px_rgba(59,130,246,0.25)]",
       )}
