@@ -28,6 +28,13 @@ export const sliderSchema: BlockSchema = {
                     key: "overlayEnabled",
                     label: "پوشش تیره",
                     type: "boolean",
+                    defaultValue: true,
+                },
+                {
+                    key: "contentBackdropEnabled",
+                    label: "بکگراند بلور پشت متن",
+                    type: "boolean",
+                    defaultValue: true,
                 },
             ],
         },

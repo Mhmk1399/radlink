@@ -34,6 +34,7 @@ type SlideItem = {
   buttonUrl: string;
   imageUrl: string;
   overlayEnabled: boolean;
+  contentBackdropEnabled?: boolean;
 };
 
 type SliderData = {
@@ -225,31 +226,43 @@ const SlideLayer = styled.div`
   width: 100%;
 `;
 
-const ContentCard = styled.div`
+const ContentCard = styled.div<{ $backdropEnabled: boolean }>`
   width: 100%;
   max-width: 780px;
   margin: 0 auto;
-  padding: 26px 20px;
-  border-radius: 24px;
-  background: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.32),
-    rgba(15, 23, 42, 0.2)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 14px 32px rgba(2, 6, 23, 0.2);
+  padding: ${(p) => (p.$backdropEnabled ? "26px 20px" : "16px 0")};
+  border-radius: ${(p) => (p.$backdropEnabled ? "24px" : "0")};
+  background: ${(p) =>
+    p.$backdropEnabled
+      ? "linear-gradient(180deg, rgba(15, 23, 42, 0.32), rgba(15, 23, 42, 0.2))"
+      : "transparent"};
+  border: ${(p) =>
+    p.$backdropEnabled
+      ? "1px solid rgba(255, 255, 255, 0.11)"
+      : "1px solid transparent"};
+  backdrop-filter: ${(p) => (p.$backdropEnabled ? "blur(12px)" : "none")};
+  -webkit-backdrop-filter: ${(p) =>
+    p.$backdropEnabled ? "blur(12px)" : "none"};
+  box-shadow: ${(p) =>
+    p.$backdropEnabled
+      ? "inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 14px 32px rgba(2, 6, 23, 0.2)"
+      : "none"};
+  text-shadow: ${(p) =>
+    p.$backdropEnabled ? "none" : "0 2px 14px rgba(2, 6, 23, 0.36)"};
   animation: ${fadeUp} 0.32s ease both;
+  transition:
+    background 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    backdrop-filter 0.24s ease,
+    padding 0.24s ease;
 
   @media (min-width: 640px) {
-    padding: 34px 30px;
+    padding: ${(p) => (p.$backdropEnabled ? "34px 30px" : "20px 0")};
   }
 
   @media (min-width: 1024px) {
-    padding: 42px 38px;
+    padding: ${(p) => (p.$backdropEnabled ? "42px 38px" : "24px 0")};
   }
 `;
 
@@ -668,6 +681,7 @@ export function SliderBlock({
   /* ── Active slide data ── */
   const slide = activeSlide!;
   const hasImage = Boolean(slide.imageUrl);
+  const contentBackdropEnabled = slide.contentBackdropEnabled !== false;
   const buttonUrl = String(slide.buttonUrl ?? "").trim();
   const buttonHref = !isEditor && buttonUrl ? buttonUrl : undefined;
 
@@ -728,7 +742,7 @@ export function SliderBlock({
             key={slide.id}
             className="w-full px-5 py-10 sm:px-10 sm:py-14"
           >
-            <ContentCard>
+            <ContentCard $backdropEnabled={contentBackdropEnabled}>
               <ContentStack>
                 {/* Title */}
                 <EditablePart

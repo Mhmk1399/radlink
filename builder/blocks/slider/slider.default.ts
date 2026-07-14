@@ -31,6 +31,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     buttonUrl: "",
                     imageUrl: "",
                     overlayEnabled: true,
+                    contentBackdropEnabled: true,
                 },
                 {
                     id: "slide-2",
@@ -41,6 +42,7 @@ export function createDefaultSliderBlock(order: number): PageBlock {
                     buttonUrl: "",
                     imageUrl: "",
                     overlayEnabled: true,
+                    contentBackdropEnabled: true,
                 },
             ],
         },
