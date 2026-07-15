@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export type AccessAction = "view" | "create" | "update" | "delete" | "publish";
+export type CommonAccessAction = Exclude<AccessAction, "publish">;
 export type BlockAccessAction = Exclude<AccessAction, "delete">;
 
 export interface IAccess extends Document {
@@ -17,7 +18,7 @@ export interface IAccess extends Document {
     dynamicAccess: {
         templates: {
             templateId: Types.ObjectId;
-            actions: AccessAction[];
+            actions: CommonAccessAction[];
         }[];
         blocks: {
             blockId: Types.ObjectId;
@@ -51,7 +52,7 @@ const AccessSchema = new Schema<IAccess>(
             templates: [
                 {
                     templateId: { type: Schema.Types.ObjectId, ref: "Template" },
-                    actions: [{ type: String, enum: ["view", "create", "update", "delete", "publish"], required: true }],
+                    actions: [{ type: String, enum: ["view", "create", "update", "delete"], required: true }],
                 },
             ],
             blocks: [

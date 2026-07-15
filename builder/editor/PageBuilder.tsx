@@ -1005,6 +1005,8 @@ export default function SimplePageBuilder({
   const canViewFloatingActions =
     !isAccessLoading &&
     (isSuperAdmin || can("landing.floatingActions", "view"));
+  const canPublishPages =
+    !isAccessLoading && (isSuperAdmin || can("admin.pages", "publish"));
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.instanceId === selectedBlockId) ?? null,
     [blocks, selectedBlockId],
@@ -2104,6 +2106,7 @@ export default function SimplePageBuilder({
       setServerSaveError(null);
       setSlugSaveError(null);
       const token = localStorage.getItem("auth_token");
+      const shouldPublishPage = canPublishPages;
       const res = await fetch("/api/pages", {
         method: "POST",
         headers: {
@@ -2133,6 +2136,7 @@ export default function SimplePageBuilder({
           logoHeader,
           footer: pageFooter,
           favicon: pageFavicon,
+          isPublished: shouldPublishPage,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -2159,10 +2163,19 @@ export default function SimplePageBuilder({
       setPageId(getCreatedDocumentId(createdPage) || null);
       setPageSaveResult({
         status: "success",
-        message: "صفحه با موفقیت ساخته شد و اکنون قابل مشاهده است.",
-        pageUrl: buildClientPageTargetUrl(createdPage.url ?? pageUrl),
+        message: shouldPublishPage
+          ? "صفحه با موفقیت ساخته شد و اکنون قابل مشاهده است."
+          : "صفحه با موفقیت به‌صورت پیش‌نویس ذخیره شد.",
+        pageUrl: shouldPublishPage
+          ? buildClientPageTargetUrl(createdPage.url ?? pageUrl)
+          : undefined,
       });
-      toast.show("صفحه با موفقیت ساخته شد! 🎉", "success");
+      toast.show(
+        shouldPublishPage
+          ? "صفحه با موفقیت ساخته شد!"
+          : "صفحه به‌صورت پیش‌نویس ذخیره شد.",
+        "success",
+      );
       return createdPage;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "خطا در ساخت صفحه";
@@ -2194,6 +2207,7 @@ export default function SimplePageBuilder({
     logoHeader,
     pageFooter,
     pageFavicon,
+    canPublishPages,
     ensureQrForCreatedPage,
     toast,
   ]);

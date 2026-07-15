@@ -305,6 +305,7 @@ function buildColumns(
   canEditOwner: boolean,
   canAssignUser: boolean,
   canEditExpiration: boolean,
+  canPublishPage: boolean,
   onPreviewImage: (src: string, title: string) => void,
 ): ColumnDef<AdminPageRow>[] {
   return [
@@ -523,7 +524,7 @@ function buildColumns(
     {
       key: "isPublished",
       label: "وضعیت",
-      editable: true,
+      editable: canPublishPage,
       inputType: "checkbox",
       placeholder: "صفحه منتشر شود",
       filterable: true,
@@ -632,6 +633,7 @@ export default function PagesSection({
     !isAccessLoading && user !== null && canManageOwners;
   const canCreatePages = can("admin.pages", "create");
   const canUpdatePages = can("admin.pages", "update");
+  const canPublishPages = can("admin.pages", "publish");
   const canDeletePages = can("admin.pages", "delete");
   const [ownerOptions, setOwnerOptions] = useState<SelectOption[]>([]);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -887,6 +889,7 @@ export default function PagesSection({
         canEditOwner,
         canAssignPages,
         canEditExpiration,
+        canPublishPages,
         openPreviewImage,
       ),
     [
@@ -896,6 +899,7 @@ export default function PagesSection({
       canEditOwner,
       canAssignPages,
       canEditExpiration,
+      canPublishPages,
       openPreviewImage,
     ],
   );
@@ -1269,13 +1273,16 @@ export default function PagesSection({
           const canUpdateThisPage =
             canUpdatePages ||
             (pageId ? canOnResource("pages", pageId, "update") : false);
+          const canPublishThisPage =
+            canPublishPages ||
+            (pageId ? canOnResource("pages", pageId, "publish") : false);
           const canViewThisPage =
             can("admin.pages", "view") ||
             (pageId ? canOnResource("pages", pageId, "view") : false);
 
           return (
             <div className="flex items-center justify-end gap-1">
-              {canUpdateThisPage && (
+              {canPublishThisPage && (
                 <button
                   type="button"
                   onClick={(event) => {

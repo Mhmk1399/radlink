@@ -1766,6 +1766,7 @@ export default function AccessesSection({
                 onToggleActionForAll={(action) =>
                   toggleResourceActionForAll("templates", action)
                 }
+                availableActions={getAccessActionsForResource("templates")}
               />
 
               <ResourceRulePanel
@@ -1801,6 +1802,7 @@ export default function AccessesSection({
                 onToggleActionForAll={(action) =>
                   toggleResourceActionForAll("pages", action)
                 }
+                availableActions={getAccessActionsForResource("pages")}
               />
             </div>
 

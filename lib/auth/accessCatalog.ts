@@ -8,20 +8,35 @@ export const ACCESS_ACTIONS = [
 
 export type AccessActionValue = (typeof ACCESS_ACTIONS)[number]["value"];
 
+export const COMMON_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
+  (action) => action.value !== "publish",
+);
+
+export const VIEW_ONLY_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
+  (action) => action.value === "view",
+);
+
+export const PAGE_ACCESS_ACTIONS = ACCESS_ACTIONS;
+
 export const BLOCK_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
   (action) => action.value !== "delete",
 );
 
 export function getAccessActionsForComponent(componentName: string) {
-  return componentName === "admin.blocks"
-    ? BLOCK_ACCESS_ACTIONS
-    : ACCESS_ACTIONS;
+  if (componentName === "admin.dashboard") return VIEW_ONLY_ACCESS_ACTIONS;
+  if (componentName === "admin.pages") return PAGE_ACCESS_ACTIONS;
+  if (componentName === "admin.blocks") return BLOCK_ACCESS_ACTIONS;
+
+  return COMMON_ACCESS_ACTIONS;
 }
 
 export function getAccessActionsForResource(
   resource: "templates" | "blocks" | "pages",
 ) {
-  return resource === "blocks" ? BLOCK_ACCESS_ACTIONS : ACCESS_ACTIONS;
+  if (resource === "pages") return PAGE_ACCESS_ACTIONS;
+  if (resource === "blocks") return BLOCK_ACCESS_ACTIONS;
+
+  return COMMON_ACCESS_ACTIONS;
 }
 
 export const STATIC_COMPONENT_CATALOG = [

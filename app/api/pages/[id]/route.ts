@@ -83,6 +83,7 @@ import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
+import { assertPagePublishAccess } from "@/lib/auth/pagePublishAccess";
 import { buildPageTargetUrl } from "@/lib/qrCode";
 import {
     hasGlobalOwnerScope,
@@ -452,6 +453,9 @@ export const PATCH = compose(
     }
 
     if (typeof body.isPublished === "boolean") {
+        const publishAccessError = await assertPagePublishAccess(req, id);
+        if (publishAccessError) return publishAccessError;
+
         update.isPublished = body.isPublished;
         update.publishedAt = body.isPublished ? new Date() : undefined;
     }

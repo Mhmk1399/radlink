@@ -89,6 +89,7 @@ import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
+import { assertPagePublishAccess } from "@/lib/auth/pagePublishAccess";
 import {
     withPageAccessScope,
     withTemplateAccessScope,
@@ -331,8 +332,8 @@ export const POST = compose(
         typeof body.description === "string" ? body.description.trim() : "";
     const logo = typeof body.logo === "string" ? body.logo.trim() : "";
     const requestedSeo = isObject(body.seo) ? body.seo : {};
-    const isPublished =
-        typeof body.isPublished === "boolean" ? body.isPublished : true;
+    const hasExplicitPublishRequest = typeof body.isPublished === "boolean";
+    const isPublished = hasExplicitPublishRequest ? body.isPublished : true;
     const requestedExpiration = parsePageExpiration(body.expiresAt);
     if (requestedExpiration.error) {
         return NextResponse.json(
@@ -350,7 +351,14 @@ export const POST = compose(
         );
     }
     const expiresAt = requestedExpiration.value;
-    const effectivePublished = isPublished && !isPageExpired(expiresAt);
+    let effectivePublished = isPublished && !isPageExpired(expiresAt);
+    if (effectivePublished) {
+        const publishAccessError = await assertPagePublishAccess(req);
+        if (publishAccessError) {
+            if (hasExplicitPublishRequest) return publishAccessError;
+            effectivePublished = false;
+        }
+    }
 
     const existing = await Page.findOne({ url });
 
