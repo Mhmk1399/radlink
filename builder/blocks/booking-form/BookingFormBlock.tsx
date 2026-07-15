@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import styled from "styled-components";
 import jalaali from "jalaali-js";
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
@@ -365,7 +365,7 @@ export default function BookingFormBlock({
   );
   const formStyle = responsiveStyleToCss(elements.form?.style ?? {}, PREFIX, {
     mobileOnly: mode === "editor",
-    effect: "card",
+    effect: "none",
   });
   const fieldLabelStyle = responsiveStyleToCss(
     elements.fieldLabel?.style ?? {},
@@ -378,7 +378,7 @@ export default function BookingFormBlock({
   const calendarStyle = responsiveStyleToCss(
     elements.calendar?.style ?? {},
     PREFIX,
-    { mobileOnly: mode === "editor", effect: "card" },
+    { mobileOnly: mode === "editor", effect: "none" },
   );
   const timeSlotStyle = responsiveStyleToCss(
     elements.timeSlot?.style ?? {},
@@ -447,6 +447,16 @@ export default function BookingFormBlock({
     Record<string, string>
   >({});
 
+  const normalizedCustomFieldValues = useMemo(() => {
+    const next: Record<string, string> = {};
+
+    customFields.forEach((field) => {
+      next[field.id] = customFieldValues[field.id] ?? field.value;
+    });
+
+    return next;
+  }, [customFields, customFieldValues]);
+
   const availableTimes = useMemo(() => {
     return availableTimesRaw
       .split(/[,|\n]/)
@@ -482,49 +492,15 @@ export default function BookingFormBlock({
     [maxDateRaw],
   );
 
-  useEffect(() => {
-    if (
-      formValues.selectedTime &&
-      availableTimes.length > 0 &&
-      !availableTimes.includes(formValues.selectedTime)
-    ) {
-      setFormValues((prev) => ({
-        ...prev,
-        selectedTime: "",
-      }));
-    }
-  }, [availableTimes, formValues.selectedTime]);
-
-  useEffect(() => {
-    setCustomFieldValues((prev) => {
-      let changed = false;
-      const next = { ...prev };
-
-      customFields.forEach((field) => {
-        if (next[field.id] === undefined) {
-          next[field.id] = field.value;
-          changed = true;
-        }
-      });
-
-      Object.keys(next).forEach((key) => {
-        if (!customFields.some((field) => field.id === key)) {
-          delete next[key];
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
-    });
-  }, [customFields]);
+  const selectedTime =
+    formValues.selectedTime && availableTimes.includes(formValues.selectedTime)
+      ? formValues.selectedTime
+      : "";
 
   const calendarValue = useMemo(
     () =>
-      combineDateWithSelectedTime(
-        formValues.selectedDate,
-        formValues.selectedTime,
-      ),
-    [formValues.selectedDate, formValues.selectedTime],
+      combineDateWithSelectedTime(formValues.selectedDate, selectedTime),
+    [formValues.selectedDate, selectedTime],
   );
 
   const handleCalendarChange = (value: string) => {
@@ -614,7 +590,7 @@ export default function BookingFormBlock({
       nextErrors.selectedDate = dateError;
     }
 
-    if (!formValues.selectedTime.trim()) {
+    if (!selectedTime.trim()) {
       nextErrors.selectedTime =
         availableTimes.length > 0
           ? "لطفاً ساعت رزرو را انتخاب کنید."
@@ -626,7 +602,7 @@ export default function BookingFormBlock({
     }
 
     customFields.forEach((field) => {
-      const value = customFieldValues[field.id] ?? "";
+      const value = normalizedCustomFieldValues[field.id] ?? "";
       if (field.required && !value.trim()) {
         nextErrors[`custom:${field.id}`] = `لطفاً ${field.label || field.key} را وارد کنید.`;
       }
@@ -654,7 +630,7 @@ export default function BookingFormBlock({
     const customFieldsPayload = customFields.map((field) => ({
       key: field.key || field.id,
       label: field.label || field.key,
-      value: (customFieldValues[field.id] ?? field.value).trim(),
+      value: (normalizedCustomFieldValues[field.id] ?? field.value).trim(),
     }));
 
     const payload = {
@@ -662,7 +638,7 @@ export default function BookingFormBlock({
       phone: formValues.phone.trim(),
       email: formValues.email.trim(),
       selectedDate: formValues.selectedDate,
-      selectedTime: formValues.selectedTime,
+      selectedTime,
       note: formValues.note.trim(),
       customFields: customFieldsPayload,
       pageUrl: getCurrentPageSlug(),
@@ -997,9 +973,9 @@ export default function BookingFormBlock({
                     >
                       <StyledTimeSlot
                         $styleCss={timeSlotStyle}
-                        $isActive={formValues.selectedTime === slot}
+                        $isActive={selectedTime === slot}
                         type="button"
-                        aria-pressed={formValues.selectedTime === slot}
+                        aria-pressed={selectedTime === slot}
                         className="px-4 py-2"
                         onClick={() => updateField("selectedTime", slot)}
                       >
@@ -1063,7 +1039,9 @@ export default function BookingFormBlock({
                           $styleCss={inputStyle}
                           id={customInputId}
                           type="text"
-                          value={customFieldValues[field.id] ?? field.value}
+                          value={
+                            normalizedCustomFieldValues[field.id] ?? field.value
+                          }
                           onChange={(e) =>
                             updateCustomField(field.id, e.target.value)
                           }

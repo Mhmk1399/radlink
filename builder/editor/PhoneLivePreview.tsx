@@ -247,7 +247,7 @@ function PhonePreviewContent({
             }>;
 
             return (
-              <div key={block.instanceId} style={getBlockSpacingStyle(block)}>
+              <div key={block.instanceId} style={getBlockSpacingStyle(block)} className="px-1">
                 <BlockComponent block={block} mode="preview" />
               </div>
             );
@@ -438,7 +438,7 @@ export default function PhonePreviewModal({
       >
         {/* ── Phone ── */}
         <div
-          className="relative shrink-0"
+          className="relative shrink-0 "
           style={{
             width: "min(350px, calc(100vw - 24px))",
             height: "min(844px, calc(100dvh - 108px))",
@@ -468,7 +468,7 @@ export default function PhonePreviewModal({
             style={{
               background:
                 "linear-gradient(155deg, #D2D2D7 0%, #A0A0A5 10%, #4C4C50 32%, #1C1C1E 50%, #4C4C50 68%, #A0A0A5 88%, #D2D2D7 100%)",
-              padding: "2px",
+              // padding: "2px",
               boxShadow:
                 "0 0 0 0.5px rgba(255,255,255,0.08), " +
                 "0 52px 120px -16px rgba(0,0,0,0.95), " +

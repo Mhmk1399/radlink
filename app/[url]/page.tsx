@@ -365,7 +365,7 @@ export default async function PageRoute({ params }: Props) {
   return (
     <div
       className={[
-        "relative isolate min-h-screen max-w-4xl mx-auto w-full px-2 pb-10",
+        "relative isolate min-h-screen max-w-4xl mx-auto w-full px-1 pb-10",
         landingFontClassName,
       ].join(" ")}
       style={landingFontStyle}

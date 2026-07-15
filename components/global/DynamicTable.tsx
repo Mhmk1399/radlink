@@ -541,6 +541,24 @@ function DesktopTableSkeleton({
             </td>
           )}
 
+          {/* Actions skeleton */}
+          {hasActions && (
+            <td className="px-4 py-3.5">
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <SkeletonPulse
+                    key={i}
+                    className="h-7 w-7 rounded-lg"
+                    isDark={isDark}
+                    style={{
+                      animationDelay: `${rowIdx * 60 + i * 50 + 200}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+            </td>
+          )}
+
           {/* Column skeletons */}
           {visibleCols.map((col, colIdx) => {
             const width = getColWidth(col, rowIdx * 7 + colIdx * 3);
@@ -572,24 +590,6 @@ function DesktopTableSkeleton({
               </td>
             );
           })}
-
-          {/* Actions skeleton */}
-          {hasActions && (
-            <td className="px-4 py-3.5">
-              <div className="flex items-center gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <SkeletonPulse
-                    key={i}
-                    className="h-7 w-7 rounded-lg"
-                    isDark={isDark}
-                    style={{
-                      animationDelay: `${rowIdx * 60 + i * 50 + 200}ms`,
-                    }}
-                  />
-                ))}
-              </div>
-            </td>
-          )}
         </tr>
       ))}
     </>
@@ -639,6 +639,18 @@ function MobileCardSkeleton({
                 style={{ animationDelay: `${idx * 80 + 20}ms` }}
               />
             </div>
+            {hasActions && (
+              <div className="flex shrink-0 items-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <SkeletonPulse
+                    key={i}
+                    className="h-7 w-7 rounded-lg"
+                    isDark={isDark}
+                    style={{ animationDelay: `${idx * 80 + i * 60 + 80}ms` }}
+                  />
+                ))}
+              </div>
+            )}
             <div className="flex-1">
               <SkeletonPulse
                 className="h-2.5 w-12 rounded mb-1.5"
@@ -676,25 +688,6 @@ function MobileCardSkeleton({
               </div>
             ))}
           </div>
-
-          {/* Actions skeleton */}
-          {hasActions && (
-            <div
-              className={cn(
-                "mt-3 flex items-center gap-1.5 border-t pt-3 mr-8",
-                t.divider,
-              )}
-            >
-              {[0, 1, 2].map((i) => (
-                <SkeletonPulse
-                  key={i}
-                  className="h-7 w-7 rounded-lg"
-                  isDark={isDark}
-                  style={{ animationDelay: `${idx * 80 + i * 60 + 200}ms` }}
-                />
-              ))}
-            </div>
-          )}
         </div>
       ))}
     </>
@@ -3010,6 +3003,17 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         #
                       </th>
                     )}
+                    {hasActions && (
+                      <th
+                        className={cn(
+                          "px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider",
+                          t.textMuted,
+                        )}
+                        role="columnheader"
+                      >
+                        عملیات
+                      </th>
+                    )}
                     {visibleCols.map((col) => {
                       const isSorted = sortKey === col.key;
                       const canSort = col.sortable !== false;
@@ -3048,17 +3052,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         </th>
                       );
                     })}
-                    {hasActions && (
-                      <th
-                        className={cn(
-                          "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider",
-                          t.textMuted,
-                        )}
-                        role="columnheader"
-                      >
-                        عملیات
-                      </th>
-                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -3159,6 +3152,40 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                               {toPersianDigits(globalRowIndex)}
                             </td>
                           )}
+                          {hasActions && (
+                            <td className="px-4 py-3" role="cell">
+                              <div
+                                className="flex items-center justify-start gap-1"
+                                role="toolbar"
+                                aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
+                              >
+                                <ActionBtn
+                                  onClick={() => openView(row)}
+                                  title="مشاهده جزئیات"
+                                >
+                                  <Icon.Eye />
+                                </ActionBtn>
+                                {canUpdate && (
+                                  <ActionBtn
+                                    onClick={() => openEdit(row)}
+                                    title="ویرایش"
+                                  >
+                                    <Icon.Edit />
+                                  </ActionBtn>
+                                )}
+                                {canDelete && (
+                                  <ActionBtn
+                                    onClick={() => openDelete(row)}
+                                    title="حذف"
+                                    variant="danger"
+                                  >
+                                    <Icon.Trash />
+                                  </ActionBtn>
+                                )}
+                                {rowActions?.(row)}
+                              </div>
+                            </td>
+                          )}
                           {visibleCols.map((col) => {
                             const raw = getNestedValue(row, col.key);
                             const display = col.render
@@ -3214,40 +3241,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                               </td>
                             );
                           })}
-                          {hasActions && (
-                            <td className="px-4 py-3" role="cell">
-                              <div
-                                className="flex items-center justify-start gap-1"
-                                role="toolbar"
-                                aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
-                              >
-                                <ActionBtn
-                                  onClick={() => openView(row)}
-                                  title="مشاهده جزئیات"
-                                >
-                                  <Icon.Eye />
-                                </ActionBtn>
-                                {canUpdate && (
-                                  <ActionBtn
-                                    onClick={() => openEdit(row)}
-                                    title="ویرایش"
-                                  >
-                                    <Icon.Edit />
-                                  </ActionBtn>
-                                )}
-                                {canDelete && (
-                                  <ActionBtn
-                                    onClick={() => openDelete(row)}
-                                    title="حذف"
-                                    variant="danger"
-                                  >
-                                    <Icon.Trash />
-                                  </ActionBtn>
-                                )}
-                                {rowActions?.(row)}
-                              </div>
-                            </td>
-                          )}
                         </tr>
                       );
                     })
@@ -3353,7 +3346,39 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             {isSelected && <CheckboxIcon checked />}
                           </button>
                         </div>
-                        <div className="flex-1">
+                        {hasActions && (
+                          <div
+                            className="flex shrink-0 flex-wrap items-center gap-1"
+                            role="toolbar"
+                            aria-label="عملیات"
+                          >
+                            <ActionBtn
+                              onClick={() => openView(row)}
+                              title="مشاهده جزئیات"
+                            >
+                              <Icon.Eye />
+                            </ActionBtn>
+                            {canUpdate && (
+                              <ActionBtn
+                                onClick={() => openEdit(row)}
+                                title="ویرایش"
+                              >
+                                <Icon.Edit />
+                              </ActionBtn>
+                            )}
+                            {canDelete && (
+                              <ActionBtn
+                                onClick={() => openDelete(row)}
+                                title="حذف"
+                                variant="danger"
+                              >
+                                <Icon.Trash />
+                              </ActionBtn>
+                            )}
+                            {rowActions?.(row)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
                           {mobileCols.slice(0, 1).map((col) => {
                             const raw = getNestedValue(row, col.key);
                             const display = col.render
@@ -3444,41 +3469,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           );
                         })}
                       </div>
-                      {hasActions && (
-                        <div
-                          className={cn(
-                            "mt-3 flex items-center gap-1 border-t pt-3 mr-8",
-                            t.divider,
-                          )}
-                          role="toolbar"
-                          aria-label="عملیات"
-                        >
-                          <ActionBtn
-                            onClick={() => openView(row)}
-                            title="مشاهده جزئیات"
-                          >
-                            <Icon.Eye />
-                          </ActionBtn>
-                          {canUpdate && (
-                            <ActionBtn
-                              onClick={() => openEdit(row)}
-                              title="ویرایش"
-                            >
-                              <Icon.Edit />
-                            </ActionBtn>
-                          )}
-                          {canDelete && (
-                            <ActionBtn
-                              onClick={() => openDelete(row)}
-                              title="حذف"
-                              variant="danger"
-                            >
-                              <Icon.Trash />
-                            </ActionBtn>
-                          )}
-                          {rowActions?.(row)}
-                        </div>
-                      )}
                     </div>
                   );
                 })

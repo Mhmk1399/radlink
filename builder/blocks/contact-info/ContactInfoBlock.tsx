@@ -163,6 +163,8 @@ const ContactRow = styled.div<{ $interactive: boolean }>`
   align-items: flex-start;
   gap: 14px;
   padding: 16px 18px;
+  color: inherit;
+  font-size: inherit;
   text-decoration: none;
   transition: opacity 0.2s ease;
   cursor: ${(props) => (props.$interactive ? "pointer" : "default")};
@@ -223,15 +225,17 @@ const ItemText = styled.div`
 `;
 
 const ItemLabel = styled.span`
-  font-size: 11px;
+  font-size: 0.78em;
   font-weight: 600;
-  color: #64748b;
+  color: currentColor;
+  opacity: 0.68;
 `;
 
 const ItemValue = styled.span`
+  font-size: 1em;
   font-weight: 700;
   line-height: 1.7;
-  color: inherit;
+  color: currentColor;
   word-break: break-word;
 `;
 
@@ -540,7 +544,6 @@ export function ContactInfoBlock({
   onSelectElement,
   onUpdateContent,
 }: ContactInfoBlockProps) {
-  const data = block.data as ContactInfoData;
   const isEditor = mode === "editor";
   const mobileOnly = isEditor;
 
