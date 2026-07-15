@@ -114,10 +114,10 @@ type ResolvedTheme = {
 export const BUILDER_CUSTOM_THEMES_KEY = "radlink_builder_custom_themes";
 
 const MOBILE_SCALE: PageThemeTypeScale = {
-  title: 23,
-  description: 13,
-  item: 12,
-  button: 13,
+  title: 16,
+  description: 11,
+  item: 10,
+  button: 11,
   heroHeight: 310,
   radius: 20,
   logoHeaderHeight: 176,
@@ -191,6 +191,18 @@ const PATTERN_SEQUENCE: PageBackgroundPatternId[] = [
   "crosshatch",
   "vertical-rhythm",
   "calm-waves",
+  "liquid-glass-aurora",
+  "prism-caustics",
+  "hologram-dots",
+  "chrome-ribbons",
+  "fluid-orbs",
+  "cyber-noise",
+  "glass-mosaic",
+  "neon-fog-glass",
+  "arctic-mist-rings",
+  "frosted-laser-grid",
+  "polar-veil-orbs",
+  "blue-vapor-noise",
 ];
 
 function hashString(value: string) {
@@ -238,12 +250,21 @@ function createTheme(
   } = {},
 ): PageThemeDefinition {
   const fallbackPattern = getDefaultThemePattern(id, palette);
+  const nextScale = {
+    ...MOBILE_SCALE,
+    ...scale,
+    title: MOBILE_SCALE.title,
+    description: MOBILE_SCALE.description,
+    item: MOBILE_SCALE.item,
+    button: MOBILE_SCALE.button,
+  };
+
   return {
     id,
     name,
     palette,
     logoVariant,
-    scale: { ...MOBILE_SCALE, ...scale },
+    scale: nextScale,
     recipe: normalizeThemeRecipe({
       ...getDefaultThemeRecipe(id),
       ...options.recipe,
@@ -945,18 +966,333 @@ export const BUILDER_PAGE_THEMES: PageThemeDefinition[] = [
       },
     },
   ),
+  createTheme(
+    "liquid-prism-2026",
+    "لیکویید پریسم 2026",
+    { base: "#050713", surface: "#12172e", accent: "#7cffcb" },
+    "glass-prism",
+    {
+      heroHeight: 346,
+      radius: 28,
+      logoHeaderHeight: 196,
+      logoSize: 92,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "solid",
+        density: "airy",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "prism-caustics",
+        color: "#ff4fd8",
+        secondaryColor: "#7cffcb",
+        opacity: 0.22,
+        size: 34,
+      },
+    },
+  ),
+  createTheme(
+    "neon-opal-glass",
+    "نئون اوپال گلس",
+    { base: "#030712", surface: "#101525", accent: "#00e5ff" },
+    "glass-aurora",
+    {
+      heroHeight: 350,
+      radius: 30,
+      logoHeaderHeight: 200,
+      logoSize: 94,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "soft",
+        density: "airy",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "liquid-glass-aurora",
+        color: "#00e5ff",
+        secondaryColor: "#8b5cf6",
+        opacity: 0.22,
+        size: 38,
+      },
+    },
+  ),
+  createTheme(
+    "chrome-rose-holo",
+    "کروم رز هولو",
+    { base: "#fff1fb", surface: "#ffffff", accent: "#ff4fd8" },
+    "holo-orbit",
+    {
+      heroHeight: 340,
+      radius: 28,
+      logoHeaderHeight: 192,
+      logoSize: 90,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "solid",
+        density: "balanced",
+        contrast: "balanced",
+      },
+      backgroundPattern: {
+        id: "hologram-dots",
+        color: "#ff4fd8",
+        secondaryColor: "#06b6d4",
+        opacity: 0.2,
+        size: 20,
+      },
+    },
+  ),
+  createTheme(
+    "cyber-lime-liquid",
+    "سایبر لایم مایع",
+    { base: "#07110f", surface: "#101d19", accent: "#ccff00" },
+    "liquid-blob",
+    {
+      heroHeight: 344,
+      radius: 30,
+      logoHeaderHeight: 198,
+      logoSize: 94,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "solid",
+        density: "compact",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "fluid-orbs",
+        color: "#ccff00",
+        secondaryColor: "#00f5d4",
+        opacity: 0.2,
+        size: 42,
+      },
+    },
+  ),
+  createTheme(
+    "ice-violet-glass",
+    "آیس وایولت شیشه‌ای",
+    { base: "#eff6ff", surface: "#ffffff", accent: "#7c3aed" },
+    "mist-bubbles",
+    {
+      heroHeight: 336,
+      radius: 26,
+      logoHeaderHeight: 188,
+      logoSize: 88,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "soft",
+        density: "balanced",
+        contrast: "balanced",
+      },
+      backgroundPattern: {
+        id: "glass-mosaic",
+        color: "#7c3aed",
+        secondaryColor: "#facc15",
+        opacity: 0.18,
+        size: 44,
+      },
+    },
+  ),
+  createTheme(
+    "lava-future-glass",
+    "لاوا فیوچر گلس",
+    { base: "#16070a", surface: "#241011", accent: "#ff3d00" },
+    "chrome-fold",
+    {
+      heroHeight: 348,
+      radius: 28,
+      logoHeaderHeight: 196,
+      logoSize: 92,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "solid",
+        density: "balanced",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "chrome-ribbons",
+        color: "#ff3d00",
+        secondaryColor: "#ec4899",
+        opacity: 0.21,
+        size: 48,
+      },
+    },
+  ),
+  createTheme(
+    "holo-mango-dark",
+    "هولو مانگو دارک",
+    { base: "#0b0715", surface: "#191124", accent: "#facc15" },
+    "neon-caustic",
+    {
+      heroHeight: 346,
+      radius: 26,
+      logoHeaderHeight: 196,
+      logoSize: 92,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "outline",
+        density: "airy",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "cyber-noise",
+        color: "#facc15",
+        secondaryColor: "#a855f7",
+        opacity: 0.18,
+        size: 18,
+      },
+    },
+  ),
+  createTheme(
+    "arctic-neon-mist",
+    "مه نئون قطبی",
+    { base: "#07111f", surface: "#102036", accent: "#67e8f9" },
+    "neon-mist",
+    {
+      heroHeight: 344,
+      radius: 28,
+      logoHeaderHeight: 194,
+      logoSize: 92,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "solid",
+        density: "airy",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "neon-fog-glass",
+        color: "#67e8f9",
+        secondaryColor: "#8b5cf6",
+        opacity: 0.2,
+        size: 36,
+      },
+    },
+  ),
+  createTheme(
+    "frosted-cyan-lilac",
+    "یخ فیروزه‌ای یاسی",
+    { base: "#eef8ff", surface: "#ffffff", accent: "#4f46e5" },
+    "frosted-orbit",
+    {
+      heroHeight: 338,
+      radius: 26,
+      logoHeaderHeight: 188,
+      logoSize: 88,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "soft",
+        density: "balanced",
+        contrast: "balanced",
+      },
+      backgroundPattern: {
+        id: "arctic-mist-rings",
+        color: "#7dd3fc",
+        secondaryColor: "#c4b5fd",
+        opacity: 0.18,
+        size: 46,
+      },
+    },
+  ),
+  createTheme(
+    "midnight-laser-glass",
+    "لیزر گلس نیمه‌شب",
+    { base: "#050816", surface: "#101827", accent: "#22d3ee" },
+    "laser-veil",
+    {
+      heroHeight: 346,
+      radius: 26,
+      logoHeaderHeight: 196,
+      logoSize: 92,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "outline",
+        density: "compact",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "frosted-laser-grid",
+        color: "#22d3ee",
+        secondaryColor: "#818cf8",
+        opacity: 0.16,
+        size: 24,
+      },
+    },
+  ),
+  createTheme(
+    "polar-glass-orbs",
+    "گوی‌های گلس قطبی",
+    { base: "#f0fdff", surface: "#ffffff", accent: "#0284c7" },
+    "polar-liquid",
+    {
+      heroHeight: 336,
+      radius: 30,
+      logoHeaderHeight: 190,
+      logoSize: 90,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "solid",
+        density: "balanced",
+        contrast: "balanced",
+      },
+      backgroundPattern: {
+        id: "polar-veil-orbs",
+        color: "#a5f3fc",
+        secondaryColor: "#60a5fa",
+        opacity: 0.18,
+        size: 42,
+      },
+    },
+  ),
+  createTheme(
+    "blue-vapor-neon",
+    "بخار آبی نئون",
+    { base: "#071627", surface: "#10243a", accent: "#38bdf8" },
+    "blue-vapor",
+    {
+      heroHeight: 342,
+      radius: 27,
+      logoHeaderHeight: 192,
+      logoSize: 90,
+    },
+    {
+      recipe: {
+        surfaceMode: "glass",
+        buttonMode: "soft",
+        density: "airy",
+        contrast: "bold",
+      },
+      backgroundPattern: {
+        id: "blue-vapor-noise",
+        color: "#38bdf8",
+        secondaryColor: "#a78bfa",
+        opacity: 0.18,
+        size: 18,
+      },
+    },
+  ),
 ];
 
 const HERO_BLOCK_TYPES = new Set(["banner", "slider", "cta"]);
-const CENTERED_ALIGNMENT_BLOCK_TYPES = new Set([
-  "banner",
-  "slider",
-  "cta",
-  "countdown",
-  "testimonial",
-  "video",
-  "contactSave",
-]);
 const TIGHT_SPACING_BLOCK_TYPES = new Set([
   "simpleLink",
   "superLink",
@@ -1132,6 +1468,8 @@ function recipeRadius(theme: PageThemeDefinition, offset = 0) {
 }
 
 function recipeFontSize(value: number, recipe: PageThemeRecipe, offset = 0) {
+  if (value <= 16) return Math.max(10, value + offset);
+
   const densityOffset =
     recipe.density === "compact" ? -1 : recipe.density === "airy" ? 1 : 0;
   return Math.max(10, value + densityOffset + offset);
@@ -1447,103 +1785,6 @@ function writeShadow(
   if (canSet(allowed, "shadow")) writeStyleValue(style, "shadow", value);
 }
 
-function writeTextAlign(
-  style: EditableStyleMap,
-  allowed: EditableStyleKey[],
-  value: TextAlignValue,
-) {
-  if (canSet(allowed, "textAlign")) writeStyleValue(style, "textAlign", value);
-}
-
-function writeContentAlign(
-  style: EditableStyleMap,
-  allowed: EditableStyleKey[],
-  value: ContentAlignValue,
-) {
-  if (canSet(allowed, "contentAlign")) {
-    writeStyleValue(style, "contentAlign", value);
-  }
-}
-
-function getThemeTextAlign({
-  role,
-  blockType,
-  isHero,
-  recipe,
-}: {
-  role: ThemeElementRole;
-  blockType: string;
-  isHero: boolean;
-  recipe: PageThemeRecipe;
-}): TextAlignValue | null {
-  if (role === "overlay" || role === "media" || role === "separator") {
-    return null;
-  }
-  if (
-    role === "buttonPrimary" ||
-    role === "buttonSecondary" ||
-    role === "accent" ||
-    role === "price"
-  ) {
-    return "center";
-  }
-  if (
-    isHero ||
-    CENTERED_ALIGNMENT_BLOCK_TYPES.has(blockType) ||
-    recipe.density === "airy"
-  ) {
-    return "center";
-  }
-  return "right";
-}
-
-function getThemeContentAlign({
-  blockType,
-  isHero,
-  recipe,
-}: {
-  blockType: string;
-  isHero: boolean;
-  recipe: PageThemeRecipe;
-}): ContentAlignValue {
-  if (
-    isHero ||
-    CENTERED_ALIGNMENT_BLOCK_TYPES.has(blockType) ||
-    recipe.density === "airy"
-  ) {
-    return "center";
-  }
-  return "right";
-}
-
-function writeThemeAlignment({
-  style,
-  allowed,
-  role,
-  blockType,
-  isHero,
-  recipe,
-}: {
-  style: EditableStyleMap;
-  allowed: EditableStyleKey[];
-  role: ThemeElementRole;
-  blockType: string;
-  isHero: boolean;
-  recipe: PageThemeRecipe;
-}) {
-  if (role === "container") {
-    writeContentAlign(
-      style,
-      allowed,
-      getThemeContentAlign({ blockType, isHero, recipe }),
-    );
-    return;
-  }
-
-  const textAlign = getThemeTextAlign({ role, blockType, isHero, recipe });
-  if (textAlign) writeTextAlign(style, allowed, textAlign);
-}
-
 function getThemeAnimation({
   role,
   recipe,
@@ -1682,15 +1923,6 @@ function styleElement({
   const lineColor = recipeLineColor(tones, recipe);
   const nextStyle: EditableStyleMap = { ...style };
 
-  writeThemeAlignment({
-    style: nextStyle,
-    allowed,
-    role,
-    blockType,
-    isHero,
-    recipe,
-  });
-
   if (role === "container") {
     const background = isHero ? tones.heroBg : blockSurface;
     writeColor(nextStyle, allowed, "backgroundColor", background);
@@ -1739,7 +1971,7 @@ function styleElement({
       nextStyle,
       allowed,
       "fontSize",
-      recipeFontSize(theme.scale.title, recipe, isHero ? 4 : 0),
+      recipeFontSize(theme.scale.title, recipe),
     );
     writeShadow(nextStyle, allowed, {
       color: alpha(isHero ? tones.heroBg : tones.accent, 0.24),
@@ -2186,14 +2418,14 @@ export function normalizePageThemeDraft(
     name: value.name?.trim() || "تم سفارشی",
     palette,
     scale: {
-      title: clamp(Number(rawScale.title) || MOBILE_SCALE.title, 18, 38),
+      title: clamp(Number(rawScale.title) || MOBILE_SCALE.title, 14, 32),
       description: clamp(
         Number(rawScale.description) || MOBILE_SCALE.description,
-        11,
-        20,
+        10,
+        18,
       ),
-      item: clamp(Number(rawScale.item) || MOBILE_SCALE.item, 10, 18),
-      button: clamp(Number(rawScale.button) || MOBILE_SCALE.button, 11, 20),
+      item: clamp(Number(rawScale.item) || MOBILE_SCALE.item, 10, 16),
+      button: clamp(Number(rawScale.button) || MOBILE_SCALE.button, 10, 18),
       heroHeight: clamp(
         Number(rawScale.heroHeight) || MOBILE_SCALE.heroHeight,
         220,

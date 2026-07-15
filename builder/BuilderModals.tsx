@@ -80,6 +80,18 @@ const TWO_COLOR_BACKGROUND_PATTERNS = new Set<PageBackgroundPattern["id"]>([
   "soft-spotlight",
   "premium-rings",
   "silk-waves",
+  "liquid-glass-aurora",
+  "prism-caustics",
+  "hologram-dots",
+  "chrome-ribbons",
+  "fluid-orbs",
+  "cyber-noise",
+  "glass-mosaic",
+  "neon-fog-glass",
+  "arctic-mist-rings",
+  "frosted-laser-grid",
+  "polar-veil-orbs",
+  "blue-vapor-noise",
 ]);
 
 function supportsSecondPatternColor(patternId: PageBackgroundPattern["id"]) {
@@ -294,10 +306,13 @@ export function BlockCatalogModal({
   }, [available, searchQuery]);
 
   useEffect(() => {
-    if (!open) {
-      setSearchQuery("");
-      return;
-    }
+    if (open || !searchQuery) return;
+    const resetTimer = window.setTimeout(() => setSearchQuery(""), 0);
+    return () => window.clearTimeout(resetTimer);
+  }, [open, searchQuery]);
+
+  useEffect(() => {
+    if (!open) return;
     document.body.style.overflow = "hidden";
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -354,14 +369,14 @@ export function BlockCatalogModal({
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={isLoading}
               placeholder="جستجوی بلاک..."
-              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-[14px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-base text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
               autoFocus
             />
           </div>
         </div>
 
         {/* List */}
-        <div className="max-h-[calc(85vh-180px)] overflow-y-auto overscroll-contain px-4 pb-6 pl-2 [scrollbar-color:#d4d4d4_transparent] [scrollbar-width:thin] sm:max-h-[380px] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-300 [&::-webkit-scrollbar-thumb]:transition-colors hover:[&::-webkit-scrollbar-thumb]:bg-neutral-400 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="builder-modal-scrollbar max-h-[calc(85vh-180px)] overflow-y-auto overscroll-contain px-4 pb-6 pl-2 sm:max-h-[380px]">
           {isLoading ? (
             <div
               className="grid grid-cols-1 gap-2"
@@ -849,7 +864,7 @@ function LogoHeaderSettingsPanel({
                 update({ title: event.target.value, enabled: true })
               }
               placeholder="مثلا: کلینیک زیبایی آوینا"
-              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-[13px] text-neutral-800 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+              className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-base text-neutral-800 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
             />
           </label>
           <label>
@@ -997,7 +1012,7 @@ function LogoHeaderSettingsPanel({
             </button>
           </div>
 
-          <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 sm:grid-cols-3">
+          <div className="builder-modal-scrollbar grid max-h-64 grid-cols-2 gap-2 overflow-y-auto rounded-xl bg-neutral-50 p-2 ring-1 ring-neutral-200 sm:grid-cols-3">
             {LOGO_HEADER_VARIANTS.filter(
               (variant) => variant.id !== "none",
             ).map((variant) => (
@@ -1332,7 +1347,7 @@ export function PageFooterEditorModal({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+        <div className="builder-modal-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
           <LandingFooter
             settings={settings}
             pageLogo={logo}
@@ -1851,7 +1866,7 @@ export function PageMetaModal({
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder="مثلاً: فروشگاه لوازم خانگی"
-              className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-[15px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+              className="w-full rounded-2xl border border-neutral-200 bg-neutral-50/80 px-4 py-3.5 text-base text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-4 focus:ring-neutral-100"
             />
           </div>
           {mode === "page" ? (
@@ -1985,7 +2000,7 @@ export function PageMetaModal({
                     pattern="[a-z0-9-]*"
                     aria-invalid={Boolean(urlError)}
                     aria-describedby={urlError ? "page-slug-error" : undefined}
-                    className="block min-w-0 max-w-full flex-1 bg-transparent px-3 py-3.5 font-mono text-[14px] text-neutral-900 outline-none placeholder:text-neutral-300 sm:text-[15px]"
+                    className="block min-w-0 max-w-full flex-1 bg-transparent px-3 py-3.5 font-mono text-base text-neutral-900 outline-none placeholder:text-neutral-300 sm:text-[15px]"
                     dir="ltr"
                   />
                 </div>

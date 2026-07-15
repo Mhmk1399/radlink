@@ -78,8 +78,8 @@ const styleLabels: Partial<Record<EditableStyleKey, string>> = {
   paddingTop: "فضای داخلی بالا",
   paddingBottom: "فضای داخلی پایین",
   borderRadius: "گردی گوشه‌ها",
-  borderColor: "رنگ بوردر",
-  borderWidth: "ضخامت بوردر",
+  borderColor: "رنگ حاشیه",
+  borderWidth: "ضخامت حاشیه",
   gridColumns: "تعداد ستون‌های گرید",
   animation: "انیمیشن",
 };

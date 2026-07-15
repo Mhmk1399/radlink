@@ -706,6 +706,7 @@ export const GET = compose(
 
     const [pages, total] = await Promise.all([
         Page.find(query)
+            .select("-blocks")
             .sort({ [sortField]: sortDirection, _id: -1 })
             .populate("owner", "firstName lastName email phoneNumber")
             .populate("assignedUser", "firstName lastName email phoneNumber")

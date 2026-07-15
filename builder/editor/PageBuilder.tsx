@@ -558,66 +558,98 @@ function ThemeApplyingOverlay({ state }: { state: ThemeApplyingState | null }) {
   if (!state) return null;
 
   const progress = clampThemeProgress(state.progress);
-  const progressDegrees = progress * 3.6;
+  const stageMarkers = [16, 72, 96];
 
   return (
     <div
       dir="rtl"
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-[560] flex items-center justify-center bg-white/60 px-4 backdrop-blur-md"
+      className="fixed inset-0 z-[560] flex items-center justify-center bg-slate-950/20 px-4 backdrop-blur-md"
     >
-      <div className="w-full max-w-sm overflow-hidden rounded-[28px] border border-white/75 bg-white/95 text-center shadow-[0_30px_95px_-26px_rgba(15,23,42,0.5)]">
-        <div className="bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.16),transparent_34%)] p-5">
-          <div className="mx-auto flex h-[88px] w-[88px] items-center justify-center rounded-full bg-white/70 p-1 shadow-inner shadow-white">
-            <div
-              className="flex h-full w-full items-center justify-center rounded-full p-1"
-              style={{
-                background: `conic-gradient(#10b981 ${progressDegrees}deg, rgba(148, 163, 184, 0.24) 0deg)`,
-              }}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress}
-            >
-              <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-white text-neutral-950">
-                <span className="font-mono text-[24px] font-black leading-none">
-                  {progress}%
+      <style>
+        {`
+          @keyframes theme-apply-sheen {
+            0% { transform: translateX(115%); opacity: 0; }
+            18% { opacity: .78; }
+            100% { transform: translateX(-260%); opacity: 0; }
+          }
+          @keyframes theme-apply-breathe {
+            0%, 100% { transform: scale(1); opacity: .58; }
+            50% { transform: scale(1.5); opacity: .16; }
+          }
+        `}
+      </style>
+
+      <div className="w-full max-w-[360px] overflow-hidden rounded-3xl border border-white/70 bg-white/90 text-right shadow-[0_28px_90px_-34px_rgba(15,23,42,0.72)] ring-1 ring-slate-900/5 backdrop-blur-xl">
+        <div className="relative overflow-hidden bg-[radial-gradient(circle_at_12%_0%,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_90%_100%,rgba(99,102,241,0.16),transparent_34%)] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-2.5 py-1 text-[10px] font-black text-slate-600 shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inset-0 rounded-full bg-cyan-400 [animation:theme-apply-breathe_1.2s_ease-in-out_infinite]" />
+                  <span className="relative h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_14px_rgba(34,211,238,0.9)]" />
                 </span>
-                <HiOutlineArrowPath
-                  size={16}
-                  className="mt-1 animate-spin text-emerald-500"
-                />
+                اعمال زنده تم
+              </div>
+              <h2 className="mt-3 truncate text-[15px] font-black text-slate-950">
+                {state.themeName}
+              </h2>
+              <p className="mt-1 truncate text-[11px] font-bold text-slate-500">
+                {state.label}
+              </p>
+            </div>
+
+            <div className="shrink-0 text-left">
+              <div className="font-mono text-[28px] font-black leading-none text-slate-950 tabular-nums">
+                {progress}%
+              </div>
+              <div
+                dir="ltr"
+                className="mt-1 font-mono text-[10px] font-bold text-slate-400"
+              >
+                {formatThemeApplyElapsed(state.elapsedMs)}
               </div>
             </div>
           </div>
         </div>
-        <h2 className="mt-4 px-5 text-[15px] font-black text-neutral-950">
-          در حال اعمال تم
-        </h2>
-        <p className="mt-1 px-5 text-[12px] font-bold text-neutral-500">
-          {state.themeName}
-        </p>
         <div className="px-5 pb-5 pt-4">
-          <div className="flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-500">
-            <span className="truncate">{state.label}</span>
-            <span dir="ltr" className="shrink-0 font-mono">
-              {formatThemeApplyElapsed(state.elapsedMs)}
-            </span>
-          </div>
-
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-200/80">
+          <div
+            className="relative h-3 overflow-hidden rounded-full bg-slate-200/80 shadow-inner shadow-slate-300/40"
+            role="progressbar"
+            aria-label="درصد اعمال تم"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
             <div
-              className="relative h-full rounded-full bg-gradient-to-l from-emerald-400 via-sky-400 to-neutral-900 transition-[width] duration-150 ease-out"
+              className="relative h-full overflow-hidden rounded-full bg-gradient-to-l from-cyan-300 via-sky-500 to-indigo-500 shadow-[0_0_24px_rgba(14,165,233,0.35)] transition-[width] duration-300 ease-out"
               style={{ width: `${progress}%` }}
             >
-              <div className="absolute inset-y-0 left-0 w-1/2 animate-pulse bg-white/35 blur-sm" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.46),transparent_48%,rgba(15,23,42,0.12))]" />
+              <div className="absolute inset-y-0 left-0 w-24 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.82),transparent)] blur-[1px] [animation:theme-apply-sheen_1.15s_linear_infinite]" />
             </div>
+
+            {stageMarkers.map((marker) => (
+              <span
+                key={marker}
+                className={[
+                  "absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full ring-2 transition",
+                  progress >= marker
+                    ? "bg-white ring-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.8)]"
+                    : "bg-slate-300 ring-white/70",
+                ].join(" ")}
+                style={{ right: `${marker}%` }}
+              />
+            ))}
           </div>
 
-          <p className="mt-3 text-[11px] font-semibold text-neutral-400">
-            صفحه بعد از پایان رندر، خودکار آماده می‌شود.
-          </p>
+          <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-slate-400">
+            <span>شروع</span>
+            <span>استایل‌دهی</span>
+            <span>رندر</span>
+          </div>
+
         </div>
       </div>
     </div>

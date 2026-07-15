@@ -251,7 +251,7 @@ function BlockSpacingControls({
 
   return (
     <div
-      className="absolute left-40 top-4 z-40 hidden w-[258px] rounded-2xl   bg-black/10 p-2 shadow-[0_14px_36px_rgba(15,23,42,0.16)] backdrop-blur-3xl lg:block"
+      className="absolute left-40 top-4 z-39 hidden w-[258px] rounded-2xl   bg-black/10 p-2 shadow-[0_14px_36px_rgba(15,23,42,0.16)] backdrop-blur-3xl lg:block"
       style={{
         transform: `translate(calc(-100% - 12px + ${panelOffset.x}px), ${panelOffset.y}px)`,
       }}

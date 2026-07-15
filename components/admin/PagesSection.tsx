@@ -102,7 +102,8 @@ function formatFaDate(value?: string) {
   }
 }
 
-type AdminPageRow = Page & {
+type AdminPageRow = Omit<Page, "blocks"> & {
+  blocks?: Page["blocks"];
   isPublished?: boolean;
   viewCount?: number;
   visitorCount?: number;
@@ -313,25 +314,29 @@ function buildColumns(
       sortable: true,
       filterable: true,
       filterType: "text",
-      render: (value, row) => (
-        <span className="block">
-          <span className={cn("block text-sm font-semibold", t.textPrimary)}>
-            {String(value ?? "—")}
-          </span>
+      render: (value, row) => {
+        const url = typeof row.url === "string" ? row.url : "";
 
-          {row.url && (
-            <span
-              className={cn(
-                "mt-0.5 block font-mono text-[11px]",
-                t.textDisabled,
-              )}
-              dir="ltr"
-            >
-              {String(row.url)}
+        return (
+          <span className="block">
+            <span className={cn("block text-sm font-semibold", t.textPrimary)}>
+              {String(value ?? "—")}
             </span>
-          )}
-        </span>
-      ),
+
+            {url ? (
+              <span
+                className={cn(
+                  "mt-0.5 block font-mono text-[11px]",
+                  t.textDisabled,
+                )}
+                dir="ltr"
+              >
+                {url}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       key: "description",

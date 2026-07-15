@@ -100,7 +100,7 @@ export function SelectField({
             : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0",
         ].join(" ")}
       >
-        <div className="max-h-[320px] overflow-y-auto p-1.5">
+        <div className="builder-modal-scrollbar max-h-[320px] overflow-y-auto p-1.5">
           {options.map((option) => {
             const isActive = option.value === value;
 

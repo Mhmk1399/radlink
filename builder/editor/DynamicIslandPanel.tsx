@@ -92,8 +92,8 @@ const STYLE_LABELS: Partial<Record<EditableStyleKey, string>> = {
   paddingTop: "فضای داخلی بالا",
   paddingBottom: "فضای داخلی پایین",
   borderRadius: "گردی",
-  borderColor: "رنگ بوردر",
-  borderWidth: "ضخامت بوردر",
+  borderColor: "رنگ حاشیه",
+  borderWidth: "ضخامت حاشیه",
   gridColumns: "تعداد ستون‌های گرید",
   animation: "انیمیشن",
 };
@@ -169,13 +169,7 @@ const COLOR_PRESETS = [
   "transparent",
 ];
 
-const CUSTOM_SCROLLBAR = [
-  "[&::-webkit-scrollbar]:w-[5px]",
-  "[&::-webkit-scrollbar-track]:bg-transparent",
-  "[&::-webkit-scrollbar-thumb]:rounded-full",
-  "[&::-webkit-scrollbar-thumb]:bg-neutral-200",
-  "hover:[&::-webkit-scrollbar-thumb]:bg-neutral-300",
-].join(" ");
+const CUSTOM_SCROLLBAR = "builder-modal-scrollbar";
 
 /* ================================================================== */
 /*  Helpers                                                            */
@@ -601,7 +595,8 @@ function CustomColorPicker({
         <button
           type="button"
           onClick={() => {
-            if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+            if (updateTimeoutRef.current)
+              clearTimeout(updateTimeoutRef.current);
             commitPendingColor();
             onClose();
           }}
@@ -788,7 +783,7 @@ function InlineColorWithPicker({
         type="button"
         onClick={() => setOpenPickerKey(isOpen ? null : styleKey)}
         className={[
-          "group flex items-center gap-2 rounded-xl px-2 py-2 transition-all",
+          "group flex min-h-10 items-center gap-2 rounded-xl px-3 py-2.5 transition-all",
           feedbackActive
             ? "bg-emerald-50 ring-1 ring-emerald-200"
             : isOpen
@@ -799,14 +794,14 @@ function InlineColorWithPicker({
       >
         <span
           className={[
-            "block h-5 w-5 rounded-lg shadow-sm transition-transform group-hover:scale-110",
+            "block h-5 w-5 shrink-0 rounded-lg shadow-sm transition-transform group-hover:scale-110",
             isLightColor(color)
               ? "ring-1 ring-neutral-300"
               : "ring-1 ring-neutral-200",
           ].join(" ")}
           style={{ backgroundColor: color }}
         />
-        <span className="hidden text-[11px] font-semibold text-neutral-600 transition group-hover:text-neutral-800 xl:inline">
+        <span className="whitespace-nowrap text-[11px] font-bold text-neutral-600 transition group-hover:text-neutral-800">
           {label}
         </span>
       </button>
@@ -865,11 +860,9 @@ function DesktopToolbar({
   selLabel,
   selectedElementId,
   breakpoint,
-  isScrolled,
   onBreakpointChange,
   onUpdateContent,
   onUpdateStyle,
-  onClose,
   onDeleteBlock,
   onDuplicateBlock,
 }: ToolbarProps) {
@@ -880,37 +873,11 @@ function DesktopToolbar({
   );
   const numericBtnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const feedback = useMicroFeedback();
   const contentTriggerRef = useRef<HTMLDivElement>(null);
   const styleTriggerRef = useRef<HTMLDivElement>(null);
   const animationTriggerRef = useRef<HTMLDivElement>(null);
   const actionsTriggerRef = useRef<HTMLDivElement>(null);
-  // ── scroll fade masks ──
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // RTL: scrollLeft is negative in some browsers
-    const sl = Math.abs(el.scrollLeft);
-    setCanScrollRight(sl > 4);
-    setCanScrollLeft(sl + el.clientWidth < el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    updateScrollState();
-    el.addEventListener("scroll", updateScrollState, { passive: true });
-    const ro = new ResizeObserver(updateScrollState);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("scroll", updateScrollState);
-      ro.disconnect();
-    };
-  }, [updateScrollState, selectedElementId]);
 
   const allowedKeys = selSchema?.allowedStyleKeys ?? [];
   const style: EditableStyleMap | null = selEl ? selEl.style : null;
@@ -924,7 +891,7 @@ function DesktopToolbar({
   const colorLabels: Record<string, string> = {
     color: "متن",
     backgroundColor: "بک‌گراند",
-    borderColor: "بوردر",
+    borderColor: "حاشیه",
   };
 
   const numericIcons: Record<string, React.ReactNode> = {
@@ -983,55 +950,32 @@ function DesktopToolbar({
     style &&
     (activeColors.length > 0 || quickNumerics.length > 0 || hasAnim);
 
-  // ── compact vs full ──
-  const isCompact = Boolean(isScrolled);
-
   return (
     <div
       data-tour="tour-inspector-panel"
-      className={[
-        "fixed inset-x-0 z-[100] flex justify-center px-4 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]",
-        isCompact ? "top-12 pt-1" : "top-[60px] pt-3",
-      ].join(" ")}
+      className="fixed inset-x-0 top-[58px] z-[100] flex justify-center px-4 pt-3 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
       dir="rtl"
     >
-      <div className="relative w-full max-w-5xl">
-        <div
-          className={[
-            "flex items-center rounded-2xl border border-neutral-200/60 bg-white/[0.97] backdrop-blur-2xl transition-all duration-300",
-            isCompact
-              ? "px-2 py-[4px] shadow-[0_1px_4px_rgba(0,0,0,0.03),0_8px_24px_-8px_rgba(0,0,0,0.06)]"
-              : "px-2.5 py-[6px] shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_40px_-12px_rgba(0,0,0,0.08)]",
-          ].join(" ")}
-        >
+      <div className="relative w-full max-w-[1180px]">
+        <div className="flex flex-wrap items-center gap-2 rounded-[22px] border border-neutral-200/70 bg-white/[0.98] px-3 py-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.05),0_18px_48px_-18px_rgba(15,23,42,0.18)] backdrop-blur-2xl transition-all duration-300">
           {/* ── Block badge ── */}
-          <div
-            className={[
-              "flex shrink-0 items-center gap-2 rounded-xl bg-emerald-50 transition-all",
-              isCompact ? "px-2 py-[5px]" : "px-3 py-[7px]",
-            ].join(" ")}
-          >
+          <div className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 transition-all">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span
-              className={[
-                "font-bold text-emerald-700 transition-all",
-                isCompact ? "text-[10px]" : "text-[12px]",
-              ].join(" ")}
-            >
+            <span className="max-w-[150px] truncate text-[12px] font-bold text-emerald-700 transition-all">
               {schema.label}
             </span>
           </div>
 
           {/* ── Selected element chip ── */}
-          {selectedElementId && !isCompact && (
+          {selectedElementId && (
             <>
               <Sep />
-              <div className="flex shrink-0 items-center gap-1.5 rounded-lg bg-neutral-100 px-2.5 py-1.5">
+              <div className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-neutral-100 px-3 py-2">
                 <HiOutlineSwatch size={12} className="text-neutral-400" />
-                <span className="max-w-[100px] truncate text-[11px] font-semibold text-neutral-600">
+                <span className="max-w-[140px] truncate text-[11px] font-bold text-neutral-600">
                   {selLabel}
                 </span>
               </div>
@@ -1040,29 +984,16 @@ function DesktopToolbar({
 
           <Sep />
 
-          {/* ══════════════════════════════════════ */}
-          {/*  SCROLLABLE QUICK CONTROLS AREA        */}
-          {/* ══════════════════════════════════════ */}
-          <div className="relative min-w-0 flex-1">
-            {/* fade masks */}
-            {canScrollLeft && (
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-white/95 to-transparent" />
-            )}
-            {canScrollRight && (
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-white/95 to-transparent" />
-            )}
-
-            <div
-              ref={scrollRef}
-              className="flex items-center   overflow-x-auto scrollbar-none"
-            >
+          {/* Quick controls can wrap to keep every label visible. */}
+          <div className="relative min-w-[280px] flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 overflow-visible pe-1">
               {/* ▸ Content dropdown */}
               {hasContent && (
                 <div ref={contentTriggerRef} className="relative shrink-0">
                   <BarBtn
                     active={openDropdown === "content"}
                     icon={<HiOutlinePencil size={13} />}
-                    label={isCompact ? "" : "محتوا"}
+                    label="محتوا"
                     onClick={() => toggle("content")}
                   />
                   <Dropdown
@@ -1090,7 +1021,7 @@ function DesktopToolbar({
                   <BarBtn
                     active={openDropdown === "style"}
                     icon={<HiOutlineAdjustmentsHorizontal size={13} />}
-                    label={isCompact ? "" : "استایل  "}
+                    label="استایل"
                     onClick={() => toggle("style")}
                   />
                   <Dropdown
@@ -1138,7 +1069,8 @@ function DesktopToolbar({
                   {activeColors.map((key) => {
                     const raw = getResp(
                       style![key] as
-                        ResponsiveValue<string | number> | undefined,
+                        | ResponsiveValue<string | number>
+                        | undefined,
                       breakpoint,
                     );
                     return (
@@ -1169,7 +1101,8 @@ function DesktopToolbar({
                     if (!cfg) return null;
                     const raw = getResp(
                       style![key] as
-                        ResponsiveValue<string | number> | undefined,
+                        | ResponsiveValue<string | number>
+                        | undefined,
                       breakpoint,
                     );
                     const isOpen = openNumericDropdown === key;
@@ -1190,7 +1123,7 @@ function DesktopToolbar({
                             setOpenColorPicker(null);
                           }}
                           className={[
-                            "flex items-center gap-1.5 rounded-xl px-2.5 py-2 transition-all",
+                            "flex min-h-10 items-center gap-2 rounded-xl px-3 py-2.5 transition-all",
                             feedback.activeKey === key
                               ? "bg-emerald-50 ring-1 ring-emerald-200"
                               : isOpen
@@ -1206,9 +1139,20 @@ function DesktopToolbar({
                           >
                             {numericIcons[key]}
                           </span>
-                          <span className="text-[11px] font-semibold">
-                            {toNum(raw)}
-                            {cfg.unit}
+                          <span className="flex flex-col items-start leading-none">
+                            <span className="whitespace-nowrap text-[10px] font-black">
+                              {STYLE_LABELS[key]}
+                            </span>
+                            <span
+                              className={[
+                                "mt-1 text-[10px] font-semibold",
+                                isOpen ? "text-white/70" : "text-neutral-400",
+                              ].join(" ")}
+                              dir="ltr"
+                            >
+                              {toNum(raw)}
+                              {cfg.unit}
+                            </span>
                           </span>
                           {isOpen ? (
                             <HiOutlineChevronUp size={10} />
@@ -1318,17 +1262,13 @@ function DesktopToolbar({
                           active={openDropdown === "animation"}
                           icon={<HiOutlineSparkles size={13} />}
                           label={
-                            isCompact
-                              ? ""
-                              : (ANIMATION_OPTIONS.find(
-                                  (o) =>
-                                    o.value ===
-                                    ((style!.animation as AnimationType) ??
-                                      "none"),
-                                )?.label ?? "انیمیشن")
+                            ANIMATION_OPTIONS.find(
+                              (o) =>
+                                o.value ===
+                                ((style!.animation as AnimationType) ?? "none"),
+                            )?.label ?? "انیمیشن"
                           }
                           onClick={() => toggle("animation")}
-                          compact
                         />
                         <Dropdown
                           open={openDropdown === "animation"}
@@ -1339,7 +1279,7 @@ function DesktopToolbar({
                           <p className="mb-3 px-1 text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                             انیمیشن ورود
                           </p>
-                          <div className="max-h-[min(62vh,520px)] space-y-1 overflow-y-auto overscroll-contain pe-1 [scrollbar-width:thin]">
+                          <div className="builder-modal-scrollbar max-h-[min(62vh,520px)] space-y-1 overflow-y-auto overscroll-contain pe-1">
                             {ANIMATION_OPTIONS.map((opt) => {
                               const active =
                                 ((style!.animation as AnimationType) ??
@@ -1413,9 +1353,8 @@ function DesktopToolbar({
             <BarBtn
               active={openDropdown === "actions"}
               icon={<HiOutlineCog6Tooth size={14} />}
-              label=""
+              label="گزینه‌ها"
               onClick={() => toggle("actions")}
-              compact
             />
             <Dropdown
               open={openDropdown === "actions"}
@@ -1462,7 +1401,7 @@ function DesktopToolbar({
 /* ================================================================== */
 
 function Sep() {
-  return <span className="mx-1 h-5 w-px shrink-0 bg-neutral-200/60" />;
+  return <span className="mx-0.5 h-8 w-px shrink-0 bg-neutral-200/70" />;
 }
 
 function BarBtn({
@@ -1470,34 +1409,29 @@ function BarBtn({
   icon,
   label,
   onClick,
-  compact,
 }: {
   active: boolean;
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  compact?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        "flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-[12px] font-semibold transition-all",
+        "flex min-h-10 items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12px] font-bold transition-all",
         active
           ? "bg-neutral-900 text-white"
           : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700",
-        compact ? "px-2" : "",
       ].join(" ")}
     >
-      {icon}
-      {label && (
-        <span className="hidden whitespace-nowrap xl:inline">{label}</span>
-      )}
+      <span className="shrink-0">{icon}</span>
+      {label && <span className="whitespace-nowrap leading-none">{label}</span>}
       {active ? (
-        <HiOutlineChevronUp size={10} />
+        <HiOutlineChevronUp size={11} className="shrink-0" />
       ) : (
-        <HiOutlineChevronDown size={10} />
+        <HiOutlineChevronDown size={11} className="shrink-0" />
       )}
     </button>
   );

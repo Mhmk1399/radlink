@@ -462,7 +462,7 @@ export function RgbaColorInput({
               onMouseDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
               className={[
-                "fixed z-[1000] max-w-[calc(100dvw-24px)] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_24px_80px_-18px_rgba(0,0,0,0.25)]",
+                "builder-modal-scrollbar fixed z-[1000] max-w-[calc(100dvw-24px)] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_24px_80px_-18px_rgba(0,0,0,0.25)]",
                 cleanPanelClassName,
               ].join(" ")}
               style={panelStyle}

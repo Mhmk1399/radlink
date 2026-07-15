@@ -20,6 +20,18 @@ export const PAGE_BACKGROUND_PATTERN_IDS = [
   "crosshatch",
   "vertical-rhythm",
   "calm-waves",
+  "liquid-glass-aurora",
+  "prism-caustics",
+  "hologram-dots",
+  "chrome-ribbons",
+  "fluid-orbs",
+  "cyber-noise",
+  "glass-mosaic",
+  "neon-fog-glass",
+  "arctic-mist-rings",
+  "frosted-laser-grid",
+  "polar-veil-orbs",
+  "blue-vapor-noise",
 ] as const;
 
 export type PageBackgroundPatternId =
@@ -218,6 +230,114 @@ export const PAGE_BACKGROUND_PATTERNS: PageBackgroundPatternOption[] = [
     defaultColor: "#0f172a",
     defaultOpacity: 0.07,
     defaultSize: 46,
+  },
+  {
+    id: "liquid-glass-aurora",
+    label: "لیکویید گلس شفقی",
+    description: "هاله‌های شفاف، نورهای محو و شکست نرم رنگ",
+    defaultColor: "#7c3aed",
+    defaultSecondaryColor: "#22d3ee",
+    defaultOpacity: 0.2,
+    defaultSize: 38,
+  },
+  {
+    id: "prism-caustics",
+    label: "کاستیک منشوری",
+    description: "خطوط شکست نور و گرادینت‌های شیشه‌ای",
+    defaultColor: "#ff4fd8",
+    defaultSecondaryColor: "#7cffcb",
+    defaultOpacity: 0.18,
+    defaultSize: 34,
+  },
+  {
+    id: "hologram-dots",
+    label: "نقطه‌های هولوگرام",
+    description: "نقطه‌های درخشان روی گرادینت هولوگرافیک",
+    defaultColor: "#8b5cf6",
+    defaultSecondaryColor: "#06b6d4",
+    defaultOpacity: 0.18,
+    defaultSize: 20,
+  },
+  {
+    id: "chrome-ribbons",
+    label: "روبان کرومی",
+    description: "نوارهای سیال با برق شیشه‌ای و رنگ‌های تند",
+    defaultColor: "#f97316",
+    defaultSecondaryColor: "#ec4899",
+    defaultOpacity: 0.18,
+    defaultSize: 48,
+  },
+  {
+    id: "fluid-orbs",
+    label: "گوی‌های سیال",
+    description: "حباب‌های بزرگ و نرم با حس لیکویید گلس",
+    defaultColor: "#ccff00",
+    defaultSecondaryColor: "#00e5ff",
+    defaultOpacity: 0.17,
+    defaultSize: 42,
+  },
+  {
+    id: "cyber-noise",
+    label: "نویز سایبری",
+    description: "بافت دیجیتال ریز با هاله‌های نئونی",
+    defaultColor: "#00f5d4",
+    defaultSecondaryColor: "#f15bb5",
+    defaultOpacity: 0.16,
+    defaultSize: 18,
+  },
+  {
+    id: "glass-mosaic",
+    label: "موزاییک شیشه‌ای",
+    description: "پنل‌های زاویه‌دار و نیمه‌شفاف روی گرادینت",
+    defaultColor: "#a855f7",
+    defaultSecondaryColor: "#facc15",
+    defaultOpacity: 0.17,
+    defaultSize: 44,
+  },
+  {
+    id: "neon-fog-glass",
+    label: "مه نئون شیشه‌ای",
+    description: "مه سرد با هاله‌های نئون و لایه‌های شفاف",
+    defaultColor: "#67e8f9",
+    defaultSecondaryColor: "#8b5cf6",
+    defaultOpacity: 0.18,
+    defaultSize: 36,
+  },
+  {
+    id: "arctic-mist-rings",
+    label: "حلقه مه قطبی",
+    description: "حلقه‌های یخی محو با نور آبی و یاسی",
+    defaultColor: "#7dd3fc",
+    defaultSecondaryColor: "#c4b5fd",
+    defaultOpacity: 0.16,
+    defaultSize: 46,
+  },
+  {
+    id: "frosted-laser-grid",
+    label: "گرید لیزری یخی",
+    description: "خطوط لیزری ظریف روی شیشه مات و سرد",
+    defaultColor: "#22d3ee",
+    defaultSecondaryColor: "#818cf8",
+    defaultOpacity: 0.14,
+    defaultSize: 24,
+  },
+  {
+    id: "polar-veil-orbs",
+    label: "گوی‌های پرده قطبی",
+    description: "گوی‌های نرم پشت پرده مه‌آلود گلس",
+    defaultColor: "#a5f3fc",
+    defaultSecondaryColor: "#60a5fa",
+    defaultOpacity: 0.17,
+    defaultSize: 42,
+  },
+  {
+    id: "blue-vapor-noise",
+    label: "بخار آبی نئونی",
+    description: "بخار سرد با نویز ظریف و نور نئون",
+    defaultColor: "#38bdf8",
+    defaultSecondaryColor: "#a78bfa",
+    defaultOpacity: 0.16,
+    defaultSize: 18,
   },
 ];
 
@@ -1007,6 +1127,852 @@ function getPatternLayers(
         ],
         repeats: ["repeat", "repeat", "no-repeat", "no-repeat", "no-repeat"],
         attachments: ["scroll", "scroll", "scroll", "scroll", "scroll"],
+      };
+    }
+    case "liquid-glass-aurora": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4.6, 0.28, 0.9),
+      );
+      const firstSoft = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 2.4, 0.12, 0.54),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 4.2, 0.24, 0.84),
+      );
+      const secondSoft = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 2.2, 0.12, 0.5),
+      );
+      const glass = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.55, 0.12, 0.36),
+      );
+      const edge = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.7, 0.05, 0.16),
+      );
+
+      return {
+        images: [
+          `linear-gradient(118deg, transparent 0 18%, ${edge} 19% 20%, transparent 21% 52%, ${edge} 53% 54%, transparent 55% 100%)`,
+          `conic-gradient(from 210deg at 54% 42%, transparent 0 18%, ${glass} 22%, transparent 30%, ${secondSoft} 48%, transparent 62%, ${firstSoft} 78%, transparent 100%)`,
+          `radial-gradient(circle at 18% 14%, ${first} 0, transparent 30%)`,
+          `radial-gradient(circle at 84% 18%, ${secondSoft} 0, transparent 28%)`,
+          `radial-gradient(circle at 24% 82%, ${second} 0, transparent 34%)`,
+          `radial-gradient(circle at 76% 78%, ${firstSoft} 0, transparent 36%)`,
+          `radial-gradient(circle, ${edge} 0 1px, transparent 4px)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.86)} 0%, ${firstSoft} 48%, ${secondSoft} 100%)`,
+        ],
+        sizes: [
+          `${size * 4}px ${size * 4}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          `${Math.max(18, size)}px ${Math.max(18, size)}px`,
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          "center",
+          "center",
+          "center",
+          "center",
+          "center",
+          "0 0",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "prism-caustics": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const prism = Math.max(18, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4.3, 0.24, 0.84),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 4, 0.22, 0.78),
+      );
+      const firstLine = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.1, 0.07, 0.24),
+      );
+      const secondLine = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.05, 0.07, 0.24),
+      );
+      const shine = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.3, 0.1, 0.3),
+      );
+
+      return {
+        images: [
+          `repeating-linear-gradient(118deg, transparent 0 ${Math.round(prism * 0.9)}px, ${firstLine} ${Math.round(prism * 0.95)}px ${Math.round(prism * 1.02)}px, transparent ${Math.round(prism * 1.08)}px ${Math.round(prism * 2.1)}px)`,
+          `repeating-linear-gradient(32deg, transparent 0 ${Math.round(prism * 1.2)}px, ${secondLine} ${Math.round(prism * 1.25)}px ${Math.round(prism * 1.34)}px, transparent ${Math.round(prism * 1.42)}px ${Math.round(prism * 2.4)}px)`,
+          `linear-gradient(64deg, transparent 0 34%, ${shine} 35% 37%, transparent 38% 100%)`,
+          `radial-gradient(circle at 14% 18%, ${first} 0, transparent 30%)`,
+          `radial-gradient(circle at 86% 78%, ${second} 0, transparent 34%)`,
+          `linear-gradient(135deg, ${colorWithOpacity(baseColor, 0.86)} 0%, ${colorWithOpacity(pattern.color, 0.2)} 50%, ${colorWithOpacity(secondaryColor, 0.2)} 100%)`,
+        ],
+        sizes: [
+          `${prism * 3}px ${prism * 3}px`,
+          `${Math.round(prism * 2.5)}px ${Math.round(prism * 2.5)}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          `${Math.round(prism / 2)}px ${Math.round(prism / 3)}px`,
+          "center",
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: ["scroll", "scroll", "scroll", "scroll", "scroll", "scroll"],
+      };
+    }
+    case "hologram-dots": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const dotGap = Math.max(14, size);
+      const dot = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.35, 0.1, 0.34),
+      );
+      const firstDot = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.2, 0.08, 0.28),
+      );
+      const secondDot = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.15, 0.08, 0.28),
+      );
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 3.8, 0.22, 0.74),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.8, 0.22, 0.74),
+      );
+      const scan = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.65, 0.04, 0.15),
+      );
+
+      return {
+        images: [
+          `repeating-linear-gradient(180deg, transparent 0 ${Math.round(dotGap * 0.72)}px, ${scan} ${Math.round(dotGap * 0.75)}px ${Math.round(dotGap * 0.82)}px, transparent ${Math.round(dotGap * 0.88)}px ${dotGap}px)`,
+          `radial-gradient(circle, ${dot} 0 1px, transparent 2.2px)`,
+          `radial-gradient(circle, ${firstDot} 0 1.2px, transparent 2.8px)`,
+          `radial-gradient(circle, ${secondDot} 0 1.2px, transparent 2.8px)`,
+          `conic-gradient(from 160deg at 50% 48%, ${first} 0 14%, transparent 24%, ${second} 48%, transparent 62%, ${first} 84%, transparent 100%)`,
+          `radial-gradient(circle at 50% 36%, ${colorWithOpacity("#ffffff", 0.2)} 0, transparent 36%)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.78)} 0%, ${colorWithOpacity(pattern.color, 0.2)} 48%, ${colorWithOpacity(secondaryColor, 0.18)} 100%)`,
+        ],
+        sizes: [
+          `${dotGap}px ${dotGap}px`,
+          `${dotGap}px ${dotGap}px`,
+          `${Math.round(dotGap * 1.55)}px ${Math.round(dotGap * 1.55)}px`,
+          `${Math.round(dotGap * 1.9)}px ${Math.round(dotGap * 1.9)}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          "0 0",
+          `${Math.round(dotGap / 2)}px ${Math.round(dotGap / 3)}px`,
+          `${Math.round(dotGap / 4)}px ${Math.round(dotGap / 2)}px`,
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "chrome-ribbons": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const ribbon = Math.max(34, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4.4, 0.24, 0.86),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 4.1, 0.22, 0.82),
+      );
+      const firstSoft = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.9, 0.1, 0.44),
+      );
+      const secondSoft = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.9, 0.1, 0.44),
+      );
+      const glass = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.2, 0.09, 0.28),
+      );
+
+      return {
+        images: [
+          `linear-gradient(128deg, transparent 0 13%, ${firstSoft} 14% 24%, ${glass} 25% 27%, transparent 28% 100%)`,
+          `linear-gradient(318deg, transparent 0 16%, ${secondSoft} 17% 30%, ${glass} 31% 33%, transparent 34% 100%)`,
+          `radial-gradient(ellipse at 20% 20%, ${first} 0, transparent 32%)`,
+          `radial-gradient(ellipse at 82% 82%, ${second} 0, transparent 34%)`,
+          `radial-gradient(circle at 64% 30%, ${glass} 0, transparent 20%)`,
+          `linear-gradient(135deg, ${colorWithOpacity(baseColor, 0.84)} 0%, ${firstSoft} 46%, ${secondSoft} 100%)`,
+        ],
+        sizes: [
+          `${ribbon * 4}px ${ribbon * 4}px`,
+          `${Math.round(ribbon * 3.5)}px ${Math.round(ribbon * 3.5)}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          `${Math.round(ribbon / 2)}px 0`,
+          "center",
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: ["scroll", "scroll", "scroll", "scroll", "scroll", "scroll"],
+      };
+    }
+    case "fluid-orbs": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const orbSize = Math.max(28, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4.4, 0.25, 0.86),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 4.3, 0.24, 0.84),
+      );
+      const firstRing = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 0.95, 0.06, 0.22),
+      );
+      const secondRing = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 0.9, 0.06, 0.22),
+      );
+      const glass = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.45, 0.1, 0.34),
+      );
+
+      return {
+        images: [
+          `radial-gradient(circle at 18% 22%, ${glass} 0 4%, transparent 5% 100%)`,
+          `radial-gradient(circle at 18% 22%, ${first} 0, transparent 28%)`,
+          `radial-gradient(circle at 78% 18%, ${second} 0, transparent 26%)`,
+          `radial-gradient(circle at 30% 78%, ${second} 0, transparent 30%)`,
+          `radial-gradient(circle at 82% 78%, ${first} 0, transparent 34%)`,
+          `repeating-radial-gradient(circle at 50% 50%, transparent 0 ${Math.round(orbSize * 0.38)}px, ${firstRing} ${Math.round(orbSize * 0.4)}px ${Math.round(orbSize * 0.44)}px, transparent ${Math.round(orbSize * 0.46)}px ${Math.round(orbSize * 0.9)}px)`,
+          `repeating-radial-gradient(circle at 45% 55%, transparent 0 ${Math.round(orbSize * 0.3)}px, ${secondRing} ${Math.round(orbSize * 0.32)}px ${Math.round(orbSize * 0.36)}px, transparent ${Math.round(orbSize * 0.38)}px ${Math.round(orbSize * 0.82)}px)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.84)} 0%, ${colorWithOpacity(pattern.color, 0.14)} 48%, ${colorWithOpacity(secondaryColor, 0.16)} 100%)`,
+        ],
+        sizes: [
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          `${orbSize * 2}px ${orbSize * 2}px`,
+          `${Math.round(orbSize * 1.55)}px ${Math.round(orbSize * 1.55)}px`,
+          "100% 100%",
+        ],
+        positions: [
+          "center",
+          "center",
+          "center",
+          "center",
+          "center",
+          "0 0",
+          `${Math.round(orbSize / 2)}px ${Math.round(orbSize / 3)}px`,
+          "center",
+        ],
+        repeats: [
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "repeat",
+          "repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "cyber-noise": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const pixel = Math.max(12, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4.2, 0.22, 0.8),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 4, 0.22, 0.78),
+      );
+      const line = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 0.85, 0.05, 0.2),
+      );
+      const dot = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.1, 0.07, 0.25),
+      );
+      const scan = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.45, 0.03, 0.1),
+      );
+
+      return {
+        images: [
+          `linear-gradient(${line} 1px, transparent 1px)`,
+          `linear-gradient(90deg, ${line} 1px, transparent 1px)`,
+          `radial-gradient(circle, ${dot} 0 1px, transparent 2.5px)`,
+          `repeating-linear-gradient(180deg, transparent 0 ${Math.round(pixel * 0.65)}px, ${scan} ${Math.round(pixel * 0.68)}px ${Math.round(pixel * 0.72)}px, transparent ${Math.round(pixel * 0.75)}px ${pixel}px)`,
+          `radial-gradient(circle at 14% 18%, ${first} 0, transparent 28%)`,
+          `radial-gradient(circle at 86% 82%, ${second} 0, transparent 32%)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.9)} 0%, ${colorWithOpacity(pattern.color, 0.18)} 46%, ${colorWithOpacity(secondaryColor, 0.18)} 100%)`,
+        ],
+        sizes: [
+          `${pixel}px ${pixel}px`,
+          `${pixel}px ${pixel}px`,
+          `${Math.round(pixel * 1.65)}px ${Math.round(pixel * 1.65)}px`,
+          `${pixel}px ${pixel}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "center",
+          "center",
+          `${Math.round(pixel / 2)}px ${Math.round(pixel / 3)}px`,
+          "0 0",
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "glass-mosaic": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const tile = Math.max(24, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 3.8, 0.22, 0.76),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.8, 0.22, 0.76),
+      );
+      const firstPanel = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.25, 0.08, 0.3),
+      );
+      const secondPanel = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.2, 0.08, 0.28),
+      );
+      const edge = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.8, 0.05, 0.18),
+      );
+
+      return {
+        images: [
+          `linear-gradient(135deg, ${firstPanel} 0 12%, transparent 13% 100%)`,
+          `linear-gradient(45deg, transparent 0 60%, ${secondPanel} 61% 78%, transparent 79% 100%)`,
+          `linear-gradient(120deg, transparent 0 48%, ${edge} 49% 50%, transparent 51% 100%)`,
+          `linear-gradient(30deg, transparent 0 36%, ${edge} 37% 38%, transparent 39% 100%)`,
+          `radial-gradient(circle at 18% 18%, ${first} 0, transparent 30%)`,
+          `radial-gradient(circle at 82% 78%, ${second} 0, transparent 34%)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.86)} 0%, ${colorWithOpacity(pattern.color, 0.16)} 50%, ${colorWithOpacity(secondaryColor, 0.16)} 100%)`,
+        ],
+        sizes: [
+          `${tile * 2}px ${tile * 2}px`,
+          `${tile * 2}px ${tile * 2}px`,
+          `${tile * 3}px ${tile * 3}px`,
+          `${Math.round(tile * 2.5)}px ${Math.round(tile * 2.5)}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          `${tile}px ${Math.round(tile / 2)}px`,
+          "0 0",
+          `${Math.round(tile / 2)}px ${Math.round(tile / 3)}px`,
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "neon-fog-glass": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const fogSize = Math.max(24, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4.4, 0.24, 0.84),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.8, 0.2, 0.74),
+      );
+      const firstMist = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.9, 0.1, 0.44),
+      );
+      const secondMist = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.8, 0.1, 0.42),
+      );
+      const glass = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.25, 0.09, 0.28),
+      );
+      const sparkle = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.75, 0.05, 0.16),
+      );
+
+      return {
+        images: [
+          `linear-gradient(128deg, transparent 0 18%, ${glass} 19% 20%, transparent 21% 54%, ${glass} 55% 56%, transparent 57% 100%)`,
+          `radial-gradient(circle at 16% 18%, ${first} 0, transparent 28%)`,
+          `radial-gradient(circle at 84% 14%, ${secondMist} 0, transparent 30%)`,
+          `radial-gradient(circle at 28% 82%, ${second} 0, transparent 34%)`,
+          `radial-gradient(circle at 78% 78%, ${firstMist} 0, transparent 34%)`,
+          `radial-gradient(circle at 50% 42%, ${colorWithOpacity("#ffffff", 0.16)} 0, transparent 38%)`,
+          `radial-gradient(circle, ${sparkle} 0 1px, transparent 4px)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.88)} 0%, ${firstMist} 48%, ${secondMist} 100%)`,
+        ],
+        sizes: [
+          `${fogSize * 4}px ${fogSize * 4}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          `${fogSize}px ${fogSize}px`,
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          "center",
+          "center",
+          "center",
+          "center",
+          "center",
+          "0 0",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "arctic-mist-rings": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const ringSize = Math.max(34, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 3.7, 0.2, 0.72),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.5, 0.2, 0.7),
+      );
+      const ring = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 0.95, 0.06, 0.22),
+      );
+      const ringSoft = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 0.8, 0.05, 0.18),
+      );
+      const frost = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.2, 0.09, 0.28),
+      );
+
+      return {
+        images: [
+          `repeating-radial-gradient(circle at 50% 50%, transparent 0 ${Math.round(ringSize * 0.34)}px, ${ring} ${Math.round(ringSize * 0.36)}px ${Math.round(ringSize * 0.39)}px, transparent ${Math.round(ringSize * 0.41)}px ${Math.round(ringSize * 0.86)}px)`,
+          `repeating-radial-gradient(circle at 44% 58%, transparent 0 ${Math.round(ringSize * 0.28)}px, ${ringSoft} ${Math.round(ringSize * 0.3)}px ${Math.round(ringSize * 0.34)}px, transparent ${Math.round(ringSize * 0.36)}px ${Math.round(ringSize * 0.78)}px)`,
+          `radial-gradient(circle at 18% 16%, ${first} 0, transparent 30%)`,
+          `radial-gradient(circle at 82% 78%, ${second} 0, transparent 34%)`,
+          `radial-gradient(circle at 54% 38%, ${frost} 0, transparent 36%)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.9)} 0%, ${colorWithOpacity(pattern.color, 0.16)} 46%, ${colorWithOpacity(secondaryColor, 0.16)} 100%)`,
+        ],
+        sizes: [
+          `${ringSize * 2}px ${ringSize * 2}px`,
+          `${Math.round(ringSize * 1.6)}px ${Math.round(ringSize * 1.6)}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          `${Math.round(ringSize / 2)}px ${Math.round(ringSize / 3)}px`,
+          "center",
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: ["scroll", "scroll", "scroll", "scroll", "scroll", "scroll"],
+      };
+    }
+    case "frosted-laser-grid": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const grid = Math.max(14, size);
+      const line = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 0.95, 0.05, 0.22),
+      );
+      const secondLine = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 0.9, 0.05, 0.2),
+      );
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 3.8, 0.2, 0.74),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.5, 0.2, 0.7),
+      );
+      const shine = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.85, 0.05, 0.18),
+      );
+
+      return {
+        images: [
+          `linear-gradient(${line} 1px, transparent 1px)`,
+          `linear-gradient(90deg, ${line} 1px, transparent 1px)`,
+          `repeating-linear-gradient(128deg, transparent 0 ${Math.round(grid * 2)}px, ${secondLine} ${Math.round(grid * 2.05)}px ${Math.round(grid * 2.16)}px, transparent ${Math.round(grid * 2.22)}px ${Math.round(grid * 4)}px)`,
+          `linear-gradient(54deg, transparent 0 32%, ${shine} 33% 34%, transparent 35% 100%)`,
+          `radial-gradient(circle at 14% 18%, ${first} 0, transparent 26%)`,
+          `radial-gradient(circle at 84% 82%, ${second} 0, transparent 30%)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.9)} 0%, ${colorWithOpacity(pattern.color, 0.16)} 48%, ${colorWithOpacity(secondaryColor, 0.16)} 100%)`,
+        ],
+        sizes: [
+          `${grid}px ${grid}px`,
+          `${grid}px ${grid}px`,
+          `${grid * 4}px ${grid * 4}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "center",
+          "center",
+          "0 0",
+          "center",
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "polar-veil-orbs": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const orbSize = Math.max(28, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 3.8, 0.2, 0.74),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.9, 0.22, 0.76),
+      );
+      const firstSoft = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.6, 0.09, 0.38),
+      );
+      const secondSoft = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.55, 0.09, 0.36),
+      );
+      const veil = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 1.45, 0.1, 0.32),
+      );
+
+      return {
+        images: [
+          `radial-gradient(circle at 16% 18%, ${first} 0, transparent 24%)`,
+          `radial-gradient(circle at 82% 22%, ${secondSoft} 0, transparent 28%)`,
+          `radial-gradient(circle at 28% 78%, ${second} 0, transparent 30%)`,
+          `radial-gradient(circle at 82% 78%, ${firstSoft} 0, transparent 34%)`,
+          `radial-gradient(circle at 52% 44%, ${veil} 0, transparent 38%)`,
+          `radial-gradient(circle, ${colorWithOpacity("#ffffff", clamp(pattern.opacity * 0.6, 0.04, 0.14))} 0 1px, transparent 4px)`,
+          `linear-gradient(180deg, ${colorWithOpacity(baseColor, 0.92)} 0%, ${colorWithOpacity(pattern.color, 0.14)} 48%, ${colorWithOpacity(secondaryColor, 0.16)} 100%)`,
+        ],
+        sizes: [
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          `${orbSize}px ${orbSize}px`,
+          "100% 100%",
+        ],
+        positions: ["center", "center", "center", "center", "center", "0 0", "center"],
+        repeats: [
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
+      };
+    }
+    case "blue-vapor-noise": {
+      const secondaryColor = pattern.secondaryColor || baseColor;
+      const noise = Math.max(12, size);
+      const first = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 4, 0.22, 0.78),
+      );
+      const second = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 3.6, 0.2, 0.72),
+      );
+      const vapor = colorWithOpacity(
+        pattern.color,
+        clamp(pattern.opacity * 1.25, 0.08, 0.3),
+      );
+      const vaporSecond = colorWithOpacity(
+        secondaryColor,
+        clamp(pattern.opacity * 1.15, 0.08, 0.28),
+      );
+      const speck = colorWithOpacity(
+        "#ffffff",
+        clamp(pattern.opacity * 0.7, 0.04, 0.15),
+      );
+
+      return {
+        images: [
+          `radial-gradient(circle, ${speck} 0 1px, transparent 2.4px)`,
+          `repeating-linear-gradient(162deg, transparent 0 ${Math.round(noise * 2.4)}px, ${vapor} ${Math.round(noise * 2.5)}px ${Math.round(noise * 2.9)}px, transparent ${Math.round(noise * 3)}px ${Math.round(noise * 5.6)}px)`,
+          `repeating-linear-gradient(24deg, transparent 0 ${Math.round(noise * 3)}px, ${vaporSecond} ${Math.round(noise * 3.1)}px ${Math.round(noise * 3.55)}px, transparent ${Math.round(noise * 3.7)}px ${Math.round(noise * 6)}px)`,
+          `radial-gradient(circle at 18% 16%, ${first} 0, transparent 30%)`,
+          `radial-gradient(circle at 82% 78%, ${second} 0, transparent 34%)`,
+          `radial-gradient(circle at 52% 42%, ${colorWithOpacity("#ffffff", 0.13)} 0, transparent 36%)`,
+          `linear-gradient(145deg, ${colorWithOpacity(baseColor, 0.9)} 0%, ${colorWithOpacity(pattern.color, 0.16)} 48%, ${colorWithOpacity(secondaryColor, 0.16)} 100%)`,
+        ],
+        sizes: [
+          `${noise}px ${noise}px`,
+          `${noise * 6}px ${noise * 6}px`,
+          `${Math.round(noise * 5)}px ${Math.round(noise * 5)}px`,
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+          "100% 100%",
+        ],
+        positions: [
+          "0 0",
+          "0 0",
+          `${Math.round(noise / 2)}px ${Math.round(noise / 3)}px`,
+          "center",
+          "center",
+          "center",
+          "center",
+        ],
+        repeats: [
+          "repeat",
+          "repeat",
+          "repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+          "no-repeat",
+        ],
+        attachments: [
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+          "scroll",
+        ],
       };
     }
     case "soft-grid":

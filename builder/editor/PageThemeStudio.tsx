@@ -228,6 +228,18 @@ const TWO_COLOR_BACKGROUND_PATTERNS = new Set<PageBackgroundPattern["id"]>([
   "soft-spotlight",
   "premium-rings",
   "silk-waves",
+  "liquid-glass-aurora",
+  "prism-caustics",
+  "hologram-dots",
+  "chrome-ribbons",
+  "fluid-orbs",
+  "cyber-noise",
+  "glass-mosaic",
+  "neon-fog-glass",
+  "arctic-mist-rings",
+  "frosted-laser-grid",
+  "polar-veil-orbs",
+  "blue-vapor-noise",
 ]);
 
 function supportsSecondPatternColor(patternId: PageBackgroundPattern["id"]) {
@@ -408,7 +420,7 @@ export function PageThemeStudio({
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[1fr_390px]">
-          <div className="min-h-0 overflow-y-auto p-5">
+          <div className="builder-modal-scrollbar min-h-0 overflow-y-auto p-5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {allThemes.map((theme) => {
                 const active = selectedId === theme.id;
@@ -492,7 +504,7 @@ export function PageThemeStudio({
             </div>
           </div>
 
-          <aside className="min-h-0 overflow-y-auto border-t border-neutral-100 bg-neutral-50/80 p-5 lg:border-r lg:border-t-0">
+          <aside className="builder-modal-scrollbar min-h-0 overflow-y-auto border-t border-neutral-100 bg-neutral-50/80 p-5 lg:border-r lg:border-t-0">
             <div className="space-y-5">
               <section className="rounded-2xl border border-neutral-200 bg-white p-4">
                 <FieldLabel>نام تم</FieldLabel>
@@ -722,8 +734,8 @@ export function PageThemeStudio({
                 </h3>
                 <NumberField
                   label="عنوان‌ها"
-                  min={18}
-                  max={38}
+                  min={14}
+                  max={32}
                   value={draft.scale.title}
                   onChange={(value) =>
                     updateDraft((theme) => ({
@@ -734,8 +746,8 @@ export function PageThemeStudio({
                 />
                 <NumberField
                   label="توضیحات"
-                  min={11}
-                  max={20}
+                  min={10}
+                  max={18}
                   value={draft.scale.description}
                   onChange={(value) =>
                     updateDraft((theme) => ({
@@ -747,7 +759,7 @@ export function PageThemeStudio({
                 <NumberField
                   label="آیتم‌ها"
                   min={10}
-                  max={18}
+                  max={16}
                   value={draft.scale.item}
                   onChange={(value) =>
                     updateDraft((theme) => ({
@@ -758,8 +770,8 @@ export function PageThemeStudio({
                 />
                 <NumberField
                   label="دکمه‌ها"
-                  min={11}
-                  max={20}
+                  min={10}
+                  max={18}
                   value={draft.scale.button}
                   onChange={(value) =>
                     updateDraft((theme) => ({

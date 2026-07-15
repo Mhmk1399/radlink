@@ -430,9 +430,10 @@ export function CanvasContent({
   return (
     <div
       ref={setNodeRef}
-      className={["relative min-h-[420px] rounded-3xl", fontClassName].join(
-        " ",
-      )}
+      className={[
+        "relative min-h-[420px] rounded-3xl mt-12 pb-8",
+        fontClassName,
+      ].join(" ")}
       style={{ ...backgroundStyle, ...fontStyle }}
     >
       <PageLogoPreview

@@ -3512,11 +3512,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   </span>{" "}
                   مورد
                 </p>
-                <PageSizeSelector
+                {/* <PageSizeSelector
                   value={currentPageSize}
                   options={pageSizes}
                   onChange={handlePageSizeChange}
-                />
+                /> */}
               </div>
 
               <div className="hidden sm:flex items-center gap-1" dir="ltr">

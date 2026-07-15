@@ -910,7 +910,7 @@ export function BlocksSidebar({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     disabled={isBlocksLoading}
                     placeholder="جستجوی بلاک..."
-                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2.5 pr-9 pl-3 text-[12px] text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2.5 pr-9 pl-3 text-base text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100"
                   />
                 </div>
               </div>

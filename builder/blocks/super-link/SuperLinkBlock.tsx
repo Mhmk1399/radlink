@@ -64,7 +64,7 @@ const ICONS: Record<string, React.ComponentType<{ size?: number | string }>> = {
 /*  Constants                                                          */
 /* ================================================================== */
 
-const PREFIX = "superLink";
+const STYLE_ANIMATION_PREFIX = "super-link-block";
 
 /* ------------------------------------------------------------------ */
 /*  Icon animation keyframes                                           */
@@ -136,7 +136,7 @@ const iconAnimationCss = (anim: IconAnimation) => {
 /* ------------------------------------------------------------------ */
 
 const StyledContainer = styled.a<{ $styleCss: string }>`
-  ${sharedBlockKeyframes("super-link-container")}
+  ${sharedBlockKeyframes(STYLE_ANIMATION_PREFIX)}
   position: relative;
   display: flex;
   align-items: center;
@@ -170,8 +170,8 @@ const StyledIcon = styled.span<{
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  ${({ $iconAnim }) => iconAnimationCss($iconAnim)}
   ${({ $styleCss }) => $styleCss}
+  ${({ $iconAnim }) => iconAnimationCss($iconAnim)}
 `;
 
 const StyledTitle = styled.span<{ $styleCss: string }>`
@@ -222,7 +222,6 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
   const elements = block.elements ?? {};
 
   const isEditor = mode === "editor";
-  const responsiveOpts = { mobileOnly: isEditor };
   const direction = block.settings.direction === "ltr" ? "ltr" : "rtl";
 
   /* ---------- styles ---------- */
@@ -230,8 +229,8 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
     () =>
       responsiveStyleToCss(
         elements.container?.style,
-        "super-link-block",
-        { ...responsiveOpts, effect: "button" },
+        STYLE_ANIMATION_PREFIX,
+        { mobileOnly: isEditor, effect: "button" },
       ),
     [elements.container?.style, isEditor],
   );
@@ -240,8 +239,8 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
     () =>
       responsiveStyleToCss(
         elements.icon?.style,
-        "super-link-block",
-        responsiveOpts,
+        STYLE_ANIMATION_PREFIX,
+        { mobileOnly: isEditor },
       ),
     [elements.icon?.style, isEditor],
   );
@@ -250,8 +249,8 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
     () =>
       responsiveStyleToCss(
         elements.title?.style,
-        "super-link-block",
-        responsiveOpts,
+        STYLE_ANIMATION_PREFIX,
+        { mobileOnly: isEditor },
       ),
     [elements.title?.style, isEditor],
   );
@@ -260,8 +259,8 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
     () =>
       responsiveStyleToCss(
         elements.description?.style,
-        "super-link-block",
-        responsiveOpts,
+        STYLE_ANIMATION_PREFIX,
+        { mobileOnly: isEditor },
       ),
     [elements.description?.style, isEditor],
   );
@@ -270,8 +269,8 @@ const SuperLinkBlock: React.FC<BlockComponentProps> = ({
     () =>
       responsiveStyleToCss(
         elements.arrow?.style,
-        "super-link-block",
-        responsiveOpts,
+        STYLE_ANIMATION_PREFIX,
+        { mobileOnly: isEditor },
       ),
     [elements.arrow?.style, isEditor],
   );

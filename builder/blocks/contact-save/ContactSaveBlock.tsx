@@ -44,6 +44,7 @@ const PREFIX = "contact-save";
 
 const Root = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(PREFIX)}
+  ${sharedBlockKeyframes(`${PREFIX}-container`)}
   width: 100%;
   ${(props) => props.$styleCss}
 `;

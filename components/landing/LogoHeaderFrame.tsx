@@ -177,6 +177,379 @@ function patternForVariant(
           />
         </>
       );
+    case "glass-aurora":
+      return (
+        <>
+          <circle
+            cx="120"
+            cy="24"
+            r="180"
+            fill={accent}
+            opacity={Math.min(0.36, opacity * 0.75)}
+            style={{ filter: "blur(16px)" }}
+          />
+          <circle
+            cx="820"
+            cy="48"
+            r="210"
+            fill={secondary}
+            opacity={Math.min(0.34, opacity * 0.72)}
+            style={{ filter: "blur(18px)" }}
+          />
+          <circle
+            cx="470"
+            cy="232"
+            r="260"
+            fill={soft}
+            opacity={Math.min(0.42, opacity * 0.82)}
+            style={{ filter: "blur(20px)" }}
+          />
+          <path
+            d="M0 172 C132 118 248 204 394 150 C548 94 676 72 960 124 V240 H0 Z"
+            fill={secondary}
+            opacity={Math.min(0.58, opacity + 0.06)}
+          />
+          <path
+            d="M0 204 C160 148 300 226 454 182 C620 136 752 92 960 146 V240 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.46, opacity * 0.9)}
+          />
+          <path
+            d="M132 64 H286 M626 72 H760 M382 42 H462"
+            stroke={soft}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="5 14"
+            opacity={Math.min(0.9, opacity + 0.24)}
+          />
+        </>
+      );
+    case "glass-prism":
+      return (
+        <>
+          <path
+            d="M0 0 H960 V240 H0 Z"
+            fill={primary}
+            opacity={Math.min(0.18, opacity * 0.35)}
+          />
+          {[
+            "M44 18 L318 0 L210 240 L0 240 Z",
+            "M292 0 L610 0 L482 240 L172 240 Z",
+            "M596 0 L960 0 L960 240 L694 240 Z",
+          ].map((path, index) => (
+            <path
+              key={path}
+              d={path}
+              fill={index % 2 ? accent : secondary}
+              opacity={Math.min(0.44, opacity * (0.74 + index * 0.12))}
+            />
+          ))}
+          <path
+            d="M96 0 L420 240 M382 0 L692 240 M700 0 L388 240"
+            stroke={soft}
+            strokeWidth="4"
+            strokeLinecap="round"
+            opacity={Math.min(0.42, opacity * 0.72)}
+          />
+          <path
+            d="M0 184 C160 142 330 206 492 160 C646 116 760 96 960 134 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.28, opacity * 0.62)}
+          />
+        </>
+      );
+    case "liquid-blob":
+      return (
+        <>
+          <path
+            d="M122 20 C252 -38 352 38 306 134 C260 230 78 222 52 124 C34 58 70 34 122 20 Z"
+            fill={accent}
+            opacity={Math.min(0.58, opacity + 0.04)}
+            style={{ filter: "blur(2px)" }}
+          />
+          <path
+            d="M676 12 C834 -42 944 52 886 154 C830 254 642 246 598 144 C562 64 606 34 676 12 Z"
+            fill={secondary}
+            opacity={Math.min(0.56, opacity + 0.04)}
+            style={{ filter: "blur(2px)" }}
+          />
+          <path
+            d="M262 204 C392 122 536 136 700 208 V240 H208 Z"
+            fill={soft}
+            opacity={Math.min(0.34, opacity * 0.68)}
+          />
+          <circle cx="168" cy="66" r="22" fill={soft} opacity={Math.min(0.74, opacity + 0.18)} />
+          <circle cx="742" cy="62" r="28" fill={soft} opacity={Math.min(0.62, opacity + 0.12)} />
+        </>
+      );
+    case "holo-orbit":
+      return (
+        <>
+          <circle
+            cx="480"
+            cy="120"
+            r="190"
+            fill={secondary}
+            opacity={Math.min(0.2, opacity * 0.38)}
+            style={{ filter: "blur(16px)" }}
+          />
+          {[0, 1, 2, 3].map((index) => (
+            <ellipse
+              key={index}
+              cx="480"
+              cy="120"
+              rx={180 + index * 72}
+              ry={42 + index * 17}
+              fill="none"
+              stroke={index % 2 ? secondary : soft}
+              strokeWidth="8"
+              strokeDasharray={index % 2 ? "10 18" : "32 16"}
+              opacity={Math.min(0.52, opacity * (0.72 + index * 0.08))}
+              transform={`rotate(${index * 24} 480 120)`}
+            />
+          ))}
+          <circle cx="324" cy="74" r="9" fill={accent} opacity={Math.min(0.9, opacity + 0.22)} />
+          <circle cx="684" cy="166" r="7" fill={soft} opacity={Math.min(0.86, opacity + 0.18)} />
+          <path
+            d="M0 198 C180 162 310 216 480 186 C658 154 770 126 960 172 V240 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.34, opacity * 0.68)}
+          />
+        </>
+      );
+    case "chrome-fold":
+      return (
+        <>
+          <path
+            d="M0 52 H960 L822 132 H122 Z"
+            fill={secondary}
+            opacity={Math.min(0.56, opacity + 0.06)}
+          />
+          <path
+            d="M122 132 H822 L960 216 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.5, opacity)}
+          />
+          <path
+            d="M0 74 H960 L864 104 H96 Z"
+            fill={soft}
+            opacity={Math.min(0.36, opacity * 0.7)}
+          />
+          <path
+            d="M112 0 L338 240 M640 0 L414 240"
+            stroke={faint}
+            strokeWidth="22"
+            strokeLinecap="round"
+            opacity={Math.min(0.42, opacity * 0.85)}
+          />
+        </>
+      );
+    case "mist-bubbles":
+      return (
+        <>
+          {Array.from({ length: 18 }).map((_, index) => {
+            const x = 42 + ((index * 97) % 880);
+            const y = 28 + ((index * 53) % 188);
+            const radius = 20 + ((index * 13) % 46);
+            return (
+              <circle
+                key={index}
+                cx={x}
+                cy={y}
+                r={radius}
+                fill={index % 3 === 0 ? accent : index % 3 === 1 ? secondary : soft}
+                opacity={Math.min(0.32, opacity * 0.62)}
+                style={{ filter: index % 2 ? "blur(2px)" : undefined }}
+              />
+            );
+          })}
+          <path
+            d="M0 196 C128 146 244 216 382 178 C538 134 696 132 960 184 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.3, opacity * 0.62)}
+          />
+        </>
+      );
+    case "neon-caustic":
+      return (
+        <>
+          <path
+            d="M0 0 H960 V240 H0 Z"
+            fill={primary}
+            opacity={Math.min(0.16, opacity * 0.32)}
+          />
+          {Array.from({ length: 8 }).map((_, index) => (
+            <path
+              key={index}
+              d={`M${index * 138 - 84} 240 C${index * 138 + 8} 170 ${index * 138 + 24} 74 ${index * 138 + 138} 0`}
+              fill="none"
+              stroke={index % 2 ? secondary : accent}
+              strokeWidth={index % 2 ? 10 : 7}
+              strokeLinecap="round"
+              opacity={Math.min(0.44, opacity * 0.78)}
+            />
+          ))}
+          <path
+            d="M0 166 C120 116 256 184 392 142 C570 86 716 92 960 136 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.3, opacity * 0.62)}
+          />
+        </>
+      );
+    case "neon-mist":
+      return (
+        <>
+          <circle
+            cx="120"
+            cy="36"
+            r="170"
+            fill={secondary}
+            opacity={Math.min(0.28, opacity * 0.58)}
+            style={{ filter: "blur(18px)" }}
+          />
+          <circle
+            cx="818"
+            cy="74"
+            r="210"
+            fill={accent}
+            opacity={Math.min(0.28, opacity * 0.58)}
+            style={{ filter: "blur(20px)" }}
+          />
+          <path
+            d="M0 160 C130 104 260 198 408 146 C570 88 702 82 960 134 V240 H0 Z"
+            fill={secondary}
+            opacity={Math.min(0.5, opacity + 0.04)}
+          />
+          <path
+            d="M0 204 C154 158 302 220 466 184 C646 144 772 126 960 166 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.3, opacity * 0.64)}
+          />
+          <path
+            d="M104 64 H230 M650 68 H806 M356 44 H448"
+            stroke={soft}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="6 18"
+            opacity={Math.min(0.86, opacity + 0.2)}
+          />
+        </>
+      );
+    case "frosted-orbit":
+      return (
+        <>
+          <circle
+            cx="480"
+            cy="118"
+            r="210"
+            fill={secondary}
+            opacity={Math.min(0.18, opacity * 0.38)}
+            style={{ filter: "blur(18px)" }}
+          />
+          {[0, 1, 2].map((index) => (
+            <ellipse
+              key={index}
+              cx="480"
+              cy="120"
+              rx={190 + index * 86}
+              ry={44 + index * 20}
+              fill="none"
+              stroke={index % 2 ? secondary : soft}
+              strokeWidth="8"
+              strokeDasharray={index === 1 ? "12 18" : "34 18"}
+              opacity={Math.min(0.45, opacity * (0.66 + index * 0.1))}
+              transform={`rotate(${index * 20} 480 120)`}
+            />
+          ))}
+          <path
+            d="M0 198 C180 150 322 214 492 180 C660 146 766 126 960 170 V240 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.3, opacity * 0.62)}
+          />
+          <circle cx="334" cy="74" r="7" fill={soft} opacity={Math.min(0.8, opacity + 0.16)} />
+          <circle cx="704" cy="162" r="8" fill={secondary} opacity={Math.min(0.72, opacity + 0.12)} />
+        </>
+      );
+    case "laser-veil":
+      return (
+        <>
+          <path
+            d="M0 0 H960 V240 H0 Z"
+            fill={primary}
+            opacity={Math.min(0.12, opacity * 0.26)}
+          />
+          {Array.from({ length: 7 }).map((_, index) => (
+            <path
+              key={index}
+              d={`M${index * 152 - 110} 240 C${index * 152 - 22} 178 ${index * 152 + 34} 72 ${index * 152 + 150} 0`}
+              fill="none"
+              stroke={index % 2 ? secondary : accent}
+              strokeWidth={index % 2 ? 8 : 5}
+              strokeLinecap="round"
+              opacity={Math.min(0.38, opacity * 0.68)}
+            />
+          ))}
+          <path
+            d="M0 164 C120 118 246 182 390 144 C560 98 710 96 960 138 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.28, opacity * 0.58)}
+          />
+        </>
+      );
+    case "polar-liquid":
+      return (
+        <>
+          <path
+            d="M126 18 C262 -30 360 48 306 142 C256 230 78 220 56 128 C40 62 74 34 126 18 Z"
+            fill={secondary}
+            opacity={Math.min(0.44, opacity * 0.82)}
+            style={{ filter: "blur(2px)" }}
+          />
+          <path
+            d="M694 12 C842 -32 942 62 884 158 C828 250 646 246 606 146 C574 68 620 34 694 12 Z"
+            fill={accent}
+            opacity={Math.min(0.4, opacity * 0.78)}
+            style={{ filter: "blur(2px)" }}
+          />
+          <path
+            d="M0 188 C146 132 300 212 458 174 C632 132 766 120 960 166 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.32, opacity * 0.64)}
+          />
+          <circle cx="168" cy="66" r="18" fill={soft} opacity={Math.min(0.62, opacity + 0.12)} />
+          <circle cx="748" cy="72" r="23" fill={soft} opacity={Math.min(0.52, opacity + 0.08)} />
+        </>
+      );
+    case "blue-vapor":
+      return (
+        <>
+          <path
+            d="M0 74 C150 24 250 108 390 62 C550 10 682 30 960 72 V0 H0 Z"
+            fill={secondary}
+            opacity={Math.min(0.32, opacity * 0.65)}
+          />
+          <path
+            d="M0 164 C126 112 250 180 388 138 C552 88 706 96 960 140 V240 H0 Z"
+            fill={accent}
+            opacity={Math.min(0.34, opacity * 0.68)}
+          />
+          <path
+            d="M0 210 C170 166 310 230 486 194 C668 158 786 146 960 182 V240 H0 Z"
+            fill={soft}
+            opacity={Math.min(0.24, opacity * 0.54)}
+          />
+          {Array.from({ length: 18 }).map((_, index) => (
+            <circle
+              key={index}
+              cx={48 + ((index * 83) % 880)}
+              cy={34 + ((index * 47) % 160)}
+              r={index % 3 === 0 ? 3 : 1.8}
+              fill={index % 2 ? soft : secondary}
+              opacity={Math.min(0.42, opacity * 0.75)}
+            />
+          ))}
+        </>
+      );
     case "curve-arc":
       return <circle cx="480" cy="248" r="360" fill={secondary} opacity={opacity} />;
     case "curve-layer":
@@ -752,7 +1125,7 @@ function LogoSlot({
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-center text-[11px] font-bold leading-5 text-neutral-400">
-          جای لوگو
+            لوگو
         </div>
       )}
     </div>

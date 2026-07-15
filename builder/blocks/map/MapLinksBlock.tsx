@@ -163,6 +163,7 @@ const shimmer = keyframes`
 
 const StyledContainer = styled.div<{ $styleCss: string }>`
   ${sharedBlockKeyframes(`${PREFIX}-container`)}
+  ${sharedBlockKeyframes("map-links-block")}
   ${(p) => p.$styleCss}
 
   position: relative;

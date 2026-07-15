@@ -448,7 +448,7 @@ function Field({
           }}
           disabled={disabled}
           className={cn(
-            "w-full rounded-xl border px-4 py-3.5 text-sm font-medium text-white placeholder:text-slate-500 outline-none",
+            "w-full rounded-xl border px-4 py-3.5 text-base font-medium text-white placeholder:text-slate-500 outline-none",
             numeric && "tracking-wide",
             isPassword && "pl-11",
             animation.smooth,

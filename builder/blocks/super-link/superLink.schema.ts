@@ -41,7 +41,7 @@ export const superLinkSchema: BlockSchema = {
             label: "انیمیشن آیکون",
             type: "select",
             options: [
-                { value: "none", label: "بدون انیمیشن" },
+                { value: "none", label: "  انیمیشن" },
                 { value: "pulse", label: "ضربان" },
                 { value: "bounce", label: "پرش" },
                 { value: "rotate", label: "چرخش" },

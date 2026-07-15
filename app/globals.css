@@ -50,34 +50,36 @@ body {
   width: 72px;
 }
 .builder-modal-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(212 212 216) transparent;
+  color-scheme: light;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgb(212 212 216) transparent !important;
   scrollbar-gutter: stable;
 }
 
 .builder-modal-scrollbar::-webkit-scrollbar {
   width: 7px;
+  height: 7px;
 }
 
 .builder-modal-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: transparent !important;
 }
 
 .builder-modal-scrollbar::-webkit-scrollbar-thumb {
-  background: rgb(212 212 216);
+  background-color: rgb(212 212 216) !important;
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
 }
 
 .builder-modal-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgb(163 163 163);
+  background-color: rgb(163 163 163) !important;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .builder-modal-scrollbar::-webkit-scrollbar-corner {
-  background: transparent;
+  background: transparent !important;
 }
 
 .builder-modal-scrollbar {

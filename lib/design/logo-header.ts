@@ -43,7 +43,19 @@ export type LogoHeaderVariant =
   | "diamonds"
   | "honeycomb"
   | "barcode"
-  | "orbit";
+  | "orbit"
+  | "glass-aurora"
+  | "glass-prism"
+  | "liquid-blob"
+  | "holo-orbit"
+  | "chrome-fold"
+  | "mist-bubbles"
+  | "neon-caustic"
+  | "neon-mist"
+  | "frosted-orbit"
+  | "laser-veil"
+  | "polar-liquid"
+  | "blue-vapor";
 
 export type LogoHeaderSettings = {
   enabled: boolean;
@@ -96,29 +108,41 @@ export const LOGO_HEADER_VARIANTS: LogoHeaderVariantOption[] = [
   { id: "rings", label: "حلقه‌ای" },
   { id: "confetti", label: "پترن ریز" },
   { id: "minimal-line", label: "خط مینیمال" },
-  { id: "liquid", label: "Liquid" },
-  { id: "mesh-gradient", label: "Mesh" },
-  { id: "topography", label: "Topo" },
-  { id: "checker", label: "Checker" },
-  { id: "bubbles", label: "Bubbles" },
-  { id: "scales", label: "Scales" },
-  { id: "petals", label: "Petals" },
-  { id: "zigzag", label: "Zigzag" },
-  { id: "wave-repeat", label: "Wave repeat" },
-  { id: "corner-swoop", label: "Corner swoop" },
-  { id: "split-circles", label: "Split circles" },
-  { id: "plus-grid", label: "Plus grid" },
-  { id: "diamonds", label: "Diamonds" },
-  { id: "honeycomb", label: "Honeycomb" },
-  { id: "barcode", label: "Barcode" },
-  { id: "orbit", label: "Orbit" },
+  { id: "liquid", label: "مایع" },
+  { id: "mesh-gradient", label: "مش گرادینتی" },
+  { id: "topography", label: "توپوگرافی" },
+  { id: "checker", label: "شطرنجی" },
+  { id: "bubbles", label: "حباب‌ها" },
+  { id: "scales", label: "فلس‌دار" },
+  { id: "petals", label: "گلبرگ‌ها" },
+  { id: "zigzag", label: "زیگزاگ" },
+  { id: "wave-repeat", label: "موج تکراری" },
+  { id: "corner-swoop", label: "قوس گوشه‌ای" },
+  { id: "split-circles", label: "دایره‌های دوگانه" },
+  { id: "plus-grid", label: "شبکه مثبت" },
+  { id: "diamonds", label: "لوزی‌ها" },
+  { id: "honeycomb", label: "کندویی" },
+  { id: "barcode", label: "بارکدی" },
+  { id: "orbit", label: "مداری" },
+  { id: "glass-aurora", label: "گلس شفقی" },
+  { id: "glass-prism", label: "منشور شیشه‌ای" },
+  { id: "liquid-blob", label: "لیکویید بلاب" },
+  { id: "holo-orbit", label: "مدار هولوگرام" },
+  { id: "chrome-fold", label: "تای کرومی" },
+  { id: "mist-bubbles", label: "حباب مه‌آلود" },
+  { id: "neon-caustic", label: "کاستیک نئونی" },
+  { id: "neon-mist", label: "مه نئونی" },
+  { id: "frosted-orbit", label: "مدار یخی" },
+  { id: "laser-veil", label: "پرده لیزری" },
+  { id: "polar-liquid", label: "مایع قطبی" },
+  { id: "blue-vapor", label: "بخار آبی" },
 ];
 
 export const DEFAULT_LOGO_HEADER: LogoHeaderSettings = {
   enabled: true,
   variant: "wave-soft",
-  title: "",
-  description: "",
+  title: "نام سایت شما",
+  description: "توضیح کوتاه درباره سایت شما",
   textColor: "#ffffff",
   descriptionColor: "rgba(255,255,255,0.78)",
   primaryColor: "#064789",

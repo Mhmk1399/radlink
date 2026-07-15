@@ -3,9 +3,40 @@ import {
   normalizePageFooterSettings,
   type PageFooterSettings,
 } from "@/lib/design/page-footer";
+import Link from "next/link";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
+}
+
+const RADLINK_BRANDING_WORD = "رادلینک";
+const RADLINK_BRANDING_URL = "https://nfcrad.link/";
+
+function RadlinkBrandingText({
+  text,
+  accentColor,
+}: {
+  text: string;
+  accentColor: string;
+}) {
+  const wordIndex = text.indexOf(RADLINK_BRANDING_WORD);
+
+  if (wordIndex < 0) return <>{text}</>;
+
+  return (
+    <>
+      {text.slice(0, wordIndex)}
+      <Link
+        href={RADLINK_BRANDING_URL}
+        target="_blank"
+        className="font-black underline decoration-2 underline-offset-4 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2"
+        style={{ color: accentColor }}
+      >
+        {RADLINK_BRANDING_WORD}
+      </Link>
+      {text.slice(wordIndex + RADLINK_BRANDING_WORD.length)}
+    </>
+  );
 }
 
 export function LandingFooter({
@@ -124,7 +155,10 @@ export function LandingFooter({
 
         {footer.showRadlinkBranding ? (
           <p className="mt-3 text-[11px] font-bold leading-5 opacity-75">
-            {brandText}
+            <RadlinkBrandingText
+              text={brandText}
+              accentColor={footer.accentColor}
+            />
           </p>
         ) : (
           <p className="mt-3 text-[11px] leading-5 opacity-55">

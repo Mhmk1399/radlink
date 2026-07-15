@@ -109,6 +109,7 @@ const DEFAULT_ELEMENTS: Record<BannerElementId, BlockElement> = {
 
 const sharedAnimationStyles = css`
   ${sharedBlockKeyframes("banner-block")}
+  ${sharedBlockKeyframes("banner-button")}
 `;
 
 /* ------------------------------------------------------------------ */

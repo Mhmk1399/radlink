@@ -6,7 +6,7 @@ export const ANIMATION_OPTIONS: ReadonlyArray<{
   desc: string;
   icon: string;
 }> = [
-  { label: "بدون", value: "none", desc: "بدون انیمیشن", icon: "○" },
+  { label: "انیمیشن", value: "none", desc: "بدون انیمیشن", icon: "○" },
   { label: "محو", value: "fade", desc: "ظاهر شدن تدریجی", icon: "◐" },
   { label: "اسلاید بالا", value: "slideUp", desc: "حرکت از پایین", icon: "↑" },
   { label: "ورود از چپ", value: "slideLeft", desc: "حرکت از سمت چپ", icon: "→" },
