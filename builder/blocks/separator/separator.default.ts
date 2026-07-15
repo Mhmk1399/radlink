@@ -43,8 +43,6 @@ export function createDefaultSeparatorBlock(order: number): PageBlock {
                 allowedStyleKeys: [
                     "backgroundColor",
                     "borderRadius",
-                    "borderColor",
-                    "borderWidth",
                     "animation",
                 ],
                 style: {
@@ -53,12 +51,6 @@ export function createDefaultSeparatorBlock(order: number): PageBlock {
                     },
                     borderRadius: {
                         mobile: 999,
-                    },
-                    borderColor: {
-                        mobile: "#427AA1",
-                    },
-                    borderWidth: {
-                        mobile: 1,
                     },
                     animation: "none",
                 },

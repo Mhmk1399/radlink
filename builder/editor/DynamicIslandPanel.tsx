@@ -503,13 +503,15 @@ function CustomColorPicker({
     getRecentColors(),
   );
   const hiddenRef = useRef<HTMLInputElement>(null);
-  const isUpdatingRef = useRef(false);
   const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingColorRef = useRef<string | null>(null);
   const parsedColor = getParsedColor(inputValue || color);
   const nativeHex = formatHexColor(parsedColor);
 
   useEffect(() => {
+    if (pendingColorRef.current) return;
+
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
 
     syncTimeoutRef.current = setTimeout(() => {
@@ -530,28 +532,46 @@ function CustomColorPicker({
 
   const handleInput = (val: string) => {
     setInputValue(val);
-    if (isValidCssColorValue(val)) {
-      onChange(val);
-      addRecentColor(val);
+    const parsedValue = parseCssColor(val);
+    if (parsedValue) {
+      const normalizedValue = formatCssColor(parsedValue);
+      pendingColorRef.current = null;
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      onChange(normalizedValue);
+      addRecentColor(normalizedValue);
       setRecentColors(getRecentColors());
     }
   };
 
-  const handleColorChange = (newColor: string) => {
-    // UI محلی سریع آپدیت بشه
+  const commitPendingColor = () => {
+    const pendingColor = pendingColorRef.current;
+    pendingColorRef.current = null;
+
+    const parsedColor = parseCssColor(pendingColor);
+    if (!parsedColor) return;
+
+    const normalizedColor = formatCssColor(parsedColor);
+    onChange(normalizedColor);
+    addRecentColor(normalizedColor);
+    setRecentColors(getRecentColors());
+  };
+
+  const handleColorChange = (newColor: string, immediate = false) => {
     setInputValue(newColor);
+    if (!isValidCssColorValue(newColor)) return;
+    pendingColorRef.current = newColor;
 
-    // اگر هنوز در بازه قفل هستیم، رد کن
-    if (isUpdatingRef.current) return;
-
-    isUpdatingRef.current = true;
-
-    onChange(newColor);
-
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    if (immediate) {
+      commitPendingColor();
+      return;
+    }
+
     updateTimeoutRef.current = setTimeout(() => {
-      isUpdatingRef.current = false;
-    }, 100);
+      updateTimeoutRef.current = null;
+      commitPendingColor();
+    }, 60);
   };
 
   const handleNativeColor = (newColor: string) => {
@@ -580,7 +600,11 @@ function CustomColorPicker({
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+            commitPendingColor();
+            onClose();
+          }}
           className="flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600"
         >
           <HiOutlineXMark size={14} />
@@ -656,7 +680,7 @@ function CustomColorPicker({
                   key={`${recent}-${idx}`}
                   type="button"
                   onClick={() => {
-                    handleColorChange(recent);
+                    handleColorChange(recent, true);
                     setInputValue(recent);
                   }}
                   className={[
@@ -700,7 +724,7 @@ function CustomColorPicker({
                 key={preset}
                 type="button"
                 onClick={() => {
-                  handleColorChange(preset);
+                  handleColorChange(preset, true);
                   setInputValue(preset);
                 }}
                 className={[
@@ -924,9 +948,18 @@ function DesktopToolbar({
     "borderWidth",
     "gridColumns",
   ];
+  const spacingNumericKeys = new Set<EditableStyleKey>([
+    "marginTop",
+    "marginBottom",
+    "paddingTop",
+    "paddingBottom",
+  ]);
 
   const activeColors = colorKeys.filter((k) => allowedKeys.includes(k));
   const activeNumerics = numericKeys.filter((k) => allowedKeys.includes(k));
+  const quickNumerics = activeNumerics.filter(
+    (key) => !spacingNumericKeys.has(key),
+  );
   const hasAnim = allowedKeys.includes("animation");
 
   // ── fire: update style + local micro-feedback (NO toast) ──
@@ -948,7 +981,7 @@ function DesktopToolbar({
   const hasInline =
     selectedElementId &&
     style &&
-    (activeColors.length > 0 || activeNumerics.length > 0 || hasAnim);
+    (activeColors.length > 0 || quickNumerics.length > 0 || hasAnim);
 
   // ── compact vs full ──
   const isCompact = Boolean(isScrolled);
@@ -1125,13 +1158,13 @@ function DesktopToolbar({
                     );
                   })}
 
-                  {activeColors.length > 0 && activeNumerics.length > 0 && (
+                  {activeColors.length > 0 && quickNumerics.length > 0 && (
                     <Sep />
                   )}
 
                   {/* group label */}
 
-                  {activeNumerics.map((key) => {
+                  {quickNumerics.map((key) => {
                     const cfg = NUMERIC_CONFIG[key];
                     if (!cfg) return null;
                     const raw = getResp(
@@ -1275,7 +1308,7 @@ function DesktopToolbar({
                   {/* ── Animation ── */}
                   {hasAnim && (
                     <>
-                      {(activeNumerics.length > 0 ||
+                      {(quickNumerics.length > 0 ||
                         activeColors.length > 0) && <Sep />}
                       <div
                         ref={animationTriggerRef}

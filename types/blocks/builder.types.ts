@@ -160,6 +160,7 @@ export type RepeaterFieldConfig = {
     defaultValue?: unknown;
     linkPreset?: MessengerLinkPreset;
     linkPresetFromField?: string;
+    valueFormat?: "persianPrice";
   }>;
 };
 

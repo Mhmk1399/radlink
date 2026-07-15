@@ -18,6 +18,7 @@ export type PublicPageNotification = {
   type: "info" | "danger";
   iconKey?: string;
   closeable: boolean;
+  creatorName?: string;
 };
 
 const DISMISSED_STORAGE_KEY = "radlink-dismissed-page-notifications";
@@ -203,6 +204,12 @@ export default function PageNotificationModal({
           >
             {activeNotification.description}
           </p>
+
+          {activeNotification.creatorName && (
+            <p className="mt-4 rounded-2xl bg-neutral-50 px-3 py-2 text-xs font-bold text-neutral-500 ring-1 ring-neutral-100">
+              ایجاد شده توسط {activeNotification.creatorName}
+            </p>
+          )}
 
           {activeNotification.closeable && (
             <button

@@ -92,6 +92,30 @@ function toClientValue(value: unknown): unknown {
 
   return String(value);
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getNotificationCreatorName(
+  creator: unknown,
+  fallback: unknown,
+) {
+  const snapshot = typeof fallback === "string" ? fallback.trim() : "";
+  if (snapshot) return snapshot;
+  if (!isRecord(creator)) return "";
+
+  const firstName =
+    typeof creator.firstName === "string" ? creator.firstName.trim() : "";
+  const lastName =
+    typeof creator.lastName === "string" ? creator.lastName.trim() : "";
+  const fullName = `${firstName} ${lastName}`.trim();
+  const phoneNumber =
+    typeof creator.phoneNumber === "string" ? creator.phoneNumber.trim() : "";
+
+  return fullName || phoneNumber;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { url } = await params;
 
@@ -291,7 +315,10 @@ export default async function PageRoute({ params }: Props) {
         { $or: [{ page: page._id }, { isGlobal: true }] },
       ],
     })
-      .select("title subtitle description type iconKey closeable createdAt")
+      .select(
+        "title subtitle description type iconKey closeable createdAt createdBy createdByName",
+      )
+      .populate("createdBy", "firstName lastName phoneNumber role")
       .sort({ createdAt: -1 })
       .lean(),
     QR.findOne({ page: page._id, isActive: { $ne: false } })
@@ -319,6 +346,10 @@ export default async function PageRoute({ params }: Props) {
         : "info") as PublicPageNotification["type"],
       iconKey: String(notification.iconKey || ""),
       closeable: Boolean(notification.closeable),
+      creatorName: getNotificationCreatorName(
+        notification.createdBy,
+        notification.createdByName,
+      ),
     }))
     .filter((notification) => notification.description);
   const clientBlocks = (page.blocks ?? []).map(

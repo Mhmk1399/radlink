@@ -9,6 +9,7 @@ import {
 } from "@/builder/blocks/shared/responsiveStyleToCss";
 
 import type {
+  EditableStyleMap,
   PageBlock,
   BlockComponentProps,
 } from "@/types/blocks/builder.types";
@@ -118,6 +119,40 @@ function isOrnamentVariant(v: SeparatorVariant): boolean {
   return !LINE_VARIANTS.includes(v);
 }
 
+function separatorLineToneCss(
+  style: EditableStyleMap | undefined,
+  mobileOnly: boolean,
+) {
+  if (!style) return "";
+
+  const css: string[] = [];
+  const toneDeclaration = (value: string) =>
+    `--separator-line-color: ${value}; color: ${value}; border-color: ${value};`;
+  const addTone = (selector: string, value: unknown) => {
+    if (typeof value !== "string" || !value.trim()) return;
+    css.push(`${selector} { ${toneDeclaration(value)} }`);
+  };
+  const addResponsiveTone = (query: string, value: unknown) => {
+    if (typeof value !== "string" || !value.trim()) return;
+    css.push(`${query} { & { ${toneDeclaration(value)} } }`);
+  };
+
+  addTone("&", style.backgroundColor?.mobile ?? style.borderColor?.mobile);
+
+  if (!mobileOnly) {
+    addResponsiveTone(
+      "@media (min-width: 768px)",
+      style.backgroundColor?.tablet ?? style.borderColor?.tablet,
+    );
+    addResponsiveTone(
+      "@media (min-width: 1024px)",
+      style.backgroundColor?.desktop ?? style.borderColor?.desktop,
+    );
+  }
+
+  return css.join("\n");
+}
+
 /* ================================================================== */
 /*  Styled                                                             */
 /* ================================================================== */
@@ -152,6 +187,7 @@ const StyledLine = styled.div<{
       height: ${p.$thickness}px;
       min-height: ${p.$thickness}px;
       border: none;
+      background-color: var(--separator-line-color, currentColor);
     `}
 
   ${(p) =>
@@ -161,7 +197,7 @@ const StyledLine = styled.div<{
       background: transparent;
       border: none;
       border-top: ${p.$thickness}px dashed;
-      border-color: inherit;
+      border-color: var(--separator-line-color, currentColor);
     `}
 
   ${(p) =>
@@ -171,7 +207,7 @@ const StyledLine = styled.div<{
       background: transparent;
       border: none;
       border-top: ${p.$thickness}px dotted;
-      border-color: inherit;
+      border-color: var(--separator-line-color, currentColor);
     `}
 `;
 
@@ -328,17 +364,25 @@ export function SeparatorBlock({
   const isOrnament = isOrnamentVariant(variant);
   const ornamentSymbol = ORNAMENT_SYMBOLS[variant] ?? "✦";
 
+  const lineHitAreaClass =
+    mode === "editor" ? "flex min-h-8 items-center" : undefined;
+  const sideLineHitAreaClass =
+    mode === "editor"
+      ? "min-w-0 flex min-h-8 flex-1 items-center"
+      : "min-w-0 flex-1";
+
   const containerCss = responsiveStyleToCss(
     block.elements.container.style,
     `${PREFIX}-container`,
     { mobileOnly, effect: "surface" },
   );
 
-  const lineCss = responsiveStyleToCss(
-    block.elements.line.style,
-    `${PREFIX}-line`,
-    { mobileOnly },
-  );
+  const lineCss = [
+    responsiveStyleToCss(block.elements.line.style, `${PREFIX}-line`, {
+      mobileOnly,
+    }),
+    separatorLineToneCss(block.elements.line.style, mobileOnly),
+  ].join("\n");
 
   const ornamentCss = responsiveStyleToCss(
     block.elements.ornament.style,
@@ -368,6 +412,7 @@ export function SeparatorBlock({
                 mode={mode}
                 selectedElementId={selectedElementId}
                 onSelectElement={onSelectElement}
+                className={lineHitAreaClass}
               >
                 {renderLineVariant(variant, lineCss, thickness)}
               </EditablePart>
@@ -382,7 +427,7 @@ export function SeparatorBlock({
                   mode={mode}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
-                  className="min-w-0 flex-1"
+                  className={sideLineHitAreaClass}
                 >
                   {renderLineVariant(variant, lineCss, thickness)}
                 </EditablePart>
@@ -409,7 +454,7 @@ export function SeparatorBlock({
                   mode={mode}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
-                  className="min-w-0 flex-1"
+                  className={sideLineHitAreaClass}
                 >
                   {renderLineVariant(variant, lineCss, thickness)}
                 </EditablePart>
@@ -425,7 +470,7 @@ export function SeparatorBlock({
                   mode={mode}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
-                  className="min-w-0 flex-1"
+                  className={sideLineHitAreaClass}
                 >
                   <SolidLine css={lineCss} thickness={thickness} />
                 </EditablePart>
@@ -452,7 +497,7 @@ export function SeparatorBlock({
                   mode={mode}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
-                  className="min-w-0 flex-1"
+                  className={sideLineHitAreaClass}
                 >
                   <SolidLine css={lineCss} thickness={thickness} />
                 </EditablePart>

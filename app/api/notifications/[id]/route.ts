@@ -13,6 +13,7 @@ import "@/models/users";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const PAGE_POPULATE_FIELDS = "title url owner isPublished";
+const USER_POPULATE_FIELDS = "firstName lastName phoneNumber role";
 const NOTIFICATION_TYPES = new Set(["info", "danger"]);
 
 function cleanText(value: unknown, maxLength: number) {
@@ -74,6 +75,7 @@ export const GET = compose(
 
     const notification = await Notification.findById(id)
         .populate("page", PAGE_POPULATE_FIELDS)
+        .populate("createdBy", USER_POPULATE_FIELDS)
         .lean();
 
     return NextResponse.json({ notification });
@@ -210,6 +212,7 @@ export const PATCH = compose(
         runValidators: true,
     })
         .populate("page", PAGE_POPULATE_FIELDS)
+        .populate("createdBy", USER_POPULATE_FIELDS)
         .lean();
 
     revalidatePath("/[url]", "page");

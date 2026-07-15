@@ -7,6 +7,7 @@ import {
   responsiveStyleToCss,
   sharedBlockKeyframes,
 } from "@/builder/blocks/shared/responsiveStyleToCss";
+import { normalizePersianPriceText } from "@/lib/format/persianPrice";
 import type { BlockComponentProps } from "@/types/blocks/builder.types";
 import { useRef } from "react";
 
@@ -21,6 +22,17 @@ function useDragScroll() {
   const lastX = useRef(0);
   const animFrame = useRef<number>(0);
   const isDragging = useRef(false);
+
+  const setDraggingAttribute = (dragging: boolean) => {
+    if (!ref.current) return;
+
+    if (dragging) {
+      ref.current.dataset.dragging = "true";
+      return;
+    }
+
+    delete ref.current.dataset.dragging;
+  };
 
   const stopMomentum = () => {
     cancelAnimationFrame(animFrame.current);
@@ -47,6 +59,7 @@ function useDragScroll() {
     scrollLeft.current = ref.current.scrollLeft;
     lastX.current = e.pageX;
     velX.current = 0;
+    setDraggingAttribute(false);
     ref.current.style.cursor = "grabbing";
     ref.current.style.userSelect = "none";
   };
@@ -55,6 +68,7 @@ function useDragScroll() {
     if (!ref.current || !isDown.current) return;
     isDown.current = false;
     isDragging.current = false;
+    setDraggingAttribute(false);
     ref.current.style.cursor = "grab";
     ref.current.style.userSelect = "";
     startMomentum();
@@ -70,6 +84,7 @@ function useDragScroll() {
       startMomentum();
     }
     isDragging.current = false;
+    setDraggingAttribute(false);
   };
 
   const onMouseMove = (e: React.MouseEvent) => {
@@ -80,6 +95,7 @@ function useDragScroll() {
 
     if (!isDragging.current && Math.abs(walk) < 4) return;
     isDragging.current = true;
+    setDraggingAttribute(true);
 
     velX.current = e.pageX - lastX.current;
     lastX.current = e.pageX;
@@ -100,7 +116,6 @@ function useDragScroll() {
     onMouseUp,
     onMouseMove,
     onClick,
-    isDragging,
   };
 }
 
@@ -123,11 +138,6 @@ interface ProductItem {
 }
 
 // ─── Animations ─────────────────────────────────────────────────────────────────
-
-const shimmer = keyframes`
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-`;
 
 const fadeInUp = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -554,14 +564,17 @@ export default function ProductCardsBlock({
   const openInNewTab = data.openInNewTab !== false;
 
   const products: ProductItem[] = Array.isArray(data.products)
-    ? (data.products as ProductItem[]).map((p) => ({
-        id: typeof p.id === "string" ? p.id : `p-${Math.random()}`,
+    ? (data.products as ProductItem[]).map((p, index) => ({
+        id: typeof p.id === "string" ? p.id : `product-${index + 1}`,
         name: typeof p.name === "string" ? p.name : "",
         description: typeof p.description === "string" ? p.description : "",
         imageUrl: typeof p.imageUrl === "string" ? p.imageUrl : "",
         altText: typeof p.altText === "string" ? p.altText : "",
-        price: typeof p.price === "string" ? p.price : "",
-        oldPrice: typeof p.oldPrice === "string" ? p.oldPrice : "",
+        price: typeof p.price === "string" ? normalizePersianPriceText(p.price) : "",
+        oldPrice:
+          typeof p.oldPrice === "string"
+            ? normalizePersianPriceText(p.oldPrice)
+            : "",
         badgeText: typeof p.badgeText === "string" ? p.badgeText : "",
         buttonText: typeof p.buttonText === "string" ? p.buttonText : "",
         productUrl: typeof p.productUrl === "string" ? p.productUrl : "",
@@ -575,6 +588,58 @@ export default function ProductCardsBlock({
     : [];
 
   const isEditor = mode === "editor";
+  const {
+    ref: scrollRef,
+    onMouseDown: handleScrollMouseDown,
+    onMouseLeave: handleScrollMouseLeave,
+    onMouseUp: handleScrollMouseUp,
+    onMouseMove: handleScrollMouseMove,
+    onClick: handleScrollClick,
+  } = useDragScroll();
+  const handleInlineContentUpdate = (
+    instanceId: string,
+    key: string,
+    value: unknown,
+  ) => {
+    if (instanceId !== block.instanceId) {
+      onUpdateContent?.(instanceId, key, value);
+      return;
+    }
+
+    const [rootKey, itemToken, ...fieldParts] = key.split(".");
+    const fieldKey = fieldParts.join(".");
+    if (rootKey !== "products" || !itemToken || !fieldKey) {
+      onUpdateContent?.(instanceId, key, value);
+      return;
+    }
+
+    const currentProducts = Array.isArray(data.products)
+      ? (data.products as Array<Record<string, unknown>>)
+      : [];
+    let didUpdate = false;
+    const nextProducts = currentProducts.map((item, index) => {
+      const sourceId = typeof item.id === "string" ? item.id : "";
+      const fallbackId = products[index]?.id ?? `product-${index + 1}`;
+      const isTarget =
+        sourceId === itemToken ||
+        fallbackId === itemToken ||
+        String(index) === itemToken;
+
+      if (!isTarget) return item;
+
+      didUpdate = true;
+      const nextValue =
+        fieldKey === "price" || fieldKey === "oldPrice"
+          ? normalizePersianPriceText(value)
+          : value;
+
+      return { ...item, [fieldKey]: nextValue };
+    });
+
+    if (!didUpdate) return;
+
+    onUpdateContent?.(block.instanceId, "products", nextProducts);
+  };
 
   return (
     <EditablePart
@@ -586,13 +651,13 @@ export default function ProductCardsBlock({
     >
       <StyledContainer
         $styleCss={containerStyle}
-        className="w-full p-5 md:p-8"
+        className="w-full p-4 sm:p-5 md:p-8"
         dir="rtl"
       >
         <ContentLayer>
           {/* Section header */}
           {(showTitle || showDescription) && (
-            <HeaderSection className="mb-6">
+            <HeaderSection className="mb-4 sm:mb-6">
               {showTitle && (
                 <EditablePart
                   instanceId={block.instanceId}
@@ -610,7 +675,7 @@ export default function ProductCardsBlock({
                       dataKey="title"
                       instanceId={block.instanceId}
                       mode={mode}
-                      onUpdateContent={onUpdateContent}
+                      onUpdateContent={handleInlineContentUpdate}
                     >
                       {(text) => <>{text}</>}
                     </InlineEditableText>
@@ -628,7 +693,7 @@ export default function ProductCardsBlock({
                 >
                   <StyledDescription
                     $styleCss={descriptionStyle}
-                    className="mb-6 mt-2"
+                    className="mb-4 mt-1.5 sm:mb-6 sm:mt-2"
                   >
                     <InlineEditableText
                       value={sectionDescription}
@@ -636,7 +701,7 @@ export default function ProductCardsBlock({
                       instanceId={block.instanceId}
                       mode={mode}
                       multiline
-                      onUpdateContent={onUpdateContent}
+                      onUpdateContent={handleInlineContentUpdate}
                     >
                       {(text) => <>{text}</>}
                     </InlineEditableText>
@@ -682,21 +747,17 @@ export default function ProductCardsBlock({
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                 >
-                  {(() => {
-                    const drag = useDragScroll();
-                    return (
-                      <StyledScrollArea
-                        $styleCss={scrollAreaStyle}
-                        className="gap-4 pb-2"
-                        ref={drag.ref}
-                        onMouseDown={drag.onMouseDown}
-                        onMouseLeave={drag.onMouseLeave}
-                        onMouseUp={drag.onMouseUp}
-                        onMouseMove={drag.onMouseMove}
-                        onClick={drag.onClick}
-                        data-dragging={drag.isDragging ? "true" : undefined}
-                        style={{ cursor: "grab" }}
-                      >
+                  <StyledScrollArea
+                    $styleCss={scrollAreaStyle}
+                    className="gap-3 pb-1.5 sm:gap-4 sm:pb-2"
+                    ref={scrollRef}
+                    onMouseDown={handleScrollMouseDown}
+                    onMouseLeave={handleScrollMouseLeave}
+                    onMouseUp={handleScrollMouseUp}
+                    onMouseMove={handleScrollMouseMove}
+                    onClick={handleScrollClick}
+                    style={{ cursor: "grab" }}
+                  >
                         {products.map((product, index) => {
                           const hasUrl = product.productUrl.length > 0;
 
@@ -710,14 +771,14 @@ export default function ProductCardsBlock({
                             >
                               <StyledButton
                                 $styleCss={buttonStyle}
-                                className="w-full py-2.5 px-4 mt-auto"
+                                className="mt-auto w-full px-3 py-2 sm:px-4 sm:py-2.5"
                               >
                                 <InlineEditableText
                                   value={product.buttonText}
                                   dataKey={`products.${product.id}.buttonText`}
                                   instanceId={block.instanceId}
                                   mode={mode}
-                                  onUpdateContent={onUpdateContent}
+                                  onUpdateContent={handleInlineContentUpdate}
                                 >
                                   {(text) => <>{text}</>}
                                 </InlineEditableText>
@@ -737,7 +798,7 @@ export default function ProductCardsBlock({
                               <StyledCard
                                 $styleCss={cardStyle}
                                 $index={index}
-                                className="w-[260px] my-2 min-w-[260px] sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
+                                className="my-1.5 w-[224px] min-w-[224px] sm:my-2 sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
                               >
                                 {/* Image */}
                                 <EditablePart
@@ -749,7 +810,7 @@ export default function ProductCardsBlock({
                                 >
                                   <StyledImageWrap
                                     $styleCss={imageStyle}
-                                    className="w-full aspect-4/3"
+                                    className="aspect-[5/3] w-full sm:aspect-4/3"
                                   >
                                     {product.imageUrl ? (
                                       <img
@@ -765,7 +826,7 @@ export default function ProductCardsBlock({
                                         <PlaceholderIcon>
                                           <ImagePlaceholderIcon />
                                         </PlaceholderIcon>
-                                        <span className="text-[11px] text-slate-400 select-none px-3 text-center">
+                                        <span className="select-none px-2 text-center text-[10px] text-slate-400 sm:px-3 sm:text-[11px]">
                                           تصویر محصول
                                         </span>
                                       </ImagePlaceholder>
@@ -773,7 +834,7 @@ export default function ProductCardsBlock({
 
                                     {/* Badge */}
                                     {product.showBadge && product.badgeText && (
-                                      <div className="absolute top-3 right-3">
+                                      <div className="absolute right-2 top-2 sm:right-3 sm:top-3">
                                         <EditablePart
                                           instanceId={block.instanceId}
                                           elementId="badge"
@@ -783,14 +844,14 @@ export default function ProductCardsBlock({
                                         >
                                           <StyledBadge
                                             $styleCss={badgeStyle}
-                                            className="px-2.5 py-1 leading-tight"
+                                            className="px-2 py-0.5 leading-tight sm:px-2.5 sm:py-1"
                                           >
                                             <InlineEditableText
                                               value={product.badgeText}
                                               dataKey={`products.${product.id}.badgeText`}
                                               instanceId={block.instanceId}
                                               mode={mode}
-                                              onUpdateContent={onUpdateContent}
+                                              onUpdateContent={handleInlineContentUpdate}
                                             >
                                               {(text) => <>{text}</>}
                                             </InlineEditableText>
@@ -802,7 +863,7 @@ export default function ProductCardsBlock({
                                 </EditablePart>
 
                                 {/* Content */}
-                                <div className="flex flex-col gap-2 p-4 flex-1">
+                                <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
                                   {/* Product name */}
                                   <EditablePart
                                     instanceId={block.instanceId}
@@ -820,7 +881,7 @@ export default function ProductCardsBlock({
                                         dataKey={`products.${product.id}.name`}
                                         instanceId={block.instanceId}
                                         mode={mode}
-                                        onUpdateContent={onUpdateContent}
+                                        onUpdateContent={handleInlineContentUpdate}
                                       >
                                         {(text) => <>{text}</>}
                                       </InlineEditableText>
@@ -845,7 +906,7 @@ export default function ProductCardsBlock({
                                         instanceId={block.instanceId}
                                         mode={mode}
                                         multiline
-                                        onUpdateContent={onUpdateContent}
+                                        onUpdateContent={handleInlineContentUpdate}
                                       >
                                         {(text) => <>{text}</>}
                                       </InlineEditableText>
@@ -867,7 +928,7 @@ export default function ProductCardsBlock({
                                           dataKey={`products.${product.id}.price`}
                                           instanceId={block.instanceId}
                                           mode={mode}
-                                          onUpdateContent={onUpdateContent}
+                                          onUpdateContent={handleInlineContentUpdate}
                                         >
                                           {(text) => <>{text}</>}
                                         </InlineEditableText>
@@ -891,7 +952,7 @@ export default function ProductCardsBlock({
                                               dataKey={`products.${product.id}.oldPrice`}
                                               instanceId={block.instanceId}
                                               mode={mode}
-                                              onUpdateContent={onUpdateContent}
+                                              onUpdateContent={handleInlineContentUpdate}
                                             >
                                               {(text) => <>{text}</>}
                                             </InlineEditableText>
@@ -930,9 +991,7 @@ export default function ProductCardsBlock({
                             </EditablePart>
                           );
                         })}
-                      </StyledScrollArea>
-                    );
-                  })()}
+                  </StyledScrollArea>
                 </EditablePart>
               )}
             </EditablePart>

@@ -405,6 +405,39 @@ function getDisplayName(user: AuthUser | null): string {
   return name || user.phoneNumber || user.email || "مدیر";
 }
 
+function isRadFirstName(value?: string) {
+  return value?.trim().replace(/\s+/g, " ").toUpperCase() === "R A D";
+}
+
+function RadVerifiedBadge() {
+  return (
+    <span
+      className="inline-flex align-[-0.15em]"
+      aria-label="نشان تایید رادلینک"
+      title="نشان تایید رادلینک"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 sm:h-7 sm:w-7 drop-shadow-[0_3px_8px_rgba(202,138,4,0.24)]"
+        aria-hidden="true"
+      >
+        <path
+          fill="#f8c537"
+          d="M10.4 2.6a2.25 2.25 0 0 1 3.2 0l1.05 1.08 1.5-.08a2.25 2.25 0 0 1 2.31 2.31l-.08 1.5 1.08 1.05a2.25 2.25 0 0 1 0 3.2l-1.08 1.05.08 1.5a2.25 2.25 0 0 1-2.31 2.31l-1.5-.08-1.05 1.08a2.25 2.25 0 0 1-3.2 0l-1.05-1.08-1.5.08a2.25 2.25 0 0 1-2.31-2.31l.08-1.5-1.08-1.05a2.25 2.25 0 0 1 0-3.2l1.08-1.05-.08-1.5A2.25 2.25 0 0 1 7.85 3.6l1.5.08 1.05-1.08Z"
+        />
+        <path
+          fill="none"
+          stroke="#fff"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.5"
+          d="m8.1 12.1 2.55 2.55 5.25-5.3"
+        />
+      </svg>
+    </span>
+  );
+}
+
 const EMPTY_STATS: DashboardStats = {
   users: { total: 0, active: 0, newLast30Days: 0, changePercent: 0 },
   agents: { total: 0, active: 0 },
@@ -1169,6 +1202,7 @@ export default function DashboardSection({
   }, []);
 
   const displayName = useMemo(() => getDisplayName(authUser), [authUser]);
+  const showRadVerifiedBadge = isRadFirstName(authUser?.firstName);
   const greeting = useMemo(() => getGreeting(), []);
   const currentDate = useMemo(() => getCurrentDate(), []);
 
@@ -1324,12 +1358,16 @@ export default function DashboardSection({
               >
                 {greeting}
                 {displayName !== "مدیر" ? `، ${displayName}` : ""}{" "}
-                <span
-                  className="inline-block motion-safe:animate-[wave_2.5s_ease-in-out_infinite] text-base sm:text-2xl"
-                  aria-hidden="true"
-                >
-                  👋
-                </span>
+                {showRadVerifiedBadge ? (
+                  <RadVerifiedBadge />
+                ) : (
+                  <span
+                    className="inline-block motion-safe:animate-[wave_2.5s_ease-in-out_infinite] text-base sm:text-2xl"
+                    aria-hidden="true"
+                  >
+                    👋
+                  </span>
+                )}
               </h1>
 
               {/* Role + phone */}

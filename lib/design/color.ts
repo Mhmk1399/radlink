@@ -98,6 +98,10 @@ export function formatHexColor(color: RgbaColor): string {
 export function formatCssColor(color: RgbaColor): string {
   const alpha = Number(clampAlpha(color.a).toFixed(2));
 
+  if (alpha <= 0) {
+    return "transparent";
+  }
+
   if (alpha >= 1) {
     return formatHexColor(color);
   }

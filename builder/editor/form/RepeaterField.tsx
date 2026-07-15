@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   HiOutlinePlus,
@@ -26,6 +26,7 @@ import {
 import { uploadFile } from "@/lib/fileUtils";
 import { LinkTypeHelp } from "./LinkTypeHelp";
 import { RgbaColorInput } from "./RgbaColorInput";
+import { normalizePersianPriceText } from "@/lib/format/persianPrice";
 import {
   getMessengerPresetConfig,
   isMessengerLinkPreset,
@@ -48,6 +49,7 @@ type RepeaterSubField = {
   defaultValue?: unknown;
   linkPreset?: MessengerLinkPreset;
   linkPresetFromField?: string;
+  valueFormat?: "persianPrice";
 };
 
 type RepeaterItem = Record<string, unknown> & { id: string };
@@ -90,6 +92,14 @@ function createEmptyItem(
   }
 
   return item;
+}
+
+function formatFieldValue(field: RepeaterSubField, value: unknown): unknown {
+  if (field.valueFormat === "persianPrice") {
+    return normalizePersianPriceText(value);
+  }
+
+  return value;
 }
 
 function isValidImageUrl(url: string): boolean {
@@ -327,7 +337,10 @@ export function RepeaterField({
   items,
   onChange,
 }: RepeaterFieldProps) {
-  const safeItems: RepeaterItem[] = Array.isArray(items) ? items : [];
+  const safeItems: RepeaterItem[] = useMemo(
+    () => (Array.isArray(items) ? items : []),
+    [items],
+  );
   const canAdd = maxItems === undefined || safeItems.length < maxItems;
 
   const updateItems = useCallback(
@@ -716,6 +729,16 @@ export function RepeaterField({
                             item.id,
                             field.key,
                             sanitizeIdentityField(field.key, e.target.value),
+                          )
+                        }
+                        onBlur={(e) =>
+                          updateItemField(
+                            item.id,
+                            field.key,
+                            formatFieldValue(
+                              field,
+                              sanitizeIdentityField(field.key, e.target.value),
+                            ),
                           )
                         }
                         inputMode={identityInputProps.inputMode}

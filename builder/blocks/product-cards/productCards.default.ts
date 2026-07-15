@@ -165,7 +165,7 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 style: {
                     color: { mobile: "#FFFFFF" },
                     backgroundColor: { mobile: "#0F172A" },
-                    fontSize: { mobile: 11, tablet: 12, desktop: 12 },
+                    fontSize: { mobile: 10, tablet: 12, desktop: 12 },
                     borderRadius: { mobile: 999 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },
@@ -176,7 +176,7 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
                     color: { mobile: "#0F172A" },
-                    fontSize: { mobile: 16, tablet: 17, desktop: 18 },
+                    fontSize: { mobile: 15, tablet: 17, desktop: 18 },
                 },
             },
             productDescription: {
@@ -184,7 +184,7 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
                     color: { mobile: "#64748B" },
-                    fontSize: { mobile: 13, tablet: 14, desktop: 15 },
+                    fontSize: { mobile: 12, tablet: 14, desktop: 15 },
                 },
             },
             price: {
@@ -192,7 +192,7 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 allowedStyleKeys: ["color", "fontSize", "animation"],
                 style: {
                     color: { mobile: "#0F172A" },
-                    fontSize: { mobile: 16, tablet: 18, desktop: 20 },
+                    fontSize: { mobile: 14, tablet: 18, desktop: 20 },
                 },
             },
             oldPrice: {
@@ -200,7 +200,7 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 allowedStyleKeys: ["color", "fontSize"],
                 style: {
                     color: { mobile: "#94A3B8" },
-                    fontSize: { mobile: 12, tablet: 13, desktop: 14 },
+                    fontSize: { mobile: 11, tablet: 13, desktop: 14 },
                 },
             },
             button: {
@@ -217,8 +217,8 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 style: {
                     color: { mobile: "#FFFFFF" },
                     backgroundColor: { mobile: "#0F172A" },
-                    fontSize: { mobile: 14, tablet: 15, desktop: 16 },
-                    borderRadius: { mobile: 14 },
+                    fontSize: { mobile: 13, tablet: 15, desktop: 16 },
+                    borderRadius: { mobile: 12 },
                     borderColor: { mobile: "transparent" },
                     borderWidth: { mobile: 0 },
                 },

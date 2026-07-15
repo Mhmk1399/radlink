@@ -47,6 +47,16 @@ function getPageLabel(value: unknown) {
   return title && url ? `${title} (/${url})` : title || url || getId(value);
 }
 
+function getUserLabel(value: unknown, fallback?: unknown) {
+  const snapshot = toText(fallback).trim();
+  if (snapshot) return snapshot;
+  if (!isRecord(value)) return "";
+  const firstName = toText(value.firstName).trim();
+  const lastName = toText(value.lastName).trim();
+  const fullName = `${firstName} ${lastName}`.trim();
+  return fullName || toText(value.phoneNumber).trim() || getId(value);
+}
+
 function formatFaDate(value?: string) {
   if (!value) return "-";
   try {
@@ -72,6 +82,7 @@ type NotificationRow = {
   iconKey: string;
   pageId: string;
   pageLabel: string;
+  createdByLabel: string;
   isGlobal: boolean;
   closeable: boolean;
   isActive: boolean;
@@ -372,6 +383,17 @@ export default function NotificationsSection({
         hiddenInForm: (formData) => Boolean(formData.isGlobal),
       },
       {
+        key: "createdByLabel",
+        label: "ایجادکننده",
+        editable: false,
+        sortable: true,
+        render: (value) => (
+          <span className={cn("text-sm font-semibold", t.textSecondary)}>
+            {String(value || "نامشخص")}
+          </span>
+        ),
+      },
+      {
         key: "closeable",
         label: "قابل بستن",
         inputType: "checkbox",
@@ -397,7 +419,7 @@ export default function NotificationsSection({
           { label: "فعال", value: "true" },
           { label: "غیرفعال", value: "false" },
         ],
-        placeholder: "نمایش اعلان برای کاربران",
+        placeholder: "اعلان فعال باشد یا خیر",
         render: (value) => (
           <span
             className={cn(
@@ -450,6 +472,7 @@ export default function NotificationsSection({
         return raw.filter(isRecord).map((notification) => {
           const id = getId(notification);
           const page = notification.page;
+          const createdBy = notification.createdBy;
 
           return {
             ...notification,
@@ -462,6 +485,10 @@ export default function NotificationsSection({
             iconKey: toText(notification.iconKey),
             pageId: getId(page) || getId(notification.page),
             pageLabel: getPageLabel(page),
+            createdByLabel: getUserLabel(
+              createdBy,
+              notification.createdByName,
+            ),
             isGlobal: Boolean(notification.isGlobal),
             closeable: Boolean(notification.closeable),
             isActive: notification.isActive !== false,

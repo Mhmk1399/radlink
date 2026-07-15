@@ -14,6 +14,7 @@ import {
 import "@/models/users";
 
 const PAGE_POPULATE_FIELDS = "title url owner isPublished";
+const USER_POPULATE_FIELDS = "firstName lastName phoneNumber role";
 const NOTIFICATION_TYPES = new Set(["info", "danger"]);
 
 function cleanText(value: unknown, maxLength: number) {
@@ -31,6 +32,17 @@ function normalizeNotificationContent(body: Record<string, unknown>) {
         subtitle: cleanText(body.subtitle, 180),
         description: cleanText(body.description, 2000),
     };
+}
+
+function getUserDisplayName(user: {
+    firstName?: unknown;
+    lastName?: unknown;
+    phoneNumber?: unknown;
+}) {
+    const firstName = cleanText(user.firstName, 80);
+    const lastName = cleanText(user.lastName, 80);
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || cleanText(user.phoneNumber, 20);
 }
 
 // Admin creates a notification for one specific page.
@@ -102,6 +114,8 @@ export const POST = compose(
 
     const created = await Notification.create({
         page: isGlobal ? undefined : pageId,
+        createdBy: req.ctx.user!._id,
+        createdByName: getUserDisplayName(req.ctx.user!),
         ...content,
         type,
         iconKey,
@@ -112,6 +126,7 @@ export const POST = compose(
 
     const notification = await Notification.findById(created._id)
         .populate("page", PAGE_POPULATE_FIELDS)
+        .populate("createdBy", USER_POPULATE_FIELDS)
         .lean();
 
     revalidatePath("/[url]", "page");
@@ -165,6 +180,7 @@ export const GET = compose(
     const [notifications, total] = await Promise.all([
         Notification.find(query)
             .populate("page", PAGE_POPULATE_FIELDS)
+            .populate("createdBy", USER_POPULATE_FIELDS)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)

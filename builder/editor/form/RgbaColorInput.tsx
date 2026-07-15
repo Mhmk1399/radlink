@@ -366,12 +366,13 @@ export function RgbaColorInput({
 
   const commitValue = (nextValue: string, immediate = false) => {
     setDraftValue(nextValue);
-    if (!isValidCssColorValue(nextValue)) return;
+    const parsedNextValue = parseCssColor(nextValue);
+    if (!parsedNextValue) return;
 
     if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
 
     const runCommit = () => {
-      const trimmed = nextValue.trim();
+      const trimmed = formatCssColor(parsedNextValue);
       if (trimmed === committedValueRef.current) return;
 
       committedValueRef.current = trimmed;

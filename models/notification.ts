@@ -6,6 +6,8 @@ import {
 
 export interface INotification extends Document {
     page?: Types.ObjectId;
+    createdBy?: Types.ObjectId;
+    createdByName?: string;
     title: string;
     subtitle?: string;
     description: string;
@@ -24,6 +26,17 @@ const notificationSchema = new Schema<INotification>(
             type: Schema.Types.ObjectId,
             ref: "Page",
             index: true,
+        },
+        createdBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            index: true,
+        },
+        createdByName: {
+            type: String,
+            trim: true,
+            maxlength: 180,
+            default: "",
         },
         title: {
             type: String,
@@ -76,6 +89,7 @@ const notificationSchema = new Schema<INotification>(
 );
 
 notificationSchema.index({ page: 1, isActive: 1, createdAt: -1 });
+notificationSchema.index({ createdBy: 1, createdAt: -1 });
 notificationSchema.index({ isGlobal: 1, isActive: 1, createdAt: -1 });
 notificationSchema.index({ isActive: 1, createdAt: -1 });
 

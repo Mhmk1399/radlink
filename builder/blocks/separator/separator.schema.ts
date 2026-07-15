@@ -44,8 +44,6 @@ export const separatorSchema: BlockSchema = {
             allowedStyleKeys: [
                 "backgroundColor",
                 "borderRadius",
-                "borderColor",
-                "borderWidth",
                 "animation",
             ],
         },

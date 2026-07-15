@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -120,6 +120,14 @@ function BlockSpacingControls({
   ) => void;
 }) {
   const [activeMode, setActiveMode] = useState<"margin" | "padding">("margin");
+  const [panelOffset, setPanelOffset] = useState({ x: 0, y: 0 });
+  const panelDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
 
   if (!onUpdateBlockSpacing || !visible) return null;
 
@@ -158,6 +166,37 @@ function BlockSpacingControls({
       ];
   const resetActiveRows = () => {
     activeRows.forEach((row) => update(row.key, 0));
+  };
+  const startPanelDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panelDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: panelOffset.x,
+      originY: panelOffset.y,
+    };
+  };
+  const movePanel = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = panelDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    setPanelOffset({
+      x: Math.min(
+        420,
+        Math.max(-96, drag.originX + event.clientX - drag.startX),
+      ),
+      y: Math.min(
+        520,
+        Math.max(-220, drag.originY + event.clientY - drag.startY),
+      ),
+    });
+  };
+  const stopPanelDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (panelDragRef.current?.pointerId !== event.pointerId) return;
+    panelDragRef.current = null;
   };
 
   const renderRow = (key: BlockSpacingKey, label: string, value: number) => (
@@ -212,11 +251,36 @@ function BlockSpacingControls({
 
   return (
     <div
-      className="absolute bottom-2 left-2 z-30 w-[258px] max-w-[calc(100%-1rem)] rounded-2xl border border-neutral-200 bg-white/95 p-2 shadow-[0_14px_36px_rgba(15,23,42,0.16)] backdrop-blur-xl"
+      className="absolute left-40 top-4 z-40 hidden w-[258px] rounded-2xl   bg-black/10 p-2 shadow-[0_14px_36px_rgba(15,23,42,0.16)] backdrop-blur-3xl lg:block"
+      style={{
+        transform: `translate(calc(-100% - 12px + ${panelOffset.x}px), ${panelOffset.y}px)`,
+      }}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
       dir="rtl"
     >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onPointerDown={startPanelDrag}
+          onPointerMove={movePanel}
+          onPointerUp={stopPanelDrag}
+          onPointerCancel={stopPanelDrag}
+          onDoubleClick={() => setPanelOffset({ x: 0, y: 0 })}
+          className="flex min-w-0 flex-1 cursor-grab items-center gap-1.5 rounded-xl bg-neutral-100 px-2.5 py-1.5 text-[10px] font-black text-neutral-500 transition hover:bg-neutral-200 active:cursor-grabbing"
+          title="برای جابه‌جایی بکشید، برای برگشت دوبار کلیک کنید"
+        >
+          <RiDraggable size={14} className="shrink-0" />
+          <span className="truncate">جابه‌جایی</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setPanelOffset({ x: 0, y: 0 })}
+          className="h-7 rounded-lg px-2 text-[10px] font-black text-blue-600 transition hover:bg-neutral-100 hover:text-neutral-800"
+        >
+          جای پیش‌فرض
+        </button>
+      </div>
       <div className="mb-2 flex items-center gap-1 rounded-xl bg-neutral-100 p-1">
         <button
           type="button"

@@ -117,7 +117,6 @@ function getExtraMapServices(
 
     const brandColor =
       getString(record.brandColor) || BRAND_COLORS[service.key] || "#64748b";
-    const backgroundColor = getString(record.backgroundColor);
     const textColor = getString(record.textColor);
 
     return [
@@ -131,7 +130,6 @@ function getExtraMapServices(
         repeaterItemId: getString(record.id) || undefined,
         repeaterIndex: index,
         buttonStyle: {
-          ...(backgroundColor ? { backgroundColor } : {}),
           ...(textColor ? { color: textColor } : {}),
         },
       },
@@ -722,7 +720,7 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
                       selectedElementId={selectedElementId}
                       onSelectElement={onSelectElement}
                     >
-                      <div onClick={handleClick}>{buttonContent}</div>
+                      {buttonContent}
                     </EditablePart>
                   );
                 }

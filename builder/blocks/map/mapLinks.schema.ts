@@ -41,7 +41,6 @@ export const mapLinksSchema: BlockSchema = {
                 { key: "url", label: "لینک نقشه", type: "url" },
                 { key: "enabled", label: "نمایش", type: "boolean", defaultValue: true },
                 { key: "brandColor", label: "رنگ برند", type: "color" },
-                { key: "backgroundColor", label: "رنگ دکمه", type: "color" },
                 { key: "textColor", label: "رنگ متن", type: "color" },
             ],
         },
