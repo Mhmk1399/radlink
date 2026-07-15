@@ -264,7 +264,6 @@ export default function ProductsSection({
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const { can, user } = useAccess();
-  const canCreateProducts = can("admin.products", "create");
   const canUpdateProducts = can("admin.products", "update");
   const canDeleteProducts = can("admin.products", "delete");
   const canViewProducts = can("admin.products", "view");
@@ -529,7 +528,7 @@ export default function ProductsSection({
         ),
       },
     ],
-    [isDark, openPreviewImage, ownerOptions, pageOptions, t],
+    [openPreviewImage, ownerOptions, pageOptions, t],
   );
 
   const transformResponse = useMemo(
@@ -597,7 +596,7 @@ export default function ProductsSection({
                 مدیریت محصولات
               </span>
               <span className={cn("mt-0.5 block text-xs sm:text-sm", t.textMuted)}>
-                ایجاد، ویرایش و مدیریت محصولات و تصاویر آن‌ها
+                ویرایش و مدیریت محصولات و تصاویر آن‌ها
               </span>
             </span>
           </div>
@@ -635,7 +634,7 @@ export default function ProductsSection({
         stickyHeader
         showRowNumbers
         enableCellCopy
-        canCreate={canCreateProducts}
+        canCreate={false}
         canUpdate={canUpdateProducts}
         canDelete={canDeleteProducts}
         transformResponse={transformResponse}

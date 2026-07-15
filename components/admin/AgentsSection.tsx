@@ -923,7 +923,7 @@ export default function AgentsSection({
       {formOpen && (
         <div
           className={cn(
-            "fixed inset-0 z-[9999] flex items-center justify-center",
+            "fixed inset-0 z-[999] flex items-center justify-center",
             isDark
               ? "bg-[#0a0a0e]/80 backdrop-blur-md"
               : "bg-[#2a2720]/40 backdrop-blur-md",

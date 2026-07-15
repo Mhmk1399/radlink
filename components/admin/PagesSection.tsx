@@ -29,6 +29,10 @@ import {
   CUSTOM_HOME_SCREEN_ICON_SETTING_KEY,
   isCustomHomeScreenIconEnabled,
 } from "@/lib/design/landing-icons";
+import {
+  getPageSlugValidationError,
+  normalizePageSlugInput,
+} from "@/lib/validation/pageSlug";
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -128,11 +132,29 @@ type SelectOption = {
 };
 
 const PAGE_EXPIRY_BROWSER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const PAGE_DOMAIN_HELP_TEXT =
+  "دامنه سایت همان آدرس اختصاصی صفحه است؛ فقط حروف انگلیسی a-z، اعداد 0-9 و خط تیره (-) مجاز است و باید حداقل ۴ کاراکتر باشد. مثال: clinic-tehran";
 
 type BrowserExpiryCache = {
   savedAt: number;
   data: PageExpiryAlertsData;
 };
+
+function isPageDomainCreateError(error: unknown) {
+  const status =
+    error && typeof error === "object" && "status" in error
+      ? Number((error as { status?: unknown }).status)
+      : undefined;
+  const message = error instanceof Error ? error.message : "";
+
+  return (
+    status === 409 ||
+    message.includes("آدرس") ||
+    message.includes("دامنه") ||
+    message.includes("کاراکتر") ||
+    message.includes("حروف انگلیسی")
+  );
+}
 
 function PageImageUploadField({
   value,
@@ -312,6 +334,14 @@ function buildColumns(
     {
       key: "title",
       label: "عنوان صفحه",
+      required: true,
+      formLabel: (mode) => (mode === "create" ? "دامنه سایت" : "عنوان صفحه"),
+      formPlaceholder: (mode) =>
+        mode === "create" ? "مثلاً clinic-tehran" : undefined,
+      formHelpText: (mode) =>
+        mode === "create" ? PAGE_DOMAIN_HELP_TEXT : undefined,
+      validate: (value, _formData, mode) =>
+        mode === "create" ? getPageSlugValidationError(value) : null,
       sortable: true,
       filterable: true,
       filterType: "text",
@@ -1217,7 +1247,19 @@ export default function PagesSection({
         updateMethod="PATCH"
         onFormDiscard={cleanupDiscardedPageImages}
         onCreate={async (item, builtInCreate) => {
-          await builtInCreate(item);
+          const pageDomain = normalizePageSlugInput(item.title);
+          try {
+            await builtInCreate({
+              ...item,
+              title: pageDomain,
+              url: pageDomain,
+            });
+          } catch (error) {
+            if (isPageDomainCreateError(error) && error instanceof Error) {
+              (error as Error & { field?: string }).field = "title";
+            }
+            throw error;
+          }
           await loadExpiryAlerts(true);
         }}
         onUpdate={async (item, builtInUpdate) => {

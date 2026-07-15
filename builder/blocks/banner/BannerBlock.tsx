@@ -13,7 +13,7 @@ import type {
   EditableStyleKey,
   BannerData,
   BannerElementId,
-} from "../../../types/blocks/banner.types";
+} from "../../../types/blocks/default.types";
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
 import { InlineEditableText } from "@/builder/blocks/shared/InlineEditableText";
 import {

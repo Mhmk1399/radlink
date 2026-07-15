@@ -28,6 +28,18 @@ export interface ColumnDef<T> {
     copyable?: boolean;
     /** Default value pre-filled when opening the create form */
     defaultValue?: unknown;
+    /** Override the field label in create/edit forms without changing table header. */
+    formLabel?: string | ((mode: "create" | "edit", formData: Partial<T>) => string);
+    /** Override the field placeholder in create/edit forms. */
+    formPlaceholder?: string | ((mode: "create" | "edit", formData: Partial<T>) => string | null | undefined);
+    /** Optional helper text displayed below the form field. */
+    formHelpText?: string | ((mode: "create" | "edit", formData: Partial<T>) => string | null | undefined);
+    /** Column-level form validation. Return a Persian error message to block submit. */
+    validate?: (
+        value: unknown,
+        formData: Partial<T>,
+        mode: "create" | "edit",
+    ) => string | null | undefined;
     /** Hide this field in create/edit forms based on the current form values. */
     hiddenInForm?: (
         formData: Partial<T>,

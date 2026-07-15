@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "@/components/ui/CustomToast";
 import {
@@ -9,7 +10,6 @@ import {
   backgrounds,
   gradients,
   borders,
-  shadows,
   typography,
   layout,
   animation,
@@ -53,7 +53,7 @@ const authKeyframes = `
    TYPES
    ══════════════════════════════════════════════ */
 
-type AuthStep = "phone" | "otp" | "register" | "success";
+type AuthStep = "phone" | "otp" | "register" | "setPassword" | "success";
 
 // Matches backend IUser shape returned from verify-otp & /me
 interface BackendUser {
@@ -88,6 +88,10 @@ interface BackendUser {
 
 const OTP_LENGTH = 6; // Backend generates 6-digit OTP
 const OTP_EXPIRY = 120; // seconds — matches backend 2 * 60_000 ms
+const ADMIN_CREATED_PASSWORD_HINT =
+  "اگر حساب شما توسط ادمین ساخته شده و هنوز رمز عبور ندارید، از تب «ورود با پیامک» وارد شوید؛ بعد از تایید پیامک، همین‌جا برای حساب خود رمز عبور می‌سازید.";
+const PASSWORD_LOGIN_GENERIC_ERROR = "شماره موبایل یا رمز عبور اشتباه است.";
+const PASSWORD_LOGIN_FALLBACK_ERROR = `${PASSWORD_LOGIN_GENERIC_ERROR} ${ADMIN_CREATED_PASSWORD_HINT}`;
 const RESEND_COOLDOWN = 60; // seconds — matches backend 60_000 ms
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 72;
@@ -179,6 +183,34 @@ async function apiUpdateProfile(
   return response.user ?? response;
 }
 
+async function apiSetPassword(
+  token: string,
+  data: {
+    newPassword: string;
+    newPasswordConfirm: string;
+  },
+): Promise<{ hasPassword: boolean }> {
+  const res = await fetch("/api/auth/password", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  const response = await res.json();
+
+  if (!res.ok) {
+    throw {
+      status: res.status,
+      message: response.message ?? "ذخیره رمز عبور با خطا مواجه شد.",
+    };
+  }
+
+  return { hasPassword: response.hasPassword === true };
+}
+
 /* ══════════════════════════════════════════════
    HELPERS
    ══════════════════════════════════════════════ */
@@ -258,52 +290,15 @@ function resolveErrorMessage(
 
 function LogoMark() {
   return (
-    <div
-      className={cn(
-        "relative flex h-14 w-14 items-center justify-center overflow-hidden",
-        layout.radius.lg,
-        borders.strong,
-        gradients.logo,
-        shadows.logo,
-      )}
-    >
-      <span
-        className={cn(
-          "absolute inset-[1px] rounded-[15px]",
-          gradients.innerHighlight,
-        )}
+    <div className="flex min-h-14 items-center justify-center">
+      <Image
+        src="/assets/images/radlinklogo.png"
+        width={160}
+        height={48}
+        alt="رادلینک"
+        priority
+        className="h-10 w-auto object-contain sm:h-11"
       />
-      <svg
-        aria-hidden
-        viewBox="0 0 24 24"
-        className="relative z-10 h-6 w-6"
-        fill="none"
-      >
-        <rect
-          x="4"
-          y="5"
-          width="16"
-          height="3"
-          rx="1.5"
-          className="fill-white"
-        />
-        <rect
-          x="4"
-          y="10.5"
-          width="11"
-          height="3"
-          rx="1.5"
-          className="fill-yellow-100"
-        />
-        <rect
-          x="4"
-          y="16"
-          width="7"
-          height="3"
-          rx="1.5"
-          className="fill-cyan-200"
-        />
-      </svg>
     </div>
   );
 }
@@ -789,9 +784,11 @@ export default function AuthPage() {
       changeStep("success");
     } catch (err: unknown) {
       const apiError = err as { message?: string };
+      const apiMessage = apiError.message?.trim();
       const msg =
-        apiError.message ??
-        "شماره موبایل یا رمز عبور اشتباه است. می‌توانید با پیامک وارد شوید.";
+        apiMessage && apiMessage !== PASSWORD_LOGIN_GENERIC_ERROR
+          ? apiMessage
+          : PASSWORD_LOGIN_FALLBACK_ERROR;
       setError(msg);
       toast.error(msg);
     } finally {
@@ -810,15 +807,22 @@ export default function AuthPage() {
       const cleanPhone = normalizePhoneNumber(phone);
       const { token, user } = await apiVerifyOtp(cleanPhone, otp);
 
-      // Persist token — use httpOnly cookie in production via a dedicated API route
-      localStorage.setItem("auth_token", token);
       setAuthToken(token);
       setCurrentUser(user);
 
       const hasProfile = Boolean(user.firstName);
       setIsExistingUser(hasProfile);
 
-      if (hasProfile) {
+      if (hasProfile && !user.hasPassword) {
+        setRegisterPassword("");
+        setRegisterPasswordConfirm("");
+        setRegisterErrors({});
+        toast.info("برای تکمیل ورود، یک رمز عبور برای حساب خود بسازید.", {
+          title: "تنظیم رمز عبور",
+        });
+        changeStep("setPassword");
+      } else if (hasProfile) {
+        localStorage.setItem("auth_token", token);
         const displayName = [user.firstName, user.lastName]
           .filter(Boolean)
           .join(" ");
@@ -892,6 +896,7 @@ export default function AuthPage() {
       });
 
       setCurrentUser(updatedUser);
+      localStorage.setItem("auth_token", authToken);
 
       const displayName = [firstName.trim(), lastName.trim()]
         .filter(Boolean)
@@ -922,6 +927,57 @@ export default function AuthPage() {
     phone,
     authToken,
   ]);
+
+  const handleSetPassword = useCallback(async () => {
+    const passwordError = validatePasswordStrength(
+      registerPassword,
+      normalizePhoneNumber(phone),
+    );
+    const nextErrors: Record<string, string> = {};
+    if (passwordError) nextErrors.password = passwordError;
+    if (registerPassword !== registerPasswordConfirm) {
+      nextErrors.passwordConfirm = "تکرار رمز عبور با رمز عبور یکسان نیست.";
+    }
+    if (Object.keys(nextErrors).length) {
+      setRegisterErrors(nextErrors);
+      return;
+    }
+
+    if (!authToken) {
+      const msg = "نشست ورود معتبر نیست. لطفاً دوباره با پیامک وارد شوید.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      await apiSetPassword(authToken, {
+        newPassword: registerPassword,
+        newPasswordConfirm: registerPasswordConfirm,
+      });
+
+      setCurrentUser((current) =>
+        current ? { ...current, hasPassword: true } : current,
+      );
+      localStorage.setItem("auth_token", authToken);
+      toast.success("رمز عبور حساب شما ذخیره شد.", {
+        title: "ورود تکمیل شد",
+      });
+      changeStep("success");
+    } catch (err: unknown) {
+      const msg = resolveErrorMessage(
+        err as { status?: number; message?: string },
+        "send",
+      );
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [authToken, phone, registerPassword, registerPasswordConfirm]);
 
   /* ────────────────────────────────────────────
      Resend OTP
@@ -955,6 +1011,15 @@ export default function AuthPage() {
 
   // ── Back to phone step ──
   const handleBack = () => {
+    if (step === "register" || step === "setPassword") {
+      localStorage.removeItem("auth_token");
+      setAuthToken("");
+      setCurrentUser(null);
+      setIsExistingUser(false);
+      setRegisterPassword("");
+      setRegisterPasswordConfirm("");
+      setRegisterErrors({});
+    }
     setOtp("");
     setOtpError(false);
     setError("");
@@ -1027,8 +1092,15 @@ export default function AuthPage() {
 
           {/* Step progress indicator */}
           <div className="relative flex items-center justify-center gap-2 pt-5">
-            {(["phone", "otp", "register"] as const).map((s, i) => {
-              const order: AuthStep[] = ["phone", "otp", "register", "success"];
+            {(
+              ["phone", "otp", step === "setPassword" ? "setPassword" : "register"] as AuthStep[]
+            ).map((s, i) => {
+              const order: AuthStep[] = [
+                "phone",
+                "otp",
+                step === "setPassword" ? "setPassword" : "register",
+                "success",
+              ];
               const currentIdx = order.indexOf(step);
               const done = currentIdx > i;
               const active = currentIdx === i;
@@ -1187,6 +1259,7 @@ export default function AuthPage() {
                       }}
                       onEnter={handlePasswordLogin}
                       disabled={loading}
+                      hint={ADMIN_CREATED_PASSWORD_HINT}
                     />
                   )}
 
@@ -1361,6 +1434,171 @@ export default function AuthPage() {
                     )}
                   >
                     {loading ? <LoadingDots /> : "تأیید کد"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ SET PASSWORD STEP ═══ */}
+            {step === "setPassword" && (
+              <div className="auth-slide-left">
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className={cn(
+                      "absolute right-5 top-2 flex h-9 w-9 items-center justify-center",
+                      layout.radius.md,
+                      borders.subtle,
+                      backgrounds.surface.glass,
+                      "text-slate-400",
+                      animation.base,
+                      "hover:text-white hover:bg-white/8",
+                      focus.ring,
+                    )}
+                    aria-label="بازگشت و ویرایش شماره"
+                  >
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-4 w-4"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+
+                  <LogoMark />
+                  <div>
+                    <h1 className={cn(typography.h3, "text-xl")}>
+                      ساخت رمز عبور
+                    </h1>
+                    <p
+                      className={cn(
+                        "mt-2",
+                        typography.bodySmall,
+                        "text-slate-400",
+                      )}
+                    >
+                      شماره شما تایید شد. برای ورودهای بعدی، همین حالا یک رمز
+                      عبور امن بسازید.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl border px-4 py-3",
+                      borders.subtle,
+                      backgrounds.surface.glassMedium,
+                    )}
+                  >
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-4 w-4 shrink-0 text-emerald-400"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span
+                      dir="ltr"
+                      className="text-sm font-mono text-slate-300"
+                    >
+                      {formatPhone(phone)}
+                    </span>
+                    <span className="mr-auto text-[10px] text-emerald-400">
+                      تایید شده
+                    </span>
+                  </div>
+
+                  <Field
+                    id="setPassword"
+                    label="رمز عبور"
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="حداقل ۸ کاراکتر"
+                    value={registerPassword}
+                    onChange={(value) => {
+                      setRegisterPassword(value);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        const message = validatePasswordStrength(
+                          value,
+                          normalizePhoneNumber(phone),
+                        );
+                        if (message) next.password = message;
+                        else delete next.password;
+                        if (
+                          registerPasswordConfirm &&
+                          value !== registerPasswordConfirm
+                        ) {
+                          next.passwordConfirm =
+                            "تکرار رمز عبور با رمز عبور یکسان نیست.";
+                        } else {
+                          delete next.passwordConfirm;
+                        }
+                        return next;
+                      });
+                      setError("");
+                    }}
+                    onEnter={handleSetPassword}
+                    disabled={loading}
+                    hint="حرف بزرگ، حرف کوچک، عدد و نشانه مثل ! یا @ لازم است."
+                    error={Boolean(registerErrors.password)}
+                    errorMessage={registerErrors.password}
+                  />
+
+                  <Field
+                    id="setPasswordConfirm"
+                    label="تکرار رمز عبور"
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="رمز عبور را دوباره وارد کنید"
+                    value={registerPasswordConfirm}
+                    onChange={(value) => {
+                      setRegisterPasswordConfirm(value);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        if (registerPassword && value !== registerPassword) {
+                          next.passwordConfirm =
+                            "تکرار رمز عبور با رمز عبور یکسان نیست.";
+                        } else {
+                          delete next.passwordConfirm;
+                        }
+                        return next;
+                      });
+                      setError("");
+                    }}
+                    onEnter={handleSetPassword}
+                    disabled={loading}
+                    error={Boolean(registerErrors.passwordConfirm)}
+                    errorMessage={registerErrors.passwordConfirm}
+                  />
+
+                  {error && <ErrorLine msg={error} />}
+
+                  <button
+                    type="button"
+                    onClick={handleSetPassword}
+                    disabled={loading || !registerPasswordReady}
+                    className={cn(
+                      components.ctaPrimary,
+                      "w-full justify-center py-3.5",
+                      (loading || !registerPasswordReady) &&
+                        "opacity-60 pointer-events-none",
+                    )}
+                  >
+                    {loading ? <LoadingDots /> : "ذخیره رمز و ورود"}
                   </button>
                 </div>
               </div>

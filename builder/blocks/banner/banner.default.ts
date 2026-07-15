@@ -1,4 +1,4 @@
-import type { PageBlock } from "../../../types/blocks/banner.types";
+import type { PageBlock } from "../../../types/blocks/default.types";
 
 function generateInstanceId(): string {
     if (

@@ -1,4 +1,4 @@
-import { BannerSchema } from "@/types/blocks/banner.types";
+import { BannerSchema } from "@/types/blocks/default.types";
 
 export const bannerSchema: BannerSchema = {
     type: "banner",

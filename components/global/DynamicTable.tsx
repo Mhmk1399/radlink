@@ -2500,12 +2500,24 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     const formMode = modalMode === "create" ? "create" : "edit";
+    const currentFormData = formData as Partial<T>;
     editableCols.forEach((col) => {
-      if (col.hiddenInForm?.(formData as Partial<T>, formMode)) return;
-      if (col.required) {
+      if (col.hiddenInForm?.(currentFormData, formMode)) return;
+      const formLabel =
+        typeof col.formLabel === "function"
+          ? col.formLabel(formMode, currentFormData)
+          : (col.formLabel ?? col.label);
+      const customError = col.validate?.(
+        formData[col.key],
+        currentFormData,
+        formMode,
+      );
+      if (customError) errors[col.key] = customError;
+
+      if (!errors[col.key] && col.required) {
         const v = formData[col.key];
         if (v === undefined || v === null || String(v).trim() === "")
-          errors[col.key] = `${col.label} الزامی است`;
+          errors[col.key] = `${formLabel} الزامی است`;
       }
       if (!errors[col.key]) {
         const identityError = validateIdentityField(col.key, formData[col.key]);
@@ -2587,17 +2599,45 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     }
   }, [onDelete, selectedRow, hookRemove, primaryKey, resetModal]);
 
-  const updateField = useCallback((key: string, value: unknown) => {
-    const sanitizedValue = sanitizeIdentityField(key, value);
-    setFormData((prev) => ({ ...prev, [key]: sanitizedValue }));
-    setFormErrors((prev) => {
-      const next = { ...prev };
-      const identityError = validateIdentityField(key, sanitizedValue);
-      if (identityError) next[key] = identityError;
-      else delete next[key];
-      return next;
-    });
-  }, []);
+  const updateField = useCallback(
+    (key: string, value: unknown) => {
+      const sanitizedValue = sanitizeIdentityField(key, value);
+      const formMode = modalMode === "create" ? "create" : "edit";
+      const nextFormData = {
+        ...(formData as Record<string, unknown>),
+        [key]: sanitizedValue,
+      } as Partial<T>;
+      const column = editableCols.find((col) => col.key === key);
+      const formLabel =
+        column && typeof column.formLabel === "function"
+          ? column.formLabel(formMode, nextFormData)
+          : (column?.formLabel ?? column?.label ?? key);
+
+      setFormData(nextFormData as Record<string, unknown>);
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        const requiredError =
+          column?.required &&
+          (sanitizedValue === undefined ||
+            sanitizedValue === null ||
+            String(sanitizedValue).trim() === "")
+            ? `${formLabel} الزامی است`
+            : null;
+        const identityError = validateIdentityField(key, sanitizedValue);
+        const customError = column?.validate?.(
+          sanitizedValue,
+          nextFormData,
+          formMode,
+        );
+        const nextError = customError || requiredError || identityError;
+
+        if (nextError) next[key] = nextError;
+        else delete next[key];
+        return next;
+      });
+    },
+    [editableCols, formData, modalMode],
+  );
 
   const handleRowDoubleClick = useCallback(
     (row: T) => {
@@ -3734,11 +3774,24 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <div className="grid gap-4 sm:grid-cols-2">
               {editableCols.map((col) => {
                 const formMode = modalMode === "create" ? "create" : "edit";
-                if (col.hiddenInForm?.(formData as Partial<T>, formMode))
+                const currentFormData = formData as Partial<T>;
+                if (col.hiddenInForm?.(currentFormData, formMode))
                   return null;
 
                 const fv = formData[col.key];
                 const error = formErrors[col.key];
+                const formLabelText =
+                  typeof col.formLabel === "function"
+                    ? col.formLabel(formMode, currentFormData)
+                    : (col.formLabel ?? col.label);
+                const formPlaceholderText =
+                  typeof col.formPlaceholder === "function"
+                    ? col.formPlaceholder(formMode, currentFormData)
+                    : col.formPlaceholder;
+                const formHelpText =
+                  typeof col.formHelpText === "function"
+                    ? col.formHelpText(formMode, currentFormData)
+                    : col.formHelpText;
                 const inputType = col.inputType || "text";
                 const identityInputProps = getIdentityInputProps(col.key);
                 const isFull = inputType === "textarea";
@@ -3752,7 +3805,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       htmlFor={`field-${col.key}`}
                       className={cn("mb-1.5 block", fieldLabel)}
                     >
-                      {col.label}
+                      {formLabelText}
                       {col.required && (
                         <span className={cn("mr-1", t.textAccent)}>*</span>
                       )}
@@ -3796,7 +3849,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           <button
                             type="button"
                             onClick={openCalendar}
-                            aria-label={`انتخاب ${col.label}`}
+                            aria-label={`انتخاب ${formLabelText}`}
                             className={cn(
                               "flex h-10 w-full items-center gap-2 rounded-xl border px-3 text-sm text-right transition-all duration-200",
                               t.inputBg,
@@ -3809,8 +3862,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             <Icon.Calendar />
                             <span className="flex-1 text-right">
                               {dateDisplay ||
+                                formPlaceholderText ||
                                 col.placeholder ||
-                                `${col.label} را انتخاب کنید`}
+                                `${formLabelText} را انتخاب کنید`}
                             </span>
                           </button>
                         )}
@@ -3830,9 +3884,13 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                               Array.isArray(val) ? (val[0] ?? "") : val,
                             )
                           }
-                          placeholder={col.placeholder || `انتخاب ${col.label}`}
+                          placeholder={
+                            formPlaceholderText ||
+                            col.placeholder ||
+                            `انتخاب ${formLabelText}`
+                          }
                           searchable={col.options.length > 6}
-                          searchPlaceholder={`جستجو در ${col.label}...`}
+                          searchPlaceholder={`جستجو در ${formLabelText}...`}
                           clearable
                           fullWidth
                           error={error}
@@ -3846,7 +3904,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         value={String(fv ?? "")}
                         onChange={(e) => updateField(col.key, e.target.value)}
                         placeholder={
-                          col.placeholder || `${col.label} را وارد کنید`
+                          formPlaceholderText ||
+                          col.placeholder ||
+                          `${formLabelText} را وارد کنید`
                         }
                         aria-invalid={!!error}
                         aria-describedby={
@@ -3870,7 +3930,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           className={checkboxBase}
                         />
                         <span className={cn("text-sm", checkboxLabel)}>
-                          {col.placeholder || col.label}
+                          {formPlaceholderText || col.placeholder || formLabelText}
                         </span>
                       </label>
                     ) : (
@@ -3893,7 +3953,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           )
                         }
                         placeholder={
-                          col.placeholder || `${col.label} را وارد کنید`
+                          formPlaceholderText ||
+                          col.placeholder ||
+                          `${formLabelText} را وارد کنید`
                         }
                         aria-invalid={!!error}
                         aria-describedby={
@@ -3918,6 +3980,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       >
                         {error}
                       </p>
+                    )}
+                    {!error && formHelpText && (
+                      <p className={cn("mt-1", fieldHelp)}>{formHelpText}</p>
                     )}
                   </div>
                 );
