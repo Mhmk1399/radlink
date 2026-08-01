@@ -2224,7 +2224,11 @@ function Header({
     isSuperAdmin,
   } = useAccess();
   const meta = SECTION_META.find((m) => m.key === currentSection);
-  const canCreatePageFromAdmin = !isAccessLoading && authUser !== null;
+  const canUseBuilder =
+    isSuperAdmin ||
+    (!isAccessLoading && !isAccessError && can("builder.access", "view"));
+  const canCreatePageFromAdmin =
+    !isAccessLoading && authUser !== null && canUseBuilder;
   const canViewNotifications =
     isSuperAdmin ||
     (!isAccessLoading && !isAccessError && can("admin.notifications", "view"));

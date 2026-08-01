@@ -706,6 +706,7 @@ export default function PagesSection({
   const canUpdatePages = can("admin.pages", "update");
   const canPublishPages = can("admin.pages", "publish");
   const canDeletePages = can("admin.pages", "delete");
+  const canUseBuilder = !isAccessLoading && can("builder.access", "view");
   const [ownerOptions, setOwnerOptions] = useState<SelectOption[]>([]);
   const [refreshToken, setRefreshToken] = useState(0);
   const [togglingPageId, setTogglingPageId] = useState<string | null>(null);
@@ -1335,6 +1336,7 @@ export default function PagesSection({
           loading={expiryAlertsLoading}
           refreshing={expiryAlertsRefreshing}
           onRefresh={() => void loadExpiryAlerts(true)}
+          canEditInBuilder={canUseBuilder}
         />
       )}
 
@@ -1482,7 +1484,7 @@ export default function PagesSection({
                 </button>
               )}
 
-              {canUpdateThisPage && (
+              {canUseBuilder && canUpdateThisPage && (
                 <button
                   type="button"
                   onClick={(event) => {

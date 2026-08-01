@@ -656,6 +656,48 @@ function ThemeApplyingOverlay({ state }: { state: ThemeApplyingState | null }) {
   );
 }
 
+function BuilderBootOverlay({ steps }: { steps: string[] }) {
+  return (
+    <div
+      dir="rtl"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="fixed inset-0 z-[620] flex items-center justify-center bg-slate-950/35 px-4 backdrop-blur-md"
+    >
+      <div className="w-full max-w-[380px] overflow-hidden rounded-3xl border border-white/70 bg-white/95 text-right shadow-[0_28px_90px_-34px_rgba(15,23,42,0.82)] ring-1 ring-slate-900/5">
+        <div className="border-b border-slate-100 bg-[radial-gradient(circle_at_12%_0%,rgba(16,185,129,0.18),transparent_34%),radial-gradient(circle_at_88%_100%,rgba(59,130,246,0.14),transparent_34%)] p-5">
+          <div className="flex items-start gap-3">
+            <span className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/20">
+              <HiOutlineArrowPath size={20} className="animate-spin" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[16px] font-black text-slate-950">
+                در حال آماده‌سازی صفحه‌ساز
+              </h2>
+              <p className="mt-1 text-xs leading-6 text-slate-600">
+                لطفا چند لحظه صبر کنید تا اطلاعات لازم کامل دریافت شود.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2 p-5">
+          {steps.map((step) => (
+            <div
+              key={step}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+            >
+              <span className="text-xs font-bold text-slate-700">{step}</span>
+              <span className="inline-flex h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.75)]" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function createInstanceId(type: string) {
   if (
     typeof crypto !== "undefined" &&
@@ -956,6 +998,9 @@ export default function SimplePageBuilder({
     Record<string, MasterBlockDefinition>
   >({});
   const [isMasterBlocksLoading, setIsMasterBlocksLoading] = useState(true);
+  const [isCategoryOptionsLoading, setIsCategoryOptionsLoading] = useState(
+    saveMode === "template",
+  );
 
   /* ── UI state ── */
   const [isServerSaving, setIsServerSaving] = useState(false);
@@ -998,6 +1043,7 @@ export default function SimplePageBuilder({
 
   /* ── Toast & Onboarding ── */
   const toast = useToast();
+  const toastShow = toast.show;
   const {
     user: authUser,
     isSuperAdmin,
@@ -1115,6 +1161,24 @@ export default function SimplePageBuilder({
     );
     return protectedBlock ? requireBlockAction(protectedBlock, "update") : true;
   }, [blocks, canUseBlockAction, requireBlockAction]);
+  const builderBootSteps = useMemo(() => {
+    const steps: string[] = [];
+    if (!storageHydrated) steps.push("آماده‌سازی پیش‌نویس صفحه");
+    if (isAccessLoading) steps.push("دریافت دسترسی‌های کاربر");
+    if (isMasterBlocksLoading) steps.push("دریافت بلاک‌های مجاز");
+    if (isCategoryOptionsLoading) steps.push("دریافت دسته‌بندی‌های قالب");
+    return steps.length > 0 ? steps : ["آماده‌سازی نهایی"];
+  }, [
+    isAccessLoading,
+    isCategoryOptionsLoading,
+    isMasterBlocksLoading,
+    storageHydrated,
+  ]);
+  const isBuilderBooting =
+    !storageHydrated ||
+    isAccessLoading ||
+    isMasterBlocksLoading ||
+    isCategoryOptionsLoading;
   const themeDraftStorageKey = useMemo(
     () =>
       buildThemeDraftStorageKey({
@@ -1517,12 +1581,15 @@ export default function SimplePageBuilder({
 
     let cancelled = false;
 
-    if (categoryOptionsCache || categoryOptionsRequestFailed) {
-      setCategoryOptions(categoryOptionsCache ?? []);
-      return;
-    }
-
     async function loadCategories() {
+      if (categoryOptionsCache || categoryOptionsRequestFailed) {
+        if (!cancelled) {
+          setCategoryOptions(categoryOptionsCache ?? []);
+          setIsCategoryOptionsLoading(false);
+        }
+        return;
+      }
+
       try {
         const token = localStorage.getItem("auth_token");
         const res = await fetch("/api/categories?mode=options&limit=100", {
@@ -1570,8 +1637,10 @@ export default function SimplePageBuilder({
             error instanceof Error
               ? error.message
               : "خطا در دریافت دسته‌بندی‌ها";
-          toast.show(msg, "error");
+          toastShow(msg, "error");
         }
+      } finally {
+        if (!cancelled) setIsCategoryOptionsLoading(false);
       }
     }
 
@@ -1580,11 +1649,13 @@ export default function SimplePageBuilder({
     return () => {
       cancelled = true;
     };
-  }, [saveMode]);
+  }, [saveMode, toastShow]);
 
   /* ── Keyboard shortcuts ── */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (isBuilderBooting) return;
+
       const isInput =
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -1631,7 +1702,13 @@ export default function SimplePageBuilder({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [history, requireCanvasUpdateAccess, selectedBlockId, toast]);
+  }, [
+    history,
+    isBuilderBooting,
+    requireCanvasUpdateAccess,
+    selectedBlockId,
+    toast,
+  ]);
   useEffect(() => {
     if (!hasUnsavedServerChanges) return;
 
@@ -1709,6 +1786,7 @@ export default function SimplePageBuilder({
 
   const addBlock = useCallback(
     (type: string) => {
+      if (isBuilderBooting) return;
       if (!canAddBlockCount()) return;
       const config = blockRegistry[type as keyof typeof blockRegistry];
       if (!allowedBlockTypes.has(type)) {
@@ -1731,6 +1809,7 @@ export default function SimplePageBuilder({
       blocks,
       canAddBlockCount,
       createBlockFromSource,
+      isBuilderBooting,
       requireBlockAction,
       setBlocks,
       sortedBlocks.length,
@@ -2659,24 +2738,35 @@ export default function SimplePageBuilder({
   /*  DnD Handlers                                */
   /* ════════════════════════════════════════════ */
 
-  const handleDragStart = useCallback((e: DragStartEvent) => {
-    const id = String(e.active.id);
-    const data = e.active.data.current;
-    if (data?.fromPalette) {
-      setActivePaletteType(data.blockType as string);
-      setActiveBlockId(null);
-    } else {
-      setActiveBlockId(id);
-      setActivePaletteType(null);
-    }
-  }, []);
+  const handleDragStart = useCallback(
+    (e: DragStartEvent) => {
+      if (isBuilderBooting) return;
 
-  const handleDragOver = useCallback((e: DragOverEvent) => {
-    setIsOverCanvas(e.over?.id === "canvas-drop-zone");
-  }, []);
+      const id = String(e.active.id);
+      const data = e.active.data.current;
+      if (data?.fromPalette) {
+        setActivePaletteType(data.blockType as string);
+        setActiveBlockId(null);
+      } else {
+        setActiveBlockId(id);
+        setActivePaletteType(null);
+      }
+    },
+    [isBuilderBooting],
+  );
+
+  const handleDragOver = useCallback(
+    (e: DragOverEvent) => {
+      if (isBuilderBooting) return;
+      setIsOverCanvas(e.over?.id === "canvas-drop-zone");
+    },
+    [isBuilderBooting],
+  );
 
   const applyTemplate = useCallback(
     (blockTypes: string[]) => {
+      if (isBuilderBooting) return;
+
       const newBlocks: PageBlock[] = [];
       const allowedTypes = blockTypes.filter(
         (type) =>
@@ -2727,6 +2817,7 @@ export default function SimplePageBuilder({
       blockLimit,
       canUseBlockAction,
       createBlockFromSource,
+      isBuilderBooting,
       requireBlockAction,
       setBlocks,
       toast,
@@ -2735,6 +2826,13 @@ export default function SimplePageBuilder({
 
   const handleDragEnd = useCallback(
     (e: DragEndEvent) => {
+      if (isBuilderBooting) {
+        setActiveBlockId(null);
+        setActivePaletteType(null);
+        setIsOverCanvas(false);
+        return;
+      }
+
       const { active, over } = e;
       const data = active.data.current;
 
@@ -2852,6 +2950,7 @@ export default function SimplePageBuilder({
       blocks,
       canAddBlockCount,
       createBlockFromSource,
+      isBuilderBooting,
       requireBlockAction,
       setBlocks,
       sortedBlocks,
@@ -2880,7 +2979,11 @@ export default function SimplePageBuilder({
       modifiers={[restrictToWindowEdges]}
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
     >
-      <div dir="rtl" className="min-h-screen   bg-[#f5f5f7]">
+      <div
+        dir="rtl"
+        aria-busy={isBuilderBooting}
+        className="min-h-screen   bg-[#f5f5f7]"
+      >
         {/* ═══════════ Header ═══════════ */}
         <BuilderHeader
           blocksCount={blocks.length}
@@ -3123,6 +3226,7 @@ export default function SimplePageBuilder({
       />
 
       <ThemeApplyingOverlay state={themeApplying} />
+      {isBuilderBooting && <BuilderBootOverlay steps={builderBootSteps} />}
 
       <PageSaveResultModal
         result={pageSaveResult}

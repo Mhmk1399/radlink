@@ -241,11 +241,13 @@ export default function PageExpiryAlertsPanel({
   loading,
   refreshing,
   onRefresh,
+  canEditInBuilder = true,
 }: {
   data: PageExpiryAlertsData | null;
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
+  canEditInBuilder?: boolean;
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
@@ -617,14 +619,16 @@ export default function PageExpiryAlertsPanel({
                           >
                             <HiOutlineArrowTopRightOnSquare size={14} />
                           </a>
-                          <a
-                            href={`/builder/${alert.id}`}
-                            title="ویرایش در صفحه‌ساز"
-                            aria-label={`ویرایش صفحه ${alert.title}`}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-violet-500 transition hover:bg-violet-500/10 active:scale-95"
-                          >
-                            <HiOutlinePencilSquare size={14} />
-                          </a>
+                          {canEditInBuilder && (
+                            <a
+                              href={`/builder/${alert.id}`}
+                              title="ویرایش در صفحه‌ساز"
+                              aria-label={`ویرایش صفحه ${alert.title}`}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-violet-500 transition hover:bg-violet-500/10 active:scale-95"
+                            >
+                              <HiOutlinePencilSquare size={14} />
+                            </a>
+                          )}
                         </div>
                       </div>
                     </article>

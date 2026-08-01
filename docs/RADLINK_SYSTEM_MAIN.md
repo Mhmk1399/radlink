@@ -441,7 +441,8 @@ sequenceDiagram
 - `admin` و `superAdmin` در owner scope معمولا global هستند.
 - `agent` فقط خودش و userهای زیرمجموعه‌اش را می‌بیند.
 - `user` فقط منابع خودش و صفحه‌هایی که به خودش assign شده‌اند را می‌بیند.
-- ساخت صفحه از پنل ادمین دیگر به Access جداگانه مثل `builder.page` وابسته نیست؛ هر کاربر واردشده در پنل باید دکمه ساخت صفحه را ببیند. کنترل‌های امنیتی داخل route ساخت صفحه همچنان auth، status، quota، template/block access و publish access را بررسی می‌کنند.
+- ورود به صفحه‌ساز با Access ثابت `builder.access:view` کنترل می‌شود. اگر سوپرادمین این مجوز را به user ندهد، کاربر نباید وارد `/builder`، ویرایش صفحه، ساخت قالب یا ویرایش قالب شود.
+- ساخت رکورد صفحه از API/جدول ادمین همچنان access جداگانه `builder.page` ندارد؛ کنترل‌های امنیتی داخل route ساخت صفحه auth، status، quota، template/block access و publish access را بررسی می‌کنند.
 - برای صفحه‌ها، `withPageAccessScope` هم `owner` و هم `assignedUser` را لحاظ می‌کند.
 - برای رزروها، `withBookingAccessScope` علاوه بر `pageOwner` و `assignedUser`، خود Pageهای assign شده و agent را هم لحاظ می‌کند.
 - هر user فقط می‌تواند عضو یک Permission فعال باشد. اگر هنگام ساخت/ویرایش Permission یا مدیریت مستقیم user تلاش شود یک user به Permission فعال دوم اضافه شود، API باید خطای فارسی بدهد.
@@ -512,7 +513,7 @@ Sectionهای اصلی:
 
 نکته‌های مهم Admin:
 
-- دکمه ساخت صفحه در header/PagesSection عمومی‌تر از access catalog است و برای کاربران واردشده پنل نمایش داده می‌شود.
+- دکمه‌های ورود به صفحه‌ساز در header، PagesSection، TemplatesSection و هشدارهای انقضا فقط وقتی نمایش داده می‌شوند که کاربر `builder.access:view` داشته باشد؛ superAdmin همیشه bypass دارد.
 - PagesSection برای superAdmin قابلیت روشن/خاموش کردن ورود صفحه به sitemap را از طریق `seo.allowIndexing` دارد.
 - PagesSection اکشن duplicate دارد که snapshot کامل صفحه، theme، blocks، header، footer و تنظیمات را کپی می‌کند، ولی slug/domain تصادفی تازه می‌سازد و مالکیت را خالی می‌گذارد تا بعدا دستی یا توسط auto assignment تعیین شود.
 - SettingsSection برای admin/superAdmin تنظیم کاربر مقصد تخصیص خودکار صفحه‌های بدون صاحب را ذخیره می‌کند.

@@ -419,7 +419,7 @@ export function BlockCatalogModal({
                     onClose();
                   }}
                   disabled={item.canCreate === false}
-                  className="group flex items-center gap-4 rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 enabled:hover:border-emerald-200 enabled:hover:bg-emerald-50/50 enabled:hover:shadow-sm enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:opacity-60"
+                  className="group flex items-center gap-4 text-base rounded-2xl border border-neutral-100 bg-white p-4 text-right transition-all duration-200 enabled:hover:border-emerald-200 enabled:hover:bg-emerald-50/50 enabled:hover:shadow-sm enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:opacity-60"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center text-blue-500 justify-center rounded-2xl bg-neutral-100 text-xl transition-all duration-200 group-hover:scale-110 group-hover:bg-emerald-100">
                     {item.icon}

@@ -24,6 +24,7 @@ export const BLOCK_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
 
 export function getAccessActionsForComponent(componentName: string) {
   if (componentName === "admin.dashboard") return VIEW_ONLY_ACCESS_ACTIONS;
+  if (componentName === "builder.access") return VIEW_ONLY_ACCESS_ACTIONS;
   if (componentName === "admin.pages") return PAGE_ACCESS_ACTIONS;
   if (componentName === "admin.blocks") return BLOCK_ACCESS_ACTIONS;
 
@@ -55,6 +56,7 @@ export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.tickets", label: "تیکت‌ها" },
   { key: "admin.bookings", label: "رزروها" },
   { key: "admin.notifications", label: "اعلانات" },
+  { key: "builder.access", label: "مجوز صفحه‌ساز" },
   { key: "builder.template", label: "صفحه‌ساز قالب‌ها" },
   { key: "landing.floatingActions", label: "دکمه شناور لندینگ" },
 ] as const;

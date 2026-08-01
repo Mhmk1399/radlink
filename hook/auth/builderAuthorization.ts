@@ -43,8 +43,21 @@ function hasAction(
   return access?.[bucket]?.[key]?.includes(action) ?? false;
 }
 
+function hasBuilderAccess(me: MeResponse) {
+  if (me.user?.role === "superAdmin") return true;
+
+  return hasAction(
+    me.access,
+    "components",
+    "builder.access",
+    "view",
+  );
+}
+
 function canUseBuilder(me: MeResponse, target: BuilderAccessTarget) {
   if (me.user?.role === "superAdmin") return true;
+
+  if (!hasBuilderAccess(me)) return false;
 
   const access = me.access;
 
@@ -69,7 +82,11 @@ function canUseBuilder(me: MeResponse, target: BuilderAccessTarget) {
   );
 }
 
-function forbiddenMessage(target: BuilderAccessTarget) {
+function forbiddenMessage(target: BuilderAccessTarget, me: MeResponse) {
+  if (!hasBuilderAccess(me)) {
+    return "شما مجوز ورود به صفحه‌ساز را ندارید.";
+  }
+
   if (target.kind === "template-create") {
     return "شما دسترسی ساخت قالب در صفحه‌ساز را ندارید.";
   }
@@ -115,7 +132,7 @@ export async function authorizeBuilderAccess(
     return {
       ok: false,
       reason: "forbidden",
-      message: forbiddenMessage(target),
+      message: forbiddenMessage(target, json),
     };
   }
 

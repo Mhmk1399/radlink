@@ -65,10 +65,11 @@ export default function TemplatesSection({
   const { isDark } = useTheme();
   const router = useRouter();
   const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
+  const canUseBuilder = !isAccessLoading && can("builder.access", "view");
   const canCreateTemplates = can("admin.templates", "create");
   const canUpdateTemplates = can("admin.templates", "update");
   const canDeleteTemplates = can("admin.templates", "delete");
-  const canCreatePages = !isAccessLoading && user !== null;
+  const canCreatePages = !isAccessLoading && user !== null && canUseBuilder;
   const [refreshToken, setRefreshToken] = useState(0);
   const [togglingTemplateId, setTogglingTemplateId] = useState<string | null>(
     null,
@@ -309,7 +310,7 @@ export default function TemplatesSection({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {canCreateTemplates && (
+            {canUseBuilder && canCreateTemplates && (
               <button
                 type="button"
                 onClick={() => router.push("/builder?mode=template")}
@@ -368,34 +369,37 @@ export default function TemplatesSection({
           <div className="flex items-center justify-end gap-1">
             {(canUpdateTemplates ||
               canOnResource("templates", row._id, "update")) && (
-              <>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    toggleTemplateStatus(row);
-                  }}
-                  disabled={togglingTemplateId === row._id}
-                  title={row.isActive ? "غیرفعال کردن" : "فعال کردن"}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleTemplateStatus(row);
+                }}
+                disabled={togglingTemplateId === row._id}
+                title={row.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                className={cn(
+                  "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+                  row.isActive
+                    ? "text-red-400/70 hover:bg-red-500/10 hover:text-red-400"
+                    : "text-emerald-400/70 hover:bg-emerald-500/10 hover:text-emerald-400",
+                )}
+              >
+                <FaPowerOff
                   className={cn(
-                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
-                    row.isActive
-                      ? "text-red-400/70 hover:bg-red-500/10 hover:text-red-400"
-                      : "text-emerald-400/70 hover:bg-emerald-500/10 hover:text-emerald-400",
+                    "h-3.5 w-3.5",
+                    togglingTemplateId === row._id && "animate-pulse",
                   )}
-                >
-                  <FaPowerOff
-                    className={cn(
-                      "h-3.5 w-3.5",
-                      togglingTemplateId === row._id && "animate-pulse",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span className="sr-only">
-                    {row.isActive ? "غیرفعال کردن" : "فعال کردن"}
-                  </span>
-                </button>
+                  aria-hidden="true"
+                />
+                <span className="sr-only">
+                  {row.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                </span>
+              </button>
+            )}
 
+            {canUseBuilder &&
+              (canUpdateTemplates ||
+                canOnResource("templates", row._id, "update")) && (
                 <button
                   type="button"
                   onClick={(event) => {
@@ -413,8 +417,7 @@ export default function TemplatesSection({
                   <FaPenToSquare className="h-3.5 w-3.5" />
                   <span className="sr-only">ویرایش قالب</span>
                 </button>
-              </>
-            )}
+              )}
 
             {canCreatePages && (
               <button
