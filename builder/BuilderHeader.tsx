@@ -11,7 +11,6 @@ import {
   HiOutlineQuestionMarkCircle,
   HiOutlineArrowRight,
   HiOutlinePaintBrush,
-  HiOutlineSparkles,
 } from "react-icons/hi2";
 import { HiOutlineEye } from "react-icons/hi2";
 import { SaveIndicator } from "./BuilderOverlays";
@@ -75,10 +74,10 @@ export function BuilderHeader({
       className="sticky top-0 z-40 border-b border-neutral-200/60 bg-white/90 backdrop-blur-2xl "
     >
       {" "}
-      <div className="px-4 py-3">
+      <div className="px-2 py-2 sm:px-4 sm:py-3">
         <div className="flex items-center justify-between gap-3">
           {/* Left side */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
            
             <div className="hidden sm:block">
               <h1 className="text-sm font-extrabold text-neutral-900">
@@ -92,7 +91,7 @@ export function BuilderHeader({
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] md:flex-none md:gap-2 md:overflow-visible [&::-webkit-scrollbar]:hidden">
             {/* Undo/Redo */}
             <div
               data-tour="tour-history-actions"
@@ -125,7 +124,7 @@ export function BuilderHeader({
               data-tour="tour-back-admin-btn"
               onClick={onBack}
               disabled={isServerSaving}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 hover:shadow-sm active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:gap-2 sm:px-4"
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-800 hover:shadow-sm active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
               title={
                 hasUnsavedChanges
                   ? "بازگشت به پنل، تغییرات ذخیره نشده است"
@@ -151,7 +150,7 @@ export function BuilderHeader({
               type="button"
               data-tour="tour-preview-btn"
               onClick={onPreview}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
             >
               <HiOutlineEye size={16} />
               <span className="hidden text-[12px] font-semibold sm:inline">
@@ -162,7 +161,7 @@ export function BuilderHeader({
             <button
               type="button"
               onClick={onOpenThemeStudio}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
               title="تم صفحه"
             >
               <HiOutlinePaintBrush size={16} />
@@ -190,7 +189,7 @@ export function BuilderHeader({
               data-tour="tour-save-page-btn"
               onClick={onOpenMeta}
               disabled={isServerSaving}
-              className="flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-[12px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500 px-0 text-[12px] font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
             >
               {isServerSaving ? (
                 <HiOutlineArrowPath size={14} className="animate-spin" />
@@ -209,7 +208,7 @@ export function BuilderHeader({
               type="button"
               data-tour="tour-mobile-add-btn"
               onClick={onOpenCatalog}
-              className="flex h-10 items-center gap-2 rounded-xl bg-neutral-900 px-4 text-[12px] font-bold text-white shadow-lg shadow-neutral-900/15 transition-all hover:bg-neutral-800 hover:shadow-xl active:scale-95 lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-900 px-0 text-[12px] font-bold text-white shadow-lg shadow-neutral-900/15 transition-all hover:bg-neutral-800 hover:shadow-xl active:scale-95 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4 lg:hidden"
             >
               <HiOutlinePlus size={14} />
               <span className="hidden sm:inline">بلاک جدید</span>
@@ -218,7 +217,7 @@ export function BuilderHeader({
               type="button"
               data-tour="tour-guide-btn"
               onClick={onStartTour}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:h-10 sm:w-10 sm:rounded-xl"
               title="راهنمای صفحه‌ساز"
             >
               <HiOutlineQuestionMarkCircle size={18} />
@@ -230,7 +229,7 @@ export function BuilderHeader({
                 type="button"
                 data-tour="tour-clear-btn"
                 onClick={onClearAll}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-500 transition-all hover:bg-red-100 active:scale-95"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 transition-all hover:bg-red-100 active:scale-95 sm:h-10 sm:w-10 sm:rounded-xl"
                 title="پاک کردن همه"
               >
                 <HiOutlineTrash size={15} />
