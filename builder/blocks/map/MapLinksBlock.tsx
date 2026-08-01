@@ -48,6 +48,9 @@ interface RenderMapService {
   Icon: string;
   url: string;
   brandColor: string;
+  groupKey: string;
+  sourcePriority: number;
+  itemOrder: number;
   labelKey?: string;
   repeaterKey?: "mapItems";
   repeaterItemId?: string;
@@ -93,6 +96,14 @@ const SERVICE_BY_PROVIDER: Record<string, MapService> = {
   waze: services[3],
 };
 
+const MAP_SERVICE_ORDER = services.reduce<Record<string, number>>(
+  (order, service, index) => {
+    order[service.key] = index;
+    return order;
+  },
+  {},
+);
+
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -126,6 +137,9 @@ function getExtraMapServices(
         Icon: service.Icon,
         url,
         brandColor,
+        groupKey: service.key,
+        sourcePriority: 1,
+        itemOrder: index,
         repeaterKey: "mapItems",
         repeaterItemId: getString(record.id) || undefined,
         repeaterIndex: index,
@@ -134,6 +148,20 @@ function getExtraMapServices(
         },
       },
     ];
+  });
+}
+
+function sortMapServicesByProvider(items: RenderMapService[]) {
+  return [...items].sort((a, b) => {
+    const groupDiff =
+      (MAP_SERVICE_ORDER[a.groupKey] ?? services.length) -
+      (MAP_SERVICE_ORDER[b.groupKey] ?? services.length);
+    if (groupDiff !== 0) return groupDiff;
+
+    const sourceDiff = a.sourcePriority - b.sourcePriority;
+    if (sourceDiff !== 0) return sourceDiff;
+
+    return a.itemOrder - b.itemOrder;
   });
 }
 
@@ -498,38 +526,43 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
   const showTitle = data.showTitle !== false;
   const showDescription = data.showDescription !== false;
   const openInNewTab = data.openInNewTab !== false;
-  const includeEmptyServices = isEditor || mode === "preview";
-
   /* ---------- visible services ---------- */
   const visibleServices = useMemo(() => {
     const baseServices: RenderMapService[] = services
-      .filter((service) => {
+      .flatMap((service, index): RenderMapService[] => {
         const shouldShow = data[service.showKey] !== false;
         const url = getString(data[service.key]);
 
-        if (includeEmptyServices) {
-          return shouldShow;
-        }
-        return shouldShow && url.length > 0;
-      })
-      .map((service) => ({
-        id: service.key,
-        label: getString(data[service.labelKey]) || service.fallbackLabel,
-        labelKey: service.labelKey,
-        Icon: service.Icon,
-        url: getString(data[service.key]),
-        brandColor: BRAND_COLORS[service.key] || "#64748b",
-      }));
+        if (!shouldShow || url.length === 0) return [];
 
-    return [
+        return [
+          {
+            id: service.key,
+            label: getString(data[service.labelKey]) || service.fallbackLabel,
+            labelKey: service.labelKey,
+            Icon: service.Icon,
+            url,
+            brandColor: BRAND_COLORS[service.key] || "#64748b",
+            groupKey: service.key,
+            sourcePriority: 0,
+            itemOrder: index,
+          },
+        ];
+      });
+
+    return sortMapServicesByProvider([
       ...baseServices,
       ...getExtraMapServices(data.mapItems, {
-        includeEmpty: includeEmptyServices,
+        includeEmpty: false,
       }),
-    ];
-  }, [data, includeEmptyServices]);
+    ]);
+  }, [data]);
 
   const hasAnyVisible = visibleServices.length > 0;
+
+  if (!isEditor && !hasAnyVisible) {
+    return null;
+  }
 
   const updateRepeaterLabel = (service: RenderMapService, label: unknown) => {
     if (!service.repeaterKey) return;
@@ -750,6 +783,16 @@ const MapLinksBlock: React.FC<BlockComponentProps> = ({
                 </EmptyStateIcon>
                 <p
                   className="text-sm text-slate-400 text-center leading-relaxed"
+                  style={{ margin: 0 }}
+                >
+                  هنوز آیتمی برای نقشه وارد نشده است.
+                  <br />
+                  <span className="text-xs text-slate-300">
+                    آیتم‌ها را از تب محتوا اضافه کنید.
+                  </span>
+                </p>
+                <p
+                  className="hidden"
                   style={{ margin: 0 }}
                 >
                   لینک نقشه‌ای وارد نشده است.

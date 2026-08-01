@@ -5,6 +5,7 @@ import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Product from "@/models/products";
 import { withActorOwnerScope } from "@/lib/auth/agentScope";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import "@/models/users";
 import "@/models/pages";
 import "@/models/files";
@@ -81,6 +82,8 @@ export const GET = compose(
     } else if (pageId && mongoose.Types.ObjectId.isValid(pageId)) {
         query.page = pageId;
     }
+
+    applyDateRangeFilters(query, searchParams, ["createdAt"]);
 
     const [products, total] = await Promise.all([
         Product.find(query)

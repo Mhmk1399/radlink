@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
   useEffect,
+  useId,
   type ReactNode,
 } from "react";
 import DatePicker, { DateObject } from "react-multi-date-picker";
@@ -179,6 +180,14 @@ const themeTokens = {
 
 const datePickerStyles = `
 .rmdp-container { direction: rtl !important; }
+.dt-date-filter .rmdp-container {
+  width: 100% !important;
+}
+@media (min-width: 640px) {
+  .dt-date-filter .rmdp-container {
+    width: auto !important;
+  }
+}
 .rmdp-wrapper {
   position: relative !important;
 }
@@ -1022,6 +1031,15 @@ function getNestedValue(obj: object, key: string): unknown {
   }, obj as unknown);
 }
 
+function isInteractiveDoubleClickTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(
+    target.closest(
+      'button,a,input,select,textarea,[role="button"],[contenteditable="true"],[data-row-dblclick-ignore="true"]',
+    ),
+  );
+}
+
 function formatCellValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "بله" : "خیر";
@@ -1410,7 +1428,7 @@ function FilterDropdown({
   }, []);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative w-full sm:w-auto">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -1418,7 +1436,7 @@ function FilterDropdown({
         aria-haspopup="listbox"
         aria-label={`فیلتر ${label}`}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
+          "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium sm:h-9 sm:w-auto sm:justify-center sm:gap-1.5",
           "transition-all duration-200",
           value
             ? cn(t.borderAccent, t.textAccent, t.inputBg)
@@ -1449,7 +1467,7 @@ function FilterDropdown({
           role="listbox"
           aria-label={`گزینه‌های ${label}`}
           className={cn(
-            "absolute top-full right-0 z-50 mt-1 min-w-40 overflow-hidden rounded-xl",
+            "absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-xl sm:left-auto sm:min-w-40",
             panel,
             "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
@@ -1519,7 +1537,7 @@ function TextFilter({
   const { t } = useTableTheme();
 
   return (
-    <div className="relative min-w-44">
+    <div className="relative w-full min-w-0 sm:w-auto sm:min-w-44">
       <span
         className={cn(
           "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
@@ -1535,7 +1553,7 @@ function TextFilter({
         placeholder={`فیلتر ${label}`}
         aria-label={`فیلتر متنی ${label}`}
         className={cn(
-          "h-9 w-full rounded-xl border pr-9 pl-8 text-xs outline-none transition",
+          "h-10 w-full rounded-xl border pr-9 pl-8 text-xs outline-none transition sm:h-9",
           value ? t.borderAccent : t.borderInput,
           t.inputBg,
           t.textPrimary,
@@ -1574,7 +1592,7 @@ function SearchableSelectFilter({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="relative z-30 min-w-52">
+    <div className="relative z-30 w-full min-w-0 sm:w-auto sm:min-w-52">
       <CustomSelect
         options={options.map((option) => ({
           value: option,
@@ -1613,7 +1631,7 @@ function DateRangeFilter({
   };
 
   return (
-    <div className="relative">
+    <div className="dt-date-filter relative w-full sm:w-auto">
       <DatePicker
         value={
           value.from && value.to
@@ -1644,7 +1662,7 @@ function DateRangeFilter({
             onClick={openCalendar}
             aria-label={`فیلتر تاریخ ${label}`}
             className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium",
+              "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium sm:h-9 sm:w-auto sm:justify-center sm:gap-1.5",
               "transition-all duration-200",
               isDark ? "bg-[#1e1e26]" : "bg-[#f5f3ee]",
               hasRange
@@ -1658,7 +1676,7 @@ function DateRangeFilter({
               isDark
                 ? "hover:border-[#3a3a44] hover:text-[#9e9a93]"
                 : "hover:border-[#ccc7bc] hover:text-[#6b665c]",
-              "max-w-70",
+              "max-w-full sm:max-w-70",
             )}
           >
             <Icon.Calendar />
@@ -2130,7 +2148,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, DateRange>>({});
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const mobileFiltersId = useId();
 
   const debouncedSearch = useDebounce(search, searchDebounceMs);
   const { copied, copiedCell, copy } = useCopyToClipboard();
@@ -2254,6 +2274,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     () => columns.filter((c) => c.viewable !== false),
     [columns],
   );
+  const canOpenEditOnDoubleClick =
+    doubleClickToEdit && canUpdate && editableCols.length > 0;
+  const canOpenRowModalOnDoubleClick =
+    doubleClickToEdit && (canOpenEditOnDoubleClick || viewableCols.length > 0);
   const filterableCols = useMemo(
     () => columns.filter((c) => c.filterable),
     [columns],
@@ -2640,10 +2664,25 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   );
 
   const handleRowDoubleClick = useCallback(
-    (row: T) => {
-      if (doubleClickToEdit && canUpdate) openEdit(row);
+    (event: React.MouseEvent, row: T) => {
+      if (!doubleClickToEdit || isInteractiveDoubleClickTarget(event.target)) {
+        return;
+      }
+
+      if (canOpenEditOnDoubleClick) {
+        openEdit(row);
+        return;
+      }
+
+      if (viewableCols.length > 0) openView(row);
     },
-    [doubleClickToEdit, canUpdate, openEdit],
+    [
+      doubleClickToEdit,
+      canOpenEditOnDoubleClick,
+      viewableCols.length,
+      openEdit,
+      openView,
+    ],
   );
 
   const handleExportExcel = useCallback(
@@ -2774,7 +2813,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 <Icon.Refresh />
               </button>
             )}
-            {searchable && (
+            {/* {searchable && (
               <div className="relative">
                 <span
                   className={cn(
@@ -2817,7 +2856,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                   </div>
                 )}
               </div>
-            )}
+            )} */}
             {exportable && (
               <ExportMenu
                 onExportExcel={handleExportExcel}
@@ -2848,41 +2887,102 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         {/* ── Filters ── */}
         {hasFilters && (
           <div
-            className="mb-3 flex flex-wrap items-center gap-2"
+            className={cn(
+              "mb-4 grid gap-2 rounded-2xl border p-3",
+              isDark
+                ? "border-[#2a2a32] bg-[#1c1c22]/72 shadow-[0_12px_30px_-22px_rgba(0,0,0,0.75)]"
+                : "border-[#e4e4e7] bg-white/82 shadow-[0_12px_30px_-24px_rgba(24,24,27,0.2)]",
+              "sm:mb-3 sm:flex sm:flex-wrap sm:items-center sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none",
+            )}
             role="toolbar"
             aria-label="فیلترها"
           >
-            <span
+            <div
               className={cn(
-                "text-xs font-medium flex items-center gap-1",
+                "flex items-center justify-between gap-2 pb-1 text-xs font-medium sm:justify-start sm:pb-0",
                 t.textMuted,
               )}
             >
-              <Icon.Filter />
-              فیلترها:
-            </span>
-            {filterableCols.map((col) => {
-              const value = filters[col.key] || "";
-              const onChange = (nextValue: string) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  [col.key]: nextValue,
-                }));
+              <span className="flex items-center gap-1">
+                <Icon.Filter />
+                فیلترها:
+              </span>
+              {activeFiltersCount > 0 && (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] sm:hidden",
+                    t.activeBg,
+                    t.textAccent,
+                  )}
+                >
+                  {toPersianDigits(activeFiltersCount)} فعال
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen((open) => !open)}
+                aria-expanded={mobileFiltersOpen}
+                aria-controls={mobileFiltersId}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] transition-all duration-200 sm:hidden",
+                  isDark
+                    ? "border-[#3a3a44] bg-[#22222a] text-[#e8e6e3]"
+                    : "border-[#d4d4d8] bg-[#f3f4f6] text-[#27272a]",
+                  focus.ring,
+                )}
+              >
+                {mobileFiltersOpen ? "بستن" : "نمایش"}
+                <span
+                  className={cn(
+                    "transition-transform duration-200",
+                    mobileFiltersOpen && "rotate-180",
+                  )}
+                >
+                  <Icon.ChevronDown />
+                </span>
+              </button>
+            </div>
+            <div
+              id={mobileFiltersId}
+              className={cn(
+                mobileFiltersOpen ? "grid" : "hidden",
+                "gap-2 sm:contents",
+              )}
+            >
+              {filterableCols.map((col) => {
+                const value = filters[col.key] || "";
+                const onChange = (nextValue: string) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    [col.key]: nextValue,
+                  }));
 
-              if (col.filterType === "text") {
-                return (
-                  <TextFilter
-                    key={col.key}
-                    label={col.label}
-                    value={value}
-                    onChange={onChange}
-                  />
-                );
-              }
+                if (col.filterType === "text") {
+                  return (
+                    <TextFilter
+                      key={col.key}
+                      label={col.label}
+                      value={value}
+                      onChange={onChange}
+                    />
+                  );
+                }
 
-              if (col.filterSearchable) {
+                if (col.filterSearchable) {
+                  return (
+                    <SearchableSelectFilter
+                      key={col.key}
+                      label={col.label}
+                      options={filterOptions[col.key] || []}
+                      optionLabels={filterOptionLabels[col.key]}
+                      value={value}
+                      onChange={onChange}
+                    />
+                  );
+                }
+
                 return (
-                  <SearchableSelectFilter
+                  <FilterDropdown
                     key={col.key}
                     label={col.label}
                     options={filterOptions[col.key] || []}
@@ -2891,46 +2991,35 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                     onChange={onChange}
                   />
                 );
-              }
-
-              return (
-                <FilterDropdown
+              })}
+              {dateFilterCols.map((col) => (
+                <DateRangeFilter
                   key={col.key}
                   label={col.label}
-                  options={filterOptions[col.key] || []}
-                  optionLabels={filterOptionLabels[col.key]}
-                  value={value}
-                  onChange={onChange}
+                  value={dateRanges[col.key] || { from: null, to: null }}
+                  onChange={(range) =>
+                    setDateRanges((prev) => ({ ...prev, [col.key]: range }))
+                  }
                 />
-              );
-            })}
-            {dateFilterCols.map((col) => (
-              <DateRangeFilter
-                key={col.key}
-                label={col.label}
-                value={dateRanges[col.key] || { from: null, to: null }}
-                onChange={(range) =>
-                  setDateRanges((prev) => ({ ...prev, [col.key]: range }))
-                }
-              />
-            ))}
-            {activeFiltersCount > 0 && (
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                aria-label="پاک کردن همه فیلترها"
-                className={cn(
-                  "inline-flex h-9 items-center gap-1 rounded-xl px-3 text-xs font-medium transition-all duration-200",
-                  isDark
-                    ? "text-[#e87c7c]/70 hover:text-[#e87c7c] hover:bg-[#c44040]/8"
-                    : "text-[#c44040]/70 hover:text-[#c44040] hover:bg-[#c44040]/5",
-                  focus.ring,
-                )}
-              >
-                <Icon.X />
-                پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
-              </button>
-            )}
+              ))}
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  aria-label="پاک کردن همه فیلترها"
+                  className={cn(
+                    "inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl px-3 text-xs font-medium transition-all duration-200 sm:h-9 sm:w-auto",
+                    isDark
+                      ? "text-[#e87c7c]/70 hover:text-[#e87c7c] hover:bg-[#c44040]/8"
+                      : "text-[#c44040]/70 hover:text-[#c44040] hover:bg-[#c44040]/5",
+                    focus.ring,
+                  )}
+                >
+                  <Icon.X />
+                  پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -3156,13 +3245,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           role="row"
                           aria-selected={isSelected}
                           aria-rowindex={globalRowIndex}
-                          onDoubleClick={() => handleRowDoubleClick(row)}
+                          onDoubleClick={(event) =>
+                            handleRowDoubleClick(event, row)
+                          }
                           className={cn(
                             "group border-b last:border-b-0",
                             t.divider,
                             "transition-all duration-200",
                             isSelected ? rowSelected : rowHover,
-                            doubleClickToEdit && canUpdate && "cursor-pointer",
+                            canOpenRowModalOnDoubleClick && "cursor-pointer",
                             // Subtle fade when revalidating existing data
                             isValidating &&
                               !isLoading &&
@@ -3345,7 +3436,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       key={rowKey}
                       role="article"
                       aria-label={`ردیف ${toPersianDigits(globalIdx)}`}
-                      onDoubleClick={() => handleRowDoubleClick(row)}
+                      onDoubleClick={(event) =>
+                        handleRowDoubleClick(event, row)
+                      }
                       className={cn(
                         "group p-4 transition-all duration-200",
                         isSelected
@@ -3359,6 +3452,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         isValidating &&
                           !isLoading &&
                           "opacity-80 transition-opacity duration-300",
+                        canOpenRowModalOnDoubleClick && "cursor-pointer",
                       )}
                     >
                       <div className="flex items-start gap-3 mb-2">

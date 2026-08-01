@@ -12,6 +12,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  auto-assign-pages-cron:
+    image: alpine:3.20
+    env_file:
+      - .env
+    environment:
+      APP_INTERNAL_URL: http://app:3000
+      AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE: "0 0 * * *"
+    volumes:
+      - ./services/cron:/cron:ro
+    command: ["/bin/sh", "/cron/auto-assign-pages-cron.sh"]
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
   mongo:
     image: mongo:7
     ports:

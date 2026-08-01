@@ -6,12 +6,16 @@ import Permission from "@/models/permission";
 import "@/models/access";
 import User from "@/models/users";
 import { accessCache } from "@/lib/auth/accessCache";
+import {
+    buildPermissionAssignmentConflictMessage,
+    findExistingActivePermissionAssignments,
+    normalizeIdList,
+} from "@/lib/auth/permissionAssignment";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 function uniqueIds(ids: unknown) {
-    if (!Array.isArray(ids)) return [];
-    return [...new Set(ids.map(String).filter(Boolean))];
+    return normalizeIdList(ids);
 }
 
 export const GET = compose(
@@ -55,6 +59,30 @@ export const PATCH = compose(
 
     if ("assignedToUsers" in updates) {
         updates.assignedToUsers = uniqueIds(updates.assignedToUsers);
+    }
+
+    const nextIsActive =
+        typeof updates.isActive === "boolean"
+            ? updates.isActive
+            : permission.isActive;
+    const nextAssignedUserIds = Array.isArray(updates.assignedToUsers)
+        ? updates.assignedToUsers.map(String)
+        : permission.assignedToUsers.map(String);
+
+    if (nextIsActive !== false) {
+        const conflicts = await findExistingActivePermissionAssignments(
+            nextAssignedUserIds,
+            { excludePermissionId: id },
+        );
+        if (conflicts.length > 0) {
+            return NextResponse.json(
+                {
+                    code: "USER_ALREADY_HAS_PERMISSION",
+                    message: buildPermissionAssignmentConflictMessage(conflicts),
+                },
+                { status: 409 },
+            );
+        }
     }
 
     Object.assign(permission, updates);

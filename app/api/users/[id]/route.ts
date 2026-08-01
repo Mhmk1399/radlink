@@ -16,6 +16,14 @@ import {
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
 import { getManagedUserIds } from "@/lib/auth/agentScope";
+import {
+    hashPassword,
+    validateStrongPassword,
+} from "@/lib/auth/password";
+import {
+    normalizeIdList,
+    validateSinglePermissionIdSelection,
+} from "@/lib/auth/permissionAssignment";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -96,7 +104,7 @@ export const PATCH = compose(
         );
     }
 
-    const target = await User.findById(id).select("role agentid");
+    const target = await User.findById(id).select("role agentid phoneNumber");
 
     if (!target) {
         return NextResponse.json(
@@ -161,6 +169,9 @@ export const PATCH = compose(
         updatedBy: requester._id,
     };
     const unsets: Record<string, ""> = {};
+    const requestedPassword =
+        typeof body.password === "string" ? body.password : "";
+    const hasRequestedPassword = requestedPassword.trim().length > 0;
 
     for (const key of allowedFields) {
         if (!(key in body)) continue;
@@ -299,22 +310,24 @@ export const PATCH = compose(
                 );
             }
 
-            const permissionIds = value.map((permission) => {
-                if (
-                    typeof permission === "object" &&
-                    permission !== null &&
-                    "_id" in permission
-                ) {
-                    return String(permission._id);
-                }
-
-                return String(permission);
-            });
+            const permissionIds = normalizeIdList(value);
 
             if (!permissionIds.every(isValidObjectId)) {
                 return NextResponse.json(
                     { message: "یکی از شناسه‌های دسترسی معتبر نیست." },
                     { status: 400 }
+                );
+            }
+
+            const permissionSelectionError =
+                validateSinglePermissionIdSelection(permissionIds);
+            if (permissionSelectionError) {
+                return NextResponse.json(
+                    {
+                        code: "TOO_MANY_USER_PERMISSIONS",
+                        message: permissionSelectionError,
+                    },
+                    { status: 409 },
                 );
             }
 
@@ -354,6 +367,39 @@ export const PATCH = compose(
         }
 
         updates[key] = value;
+    }
+
+    if (hasRequestedPassword) {
+        if (!isAdmin) {
+            return NextResponse.json(
+                { message: "فقط مدیر می‌تواند رمز عبور کاربر را تغییر دهد." },
+                { status: 403 },
+            );
+        }
+
+        const passwordValidationError = validateStrongPassword(
+            requestedPassword,
+            {
+                phoneNumber:
+                    typeof updates.phoneNumber === "string"
+                        ? updates.phoneNumber
+                        : target.phoneNumber,
+            },
+        );
+
+        if (passwordValidationError) {
+            return NextResponse.json(
+                {
+                    code: "INVALID_PASSWORD",
+                    message: passwordValidationError,
+                    field: "password",
+                },
+                { status: 400 },
+            );
+        }
+
+        updates.passwordHash = await hashPassword(requestedPassword);
+        updates.passwordChangedAt = new Date();
     }
 
     // A normal user may only update themselves.

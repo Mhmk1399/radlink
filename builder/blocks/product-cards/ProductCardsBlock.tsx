@@ -221,6 +221,7 @@ const StyledScrollArea = styled.div<{ $styleCss: string }>`
   display: flex;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  cursor: grab;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease;
@@ -244,6 +245,14 @@ const StyledScrollArea = styled.div<{ $styleCss: string }>`
   }
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.18);
+  }
+
+  @media (min-width: 1024px) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+    cursor: default;
+    scroll-snap-type: none;
   }
 `;
 
@@ -424,6 +433,58 @@ const StyledButton = styled.span<{ $styleCss: string }>`
   }
 `;
 
+const BottomButtonsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+
+  @media (max-width: 640px) {
+    gap: 8px;
+    margin-top: 14px;
+  }
+`;
+
+const StyledBottomButton = styled.a<{ $styleCss: string }>`
+  ${({ $styleCss }) => $styleCss}
+  display: inline-flex;
+  min-height: 42px;
+  min-width: 150px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    font-size 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.25s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 8px 20px rgba(15, 23, 42, 0.12),
+      0 2px 6px rgba(15, 23, 42, 0.08);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 640px) {
+    min-height: 38px;
+    min-width: 128px;
+  }
+`;
+
 const EmptyStateWrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -552,6 +613,16 @@ export default function ProductCardsBlock({
     PREFIX,
     { mobileOnly: mode === "editor", effect: "button" },
   );
+  const bottomButtonPrimaryStyle = responsiveStyleToCss(
+    elements.bottomButtonPrimary?.style ?? {},
+    PREFIX,
+    { mobileOnly: mode === "editor", effect: "button" },
+  );
+  const bottomButtonSecondaryStyle = responsiveStyleToCss(
+    elements.bottomButtonSecondary?.style ?? {},
+    PREFIX,
+    { mobileOnly: mode === "editor", effect: "button" },
+  );
 
   // ── Safe data ─────────────────────────────────────────────────────────────
 
@@ -562,6 +633,26 @@ export default function ProductCardsBlock({
   const showDescription = data.showDescription !== false;
   const showButtons = data.showButtons !== false;
   const openInNewTab = data.openInNewTab !== false;
+  const showBottomButtons = data.showBottomButtons === true;
+  const showBottomPrimaryButton = data.showBottomPrimaryButton !== false;
+  const showBottomSecondaryButton = data.showBottomSecondaryButton !== false;
+  const bottomPrimaryButtonText =
+    typeof data.bottomPrimaryButtonText === "string"
+      ? data.bottomPrimaryButtonText
+      : "مشاهده همه محصولات";
+  const bottomPrimaryButtonUrl =
+    typeof data.bottomPrimaryButtonUrl === "string"
+      ? data.bottomPrimaryButtonUrl.trim()
+      : "";
+  const bottomSecondaryButtonText =
+    typeof data.bottomSecondaryButtonText === "string"
+      ? data.bottomSecondaryButtonText
+      : "مشاوره خرید";
+  const bottomSecondaryButtonUrl =
+    typeof data.bottomSecondaryButtonUrl === "string"
+      ? data.bottomSecondaryButtonUrl.trim()
+      : "";
+  const bottomButtonsOpenInNewTab = data.bottomButtonsOpenInNewTab !== false;
 
   const products: ProductItem[] = Array.isArray(data.products)
     ? (data.products as ProductItem[]).map((p, index) => ({
@@ -588,6 +679,11 @@ export default function ProductCardsBlock({
     : [];
 
   const isEditor = mode === "editor";
+  const shouldShowBottomButtons = Boolean(
+    showBottomButtons &&
+      ((showBottomPrimaryButton && bottomPrimaryButtonText.trim()) ||
+        (showBottomSecondaryButton && bottomSecondaryButtonText.trim())),
+  );
   const {
     ref: scrollRef,
     onMouseDown: handleScrollMouseDown,
@@ -756,7 +852,6 @@ export default function ProductCardsBlock({
                     onMouseUp={handleScrollMouseUp}
                     onMouseMove={handleScrollMouseMove}
                     onClick={handleScrollClick}
-                    style={{ cursor: "grab" }}
                   >
                         {products.map((product, index) => {
                           const hasUrl = product.productUrl.length > 0;
@@ -798,7 +893,7 @@ export default function ProductCardsBlock({
                               <StyledCard
                                 $styleCss={cardStyle}
                                 $index={index}
-                                className="my-1.5 w-[224px] min-w-[224px] sm:my-2 sm:w-[290px] sm:min-w-[290px] md:w-[310px] md:min-w-[310px]"
+                                className="my-1 w-[190px] min-w-[190px] sm:my-2 sm:w-[250px] sm:min-w-[250px] lg:w-auto lg:min-w-0"
                               >
                                 {/* Image */}
                                 <EditablePart
@@ -995,6 +1090,104 @@ export default function ProductCardsBlock({
                 </EditablePart>
               )}
             </EditablePart>
+          )}
+
+          {shouldShowBottomButtons && (
+            <BottomButtonsRow>
+              {showBottomPrimaryButton && bottomPrimaryButtonText.trim() && (
+                <EditablePart
+                  instanceId={block.instanceId}
+                  elementId="bottomButtonPrimary"
+                  mode={mode}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
+                >
+                  <StyledBottomButton
+                    $styleCss={bottomButtonPrimaryStyle}
+                    href={
+                      !isEditor && bottomPrimaryButtonUrl
+                        ? bottomPrimaryButtonUrl
+                        : undefined
+                    }
+                    target={
+                      !isEditor &&
+                      bottomPrimaryButtonUrl &&
+                      bottomButtonsOpenInNewTab
+                        ? "_blank"
+                        : undefined
+                    }
+                    rel={
+                      !isEditor &&
+                      bottomPrimaryButtonUrl &&
+                      bottomButtonsOpenInNewTab
+                        ? "noopener noreferrer"
+                        : undefined
+                    }
+                    onClick={(event) => {
+                      if (isEditor) event.preventDefault();
+                    }}
+                    className="rounded-xl border border-transparent bg-slate-950 px-4 py-2.5 text-sm text-white no-underline sm:px-5"
+                  >
+                    <InlineEditableText
+                      value={bottomPrimaryButtonText}
+                      dataKey="bottomPrimaryButtonText"
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      onUpdateContent={handleInlineContentUpdate}
+                    >
+                      {(text) => <span>{text}</span>}
+                    </InlineEditableText>
+                  </StyledBottomButton>
+                </EditablePart>
+              )}
+
+              {showBottomSecondaryButton && bottomSecondaryButtonText.trim() && (
+                <EditablePart
+                  instanceId={block.instanceId}
+                  elementId="bottomButtonSecondary"
+                  mode={mode}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
+                >
+                  <StyledBottomButton
+                    $styleCss={bottomButtonSecondaryStyle}
+                    href={
+                      !isEditor && bottomSecondaryButtonUrl
+                        ? bottomSecondaryButtonUrl
+                        : undefined
+                    }
+                    target={
+                      !isEditor &&
+                      bottomSecondaryButtonUrl &&
+                      bottomButtonsOpenInNewTab
+                        ? "_blank"
+                        : undefined
+                    }
+                    rel={
+                      !isEditor &&
+                      bottomSecondaryButtonUrl &&
+                      bottomButtonsOpenInNewTab
+                        ? "noopener noreferrer"
+                        : undefined
+                    }
+                    onClick={(event) => {
+                      if (isEditor) event.preventDefault();
+                    }}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 no-underline sm:px-5"
+                  >
+                    <InlineEditableText
+                      value={bottomSecondaryButtonText}
+                      dataKey="bottomSecondaryButtonText"
+                      instanceId={block.instanceId}
+                      mode={mode}
+                      onUpdateContent={handleInlineContentUpdate}
+                    >
+                      {(text) => <span>{text}</span>}
+                    </InlineEditableText>
+                  </StyledBottomButton>
+                </EditablePart>
+              )}
+            </BottomButtonsRow>
           )}
         </ContentLayer>
       </StyledContainer>

@@ -45,7 +45,7 @@ const productLinks = [
 const companyLinks = [
   { label: "درباره ما", href: "/about" },
   { label: "تماس با ما", href: "/contact" },
-  { label: "قوانین و مقررات", href: "#terms" },
+  { label: "قوانین و مقررات", href: "/terms" },
   { label: "حریم خصوصی", href: "#privacy" },
 ];
 
@@ -289,7 +289,7 @@ export function SmartLandingFooter() {
 
           <div className="flex items-center gap-3 text-xs">
             <Link
-              href="#terms"
+              href="/terms"
               className="text-slate-500 transition-colors duration-200 hover:text-slate-300 focus-visible:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-sky-400/60"
             >
               قوانین

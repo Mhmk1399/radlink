@@ -24,6 +24,7 @@ export function createDefaultContactSaveBlock(order = 0): PageBlock {
       firstName: "علی",
       lastName: "محمدی",
       phoneNumber: "09120000000",
+      phoneNumberSecondary: "",
       email: "",
       address: "",
       url: "",

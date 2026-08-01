@@ -130,9 +130,14 @@ import {
     sanitizePageSlug,
 } from "@/lib/validation/pageSlug";
 import { CUSTOM_HOME_SCREEN_ICON_SETTING_KEY } from "@/lib/design/landing-icons";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 
 function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function canManageFooterBranding(role: unknown) {
+    return role === "agent" || role === "admin" || role === "superAdmin";
 }
 
 async function loadPageExpiryAlerts(): Promise<PageExpiryAlertsData> {
@@ -527,6 +532,19 @@ export const POST = compose(
         delete pageSettings[CUSTOM_HOME_SCREEN_ICON_SETTING_KEY];
     }
 
+    const footerSource = isObject(body.footer)
+        ? { ...body.footer }
+        : isObject(templateFooter)
+          ? { ...templateFooter }
+          : {};
+
+    if (!canManageFooterBranding(user.role)) {
+        delete footerSource.showRadlinkBranding;
+        delete footerSource.brandingText;
+        delete footerSource.brandingLinkText;
+        delete footerSource.brandingLinkUrl;
+    }
+
     const page = await Page.create({
         title,
         description,
@@ -549,6 +567,10 @@ export const POST = compose(
                 : [],
             canonical: buildPageTargetUrl(url, req.url),
             ogImage: logo,
+            allowIndexing:
+                user.role === "superAdmin"
+                    ? requestedSeo.allowIndexing !== false
+                    : true,
         },
         settings: pageSettings,
         styleOverride:
@@ -562,20 +584,7 @@ export const POST = compose(
         logoHeader: normalizeLogoHeaderSettings(
             body.logoHeader ?? templateLogoHeader,
         ),
-        footer: normalizePageFooterSettings({
-            ...(isObject(body.footer)
-                ? body.footer
-                : isObject(templateFooter)
-                  ? templateFooter
-                  : {}),
-            logo: "",
-            showRadlinkBranding:
-                user.role === "superAdmin"
-                    ? (isObject(body.footer)
-                        ? body.footer.showRadlinkBranding
-                        : undefined)
-                    : true,
-        }),
+        footer: normalizePageFooterSettings({ ...footerSource, logo: "" }),
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
         expiresAt,
         isPublished: effectivePublished,
@@ -589,7 +598,7 @@ export const POST = compose(
             blocks: page.blocks,
         });
     } catch (error) {
-        console.error("Failed to synchronize page products", error);
+        console.error("همگام‌سازی محصولات صفحه با خطا مواجه شد.", error);
         await Product.deleteMany({ page: page._id, source: "builder" }).catch(
             () => null
         );
@@ -609,14 +618,14 @@ export const POST = compose(
             requestUrl: req.url,
         });
     } catch (error) {
-        console.error("Failed to create page QR code", error);
+        console.error("ساخت کد کیوآر صفحه با خطا مواجه شد.", error);
         await Product.deleteMany({ page: page._id, source: "builder" }).catch(
             () => null
         );
         await Page.findByIdAndDelete(page._id).catch(() => null);
 
         return NextResponse.json(
-            { message: "ساخت کد QR برای صفحه با خطا مواجه شد. لطفا دوباره تلاش کنید." },
+            { message: "ساخت کد کیوآر برای صفحه با خطا مواجه شد. لطفا دوباره تلاش کنید." },
             { status: 500 }
         );
     }
@@ -629,6 +638,7 @@ export const POST = compose(
 
     revalidatePath(`/${page.url}`);
     revalidatePath("/[url]", "page");
+    revalidatePath("/sitemap.xml");
     invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({ page: populatedPage ?? page, qr }, { status: 201 });
@@ -699,6 +709,8 @@ export const GET = compose(
     ) {
         filters.assignedUser = assignedUserIdFilter;
     }
+
+    applyDateRangeFilters(filters, searchParams, ["createdAt"]);
 
     const query = await withPageAccessScope(user, filters);
 

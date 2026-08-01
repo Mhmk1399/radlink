@@ -223,7 +223,7 @@ export async function GET() {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Missing environment variables",
+                    error: "متغیرهای محیطی موردنیاز تنظیم نشده‌اند.",
                     missing: missingVars,
                 },
                 { status: 500 }
@@ -232,7 +232,7 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
-            message: "Liara Object Storage upload service is configured and ready",
+            message: "سرویس آپلود فضای ذخیره‌سازی لیارا تنظیم شده و آماده است.",
             config: {
                 bucket: process.env.LIARA_BUCKET_NAME,
                 endpoint: process.env.LIARA_ENDPOINT,
@@ -247,7 +247,7 @@ export async function GET() {
         return NextResponse.json(
             {
                 success: false,
-                error: "Failed to check service status",
+                error: "بررسی وضعیت سرویس با خطا مواجه شد.",
             },
             { status: 500 }
         );

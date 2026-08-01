@@ -64,11 +64,11 @@ export default function TemplatesSection({
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const router = useRouter();
-  const { can, canOnResource } = useAccess();
+  const { user, can, canOnResource, isLoading: isAccessLoading } = useAccess();
   const canCreateTemplates = can("admin.templates", "create");
   const canUpdateTemplates = can("admin.templates", "update");
   const canDeleteTemplates = can("admin.templates", "delete");
-  const canCreatePages = can("admin.pages", "create");
+  const canCreatePages = !isAccessLoading && user !== null;
   const [refreshToken, setRefreshToken] = useState(0);
   const [togglingTemplateId, setTogglingTemplateId] = useState<string | null>(
     null,

@@ -122,6 +122,9 @@ type RenderService = {
   Icon: React.FC;
   url: string;
   brandColor: string;
+  groupKey: string;
+  sourcePriority: number;
+  itemOrder: number;
   labelKey?: string;
   repeaterKey?: "messengerItems";
   repeaterItemId?: string;
@@ -253,6 +256,14 @@ const SERVICE_BY_PRESET: Partial<Record<MessengerLinkPreset, ServiceDef>> = {
   linkedin: services.find((service) => service.urlKey === "linkedinUrl"),
 };
 
+const MESSENGER_SERVICE_ORDER = services.reduce<Record<string, number>>(
+  (order, service, index) => {
+    order[service.urlKey] = index;
+    return order;
+  },
+  {},
+);
+
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -292,6 +303,9 @@ function getExtraMessengerServices(
         Icon: baseService.Icon,
         url,
         brandColor,
+        groupKey: baseService.urlKey,
+        sourcePriority: 1,
+        itemOrder: index,
         repeaterKey: "messengerItems",
         repeaterItemId: getString(record.id) || undefined,
         repeaterIndex: index,
@@ -301,6 +315,20 @@ function getExtraMessengerServices(
         },
       },
     ];
+  });
+}
+
+function sortMessengerServicesByPlatform(items: RenderService[]) {
+  return [...items].sort((a, b) => {
+    const groupDiff =
+      (MESSENGER_SERVICE_ORDER[a.groupKey] ?? services.length) -
+      (MESSENGER_SERVICE_ORDER[b.groupKey] ?? services.length);
+    if (groupDiff !== 0) return groupDiff;
+
+    const sourceDiff = a.sourcePriority - b.sourcePriority;
+    if (sourceDiff !== 0) return sourceDiff;
+
+    return a.itemOrder - b.itemOrder;
   });
 }
 
@@ -615,31 +643,38 @@ export default function MessengerLinksBlock({
       : "min-h-[68px] flex-row gap-3.5 px-4 py-3";
 
   const isEditor = mode === "editor";
-  const isBuilderPreview = mode === "preview";
 
   const baseVisibleServices: RenderService[] = services
-    .filter((service) => {
+    .flatMap((service, index): RenderService[] => {
       const shouldShow = data[service.showKey] !== false;
-      if (!shouldShow) return false;
-      if (isEditor || isBuilderPreview) return true;
       const url = resolveServiceUrl(service.urlKey, data[service.urlKey]);
-      return url.length > 0;
-    })
-    .map((service) => ({
-      id: service.urlKey,
-      label: getString(data[service.labelKey]) || service.fallbackLabel,
-      labelKey: service.labelKey,
-      Icon: service.Icon,
-      url: resolveServiceUrl(service.urlKey, data[service.urlKey]),
-      brandColor: BRAND_COLORS[service.urlKey] || "#64748b",
-    }));
-  const extraVisibleServices = getExtraMessengerServices(data.messengerItems, {
-    includeEmpty: isEditor || isBuilderPreview,
-  });
-  const visibleServices = [...baseVisibleServices, ...extraVisibleServices];
 
-  // Public pages must not render enabled services that have no destination.
-  if (mode === "public" && visibleServices.length === 0) {
+      if (!shouldShow || url.length === 0) return [];
+
+      return [
+        {
+          id: service.urlKey,
+          label: getString(data[service.labelKey]) || service.fallbackLabel,
+          labelKey: service.labelKey,
+          Icon: service.Icon,
+          url,
+          brandColor: BRAND_COLORS[service.urlKey] || "#64748b",
+          groupKey: service.urlKey,
+          sourcePriority: 0,
+          itemOrder: index,
+        },
+      ];
+    });
+  const extraVisibleServices = getExtraMessengerServices(data.messengerItems, {
+    includeEmpty: false,
+  });
+  const visibleServices = sortMessengerServicesByPlatform([
+    ...baseVisibleServices,
+    ...extraVisibleServices,
+  ]);
+
+  // Non-editor views must not render enabled services that have no destination.
+  if (!isEditor && visibleServices.length === 0) {
     return null;
   }
 
@@ -739,6 +774,16 @@ export default function MessengerLinksBlock({
             </EmptyStateIconCircle>
             <p
               className="text-sm text-slate-400 text-center leading-relaxed"
+              style={{ margin: 0 }}
+            >
+              هنوز آیتمی برای پیام‌رسان‌ها وارد نشده است.
+              <br />
+              <span className="text-xs text-slate-300">
+                آیتم‌ها را از تب محتوا اضافه کنید.
+              </span>
+            </p>
+            <p
+              className="hidden"
               style={{ margin: 0 }}
             >
               هنوز لینکی برای پیام‌رسان‌ها وارد نشده است.

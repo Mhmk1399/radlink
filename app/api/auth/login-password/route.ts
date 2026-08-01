@@ -46,13 +46,6 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
         );
     }
 
-    if (!user.isPhoneVerified) {
-        return NextResponse.json(
-            { message: "برای فعال‌سازی ورود با رمز عبور ابتدا با پیامک وارد شوید." },
-            { status: 403 },
-        );
-    }
-
     const passwordMatches = await verifyPassword(password, user.passwordHash);
     if (!passwordMatches) {
         return NextResponse.json(
@@ -61,6 +54,10 @@ export const POST = compose(withDB())(async (req: AuthRequest) => {
         );
     }
 
+    if (!user.isPhoneVerified) {
+        user.isPhoneVerified = true;
+        user.phoneVerifiedAt = new Date();
+    }
     user.lastLoginAt = new Date();
     await user.save();
 

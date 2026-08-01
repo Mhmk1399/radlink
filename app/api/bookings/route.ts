@@ -4,6 +4,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withPermission, withStatus } from "@/lib/auth/middlewares";
 import type { AuthRequest } from "@/lib/auth/types";
 import { withBookingAccessScope } from "@/lib/bookings/bookingAccess";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import {
   isValidEmail,
   normalizeEmail,
@@ -241,8 +242,6 @@ export const GET = compose(
   const pageTitleFilter = getFilterParam(searchParams, "pageTitle");
   const sortKey = searchParams.get("sortKey")?.trim() || "createdAt";
   const sortDir = searchParams.get("sortDir") === "asc" ? 1 : -1;
-  const dateFrom = searchParams.get("dateFrom_createdAt");
-  const dateTo = searchParams.get("dateTo_createdAt");
 
   const baseQuery: Record<string, unknown> = {};
   const andConditions: Record<string, unknown>[] = [];
@@ -288,18 +287,7 @@ export const GET = compose(
     });
   }
 
-  if (dateFrom || dateTo) {
-    const createdAt: Record<string, Date> = {};
-    if (dateFrom) {
-      const fromDate = new Date(dateFrom);
-      if (!Number.isNaN(fromDate.getTime())) createdAt.$gte = fromDate;
-    }
-    if (dateTo) {
-      const toDate = new Date(dateTo);
-      if (!Number.isNaN(toDate.getTime())) createdAt.$lte = toDate;
-    }
-    if (Object.keys(createdAt).length > 0) baseQuery.createdAt = createdAt;
-  }
+  applyDateRangeFilters(baseQuery, searchParams, ["createdAt"]);
 
   if (search) {
     const searchRegex = escapeRegex(search);

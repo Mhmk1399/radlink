@@ -249,7 +249,7 @@ export interface IPage extends Document {
   // Unique public slug/url.
   url: string;
 
-  owner: Types.ObjectId;
+  owner?: Types.ObjectId | null;
   assignedUser?: Types.ObjectId | null;
 
   // Optional template reference.
@@ -279,6 +279,7 @@ export interface IPage extends Document {
     keywords?: string[];
     canonical?: string;
     ogImage?: string;
+    allowIndexing?: boolean;
   };
 
   // Feature flags / integrations / misc settings
@@ -293,6 +294,7 @@ export interface IPage extends Document {
 
   isPublished: boolean;
   expiresAt?: Date | null;
+  autoAssignAt?: Date | null;
 
   publishedAt?: Date;
 
@@ -369,6 +371,8 @@ const PageBlockSchema = new Schema<PageBlock>(
   },
 );
 
+const AUTO_ASSIGN_DELAY_MS = 24 * 60 * 60 * 1000;
+
 const PageSchema = new Schema<IPage>(
   {
     title: {
@@ -394,7 +398,7 @@ const PageSchema = new Schema<IPage>(
     owner: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
       index: true,
     },
 
@@ -495,6 +499,11 @@ const PageSchema = new Schema<IPage>(
         type: String,
         trim: true,
       },
+      allowIndexing: {
+        type: Boolean,
+        default: true,
+        index: true,
+      },
     },
 
     extraServices: {
@@ -536,6 +545,12 @@ const PageSchema = new Schema<IPage>(
       default: null,
     },
 
+    autoAssignAt: {
+      type: Date,
+      default: () => new Date(Date.now() + AUTO_ASSIGN_DELAY_MS),
+      index: true,
+    },
+
     publishedAt: {
       type: Date,
     },
@@ -554,6 +569,8 @@ PageSchema.index({ owner: 1, "stats.views": -1, _id: -1 });
 PageSchema.index({ owner: 1, "stats.visitors": -1, _id: -1 });
 PageSchema.index({ assignedUser: 1, updatedAt: -1 });
 PageSchema.index({ assignedUser: 1, isPublished: 1, updatedAt: -1 });
+PageSchema.index({ owner: 1, assignedUser: 1, autoAssignAt: 1 });
+PageSchema.index({ owner: 1, assignedUser: 1, createdAt: 1 });
 
 /* ================================================================== */
 /*  Model                                                              */

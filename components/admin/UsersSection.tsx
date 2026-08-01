@@ -86,6 +86,7 @@ type UserRow = {
   "limits.files"?: number;
   "limits.blocks"?: number;
   "limits.pages"?: number;
+  password?: string;
 };
 
 type SelectOption = {
@@ -234,6 +235,12 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
   delete payload["limits.pages"];
   delete payload.permissions;
 
+  if (typeof item.password === "string" && item.password.trim()) {
+    payload.password = item.password;
+  } else {
+    delete payload.password;
+  }
+
   payload.agentid =
     typeof item.agentid === "string" && item.agentid.trim()
       ? item.agentid.trim()
@@ -316,17 +323,17 @@ export default function UsersSection({
   }
 
   useEffect(() => {
-    if (
-      !token ||
-      (authUser?.role !== "admin" && authUser?.role !== "superAdmin")
-    ) {
-      setAgentOptions([]);
-      return;
-    }
-
     let ignore = false;
 
     async function loadAgentOptions() {
+      if (
+        !token ||
+        (authUser?.role !== "admin" && authUser?.role !== "superAdmin")
+      ) {
+        if (!ignore) setAgentOptions([]);
+        return;
+      }
+
       try {
         const response = await fetch("/api/agents?limit=100", { headers });
         const json = await response.json().catch(() => null);
@@ -380,17 +387,26 @@ export default function UsersSection({
     () =>
       (json: unknown): UserRow[] => {
         // Support both { users: [...] } and plain [...]
+        const jsonRecord =
+          typeof json === "object" && json !== null
+            ? (json as Record<string, unknown>)
+            : null;
         const raw =
-          typeof json === "object" &&
-          json !== null &&
-          "users" in json &&
-          Array.isArray((json as any).users)
-            ? (json as any).users
+          jsonRecord && Array.isArray(jsonRecord.users)
+            ? jsonRecord.users
             : Array.isArray(json)
               ? json
               : [];
 
-        return raw.map((u: any) => {
+        return raw.map((item: unknown) => {
+          const u =
+            item && typeof item === "object"
+              ? (item as Record<string, unknown>)
+              : {};
+          const limits =
+            u.limits && typeof u.limits === "object"
+              ? (u.limits as Record<string, unknown>)
+              : {};
           const userId = String(u._id ?? u.id ?? "");
           const agentId = getObjectId(u.agentid);
           const agentLabel =
@@ -415,21 +431,23 @@ export default function UsersSection({
             agentLabel,
             // Normalise permissions (populated docs or raw ObjectId strings)
             permissions: Array.isArray(u.permissions)
-              ? u.permissions.map((p: any) =>
-                  typeof p === "object"
-                    ? String(p.name ?? p._id ?? p.id ?? p)
-                    : String(p),
-                )
+              ? u.permissions.map((p: unknown) => {
+                  if (!p || typeof p !== "object") return String(p);
+                  const permission = p as Record<string, unknown>;
+                  return String(
+                    permission.name ?? permission._id ?? permission.id ?? p,
+                  );
+                })
               : [],
             // Ensure limits always exists
             limits: {
-              files: u.limits?.files ?? 0,
-              blocks: u.limits?.blocks ?? 0,
-              pages: u.limits?.pages ?? 0,
+              files: Number(limits.files ?? 0),
+              blocks: Number(limits.blocks ?? 0),
+              pages: Number(limits.pages ?? 0),
             },
-            "limits.files": u.limits?.files ?? 0,
-            "limits.blocks": u.limits?.blocks ?? 0,
-            "limits.pages": u.limits?.pages ?? 0,
+            "limits.files": Number(limits.files ?? 0),
+            "limits.blocks": Number(limits.blocks ?? 0),
+            "limits.pages": Number(limits.pages ?? 0),
             // Normalise createdBy / updatedBy
             createdBy: formatUserRef(u.createdBy),
             updatedBy: formatUserRef(u.updatedBy),
@@ -489,6 +507,22 @@ export default function UsersSection({
         render: (value) => (
           <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
+      },
+      {
+        key: "password",
+        label: "رمز عبور",
+        inputType: "password",
+        visible: false,
+        placeholder: "مثلا Aa123456!",
+        formLabel: (mode) =>
+          mode === "create" ? "رمز عبور اولیه" : "رمز عبور جدید",
+        formHelpText: (mode) =>
+          mode === "create"
+            ? "اختیاری است؛ اگر پر شود کاربر می‌تواند با این رمز وارد شود."
+            : "برای تغییر رمز پر کنید؛ اگر خالی بماند رمز فعلی تغییر نمی‌کند.",
+        hiddenInForm: () =>
+          authUser?.role !== "admin" && authUser?.role !== "superAdmin",
+        copyable: false,
       },
       {
         key: "nationalCode",

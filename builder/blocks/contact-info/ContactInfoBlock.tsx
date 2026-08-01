@@ -12,6 +12,7 @@ import {
 
 import type {
   BlockComponentProps,
+  EditableStyleMap,
   PageBlock,
 } from "@/types/blocks/builder.types";
 
@@ -62,6 +63,33 @@ type ContactInfoItem = {
   backgroundColor?: string;
   textColor?: string;
 };
+
+type RenderContactInfoItem = {
+  id: string;
+  type: IconTone;
+  label: React.ReactNode;
+  value: React.ReactNode;
+  href?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  sourcePriority: number;
+  itemOrder: number;
+};
+
+const CONTACT_INFO_TYPE_ORDER: IconTone[] = [
+  "phone",
+  "whatsapp",
+  "email",
+  "address",
+  "link",
+];
+
+const CONTACT_INFO_TYPE_ORDER_MAP = CONTACT_INFO_TYPE_ORDER.reduce<
+  Record<IconTone, number>
+>((order, type, index) => {
+  order[type] = index;
+  return order;
+}, {} as Record<IconTone, number>);
 
 /* ================================================================== */
 /*  Styled                                                             */
@@ -133,10 +161,28 @@ const StyledDescription = styled.div<{ $styleCss: string }>`
   line-height: 1.9;
 `;
 
-const ItemsStack = styled.div`
-  display: flex;
-  flex-direction: column;
+const ItemsStack = styled.div<{
+  $mobileColumns: number;
+  $tabletColumns: number;
+  $desktopColumns: number;
+  $mobileOnly: boolean;
+}>`
+  display: grid;
   gap: 12px;
+  grid-template-columns: repeat(${(props) => props.$mobileColumns}, minmax(0, 1fr));
+
+  ${(props) =>
+    props.$mobileOnly
+      ? ""
+      : `
+        @media (min-width: 768px) {
+          grid-template-columns: repeat(${props.$tabletColumns}, minmax(0, 1fr));
+        }
+
+        @media (min-width: 1024px) {
+          grid-template-columns: repeat(${props.$desktopColumns}, minmax(0, 1fr));
+        }
+      `}
 `;
 
 const StyledItem = styled.div<{ $styleCss: string }>`
@@ -313,6 +359,31 @@ const ButtonIconWrap = styled.span<{ $variant: "primary" | "secondary" }>`
       : `
         background: rgba(15, 23, 42, 0.06);
       `}
+`;
+
+const EmptyStateWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+`;
+
+const EmptyStateIconCircle = styled.div`
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: #eef2ff;
+  color: #475569;
 `;
 
 /* ================================================================== */
@@ -533,6 +604,40 @@ function getExtraContactItems(
   });
 }
 
+function clampGridColumns(value: unknown, fallback: number) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(4, Math.max(1, Math.round(numeric)));
+}
+
+function getContactItemsGridColumns(
+  style: EditableStyleMap | undefined,
+  mobileOnly: boolean,
+) {
+  const mobile = clampGridColumns(style?.gridColumns?.mobile, 1);
+  const tablet = mobileOnly
+    ? mobile
+    : clampGridColumns(style?.gridColumns?.tablet, mobile);
+  const desktop = mobileOnly
+    ? mobile
+    : clampGridColumns(style?.gridColumns?.desktop, tablet);
+
+  return { mobile, tablet, desktop };
+}
+
+function sortContactItemsByType(items: RenderContactInfoItem[]) {
+  return [...items].sort((a, b) => {
+    const groupDiff =
+      CONTACT_INFO_TYPE_ORDER_MAP[a.type] - CONTACT_INFO_TYPE_ORDER_MAP[b.type];
+    if (groupDiff !== 0) return groupDiff;
+
+    const sourceDiff = a.sourcePriority - b.sourcePriority;
+    if (sourceDiff !== 0) return sourceDiff;
+
+    return a.itemOrder - b.itemOrder;
+  });
+}
+
 /* ================================================================== */
 /*  Main Component                                                     */
 /* ================================================================== */
@@ -570,6 +675,12 @@ export function ContactInfoBlock({
     `${PREFIX}-item`,
     { mobileOnly, effect: "card" },
   );
+  const itemGridColumns = getContactItemsGridColumns(
+    block.elements.container.style?.gridColumns
+      ? block.elements.container.style
+      : block.elements.item.style,
+    mobileOnly,
+  );
 
   const btnPriCss = responsiveStyleToCss(
     block.elements.buttonPrimary.style,
@@ -594,7 +705,7 @@ export function ContactInfoBlock({
   const addressLabel =
     String(block.data.addressLabel ?? "آدرس").trim() || "آدرس";
   const extraContactItems = getExtraContactItems(block.data.contactItems, {
-    includeEmpty: isEditor,
+    includeEmpty: false,
   });
 
   const updateRepeaterLabel = (
@@ -618,12 +729,170 @@ export function ContactInfoBlock({
   const whatsappHref = whatsapp ? `https://wa.me/${whatsapp}` : undefined;
   const emailHref = email ? `mailto:${email}` : undefined;
 
-  const hasAnyItem =
-    (Boolean(block.data.showPhone) && phone) ||
-    (Boolean(block.data.showWhatsapp) && whatsapp) ||
-    (Boolean(block.data.showEmail) && email) ||
-    (Boolean(block.data.showAddress) && address) ||
-    extraContactItems.length > 0;
+  const contactItems: RenderContactInfoItem[] = [];
+
+  if (Boolean(block.data.showPhone) && phone) {
+    contactItems.push({
+      id: "phone",
+      type: "phone",
+      label: (
+        <InlineEditableText
+          value={phoneLabel}
+          dataKey="phoneLabel"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <>{text}</>}
+        </InlineEditableText>
+      ),
+      value: (
+        <InlineEditableText
+          value={String(block.data.phone ?? "")}
+          dataKey="phone"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <span dir="ltr">{text}</span>}
+        </InlineEditableText>
+      ),
+      href: phoneHref,
+      sourcePriority: 0,
+      itemOrder: 0,
+    });
+  }
+
+  if (Boolean(block.data.showWhatsapp) && whatsapp) {
+    contactItems.push({
+      id: "whatsapp",
+      type: "whatsapp",
+      label: (
+        <InlineEditableText
+          value={whatsappLabel}
+          dataKey="whatsappLabel"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <>{text}</>}
+        </InlineEditableText>
+      ),
+      value: (
+        <InlineEditableText
+          value={String(block.data.whatsapp ?? "")}
+          dataKey="whatsapp"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <span dir="ltr">{text}</span>}
+        </InlineEditableText>
+      ),
+      href: whatsappHref,
+      sourcePriority: 0,
+      itemOrder: 1,
+    });
+  }
+
+  if (Boolean(block.data.showEmail) && email) {
+    contactItems.push({
+      id: "email",
+      type: "email",
+      label: (
+        <InlineEditableText
+          value={emailLabel}
+          dataKey="emailLabel"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <>{text}</>}
+        </InlineEditableText>
+      ),
+      value: (
+        <InlineEditableText
+          value={String(block.data.email ?? "")}
+          dataKey="email"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <span dir="ltr">{text}</span>}
+        </InlineEditableText>
+      ),
+      href: emailHref,
+      sourcePriority: 0,
+      itemOrder: 2,
+    });
+  }
+
+  if (Boolean(block.data.showAddress) && address) {
+    contactItems.push({
+      id: "address",
+      type: "address",
+      label: (
+        <InlineEditableText
+          value={addressLabel}
+          dataKey="addressLabel"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <>{text}</>}
+        </InlineEditableText>
+      ),
+      value: (
+        <InlineEditableText
+          value={String(block.data.address ?? "")}
+          dataKey="address"
+          instanceId={block.instanceId}
+          mode={mode}
+          multiline
+          onUpdateContent={onUpdateContent}
+        >
+          {(text) => <span>{text}</span>}
+        </InlineEditableText>
+      ),
+      sourcePriority: 0,
+      itemOrder: 3,
+    });
+  }
+
+  extraContactItems.forEach((item) => {
+    contactItems.push({
+      id: `extra-${item.id}`,
+      type: item.type,
+      label: (
+        <InlineEditableText
+          value={item.label}
+          dataKey="label"
+          instanceId={block.instanceId}
+          mode={mode}
+          onUpdateContent={(_, __, value) => updateRepeaterLabel(item, value)}
+        >
+          {(text) => <>{text}</>}
+        </InlineEditableText>
+      ),
+      value: (
+        <span dir={item.type === "address" ? "rtl" : "ltr"}>
+          {item.value || "بدون مقدار"}
+        </span>
+      ),
+      href: item.href,
+      backgroundColor: item.backgroundColor,
+      textColor: item.textColor,
+      sourcePriority: 1,
+      itemOrder: item.repeaterIndex ?? 0,
+    });
+  });
+
+  const visibleContactItems = sortContactItemsByType(contactItems);
+  const hasAnyItem = visibleContactItems.length > 0;
+
+  if (!isEditor && !hasAnyItem && !phone && !whatsapp) {
+    return null;
+  }
 
   return (
     <ContactRoot dir="rtl">
@@ -700,137 +969,13 @@ export function ContactInfoBlock({
                 selectedElementId={selectedElementId}
                 onSelectElement={onSelectElement}
               >
-                <ItemsStack>
-                  {Boolean(block.data.showPhone) && phone && (
-                    <StyledItem $styleCss={itemCss}>
-                      <ContactItemRow
-                        icon={<PhoneIcon />}
-                        label={
-                          <InlineEditableText
-                            value={phoneLabel}
-                            dataKey="phoneLabel"
-                            instanceId={block.instanceId}
-                            mode={mode}
-                            onUpdateContent={onUpdateContent}
-                          >
-                            {(text) => <>{text}</>}
-                          </InlineEditableText>
-                        }
-                        href={phoneHref}
-                        isEditor={isEditor}
-                        tone="phone"
-                      >
-                        <InlineEditableText
-                          value={String(block.data.phone ?? "")}
-                          dataKey="phone"
-                          instanceId={block.instanceId}
-                          mode={mode}
-                          onUpdateContent={onUpdateContent}
-                        >
-                          {(text) => <span dir="ltr">{text}</span>}
-                        </InlineEditableText>
-                      </ContactItemRow>
-                    </StyledItem>
-                  )}
-
-                  {Boolean(block.data.showWhatsapp) && whatsapp && (
-                    <StyledItem $styleCss={itemCss}>
-                      <ContactItemRow
-                        icon={<WhatsappIcon />}
-                        label={
-                          <InlineEditableText
-                            value={whatsappLabel}
-                            dataKey="whatsappLabel"
-                            instanceId={block.instanceId}
-                            mode={mode}
-                            onUpdateContent={onUpdateContent}
-                          >
-                            {(text) => <>{text}</>}
-                          </InlineEditableText>
-                        }
-                        href={whatsappHref}
-                        isEditor={isEditor}
-                        tone="whatsapp"
-                      >
-                        <InlineEditableText
-                          value={String(block.data.whatsapp ?? "")}
-                          dataKey="whatsapp"
-                          instanceId={block.instanceId}
-                          mode={mode}
-                          onUpdateContent={onUpdateContent}
-                        >
-                          {(text) => <span dir="ltr">{text}</span>}
-                        </InlineEditableText>
-                      </ContactItemRow>
-                    </StyledItem>
-                  )}
-
-                  {Boolean(block.data.showEmail) && email && (
-                    <StyledItem $styleCss={itemCss}>
-                      <ContactItemRow
-                        icon={<EmailIcon />}
-                        label={
-                          <InlineEditableText
-                            value={emailLabel}
-                            dataKey="emailLabel"
-                            instanceId={block.instanceId}
-                            mode={mode}
-                            onUpdateContent={onUpdateContent}
-                          >
-                            {(text) => <>{text}</>}
-                          </InlineEditableText>
-                        }
-                        href={emailHref}
-                        isEditor={isEditor}
-                        tone="email"
-                      >
-                        <InlineEditableText
-                          value={String(block.data.email ?? "")}
-                          dataKey="email"
-                          instanceId={block.instanceId}
-                          mode={mode}
-                          onUpdateContent={onUpdateContent}
-                        >
-                          {(text) => <span dir="ltr">{text}</span>}
-                        </InlineEditableText>
-                      </ContactItemRow>
-                    </StyledItem>
-                  )}
-
-                  {Boolean(block.data.showAddress) && address && (
-                    <StyledItem $styleCss={itemCss}>
-                      <ContactItemRow
-                        icon={<AddressIcon />}
-                        label={
-                          <InlineEditableText
-                            value={addressLabel}
-                            dataKey="addressLabel"
-                            instanceId={block.instanceId}
-                            mode={mode}
-                            onUpdateContent={onUpdateContent}
-                          >
-                            {(text) => <>{text}</>}
-                          </InlineEditableText>
-                        }
-                        href={undefined}
-                        isEditor={isEditor}
-                        tone="address"
-                      >
-                        <InlineEditableText
-                          value={String(block.data.address ?? "")}
-                          dataKey="address"
-                          instanceId={block.instanceId}
-                          mode={mode}
-                          multiline
-                          onUpdateContent={onUpdateContent}
-                        >
-                          {(text) => <span>{text}</span>}
-                        </InlineEditableText>
-                      </ContactItemRow>
-                    </StyledItem>
-                  )}
-
-                  {extraContactItems.map((item) => (
+                <ItemsStack
+                  $mobileColumns={itemGridColumns.mobile}
+                  $tabletColumns={itemGridColumns.tablet}
+                  $desktopColumns={itemGridColumns.desktop}
+                  $mobileOnly={mobileOnly}
+                >
+                  {visibleContactItems.map((item) => (
                     <StyledItem
                       key={item.id}
                       $styleCss={itemCss}
@@ -843,105 +988,111 @@ export function ContactInfoBlock({
                     >
                       <ContactItemRow
                         icon={getContactItemIcon(item.type)}
-                        label={
-                          <InlineEditableText
-                            value={item.label}
-                            dataKey="label"
-                            instanceId={block.instanceId}
-                            mode={mode}
-                            onUpdateContent={(_, __, value) =>
-                              updateRepeaterLabel(item, value)
-                            }
-                          >
-                            {(text) => <>{text}</>}
-                          </InlineEditableText>
-                        }
+                        label={item.label}
                         href={item.href}
                         isEditor={isEditor}
                         tone={item.type}
                       >
-                        <span dir={item.type === "address" ? "rtl" : "ltr"}>
-                          {item.value || "بدون مقدار"}
-                        </span>
+                        {item.value}
                       </ContactItemRow>
                     </StyledItem>
                   ))}
+
+
+
+
                 </ItemsStack>
               </EditablePart>
             )}
 
+            {!hasAnyItem && isEditor && (
+              <EmptyStateWrapper>
+                <EmptyStateIconCircle>
+                  <PhoneIcon />
+                </EmptyStateIconCircle>
+                <p
+                  className="text-sm text-slate-400 text-center leading-relaxed"
+                  style={{ margin: 0 }}
+                >
+                  هنوز آیتمی برای اطلاعات تماس وارد نشده است.
+                  <br />
+                  <span className="text-xs text-slate-300">
+                    آیتم‌ها را از تب محتوا اضافه کنید.
+                  </span>
+                </p>
+              </EmptyStateWrapper>
+            )}
+
             {/* Buttons */}
-            {Boolean(block.data.showButtons) && (
+            {Boolean(block.data.showButtons) && (phone || whatsapp) && (
               <ButtonsRow>
-                <EditablePart
-                  instanceId={block.instanceId}
-                  elementId="buttonPrimary"
-                  mode={mode}
-                  selectedElementId={selectedElementId}
-                  onSelectElement={onSelectElement}
-                >
-                  <StyledButtonPrimary
-                    $styleCss={btnPriCss}
-                    href={!isEditor && phone ? `tel:${phone}` : undefined}
-                    onClick={(e) => {
-                      if (isEditor) e.preventDefault();
-                    }}
-                    className="min-w-[140px] justify-center no-underline"
+                {phone && (
+                  <EditablePart
+                    instanceId={block.instanceId}
+                    elementId="buttonPrimary"
+                    mode={mode}
+                    selectedElementId={selectedElementId}
+                    onSelectElement={onSelectElement}
                   >
-                    <ButtonIconWrap $variant="primary">
-                      <PhoneIcon />
-                    </ButtonIconWrap>
-
-                    <InlineEditableText
-                      value={String(block.data.primaryButtonText ?? "")}
-                      dataKey="primaryButtonText"
-                      instanceId={block.instanceId}
-                      mode={mode}
-                      onUpdateContent={onUpdateContent}
+                    <StyledButtonPrimary
+                      $styleCss={btnPriCss}
+                      href={!isEditor ? `tel:${phone}` : undefined}
+                      onClick={(e) => {
+                        if (isEditor) e.preventDefault();
+                      }}
+                      className="min-w-[140px] justify-center no-underline"
                     >
-                      {(text) => <span>{text}</span>}
-                    </InlineEditableText>
-                  </StyledButtonPrimary>
-                </EditablePart>
+                      <ButtonIconWrap $variant="primary">
+                        <PhoneIcon />
+                      </ButtonIconWrap>
 
-                <EditablePart
-                  instanceId={block.instanceId}
-                  elementId="buttonSecondary"
-                  mode={mode}
-                  selectedElementId={selectedElementId}
-                  onSelectElement={onSelectElement}
-                >
-                  <StyledButtonSecondary
-                    $styleCss={btnSecCss}
-                    href={
-                      !isEditor && whatsapp
-                        ? `https://wa.me/${whatsapp}`
-                        : undefined
-                    }
-                    target={!isEditor && whatsapp ? "_blank" : undefined}
-                    rel={
-                      !isEditor && whatsapp ? "noopener noreferrer" : undefined
-                    }
-                    onClick={(e) => {
-                      if (isEditor) e.preventDefault();
-                    }}
-                    className="min-w-[160px] justify-center no-underline"
+                      <InlineEditableText
+                        value={String(block.data.primaryButtonText ?? "")}
+                        dataKey="primaryButtonText"
+                        instanceId={block.instanceId}
+                        mode={mode}
+                        onUpdateContent={onUpdateContent}
+                      >
+                        {(text) => <span>{text}</span>}
+                      </InlineEditableText>
+                    </StyledButtonPrimary>
+                  </EditablePart>
+                )}
+
+                {whatsapp && (
+                  <EditablePart
+                    instanceId={block.instanceId}
+                    elementId="buttonSecondary"
+                    mode={mode}
+                    selectedElementId={selectedElementId}
+                    onSelectElement={onSelectElement}
                   >
-                    <ButtonIconWrap $variant="secondary">
-                      <WhatsappIcon />
-                    </ButtonIconWrap>
-
-                    <InlineEditableText
-                      value={String(block.data.secondaryButtonText ?? "")}
-                      dataKey="secondaryButtonText"
-                      instanceId={block.instanceId}
-                      mode={mode}
-                      onUpdateContent={onUpdateContent}
+                    <StyledButtonSecondary
+                      $styleCss={btnSecCss}
+                      href={!isEditor ? `https://wa.me/${whatsapp}` : undefined}
+                      target={!isEditor ? "_blank" : undefined}
+                      rel={!isEditor ? "noopener noreferrer" : undefined}
+                      onClick={(e) => {
+                        if (isEditor) e.preventDefault();
+                      }}
+                      className="min-w-[160px] justify-center no-underline"
                     >
-                      {(text) => <span>{text}</span>}
-                    </InlineEditableText>
-                  </StyledButtonSecondary>
-                </EditablePart>
+                      <ButtonIconWrap $variant="secondary">
+                        <WhatsappIcon />
+                      </ButtonIconWrap>
+
+                      <InlineEditableText
+                        value={String(block.data.secondaryButtonText ?? "")}
+                        dataKey="secondaryButtonText"
+                        instanceId={block.instanceId}
+                        mode={mode}
+                        onUpdateContent={onUpdateContent}
+                      >
+                        {(text) => <span>{text}</span>}
+                      </InlineEditableText>
+                    </StyledButtonSecondary>
+                  </EditablePart>
+                )}
               </ButtonsRow>
             )}
           </ContentLayer>

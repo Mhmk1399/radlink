@@ -123,6 +123,7 @@ export interface CreateUserPayload {
     email?: string;
     nationalCode?: string;
     fatherName?: string;
+    password?: string;
     role?: UserRole;
     status?: UserStatus;
     limits?: Partial<AgentLimits>;
@@ -458,6 +459,9 @@ export interface PageSeo {
     title?: string;
     description?: string;
     keywords?: string[];
+    canonical?: string;
+    ogImage?: string;
+    allowIndexing?: boolean;
 }
 
 export interface PageStats {
@@ -489,6 +493,8 @@ export interface PageFooter {
     borderColor?: string;
     showRadlinkBranding?: boolean;
     brandingText?: string;
+    brandingLinkText?: string;
+    brandingLinkUrl?: string;
 }
 
 export interface Page extends BaseDocument {
@@ -498,7 +504,7 @@ export interface Page extends BaseDocument {
     jason: Record<string, unknown>;
     selectedTemplateId?: string;
     selectedTemplate?: Template;
-    ownerId: string;
+    ownerId?: string;
     owner?: User;
     assignedUserId?: string;
     assignedUser?: User;
@@ -509,6 +515,7 @@ export interface Page extends BaseDocument {
     footer?: PageFooter;
     favicon?: string;
     expiresAt?: string | null;
+    autoAssignAt?: string | null;
     isPublished?: boolean;
     pageData?: Record<string, unknown>;
     extraServices?: PageExtraServices;

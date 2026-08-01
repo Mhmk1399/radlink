@@ -10,6 +10,8 @@ export type PageFooterSettings = {
   borderColor: string;
   showRadlinkBranding: boolean;
   brandingText: string;
+  brandingLinkText: string;
+  brandingLinkUrl: string;
 };
 
 export const DEFAULT_PAGE_FOOTER: PageFooterSettings = {
@@ -24,6 +26,8 @@ export const DEFAULT_PAGE_FOOTER: PageFooterSettings = {
   borderColor: "rgba(15,23,42,0.10)",
   showRadlinkBranding: true,
   brandingText: "این سایت ساخته شده توسط رادلینک می‌باشد",
+  brandingLinkText: "رادلینک",
+  brandingLinkUrl: "https://nfcrad.link/",
 };
 
 function cleanString(value: unknown, fallback = "") {
@@ -32,6 +36,32 @@ function cleanString(value: unknown, fallback = "") {
 
 function cleanBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function parseMarkdownLink(text: string) {
+  const match = text.match(/\[([^\]]+)\]\(([^)]+)\)/);
+  if (!match) return null;
+
+  return {
+    text: text.replace(match[0], match[1]).trim(),
+    linkText: match[1].trim(),
+    linkUrl: match[2].trim(),
+  };
+}
+
+export function sanitizePageFooterLinkUrl(value: unknown, fallback = "") {
+  const url = cleanString(value, fallback);
+  if (!url) return "";
+  if (url.startsWith("/") && !url.startsWith("//")) return url;
+
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:", "mailto:", "tel:"].includes(parsed.protocol)
+      ? url
+      : "";
+  } catch {
+    return "";
+  }
 }
 
 export function normalizePageFooterSettings(
@@ -47,6 +77,8 @@ export function normalizePageFooterSettings(
     ...DEFAULT_PAGE_FOOTER,
     ...fallback,
   };
+  const rawBrandingText = cleanString(source.brandingText, base.brandingText);
+  const markdownLink = parseMarkdownLink(rawBrandingText);
 
   return {
     enabled: cleanBoolean(source.enabled, base.enabled),
@@ -68,6 +100,14 @@ export function normalizePageFooterSettings(
       source.showRadlinkBranding,
       base.showRadlinkBranding,
     ),
-    brandingText: cleanString(source.brandingText, base.brandingText),
+    brandingText: markdownLink?.text ?? rawBrandingText,
+    brandingLinkText: cleanString(
+      source.brandingLinkText,
+      markdownLink?.linkText ?? base.brandingLinkText,
+    ),
+    brandingLinkUrl: sanitizePageFooterLinkUrl(
+      source.brandingLinkUrl,
+      markdownLink?.linkUrl ?? base.brandingLinkUrl,
+    ),
   };
 }

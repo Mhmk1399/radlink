@@ -6,6 +6,7 @@ import {
     canAccessActorOwner,
     withActorOwnerScope,
 } from "@/lib/auth/agentScope";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import { createQrForPage } from "@/lib/qrCode";
 import QR from "@/models/qr";
 import Page from "@/models/pages";
@@ -55,6 +56,8 @@ export const GET = compose(
     const query: Record<string, unknown> =
         await withActorOwnerScope(user);
     if (isActive !== null) query.isActive = isActive === "true";
+
+    applyDateRangeFilters(query, searchParams, ["createdAt"]);
 
     const [qrs, total] = await Promise.all([
         QR.find(query)

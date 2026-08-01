@@ -163,6 +163,13 @@ const daamon = localFont({
   preload: false,
 });
 
+const bnazanin = localFont({
+  src: "../../next-persian-fonts/Bnazanain/B-NAZANIN.ttf",
+  variable: "--font-bnazanin",
+  display: "swap",
+  preload: false,
+});
+
 const landingNextFonts = {
   vazir,
   yekan,
@@ -174,6 +181,7 @@ const landingNextFonts = {
   aria,
   ray,
   daamon,
+  bnazanin,
 } satisfies Record<
   LandingFontId,
   {

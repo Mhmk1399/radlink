@@ -8,12 +8,14 @@ type SmsIrResponse = {
   [key: string]: unknown;
 };
 
+const SMS_CONFIG_INCOMPLETE_MESSAGE = "تنظیمات پیامک کامل نیست.";
+
 const getSmsClient = () => {
   const apiKey = (process.env.SMS_IR_API_KEY || process.env.smskey || "").trim();
   const lineNumber = Number(process.env.SMS_IR_LINE_NUMBER?.trim());
 
   if (!apiKey || Number.isNaN(lineNumber)) {
-    throw new Error("SMS.ir configuration is incomplete");
+    throw new Error(SMS_CONFIG_INCOMPLETE_MESSAGE);
   }
 
   return new Smsir(apiKey, lineNumber);
@@ -40,7 +42,7 @@ export async function sendVerificationCode(phone: string, code: string) {
   } catch (error: unknown) {
     if (
       error instanceof Error &&
-      error.message === "SMS.ir configuration is incomplete"
+      error.message === SMS_CONFIG_INCOMPLETE_MESSAGE
     ) {
       console.log("[SMS.ir] configuration is incomplete; skipped SMS send.");
       return true;
@@ -49,15 +51,15 @@ export async function sendVerificationCode(phone: string, code: string) {
     if (typeof error === "object" && error && "response" in error) {
       const response = (error as { response?: { status?: number; data?: unknown } })
         .response;
-      console.log("SMS send response:", {
+      console.log("پاسخ ارسال پیامک:", {
         status: response?.status,
         data: response?.data,
       });
     }
 
     console.log(
-      "SMS send error:",
-      error instanceof Error ? error.message : "Unknown error"
+      "خطای ارسال پیامک:",
+      error instanceof Error ? error.message : "خطای ناشناخته"
     );
     return false;
   }
@@ -79,10 +81,10 @@ export async function sendOrderConfirmationSMS(phone: string, customerName: stri
       { name: 'ORDERID', value: shortOrderId }
     ]);
     
-    console.log('SMS send result:', result);
+    console.log("نتیجه ارسال پیامک:", result);
     return result.data?.status === 1;
   } catch (error: unknown) {
-    console.log('Order SMS send error:', error instanceof Error ? error.message : 'Unknown error');
+    console.log("خطای ارسال پیامک سفارش:", error instanceof Error ? error.message : "خطای ناشناخته");
     return false;
   }
 }
@@ -126,10 +128,10 @@ export async function sendStatusUpdateSMS(phone: string, customerName: string, o
       { name: 'ORDERNAME', value: truncatedOrderName }
     ]);
     
-    console.log('Status update SMS send result:', result);
+    console.log("نتیجه ارسال پیامک تغییر وضعیت:", result);
     return result.data?.status === 1;
   } catch (error: unknown) {
-    console.log('Status update SMS send error:', error instanceof Error ? error.message : 'Unknown error');
+    console.log("خطای ارسال پیامک تغییر وضعیت:", error instanceof Error ? error.message : "خطای ناشناخته");
     return false;
   }
 }

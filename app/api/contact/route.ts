@@ -10,6 +10,7 @@ import {
     normalizePhoneNumber,
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 
 export const POST = compose(withDB())(async (req: AuthRequest) => {
     const body = await req.json();
@@ -76,6 +77,8 @@ export const GET = compose(
             { message: { $regex: search, $options: "i" } },
         ];
     }
+
+    applyDateRangeFilters(query, searchParams, ["createdAt"]);
 
     const [contactMessages, total] = await Promise.all([
         ContactMessage.find(query)

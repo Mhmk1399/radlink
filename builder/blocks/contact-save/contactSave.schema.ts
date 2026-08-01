@@ -32,7 +32,12 @@ export const contactSaveSchema: BlockSchema = {
     },
     {
       key: "phoneNumber",
-      label: "شماره همراه",
+      label: "شماره تماس اول",
+      type: "text",
+    },
+    {
+      key: "phoneNumberSecondary",
+      label: "شماره تماس دوم",
       type: "text",
     },
     {

@@ -24,6 +24,15 @@ import {
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
 import { getManagedUserIds } from "@/lib/auth/agentScope";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
+import {
+    hashPassword,
+    validateStrongPassword,
+} from "@/lib/auth/password";
+import {
+    normalizeIdList,
+    validateSinglePermissionIdSelection,
+} from "@/lib/auth/permissionAssignment";
 
 // GET /api/users
 export const GET = compose(
@@ -84,6 +93,14 @@ export const GET = compose(
             { email: { $regex: safeSearch, $options: "i" } },
         ];
     }
+
+    applyDateRangeFilters(query, searchParams, [
+        "lastLoginAt",
+        "lastOtpRequestAt",
+        "phoneVerifiedAt",
+        "createdAt",
+        "updatedAt",
+    ]);
 
     if (
         mode === "agent-options" ||
@@ -160,7 +177,7 @@ export const POST = compose(
             return NextResponse.json(
                 {
                     code: "UNAUTHORIZED",
-                    message: "Authentication is required.",
+                    message: "برای انجام این عملیات ابتدا وارد حساب کاربری شوید.",
                 },
                 { status: 401 },
             );
@@ -297,8 +314,55 @@ export const POST = compose(
         const effectiveLimits = requesterAgent
             ? requesterAgent.limits
             : body.limits;
+        const requestedPassword =
+            typeof body.password === "string" ? body.password : "";
+        const hasRequestedPassword = requestedPassword.trim().length > 0;
+        const permissionIds =
+            currentUser.role !== "agent" && Array.isArray(body.permissions)
+                ? normalizeIdList(body.permissions)
+                : [];
+        if (!permissionIds.every((id) => mongoose.Types.ObjectId.isValid(id))) {
+            return NextResponse.json(
+                { message: "یکی از شناسه‌های دسترسی معتبر نیست." },
+                { status: 400 },
+            );
+        }
 
-        // Only a superAdmin should create another superAdmin.
+        const permissionSelectionError =
+            validateSinglePermissionIdSelection(permissionIds);
+        if (permissionSelectionError) {
+            return NextResponse.json(
+                { code: "TOO_MANY_USER_PERMISSIONS", message: permissionSelectionError },
+                { status: 409 },
+            );
+        }
+
+        if (
+            hasRequestedPassword &&
+            currentUser.role !== "admin" &&
+            currentUser.role !== "superAdmin"
+        ) {
+            return NextResponse.json(
+                { message: "فقط مدیر می‌تواند برای کاربر رمز عبور تعیین کند." },
+                { status: 403 },
+            );
+        }
+
+        const passwordValidationError = hasRequestedPassword
+            ? validateStrongPassword(requestedPassword, { phoneNumber })
+            : null;
+        if (passwordValidationError) {
+            return NextResponse.json(
+                {
+                    code: "INVALID_PASSWORD",
+                    message: passwordValidationError,
+                    field: "password",
+                },
+                { status: 400 },
+            );
+        }
+
+        // فقط سوپر ادمین می‌تواند سوپر ادمین دیگری ایجاد کند.
         if (
             role === "superAdmin" &&
             currentUser.role !== "superAdmin"
@@ -307,7 +371,7 @@ export const POST = compose(
                 {
                     code: "SUPER_ADMIN_CREATION_FORBIDDEN",
                     message:
-                        "Only a super admin can create another super admin.",
+                        "فقط سوپر ادمین می‌تواند سوپر ادمین دیگری ایجاد کند.",
                 },
                 { status: 403 },
             );
@@ -323,7 +387,7 @@ export const POST = compose(
                 {
                     code: "PHONE_NUMBER_ALREADY_EXISTS",
                     message:
-                        "A user with this phone number already exists.",
+                        "کاربری با این شماره تماس قبلاً ثبت شده است.",
                 },
                 { status: 409 },
             );
@@ -354,9 +418,7 @@ export const POST = compose(
 
             agentid: agentId || undefined,
 
-            permissions: currentUser.role !== "agent" && Array.isArray(body.permissions)
-                ? body.permissions
-                : [],
+            permissions: permissionIds,
 
             limits: {
                 files: Math.max(
@@ -379,6 +441,12 @@ export const POST = compose(
                 : undefined,
 
             isDeleted: false,
+            ...(hasRequestedPassword
+                ? {
+                    passwordHash: await hashPassword(requestedPassword),
+                    passwordChangedAt: new Date(),
+                }
+                : {}),
 
             // These values must come from the authenticated server user,
             // not from the frontend payload.
@@ -408,7 +476,7 @@ export const POST = compose(
 
         return NextResponse.json(
             {
-                message: "User created successfully.",
+                message: "کاربر با موفقیت ساخته شد.",
                 user: populatedUser,
             },
             { status: 201 },
@@ -426,7 +494,7 @@ export const POST = compose(
                 {
                     code: "DUPLICATE_USER_DATA",
                     message:
-                        "The phone number, email, or national code already exists.",
+                        "شماره تماس، ایمیل یا کد ملی قبلاً ثبت شده است.",
                     field: mongoError.keyPattern
                         ? Object.keys(mongoError.keyPattern)[0]
                         : undefined,
@@ -438,7 +506,7 @@ export const POST = compose(
         return NextResponse.json(
             {
                 code: "USER_CREATION_FAILED",
-                message: "Failed to create user.",
+                message: "ساخت کاربر با خطا مواجه شد.",
             },
             { status: 500 },
         );

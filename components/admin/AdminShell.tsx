@@ -1553,6 +1553,9 @@ function DynamicIsland({
 
   const canShow = (key: AdminSection) => {
     if (SUPER_ADMIN_ONLY_SECTIONS.has(key)) return isSuperAdmin;
+    if (key === "settings") {
+      return effectiveRole === "admin" || effectiveRole === "superAdmin";
+    }
     if (key === "profile" || isSuperAdmin) return true;
     return !accessLoading && !accessError && can(`admin.${key}`, "view");
   };
@@ -1828,6 +1831,9 @@ function Sidebar({
 
   const sections = SECTION_META.filter((item) => {
     if (SUPER_ADMIN_ONLY_SECTIONS.has(item.key)) return isSuperAdmin;
+    if (item.key === "settings") {
+      return authUser?.role === "admin" || authUser?.role === "superAdmin";
+    }
     if (item.key === "profile" || isSuperAdmin) return true;
     return !accessLoading && !accessError && can(`admin.${item.key}`, "view");
   });
@@ -2218,8 +2224,7 @@ function Header({
     isSuperAdmin,
   } = useAccess();
   const meta = SECTION_META.find((m) => m.key === currentSection);
-  const canCreatePageFromAdmin =
-    !isAccessLoading && can("builder.page", "create");
+  const canCreatePageFromAdmin = !isAccessLoading && authUser !== null;
   const canViewNotifications =
     isSuperAdmin ||
     (!isAccessLoading && !isAccessError && can("admin.notifications", "view"));
@@ -2356,6 +2361,7 @@ export default function AdminShell({
   const { section, navigate } = useHashRoute();
   const {
     can,
+    user: accessUser,
     isLoading: isAccessLoading,
     isError: isAccessError,
     isSuperAdmin,
@@ -2364,13 +2370,17 @@ export default function AdminShell({
   const canViewSection = useCallback(
     (key: AdminSection) => {
       if (SUPER_ADMIN_ONLY_SECTIONS.has(key)) return isSuperAdmin;
+      if (key === "settings") {
+        const role = accessUser?.role ?? authUser?.role;
+        return role === "admin" || role === "superAdmin";
+      }
       return (
         key === "profile" ||
         isSuperAdmin ||
         (!isAccessError && can(`admin.${key}`, "view"))
       );
     },
-    [can, isAccessError, isSuperAdmin],
+    [accessUser?.role, authUser?.role, can, isAccessError, isSuperAdmin],
   );
 
   const fallbackSection = useMemo(

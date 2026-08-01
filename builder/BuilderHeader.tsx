@@ -216,6 +216,7 @@ export function BuilderHeader({
             </button>
             <button
               type="button"
+              data-tour="tour-guide-btn"
               onClick={onStartTour}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95"
               title="راهنمای صفحه‌ساز"

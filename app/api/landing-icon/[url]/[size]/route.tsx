@@ -34,7 +34,7 @@ async function readImageBuffer(src: string, requestUrl: string) {
   const contentType = response.headers.get("content-type") ?? "";
 
   if (!response.ok || !contentType.toLowerCase().startsWith("image/")) {
-    throw new Error("Icon source is not a valid image");
+    throw new Error("منبع آیکون تصویر معتبر نیست.");
   }
 
   return Buffer.from(await response.arrayBuffer());
@@ -97,7 +97,7 @@ async function normalizeSourceIcon(source: Buffer, size: number) {
     return await resizeSourceIcon(source, size);
   } catch {
     const icoPng = extractPngFromIco(source, size);
-    if (!icoPng) throw new Error("Unsupported icon image format");
+    if (!icoPng) throw new Error("فرمت تصویر آیکون پشتیبانی نمی‌شود.");
     return resizeSourceIcon(icoPng, size);
   }
 }
@@ -145,7 +145,7 @@ export async function GET(request: Request, context: RouteContext) {
   const size = Number(rawSize);
 
   if (!isLandingGeneratedIconSize(size)) {
-    return new Response("Invalid icon size", { status: 400 });
+    return new Response("اندازه آیکون معتبر نیست.", { status: 400 });
   }
 
   await connectDB();
@@ -155,7 +155,7 @@ export async function GET(request: Request, context: RouteContext) {
     .lean();
 
   if (!page || page.isPublished !== true || isPageExpired(page.expiresAt)) {
-    return new Response("Icon not found", { status: 404 });
+    return new Response("آیکون پیدا نشد.", { status: 404 });
   }
 
   const iconConfig = getLandingIconConfig({

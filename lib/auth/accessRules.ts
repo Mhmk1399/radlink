@@ -126,6 +126,10 @@ export function getAccessTargetForRequest(
     };
   }
 
+  if (pathname === "/api/pages" && normalizedMethod === "POST") {
+    return null;
+  }
+
   if (
     pathname === "/api/blocks" &&
     normalizedMethod === "GET" &&

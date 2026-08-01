@@ -521,7 +521,7 @@ export function SmartSuggestions({
             <div className="min-w-0">
               <h1
                 id="builder-start-title"
-                className={`truncate text-base font-black ${t.textPrimary} sm:text-xl`}
+                className={`truncate text-xs font-black ${t.textPrimary} sm:text-xl`}
               >
                 صفحه جدید را چطور شروع می‌کنید؟
               </h1>

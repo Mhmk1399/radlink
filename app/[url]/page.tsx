@@ -132,6 +132,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       robots: { index: false, follow: false },
     };
   }
+  if (page.seo?.allowIndexing === false) {
+    return {
+      title: String(page.seo?.title || page.title || "صفحه"),
+      robots: { index: false, follow: false },
+    };
+  }
 
   const iconConfig = getLandingIconConfig({
     favicon: page.favicon,
@@ -207,12 +213,7 @@ export default async function PageRoute({ params }: Props) {
   const footer = normalizePageFooterSettings(page.footer);
   const landingFontClassName = getLandingFontClassName(page.font);
   const landingFontStyle = getLandingFontStyle(page.font);
-  const iconConfig = getLandingIconConfig({
-    favicon: page.favicon,
-    settings: page.settings,
-  });
   const iconVersion = getPageIconVersion(page as Record<string, unknown>);
-  const browserIcon = withIconVersion(iconConfig.browserIcon, iconVersion);
   const generatedIcon180 = getLandingGeneratedIconUrl(url, 180, iconVersion);
   const generatedIcon192 = getLandingGeneratedIconUrl(url, 192, iconVersion);
   const manifestUrl = `/api/landing-manifest/${encodeURIComponent(url)}?v=${encodeURIComponent(iconVersion)}`;

@@ -1,40 +1,44 @@
 import Image from "next/image";
 import {
   normalizePageFooterSettings,
+  sanitizePageFooterLinkUrl,
   type PageFooterSettings,
 } from "@/lib/design/page-footer";
-import Link from "next/link";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const RADLINK_BRANDING_WORD = "رادلینک";
-const RADLINK_BRANDING_URL = "https://nfcrad.link/";
-
-function RadlinkBrandingText({
+function LinkedBrandingText({
   text,
+  linkText,
+  linkUrl,
   accentColor,
 }: {
   text: string;
+  linkText: string;
+  linkUrl: string;
   accentColor: string;
 }) {
-  const wordIndex = text.indexOf(RADLINK_BRANDING_WORD);
+  const safeUrl = sanitizePageFooterLinkUrl(linkUrl);
+  const linkedPart = linkText.trim();
+  const wordIndex = linkedPart ? text.indexOf(linkedPart) : -1;
 
-  if (wordIndex < 0) return <>{text}</>;
+  if (!safeUrl || wordIndex < 0) return <>{text}</>;
 
   return (
     <>
       {text.slice(0, wordIndex)}
-      <Link
-        href={RADLINK_BRANDING_URL}
+      <a
+        href={safeUrl}
         target="_blank"
+        rel="noopener noreferrer"
         className="font-black underline decoration-2 underline-offset-4 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2"
         style={{ color: accentColor }}
       >
-        {RADLINK_BRANDING_WORD}
-      </Link>
-      {text.slice(wordIndex + RADLINK_BRANDING_WORD.length)}
+        {linkedPart}
+      </a>
+      {text.slice(wordIndex + linkedPart.length)}
     </>
   );
 }
@@ -56,8 +60,7 @@ export function LandingFooter({
   const logo = pageLogo || "";
   const title = String(pageTitle || "رادلینک").trim();
   const description = footer.description.trim();
-  const brandText =
-    footer.brandingText || "این سایت ساخته شده توسط رادلینک می‌باشد";
+  const brandText = footer.brandingText.trim();
 
   return (
     <footer
@@ -108,7 +111,7 @@ export function LandingFooter({
           )}
         </div>
 
-        <p
+        {/* <p
           className={cn(
             "mt-3 max-w-full truncate font-black",
             compact ? "text-sm" : "text-base",
@@ -116,7 +119,7 @@ export function LandingFooter({
           style={{ color: footer.accentColor }}
         >
           {title}
-        </p>
+        </p> */}
 
         {description ? (
           <p
@@ -148,23 +151,22 @@ export function LandingFooter({
           </div>
         ) : null}
 
-        <div
-          className="mt-4 h-px w-full max-w-xs"
-          style={{ backgroundColor: footer.borderColor }}
-        />
-
-        {footer.showRadlinkBranding ? (
-          <p className="mt-3 text-[11px] font-bold leading-5 opacity-75">
-            <RadlinkBrandingText
-              text={brandText}
-              accentColor={footer.accentColor}
+        {footer.showRadlinkBranding && brandText ? (
+          <>
+            <div
+              className="mt-4 h-px w-full max-w-xs"
+              style={{ backgroundColor: footer.borderColor }}
             />
-          </p>
-        ) : (
-          <p className="mt-3 text-[11px] leading-5 opacity-55">
-            تمامی حقوق این صفحه محفوظ است.
-          </p>
-        )}
+            <p className="mt-3 text-[11px] font-bold leading-5 opacity-75">
+              <LinkedBrandingText
+                text={brandText}
+                linkText={footer.brandingLinkText}
+                linkUrl={footer.brandingLinkUrl}
+                accentColor={footer.accentColor}
+              />
+            </p>
+          </>
+        ) : null}
       </div>
     </footer>
   );

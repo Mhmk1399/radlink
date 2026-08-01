@@ -64,6 +64,7 @@ export const contactInfoSchema: BlockSchema = {
         "borderRadius",
         "borderColor",
         "borderWidth",
+        "gridColumns",
         "animation",
       ],
     },

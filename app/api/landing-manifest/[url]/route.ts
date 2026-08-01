@@ -46,7 +46,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (!page || page.isPublished !== true || isPageExpired(page.expiresAt)) {
     return NextResponse.json(
-      { message: "Manifest not found" },
+      { message: "مانیفست پیدا نشد." },
       { status: 404 },
     );
   }

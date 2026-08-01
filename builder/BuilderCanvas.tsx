@@ -181,6 +181,7 @@ export function CanvasDropZone({
   return (
     <div
       ref={setNodeRef}
+      data-tour="tour-canvas"
       className={[
         "rounded-[24px] border-2 bg-white transition-all duration-300",
         showHighlight
@@ -368,6 +369,7 @@ export function CanvasContent({
     return (
       <div
         ref={setNodeRef}
+        data-tour="tour-canvas"
         className={[
           "relative min-h-[420px] rounded-3xl border-2 transition-all duration-300",
           isActive
@@ -395,7 +397,7 @@ export function CanvasContent({
             <p className="mt-2 text-[13px] text-blue-500">بلاک اضافه می‌شه</p>
           </div>
         ) : showSmartSuggestions ? (
-          <div></div>
+          <div data-tour="tour-empty-add-btn"></div>
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-2xl">
@@ -409,6 +411,7 @@ export function CanvasContent({
             </p>
             <button
               type="button"
+              data-tour="tour-empty-add-btn"
               onClick={onOpenCatalog}
               className="mt-5 rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-neutral-800"
             >
@@ -446,7 +449,11 @@ export function CanvasContent({
       />
       <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
         {sortedBlocks.map((block, index) => (
-          <div key={block.instanceId} style={getBlockSpacingStyle(block)}>
+          <div
+            key={block.instanceId}
+            data-tour={index === 0 ? "tour-canvas-first-block" : undefined}
+            style={getBlockSpacingStyle(block)}
+          >
             {/* ── Gap قبل از هر بلاک (فقط وقتی palette drag فعاله) ── */}
             {isPaletteDragging && (
               <DropGap id={`gap-before-${block.instanceId}`} isActive={false} />

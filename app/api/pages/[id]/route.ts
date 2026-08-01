@@ -131,6 +131,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function canManageFooterBranding(role: unknown) {
+    return role === "agent" || role === "admin" || role === "superAdmin";
+}
+
 function getOptionalObjectId(value: unknown) {
     if (value === undefined || value === null || value === "") return undefined;
     if (typeof value === "string" && mongoose.Types.ObjectId.isValid(value)) {
@@ -522,9 +526,11 @@ export const PATCH = compose(
         const footerPatch: Record<string, unknown> = { ...requestedFooter };
         footerPatch.logo = "";
 
-        if (user.role !== "superAdmin") {
+        if (!canManageFooterBranding(user.role)) {
             delete footerPatch.showRadlinkBranding;
             delete footerPatch.brandingText;
+            delete footerPatch.brandingLinkText;
+            delete footerPatch.brandingLinkUrl;
         }
 
         update.footer = normalizePageFooterSettings(
@@ -543,30 +549,40 @@ export const PATCH = compose(
     }
 
     if (body.blocks !== undefined) {
+        const currentOwnerId = currentPage.owner ? String(currentPage.owner) : "";
         const ownerUser =
-            String(currentPage.owner) === String(user._id)
+            currentOwnerId && String(currentOwnerId) === String(user._id)
                 ? user
-                : await User.findById(currentPage.owner);
+                : currentOwnerId
+                  ? await User.findById(currentOwnerId)
+                  : null;
 
-        if (!ownerUser) {
+        if (currentOwnerId && !ownerUser) {
             return NextResponse.json(
                 { message: "مالک صفحه پیدا نشد." },
                 { status: 404 }
             );
         }
 
-        const nextBlocks = Array.isArray(update.blocks) ? update.blocks : [];
-        const blockQuota = await checkUserQuota({
-            user: ownerUser,
-            resource: "blocks",
-            absoluteUsage: nextBlocks.length,
-            currentUsage: currentPage.blocks.length,
-        });
-        if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+        if (ownerUser) {
+            const nextBlocks = Array.isArray(update.blocks) ? update.blocks : [];
+            const blockQuota = await checkUserQuota({
+                user: ownerUser,
+                resource: "blocks",
+                absoluteUsage: nextBlocks.length,
+                currentUsage: currentPage.blocks.length,
+            });
+            if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+        }
     }
 
     const currentSeo = isObject(currentPage.seo) ? currentPage.seo : {};
-    const requestedSeo = isObject(body.seo) ? body.seo : {};
+    const requestedSeo = isObject(body.seo) ? { ...body.seo } : {};
+    if (user.role !== "superAdmin") {
+        delete requestedSeo.allowIndexing;
+    } else if (Object.prototype.hasOwnProperty.call(requestedSeo, "allowIndexing")) {
+        requestedSeo.allowIndexing = requestedSeo.allowIndexing !== false;
+    }
     const nextUrl =
         typeof update.url === "string" ? update.url : String(currentPage.url);
     const nextLogo =
@@ -599,13 +615,16 @@ export const PATCH = compose(
         );
     }
 
-    await syncPageProducts({
-        pageId: page._id,
-        ownerId:
-            (update.owner as string | undefined) ??
-            String(currentPage.owner),
-        blocks: page.blocks,
-    });
+    const productOwnerId =
+        (update.owner as string | undefined) ??
+        (currentPage.owner ? String(currentPage.owner) : "");
+    if (productOwnerId) {
+        await syncPageProducts({
+            pageId: page._id,
+            ownerId: productOwnerId,
+            blocks: page.blocks,
+        });
+    }
 
     const currentFooter = normalizePageFooterSettings(currentPage.footer);
     const nextFooter = update.footer
@@ -644,6 +663,7 @@ export const PATCH = compose(
         revalidatePath(`/${currentPage.url}`);
     }
     revalidatePath("/[url]", "page");
+    revalidatePath("/sitemap.xml");
     invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({ page });
@@ -710,6 +730,7 @@ export const DELETE = compose(
     );
 
     revalidatePath("/[url]", "page");
+    revalidatePath("/sitemap.xml");
     invalidatePageExpiryAlertsCache();
 
     return NextResponse.json({

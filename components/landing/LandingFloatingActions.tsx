@@ -12,6 +12,7 @@ import {
 import {
   buildVCardFileName,
   buildVCardHref,
+  downloadContactVCard,
   getContactSaveData,
 } from "@/builder/blocks/contact-save/ContactSaveBlock";
 import type { PageBlock } from "@/types/blocks/builder.types";
@@ -71,7 +72,10 @@ export default function LandingFloatingActions({
   const contactData = contactBlock ? getContactSaveData(contactBlock) : null;
   const contactBlockId = contactBlock?.instanceId ?? null;
   const canSaveContact = Boolean(
-    contactData?.phoneNumber.trim() && contactBlock && !contactBlock.hidden,
+    (contactData?.phoneNumber.trim() ||
+      contactData?.phoneNumberSecondary.trim()) &&
+      contactBlock &&
+      !contactBlock.hidden,
   );
   const showEditorContactHelp =
     mode === "editor" &&
@@ -191,7 +195,15 @@ export default function LandingFloatingActions({
                 if (mode === "editor") {
                   event.preventDefault();
                   startEditingContact();
+                  return;
                 }
+
+                event.preventDefault();
+                void downloadContactVCard(contactData)
+                  .then(() => setOpen(false))
+                  .catch(() =>
+                    setFeedback("ذخیره مخاطب انجام نشد. دوباره تلاش کنید."),
+                  );
               }}
               className={actionClass}
               title="ذخیره در مخاطبین دستگاه"

@@ -36,6 +36,8 @@ type SpotlightRect = {
   height: number;
 };
 
+type GoToStep = (nextIndex: number, direction?: 1 | -1, retries?: number) => void;
+
 const TOUR_KEY = "builder-tour-done-v5";
 const VIEWPORT_GAP = 8;
 const SPOTLIGHT_PADDING = 8;
@@ -53,6 +55,10 @@ function getTargetElement(selector: string): HTMLElement | null {
 
 function isSidebarTarget(selector: string) {
   return selector.includes("tour-sidebar");
+}
+
+function isValidTourStep(step: TourStep | undefined): step is TourStep {
+  return Boolean(step?.target);
 }
 
 function buildSpotlightRect(rect: DOMRect): SpotlightRect {
@@ -160,6 +166,7 @@ export function BuilderTour({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshRafRef = useRef<number | null>(null);
+  const goToStepRef = useRef<GoToStep | null>(null);
 
   const clearRetryTimer = useCallback(() => {
     if (retryTimerRef.current) {
@@ -224,6 +231,14 @@ export function BuilderTour({
         content:
           "همه بلاک‌هایی که اضافه می‌کنی اینجا نمایش داده می‌شن. می‌تونی انتخاب، ویرایش و جابه‌جاشون کنی.",
         icon: "🧱",
+      },
+      {
+        target: "[data-tour='tour-guide-btn']",
+        placement: "bottom",
+        title: "اجرای دوباره راهنما",
+        content:
+          "هر وقت خواستی دوباره مسیر صفحه‌ساز را مرور کنی، از این دکمه راهنما را از اول اجرا کن.",
+        icon: "؟",
       },
     ];
 
@@ -347,26 +362,27 @@ export function BuilderTour({
           baseSteps[2],
           baseSteps[3],
           baseSteps[4],
+          baseSteps[6],
           desktopSteps[1],
           desktopSteps[2],
           desktopSteps[3],
           desktopSteps[4],
           desktopSteps[5],
-          desktopSteps[6],
           baseSteps[5],
           ...endSteps,
-        ]
+        ].filter(isValidTourStep)
       : [
           baseSteps[0],
           baseSteps[1],
           baseSteps[2],
           baseSteps[3],
           baseSteps[4],
+          baseSteps[6],
           mobileSteps[0],
           mobileSteps[1],
           baseSteps[5],
           ...endSteps,
-        ];
+        ].filter(isValidTourStep);
   }, [hasBlocks, hasInspector, isDesktop]);
 
   const finishTour = useCallback(
@@ -390,16 +406,19 @@ export function BuilderTour({
 
   // Mount effect
   useEffect(() => {
-    setMounted(true);
-
     const updateViewport = () => {
       setIsDesktop(window.innerWidth >= 1024);
     };
 
-    updateViewport();
+    const mountTimer = window.setTimeout(() => {
+      setMounted(true);
+      updateViewport();
+    }, 0);
+
     window.addEventListener("resize", updateViewport, { passive: true });
 
     return () => {
+      window.clearTimeout(mountTimer);
       window.removeEventListener("resize", updateViewport);
     };
   }, []);
@@ -456,11 +475,15 @@ export function BuilderTour({
       }
 
       const step = steps[nextIndex];
+      if (!step) {
+        finishTour(false);
+        return;
+      }
 
       if (isDesktop && sidebarCollapsed && isSidebarTarget(step.target)) {
         onExpandSidebar();
         retryTimerRef.current = setTimeout(() => {
-          goToStep(nextIndex, direction, retries);
+          goToStepRef.current?.(nextIndex, direction, retries);
         }, 450);
         return;
       }
@@ -470,12 +493,12 @@ export function BuilderTour({
       if (!targetEl) {
         if (retries > 0) {
           retryTimerRef.current = setTimeout(() => {
-            goToStep(nextIndex, direction, retries - 1);
+            goToStepRef.current?.(nextIndex, direction, retries - 1);
           }, 180);
           return;
         }
 
-        goToStep(nextIndex + direction, direction, 12);
+        goToStepRef.current?.(nextIndex + direction, direction, 12);
         return;
       }
 
@@ -508,6 +531,15 @@ export function BuilderTour({
     ],
   );
 
+  useEffect(() => {
+    goToStepRef.current = goToStep;
+    return () => {
+      if (goToStepRef.current === goToStep) {
+        goToStepRef.current = null;
+      }
+    };
+  }, [goToStep]);
+
   // تابع شروع تور
   const startTour = useCallback(() => {
     if (steps.length === 0) return;
@@ -535,8 +567,10 @@ export function BuilderTour({
     }
 
     if (done) {
-      setTourInitialized(true);
-      return;
+      const doneTimer = window.setTimeout(() => {
+        setTourInitialized(true);
+      }, 0);
+      return () => window.clearTimeout(doneTimer);
     }
 
     // صبر برای اطمینان از آماده شدن DOM
@@ -564,10 +598,8 @@ export function BuilderTour({
   useEffect(() => {
     if (!forceRun || !mounted) return;
 
-    // ریست کردن state ها
-    setTourInitialized(false);
-
     const timer = setTimeout(() => {
+      setTourInitialized(false);
       startTour();
       onForceRunHandled?.();
     }, 300);

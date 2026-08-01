@@ -9,6 +9,7 @@ export const LANDING_FONT_IDS = [
   "aria",
   "ray",
   "daamon",
+  "bnazanin",
 ] as const;
 
 export type LandingFontId = (typeof LANDING_FONT_IDS)[number];
@@ -82,6 +83,12 @@ export const LANDING_FONT_OPTIONS: LandingFontOption[] = [
     label: "دامون",
     description: "خاص، نرم و مناسب برندهای خلاق",
     previewText: "نمونه متن لندینگ با فونت دامون",
+  },
+  {
+    id: "bnazanin",
+    label: "B Nazanin",
+    description: "خوانا و رسمی برای بیشتر لندینگ‌ها",
+    previewText: "نمونه متن لندینگ با فونت بی نازنین",
   },
 ];
 

@@ -1,6 +1,6 @@
 # Radlink System Blueprint
 
-آخرین بازبینی کد: 2026-07-15
+آخرین بازبینی کد: 2026-08-01
 
 این فایل مرجع سریع و عملیاتی پروژه است. هدفش این است که هر نفر جدیدی با خواندن همین سند بفهمد Radlink چطور کار می‌کند، مسیرهای حساس کجاست، چه فایل‌هایی برای تغییر خطرناک‌ترند، و برای توسعه آینده باید از چه قراردادهایی پیروی کند.
 
@@ -79,6 +79,7 @@ flowchart LR
 | `/builder` | ساخت صفحه یا قالب جدید |
 | `/builder/[pageId]` | ویرایش صفحه موجود |
 | `/[url]` | لندینگ عمومی ساخته‌شده |
+| `/about`, `/contact`, `/terms` | صفحات static عمومی درباره، تماس و قوانین |
 
 نکته App Router: فایل‌های `page.tsx` و `layout.tsx` به صورت پیش‌فرض Server Component هستند. هر جا state، event، localStorage یا browser API داریم، فایل با `"use client"` شروع شده است. صفحه‌ساز عمدا با `dynamic(..., { ssr: false })` لود می‌شود چون کاملا تعاملی و browser-heavy است.
 
@@ -156,6 +157,20 @@ Permission چند Access را گروه می‌کند و به چند user وصل 
 - `grantedBy`
 - `isActive`
 
+قرارداد فعلی: هر user فقط می‌تواند در یک Permission فعال عضو باشد. APIهای `POST /api/permissions`، `PATCH /api/permissions/[id]` و مسیرهای مستقیم مدیریت user اجازه نمی‌دهند یک کاربر همزمان بیش از یک permission فعال بگیرد. خود Permission همچنان می‌تواند چند Access داخل `accesses` داشته باشد.
+
+### SystemSetting
+
+فایل: `models/systemSetting.ts`
+
+تنظیمات سراسری پروژه در این مدل key/value ذخیره می‌شوند. فعلا برای قابلیت تخصیص خودکار صفحات استفاده می‌شود.
+
+فیلدهای مهم:
+
+- `key`: کلید تنظیم، unique.
+- `value`: مقدار string؛ برای `autoPageAssignment.targetUserId` فقط شناسه کاربر ذخیره می‌شود.
+- `updatedBy`: آخرین admin/superAdmin که تنظیم را تغییر داده است.
+
 ### Page
 
 فایل: `models/pages.ts`
@@ -176,13 +191,45 @@ Permission چند Access را گروه می‌کند و به چند user وصل 
 - `footer`: تنظیمات فوتر.
 - `favicon`
 - `thumbnail`
-- `seo`
+- `seo`: شامل `title`, `description`, `keywords`, `canonical`, `ogImage`, `allowIndexing`.
 - `settings`: تنظیمات آزاد مثل فعال/غیرفعال بودن آیکن اختصاصی home screen.
 - `stats.views`, `stats.visitors`
 - `isPublished`
 - `expiresAt`, `publishedAt`
+- `autoAssignAt`: زمان واجد شرایط شدن صفحه برای تخصیص خودکار ۲۴ ساعته.
 
 اصل مهم: `Page.blocks` فقط reference نیست؛ snapshot کامل هر بلاک است. بعد از اضافه شدن بلاک به صفحه، تغییرات کاربر در همان snapshot ذخیره می‌شود.
+
+نکته مالکیت: بعضی صفحه‌ها می‌توانند موقتا بدون `owner` و `assignedUser` باشند، مخصوصا صفحه‌هایی که با اکشن duplicate بدون مالک ساخته می‌شوند. این حالت خطا نیست، ولی چنین صفحه‌ای تا زمان assign دستی یا auto assignment باید با scope و queryهای backend با دقت مدیریت شود.
+
+#### تخصیص خودکار صفحه‌های بدون صاحب
+
+برای صفحه‌هایی که بدون صاحب ساخته یا کپی می‌شوند، مثل کپی کامل صفحه بدون مالکیت، سیستم یک job زمان‌بندی‌شده دارد.
+
+جریان دقیق:
+
+1. ادمین در پنل `تنظیمات` یک کاربر مقصد انتخاب می‌کند.
+2. فقط شناسه همان کاربر در مدل `SystemSetting` با کلید `autoPageAssignment.targetUserId` ذخیره می‌شود؛ اطلاعات کامل کاربر داخل Page کپی نمی‌شود.
+3. روی VPS، سرویس `auto-assign-pages-cron` در `docker-compose.yml` کنار سرویس اصلی app بالا می‌آید.
+4. این سرویس طبق `AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE`، به صورت پیش‌فرض روزی یک‌بار، endpoint داخلی `POST /api/cron/auto-assign-pages` را صدا می‌زند.
+5. endpoint با `RADLINK_CRON_SECRET` محافظت می‌شود و بدون secret معتبر اجرا نمی‌شود.
+6. قبل از تخصیص، کاربر مقصد باید وجود داشته باشد، `active` باشد و حذف نشده باشد.
+7. job فقط صفحه‌هایی را پردازش می‌کند که `owner = null` و `assignedUser = null` دارند و یا `autoAssignAt <= now` است یا برای رکوردهای قدیمی‌تر حداقل ۲۴ ساعت از `createdAt` گذشته است.
+8. تخصیص با `findOneAndUpdate` شرط‌دار انجام می‌شود؛ بنابراین اگر قبل یا هم‌زمان owner/assignedUser دستی ثبت شده باشد، job آن صفحه را overwrite نمی‌کند.
+9. مقدار `owner` صفحه برابر userId تنظیم‌شده می‌شود و محصولات builder مرتبط با همان صفحه هم با owner جدید sync می‌شوند.
+10. نتیجه اجرا شامل تعداد صفحات بررسی‌شده و تخصیص‌یافته با prefix `[AUTO_24H_PAGE_ASSIGNMENT]` در log سرور ثبت می‌شود.
+
+برای این قابلیت از `setTimeout`، تایمر داخل process یا TTL index استفاده نمی‌شود؛ صفحه نباید حذف شود و زمان‌بندی باید بیرون از process اصلی app، با cron سرویس VPS انجام شود. روی query صفحه‌های واجد شرایط هم باید index مناسب بر اساس `owner`, `assignedUser`, `autoAssignAt` و `createdAt` وجود داشته باشد.
+
+این job idempotent است؛ اجرای چندباره یا هم‌زمان آن نباید صفحه‌ای را دوباره تخصیص دهد یا تخصیص دستی را خراب کند.
+
+#### ایندکس شدن و سایت‌مپ
+
+- صفحات static مثل `/about`, `/contact` و `/terms` باید در sitemap باشند.
+- لندینگ‌های ساخته‌شده هم وارد sitemap می‌شوند، مگر اینکه `seo.allowIndexing` برای آن‌ها `false` باشد.
+- فقط سوپرادمین می‌تواند از پنل صفحات مقدار `seo.allowIndexing` را تغییر دهد.
+- وقتی `allowIndexing = false` باشد، صفحه نباید در `sitemap.xml` بیاید و در خروجی عمومی باید noindex لحاظ شود.
+- تغییر انتشار، انقضا یا allowIndexing باید `revalidatePath("/sitemap.xml")` را در مسیرهای مرتبط حفظ کند.
 
 ### Block
 
@@ -337,6 +384,13 @@ Block مدل master برای کاتالوگ بلاک‌هاست. صفحه‌سا
 5. پنل ادمین با `AdminAuthProvider` وجود توکن را چک می‌کند.
 6. APIهای محافظت‌شده با `withAuth()` توکن را می‌خوانند و user را در `req.ctx.user` می‌گذارند.
 
+ورود با رمز:
+
+- admin و superAdmin می‌توانند هنگام ساخت user رمز اولیه ثبت کنند یا در فرم ویرایش user رمز را تغییر دهند.
+- مسیر `/api/auth/login-password` نباید کاربری را که رمز معتبر دارد مجبور کند اول با پیامک وارد شود. این حالت برای userهایی لازم است که از ابتدا توسط admin ساخته شده‌اند.
+- بعد از ورود موفق با رمز، اگر شماره قبلا verified نشده باشد، همان ورود موفق می‌تواند وضعیت تایید شماره را کامل کند.
+- پیام‌های خطای backend مربوط به auth و users باید فارسی و قابل نمایش به کاربر باشند.
+
 ریسک فعلی بسیار مهم:
 
 در کد فعلی، بررسی واقعی OTP در `app/api/auth/verify-otp/route.ts` کامنت شده است. یعنی اگر phone موجود باشد، مسیر verify می‌تواند بدون مقایسه OTP واقعی کاربر را verified کند و JWT بدهد. این مورد در `docs/BUGS.md` هم به عنوان P0 آمده و هنوز در کد فعلی دیده می‌شود.
@@ -387,8 +441,10 @@ sequenceDiagram
 - `admin` و `superAdmin` در owner scope معمولا global هستند.
 - `agent` فقط خودش و userهای زیرمجموعه‌اش را می‌بیند.
 - `user` فقط منابع خودش و صفحه‌هایی که به خودش assign شده‌اند را می‌بیند.
+- ساخت صفحه از پنل ادمین دیگر به Access جداگانه مثل `builder.page` وابسته نیست؛ هر کاربر واردشده در پنل باید دکمه ساخت صفحه را ببیند. کنترل‌های امنیتی داخل route ساخت صفحه همچنان auth، status، quota، template/block access و publish access را بررسی می‌کنند.
 - برای صفحه‌ها، `withPageAccessScope` هم `owner` و هم `assignedUser` را لحاظ می‌کند.
 - برای رزروها، `withBookingAccessScope` علاوه بر `pageOwner` و `assignedUser`، خود Pageهای assign شده و agent را هم لحاظ می‌کند.
+- هر user فقط می‌تواند عضو یک Permission فعال باشد. اگر هنگام ساخت/ویرایش Permission یا مدیریت مستقیم user تلاش شود یک user به Permission فعال دوم اضافه شود، API باید خطای فارسی بدهد.
 
 Frontend:
 
@@ -434,6 +490,7 @@ Sectionهای اصلی:
 | bookings | `BookingsSection` | `Booking`, `/api/bookings` |
 | notifications | `NotificationsSection` | `Notification`, `/api/notifications` |
 | contactMessages | `ContactMessagesSection` | `ContactMessage`, `/api/contact` |
+| settings | `SettingsSection` | `SystemSetting`, `/api/settings/*` |
 | profile | `ProfileSection` | `/api/auth/me`, `/api/auth/password` |
 
 `DynamicTable` بسیار مهم است. امکاناتش:
@@ -445,6 +502,20 @@ Sectionهای اصلی:
 - row actions.
 - action buttons.
 - access-aware create/update/delete.
+
+قراردادهای فعلی `DynamicTable`:
+
+- فیلترهای تاریخ باید به شکل range واقعی به API ارسال و در backend با helper مشترک مثل `lib/api/dateRangeFilters.ts` به query تبدیل شوند.
+- در موبایل، فیلترهای بالای جدول داخل panel مرتب و قابل collapse هستند و فیلترهای تاریخ باید full width باشند. در دسکتاپ نباید layout قبلی جدول تغییر کند.
+- double click روی ردیف باید اول فرم edit همان table را باز کند؛ اگر آن table فرم edit/action مناسب ندارد، فرم view باز می‌شود.
+- کلیک روی controlهای داخلی ردیف مثل button، checkbox، لینک، menu و input نباید trigger دابل‌کلیک ردیف شود.
+
+نکته‌های مهم Admin:
+
+- دکمه ساخت صفحه در header/PagesSection عمومی‌تر از access catalog است و برای کاربران واردشده پنل نمایش داده می‌شود.
+- PagesSection برای superAdmin قابلیت روشن/خاموش کردن ورود صفحه به sitemap را از طریق `seo.allowIndexing` دارد.
+- PagesSection اکشن duplicate دارد که snapshot کامل صفحه، theme، blocks، header، footer و تنظیمات را کپی می‌کند، ولی slug/domain تصادفی تازه می‌سازد و مالکیت را خالی می‌گذارد تا بعدا دستی یا توسط auto assignment تعیین شود.
+- SettingsSection برای admin/superAdmin تنظیم کاربر مقصد تخصیص خودکار صفحه‌های بدون صاحب را ذخیره می‌کند.
 
 ریسک نگهداری: `DynamicTable.tsx` بسیار بزرگ است و هر تغییر در آن می‌تواند روی چندین section اثر بگذارد.
 
@@ -499,6 +570,12 @@ stateهای مهم PageBuilder:
 - products از بلاک `productCards` با `syncPageProducts` سینک می‌شوند.
 - QR برای صفحه جدید ساخته می‌شود.
 - صفحه با blocks embedded ذخیره می‌شود.
+
+رفتارهای UX فعلی صفحه‌ساز:
+
+- فونت‌های قابل انتخاب صفحه‌ساز از `lib/design/landing-fonts.ts` و `lib/design/landing-fonts.next.ts` می‌آیند. فونت `Bnazanin` هم باید در همین قرارداد موجود باشد و import فونت محلی نباید باعث خطای Turbopack در client bundle شود.
+- تور راهنمای builder باید مرحله «اضافه کردن بلاک با drag» را بدون گیر کردن رد کند و دکمه راهنما هم خودش در مراحل tour معرفی شود.
+- در مرحله‌های tour، اگر target یک step پیدا نشود یا step نامعتبر باشد، tour نباید با TypeError روی `step.target` متوقف شود.
 
 ## Block System
 
@@ -567,6 +644,33 @@ registry الان به صورت مرکزی این قابلیت‌ها را به 
 - `builder/blocks/shared/responsiveStyleToCss.ts`
 
 `responsiveStyleToCss.ts` تبدیل styleهای responsive به CSS واقعی را انجام می‌دهد و animation/shadow/textAlign/contentAlign را رندر می‌کند. اگر یک style در فرم انتخاب می‌شود ولی در خروجی اثر ندارد، اول این فایل و سپس component همان بلاک را بررسی کن.
+
+### قراردادهای خاص بلاک‌های مهم
+
+`productCards`:
+
+- در دسکتاپ کارت‌ها باید ۳ ستونه نمایش داده شوند.
+- در موبایل همان الگوی اسکرول افقی حفظ می‌شود و اندازه کارت‌ها کمی کوچک‌تر از دسکتاپ است.
+- هر کارت می‌تواند دکمه خودش را داشته باشد، اما دو دکمه block-level هم زیر کل کارت‌ها وجود دارد. این دو دکمه نباید با دکمه داخلی کارت‌ها قاطی شوند.
+- دو دکمه زیر کارت‌ها باید مستقل قابل خاموش/روشن شدن، تغییر متن، تغییر لینک و تغییر ظاهر باشند.
+- وقتی کاربر محصول جدید به repeater اضافه می‌کند، آیتم جدید باید متن/قیمت/تصویر یا مقادیر default قابل فهم داشته باشد تا کارت خالی و گیج‌کننده ساخته نشود.
+- ذخیره صفحه باید محصولات این بلاک را با `syncPageProducts` سینک کند.
+
+`contactSave`:
+
+- عکس آپلودشده مخاطب باید در فایل ذخیره مخاطب موبایل‌ها هم لحاظ شود.
+- بلاک باید امکان ثبت دو شماره تماس برای یک مخاطب را داشته باشد.
+
+`contactInfo`, `mapLinks`, `messengerLinks`:
+
+- آیتم‌های هم‌نوع باید کنار هم گروه شوند؛ مثلا دو Telegram، دو phone یا دو Google Map پشت سر هم بیایند.
+- placeholderهای بدون داده نباید در حالت عادی public/preview مثل آیتم واقعی نمایش داده شوند.
+- وقتی هنوز داده‌ای در تب محتوا ثبت نشده، خود بلاک باید یک متن راهنما نشان دهد؛ مثل «آیتم‌ها را از تب محتوا اضافه کنید».
+
+`contactInfo`:
+
+- تعداد ستون‌های grid آیتم‌ها از تب استایل تا ۴ ستون قابل تنظیم است.
+- کنترل grid باید با انتخاب container بلاک در تب استایل نمایش داده شود، نه با کلیک روی تک‌تک آیتم‌ها.
 
 ## Dynamic Island و فرم‌های ویرایش
 
@@ -656,6 +760,24 @@ Theme Studio روی صفحه و بلاک‌ها اعمال می‌کند:
 
 `PageRenderer` روی هر بلاک `getBlockSpacingStyle(b)` اعمال می‌کند. بنابراین margin/padding بیرونی بلاک‌ها در public landing هم اثر می‌گذارد.
 
+## صفحات Static عمومی
+
+فایل‌های اصلی:
+
+- `components/static/auth/AuthPage.tsx`
+- `components/static/Terms/TermsContent.tsx`
+- `app/terms/page.tsx`
+- `app/about/page.tsx`
+- `app/contact/page.tsx`
+- `app/sitemap.ts`
+- `app/robots.ts`
+
+قراردادها:
+
+- صفحات `/about`، `/contact` و `/terms` بخشی از سایت اصلی هستند و باید در sitemap حضور داشته باشند.
+- لینک قوانین در صفحه ورود/ثبت‌نام باید به جای خروج کامل از flow، محتوای قوانین را داخل modal نمایش دهد.
+- متن قوانین باید متناسب با پروژه رادلینک باشد: ساخت لندینگ، QR/NFC، ذخیره مخاطب، رزرو، پیام‌رسان‌ها، فایل‌ها، مسئولیت محتوای کاربر و حریم خصوصی.
+
 ## Header و Footer
 
 Header:
@@ -677,7 +799,15 @@ Footer:
 - تنظیمات: `lib/design/page-footer.ts`
 - ذخیره در Page/Template: `footer`
 
-Footer باید همیشه با page logo کار کند، چون پروژه لوگوی جدا برای footer ندارد. متن Radlink branding هم از footer setting می‌آید و کلمه Radlink لینک‌دار/underline/bold رندر می‌شود.
+Footer باید همیشه با page logo کار کند، چون پروژه لوگوی جدا برای footer ندارد.
+
+قرارداد branding فوتر:
+
+- متن پیش‌فرض می‌تواند چیزی شبیه «این سایت ساخته شده توسط رادلینک می‌باشد» باشد، اما خروجی public نباید اسم سایت را جداگانه و اجباری به فوتر اضافه کند.
+- متن فوتر باید از تنظیمات خود صفحه/قالب بیاید و همان متن تنظیم‌شده رندر شود.
+- admin و agent باید برای صفحه‌های داخل scope خود بتوانند branding فوتر را روشن/خاموش کنند.
+- متن کامل branding، بخش لینک‌دار متن و URL لینک باید قابل تغییر باشد. مثلا در متن بالا فقط «رادلینک» می‌تواند به `https://nfcrad.link/` لینک شود.
+- لینک فقط باید روی segment انتخاب‌شده اعمال شود، نه کل جمله.
 
 نکته مهم UX:
 
@@ -882,8 +1012,11 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `/api/templates` و `/api/templates/[id]` | قالب‌ها |
 | `/api/builder/template-catalog` | کاتالوگ قالب برای builder |
 | `/api/pages` و `/api/pages/[id]` | صفحات |
+| `/api/pages/[id]/duplicate` | کپی کامل صفحه با slug/domain تازه و بدون owner/assignedUser |
 | `/api/pages/[id]/blocks` | mutationهای legacy/جزئی روی blocks |
 | `/api/pages/[id]/view` | آمار بازدید public |
+| `/api/settings/auto-page-assignment` | خواندن/ذخیره user مقصد تخصیص خودکار صفحات بدون صاحب |
+| `/api/cron/auto-assign-pages` | اجرای job زمان‌بندی‌شده تخصیص خودکار صفحات بدون صاحب |
 | `/api/categories` و `/api/categories/[id]` | دسته‌بندی قالب‌ها |
 | `/api/uploads` | upload فایل |
 | `/api/uploads/delete` | حذف فایل |
@@ -919,14 +1052,20 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `lib/auth/pagePublishAccess.ts` | اجازه publish صفحات |
 | `app/api/auth/verify-otp/route.ts` | نقطه صدور JWT و ریسک فعلی OTP bypass |
 | `app/api/auth/send-otp/route.ts` | OTP، rate limit اولیه، ساخت user |
+| `app/api/auth/login-password/route.ts` | ورود با رمز و verified کردن userهای ساخته‌شده توسط admin |
 | `app/api/pages/route.ts` | ساخت/list صفحه، QR، sync products، publish |
 | `app/api/pages/[id]/route.ts` | ویرایش/حذف صفحه، blocks، publish، owner |
+| `app/api/pages/[id]/duplicate/route.ts` | کپی کامل صفحه و ساخت صفحه بدون owner |
+| `app/api/settings/auto-page-assignment/route.ts` | تعیین user مقصد برای تخصیص خودکار |
+| `app/api/cron/auto-assign-pages/route.ts` | endpoint زمان‌بندی‌شده و secret-protected |
 | `app/api/uploads/route.ts` | upload public فایل، quota، storage |
 | `lib/s3.ts`, `lib/liaraStorage.ts` | credential و object storage |
 | `lib/fileDeletion.ts` | حذف storage و DB record |
+| `lib/pages/autoAssignUnownedPages.ts` | منطق atomic تخصیص خودکار صفحات بدون صاحب |
 | `models/users.ts` | identity و role |
 | `models/access.ts` | قرارداد permission |
 | `models/permission.ts` | assignment دسترسی‌ها |
+| `models/systemSetting.ts` | تنظیمات سراسری حساس مثل user مقصد auto assignment |
 | `models/pages.ts` | کل لندینگ‌ها و public state |
 | `models/booking.ts` | اطلاعات مشتری و رزرو |
 | `models/files.ts` | فایل‌های آپلودی و لینک‌ها |
@@ -952,15 +1091,21 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `lib/design/logo-header.ts` | تنظیمات هدر |
 | `lib/design/page-footer.ts` | تنظیمات فوتر |
 | `lib/design/landing-fonts.ts` | فونت‌های لندینگ |
+| `lib/api/dateRangeFilters.ts` | تبدیل فیلترهای تاریخ DynamicTable به query مشترک backend |
 | `components/global/DynamicTable.tsx` | جدول همه sectionهای ادمین |
 | `components/admin/AdminShell.tsx` | ناوبری پنل |
 | `components/admin/PagesSection.tsx` | مدیریت صفحات و publish |
+| `components/admin/UsersSection.tsx` | ساخت/ویرایش user، نقش، وضعیت و رمز |
+| `components/admin/SettingsSection.tsx` | تنظیمات عملیاتی مثل user مقصد تخصیص خودکار |
 | `components/admin/BookingsSection.tsx` | مدیریت رزروها |
 | `app/[url]/page.tsx` | public landing |
 | `app/[url]/PageRenderer.tsx` | رندر بلاک‌ها در public |
 | `components/landing/LandingFooter.tsx` | فوتر public |
 | `components/landing/LogoHeaderFrame.tsx` | هدر public |
 | `components/landing/LandingInstallPrompt.tsx` | نصب PWA |
+| `app/sitemap.ts`, `app/robots.ts` | SEO، sitemap و noindex صفحات |
+| `services/cron/auto-assign-pages-cron.sh` | اجرای cron در VPS/Docker |
+| `docker-compose.yml` | بالا آوردن app و cron کنار هم در VPS |
 
 ## فایل‌های کم‌ریسک‌تر
 
@@ -998,6 +1143,14 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `NEXT_PUBLIC_STORAGE_URL` | fallback storage URL |
 | `NEXT_PUBLIC_APP_URL` | base URL برای QR و لینک‌ها |
 | `APP_URL` | fallback server base URL |
+| `RADLINK_CRON_SECRET` | secret اجرای endpointهای زمان‌بندی‌شده مثل تخصیص خودکار صفحات |
+| `AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE` | زمان‌بندی cron اختیاری برای VPS/Docker Compose؛ پیش‌فرض روزی یک‌بار در `0 0 * * *` |
+
+در deploy فعلی VPS، اجرای خودکار تخصیص صفحات توسط سرویس `auto-assign-pages-cron` در `docker-compose.yml` انجام می‌شود و به سرویس‌های Vercel وابسته نیست.
+
+`RADLINK_CRON_SECRET` باید یک رشته طولانی و غیرقابل حدس باشد و همان مقدار هم در سرویس app و هم در سرویس cron موجود باشد. cron این مقدار را در header درخواست می‌فرستد و endpoint بدون آن `401` می‌دهد.
+
+اگر `AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE` تنظیم نشود، زمان‌بندی پیش‌فرض روزی یک‌بار است. این زمان‌بندی فقط زمان اجرای job را مشخص می‌کند؛ خود job داخل اجرا، فقط صفحاتی را تغییر می‌دهد که حداقل ۲۴ ساعت از ایجادشان گذشته و هنوز owner/assignedUser ندارند.
 
 این‌ها هرگز نباید داخل client bundle، log عمومی، screenshot یا docs عمومی با مقدار واقعی بیایند.
 
@@ -1035,6 +1188,8 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 5. اگر table دارد، از `DynamicTable` استفاده کن.
 6. اگر owner-scoped است، از `withActorOwnerScope`, `canAccessActorOwner`, `withPageAccessScope` یا scope مناسب استفاده کن.
 7. اگر تغییر permission/access می‌دهد، cache را invalidate کن.
+8. اگر route برای scheduler/cron است، access عمومی نده؛ آن را با secret محیطی مثل `RADLINK_CRON_SECRET` محافظت کن و نتیجه اجرا را log کن.
+9. پیام‌های backend که به UI برمی‌گردند باید فارسی باشند، مگر اینکه عمدا برای log داخلی یا debugging نوشته شده باشند.
 
 ## قواعد مهم داده
 

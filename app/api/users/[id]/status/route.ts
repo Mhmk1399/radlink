@@ -43,7 +43,7 @@ export const PATCH = compose(
         requester.role !== "superAdmin"
     ) {
         return NextResponse.json(
-            { message: "فقط R A D می‌تواند وضعیت R A D را تغییر دهد." },
+            { message: "فقط سوپر ادمین می‌تواند وضعیت سوپر ادمین را تغییر دهد." },
             { status: 403 },
         );
     }

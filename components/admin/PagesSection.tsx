@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaGlobe, FaFileAlt } from "react-icons/fa";
 import { FaImage, FaPowerOff } from "react-icons/fa6";
-import { HiOutlinePencil } from "react-icons/hi2";
+import { HiOutlineDocumentDuplicate, HiOutlinePencil } from "react-icons/hi2";
 import type { ColumnDef } from "@/types/table";
 import type { Page } from "@/types/index";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
@@ -328,6 +328,7 @@ function buildColumns(
   canAssignUser: boolean,
   canEditExpiration: boolean,
   canPublishPage: boolean,
+  canEditSitemapIndexing: boolean,
   onPreviewImage: (src: string, title: string) => void,
 ): ColumnDef<AdminPageRow>[] {
   return [
@@ -593,6 +594,42 @@ function buildColumns(
       },
     },
     {
+      key: "seo.allowIndexing",
+      editable: false,
+      visible: canEditSitemapIndexing,
+      label: "سایت‌مپ",
+      hideOnMobile: true,
+      render: (_value, row) => {
+        const seo = isRecord(row.seo) ? row.seo : {};
+        const allowIndexing = seo.allowIndexing !== false;
+
+        return (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+              allowIndexing
+                ? "bg-emerald-500/[0.08] text-emerald-400 ring-emerald-500/15"
+                : isDark
+                  ? "bg-[#6e6a62]/10 text-[#9c9890] ring-[#6e6a62]/15"
+                  : "bg-black/[0.04] text-[#6B5D3E] ring-black/[0.06]",
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                allowIndexing
+                  ? "bg-emerald-400"
+                  : isDark
+                    ? "bg-[#9c9890]"
+                    : "bg-[#A09070]",
+              )}
+            />
+            {allowIndexing ? "فعال" : "خاموش"}
+          </span>
+        );
+      },
+    },
+    {
       key: "createdAt",
       editable: false,
       label: "تاریخ ایجاد",
@@ -651,8 +688,12 @@ export default function PagesSection({
     user?.role === "superAdmin";
   const canViewExpiryAlerts =
     user?.role === "admin" || user?.role === "superAdmin";
-  const canEditRadlinkBranding = user?.role === "superAdmin";
+  const canEditFooterBranding =
+    user?.role === "agent" ||
+    user?.role === "admin" ||
+    user?.role === "superAdmin";
   const canEditHomeScreenIcon = user?.role === "superAdmin";
+  const canEditSitemapIndexing = user?.role === "superAdmin";
   const expiryAlertsUserId = user?.id ?? "";
 
   const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
@@ -661,13 +702,16 @@ export default function PagesSection({
   const canAssignPages = !isAccessLoading && user !== null && canManageOwners;
   const canEditExpiration =
     !isAccessLoading && user !== null && canManageOwners;
-  const canCreatePages = can("admin.pages", "create");
+  const canCreatePages = !isAccessLoading && user !== null;
   const canUpdatePages = can("admin.pages", "update");
   const canPublishPages = can("admin.pages", "publish");
   const canDeletePages = can("admin.pages", "delete");
   const [ownerOptions, setOwnerOptions] = useState<SelectOption[]>([]);
   const [refreshToken, setRefreshToken] = useState(0);
   const [togglingPageId, setTogglingPageId] = useState<string | null>(null);
+  const [duplicatingPageId, setDuplicatingPageId] = useState<string | null>(
+    null,
+  );
   const [brandingPage, setBrandingPage] = useState<AdminPageRow | null>(null);
   const [brandingLogo, setBrandingLogo] = useState("");
   const [brandingFavicon, setBrandingFavicon] = useState("");
@@ -679,6 +723,12 @@ export default function PagesSection({
   const [brandingFooterAccent, setBrandingFooterAccent] = useState("");
   const [brandingFooterBorder, setBrandingFooterBorder] = useState("");
   const [brandingShowRadlink, setBrandingShowRadlink] = useState(true);
+  const [brandingFooterBrandText, setBrandingFooterBrandText] = useState("");
+  const [brandingFooterBrandLinkText, setBrandingFooterBrandLinkText] =
+    useState("");
+  const [brandingFooterBrandLinkUrl, setBrandingFooterBrandLinkUrl] =
+    useState("");
+  const [brandingAllowIndexing, setBrandingAllowIndexing] = useState(true);
   const [brandingCustomHomeScreenIcon, setBrandingCustomHomeScreenIcon] =
     useState(true);
   const [uploadingBranding, setUploadingBranding] =
@@ -920,6 +970,7 @@ export default function PagesSection({
         canAssignPages,
         canEditExpiration,
         canPublishPages,
+        canEditSitemapIndexing,
         openPreviewImage,
       ),
     [
@@ -930,6 +981,7 @@ export default function PagesSection({
       canAssignPages,
       canEditExpiration,
       canPublishPages,
+      canEditSitemapIndexing,
       openPreviewImage,
     ],
   );
@@ -975,6 +1027,39 @@ export default function PagesSection({
     }
   }
 
+  async function duplicatePage(row: AdminPageRow) {
+    const pageId = String(row._id || row.id || "");
+    if (!pageId || duplicatingPageId) return;
+
+    try {
+      setDuplicatingPageId(pageId);
+      const response = await fetch(`/api/pages/${pageId}/duplicate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+      });
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof json?.message === "string"
+            ? json.message
+            : "کپی صفحه انجام نشد.",
+        );
+      }
+
+      toast.success("صفحه با دامنه تصادفی و بدون مالکیت کپی شد.");
+      setRefreshToken((value) => value + 1);
+      await loadExpiryAlerts(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "کپی صفحه انجام نشد.");
+    } finally {
+      setDuplicatingPageId(null);
+    }
+  }
+
   function getBrandingFooter(page: AdminPageRow | null = brandingPage) {
     return normalizePageFooterSettings(page?.footer);
   }
@@ -1007,6 +1092,7 @@ export default function PagesSection({
 
   function openBrandingModal(row: AdminPageRow) {
     const footer = getBrandingFooter(row);
+    const seo = isRecord(row.seo) ? row.seo : {};
 
     setBrandingPage(row);
     setBrandingLogo(typeof row.logo === "string" ? row.logo : "");
@@ -1018,6 +1104,10 @@ export default function PagesSection({
     setBrandingFooterAccent(footer.accentColor);
     setBrandingFooterBorder(footer.borderColor);
     setBrandingShowRadlink(footer.showRadlinkBranding);
+    setBrandingFooterBrandText(footer.brandingText);
+    setBrandingFooterBrandLinkText(footer.brandingLinkText);
+    setBrandingFooterBrandLinkUrl(footer.brandingLinkUrl);
+    setBrandingAllowIndexing(seo.allowIndexing !== false);
     setBrandingCustomHomeScreenIcon(
       isCustomHomeScreenIconEnabled(row.settings),
     );
@@ -1129,10 +1219,18 @@ export default function PagesSection({
             textColor: brandingFooterText,
             accentColor: brandingFooterAccent,
             borderColor: brandingFooterBorder,
-            ...(canEditRadlinkBranding
-              ? { showRadlinkBranding: brandingShowRadlink }
+            ...(canEditFooterBranding
+              ? {
+                  showRadlinkBranding: brandingShowRadlink,
+                  brandingText: brandingFooterBrandText,
+                  brandingLinkText: brandingFooterBrandLinkText,
+                  brandingLinkUrl: brandingFooterBrandLinkUrl,
+                }
               : {}),
           } satisfies Partial<PageFooterSettings>,
+          ...(canEditSitemapIndexing
+            ? { seo: { allowIndexing: brandingAllowIndexing } }
+            : {}),
         }),
       });
       const json = await response.json().catch(() => null);
@@ -1321,9 +1419,38 @@ export default function PagesSection({
           const canViewThisPage =
             can("admin.pages", "view") ||
             (pageId ? canOnResource("pages", pageId, "view") : false);
+          const canDuplicateThisPage =
+            canCreatePages &&
+            canViewThisPage &&
+            (user?.role === "admin" || user?.role === "superAdmin");
 
           return (
             <div className="flex items-center justify-end gap-1">
+              {canDuplicateThisPage && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void duplicatePage(row);
+                  }}
+                  disabled={duplicatingPageId === pageId}
+                  title="کپی کامل صفحه بدون مالکیت"
+                  className={cn(
+                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
+                    isDark
+                      ? "text-cyan-400/75 hover:bg-cyan-500/10 hover:text-cyan-400"
+                      : "text-cyan-700/75 hover:bg-cyan-500/10 hover:text-cyan-700",
+                  )}
+                >
+                  {duplicatingPageId === pageId ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <HiOutlineDocumentDuplicate className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">کپی کامل صفحه بدون مالکیت</span>
+                </button>
+              )}
+
               {canPublishThisPage && (
                 <button
                   type="button"
@@ -1760,7 +1887,7 @@ export default function PagesSection({
                   </label>
                 ) : null}
 
-                {canEditRadlinkBranding ? (
+                {canEditSitemapIndexing ? (
                   <label
                     className={cn(
                       "flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3",
@@ -1775,33 +1902,34 @@ export default function PagesSection({
                           brandingModalTheme.textPrimary,
                         )}
                       >
-                        نمایش متن ساخته شده با رادلینک
+                        نمایش در سایت‌مپ و ایندکس
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-[10px]",
-                            brandingShowRadlink
+                            brandingAllowIndexing
                               ? `${brandingModalTheme.successBg} ${brandingModalTheme.successText}`
                               : `${brandingModalTheme.errorBg} ${brandingModalTheme.errorText}`,
                           )}
                         >
-                          {brandingShowRadlink ? "فعال" : "خاموش"}
+                          {brandingAllowIndexing ? "فعال" : "خاموش"}
                         </span>
                       </span>
                       <span
                         className={cn(
-                          "mt-1 block text-xs",
+                          "mt-1 block text-xs leading-6",
                           brandingModalTheme.textMuted,
                         )}
                       >
-                        فقط سوپر ادمین می‌تواند این متن را برای هر صفحه خاموش یا
-                        روشن کند. حالت پیش‌فرض فعال است.
+                        اگر خاموش باشد، این لندینگ از sitemap.xml حذف می‌شود و
+                        برای موتورهای جستجو noindex می‌گیرد. فقط سوپرادمین به
+                        این گزینه دسترسی دارد.
                       </span>
                     </span>
                     <input
                       type="checkbox"
-                      checked={brandingShowRadlink}
+                      checked={brandingAllowIndexing}
                       onChange={(event) =>
-                        setBrandingShowRadlink(event.target.checked)
+                        setBrandingAllowIndexing(event.target.checked)
                       }
                       className={cn(
                         "h-5 w-5 rounded border-neutral-300 focus:ring-0",
@@ -1809,6 +1937,150 @@ export default function PagesSection({
                       )}
                     />
                   </label>
+                ) : null}
+
+                {canEditFooterBranding ? (
+                  <div
+                    className={cn(
+                      "space-y-4 rounded-xl border px-4 py-3",
+                      brandingModalTheme.inputBg,
+                      brandingModalTheme.borderInput,
+                    )}
+                  >
+                    <label className="flex cursor-pointer items-center justify-between gap-4">
+                      <span>
+                        <span
+                          className={cn(
+                            "flex items-center gap-2 text-sm font-bold",
+                            brandingModalTheme.textPrimary,
+                          )}
+                        >
+                          نمایش متن پایین فوتر
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px]",
+                              brandingShowRadlink
+                                ? `${brandingModalTheme.successBg} ${brandingModalTheme.successText}`
+                                : `${brandingModalTheme.errorBg} ${brandingModalTheme.errorText}`,
+                            )}
+                          >
+                            {brandingShowRadlink ? "فعال" : "خاموش"}
+                          </span>
+                        </span>
+                        <span
+                          className={cn(
+                            "mt-1 block text-xs leading-6",
+                            brandingModalTheme.textMuted,
+                          )}
+                        >
+                          مدیر و نماینده می‌توانند این متن را برای صفحه‌های تحت
+                          دسترسی خود تغییر دهند.
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={brandingShowRadlink}
+                        onChange={(event) =>
+                          setBrandingShowRadlink(event.target.checked)
+                        }
+                        className={cn(
+                          "h-5 w-5 rounded border-neutral-300 focus:ring-0",
+                          brandingModalTheme.checkboxAccent,
+                        )}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span
+                        className={cn(
+                          "mb-2 block text-xs font-bold",
+                          brandingModalTheme.textPrimary,
+                        )}
+                      >
+                        متن پایین فوتر
+                      </span>
+                      <textarea
+                        value={brandingFooterBrandText}
+                        onChange={(event) =>
+                          setBrandingFooterBrandText(event.target.value)
+                        }
+                        rows={2}
+                        className={cn(
+                          "w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition",
+                          brandingModalTheme.inputBg,
+                          brandingModalTheme.borderInput,
+                          brandingModalTheme.borderFocus,
+                          brandingModalTheme.textPrimary,
+                        )}
+                        placeholder="مثلا: این سایت ساخته شده توسط رادلینک می‌باشد"
+                      />
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block">
+                        <span
+                          className={cn(
+                            "mb-2 block text-xs font-bold",
+                            brandingModalTheme.textPrimary,
+                          )}
+                        >
+                          بخش لینک‌دار متن
+                        </span>
+                        <input
+                          type="text"
+                          value={brandingFooterBrandLinkText}
+                          onChange={(event) =>
+                            setBrandingFooterBrandLinkText(event.target.value)
+                          }
+                          className={cn(
+                            "w-full rounded-xl border px-4 py-3 text-sm outline-none transition",
+                            brandingModalTheme.inputBg,
+                            brandingModalTheme.borderInput,
+                            brandingModalTheme.borderFocus,
+                            brandingModalTheme.textPrimary,
+                          )}
+                          placeholder="مثلا: رادلینک"
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span
+                          className={cn(
+                            "mb-2 block text-xs font-bold",
+                            brandingModalTheme.textPrimary,
+                          )}
+                        >
+                          آدرس لینک
+                        </span>
+                        <input
+                          type="url"
+                          value={brandingFooterBrandLinkUrl}
+                          onChange={(event) =>
+                            setBrandingFooterBrandLinkUrl(event.target.value)
+                          }
+                          className={cn(
+                            "w-full rounded-xl border px-4 py-3 text-left text-sm outline-none transition",
+                            brandingModalTheme.inputBg,
+                            brandingModalTheme.borderInput,
+                            brandingModalTheme.borderFocus,
+                            brandingModalTheme.textPrimary,
+                          )}
+                          dir="ltr"
+                          placeholder="https://nfcrad.link/"
+                        />
+                      </label>
+                    </div>
+
+                    <p
+                      className={cn(
+                        "text-xs leading-6",
+                        brandingModalTheme.textMuted,
+                      )}
+                    >
+                      اگر بخش لینک‌دار داخل متن پیدا شود، فقط همان قسمت در خروجی
+                      لندینگ لینک می‌شود.
+                    </p>
+                  </div>
                 ) : null}
               </div>
             </div>

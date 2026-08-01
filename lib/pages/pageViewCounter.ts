@@ -84,7 +84,7 @@ export async function flushPageViewCounters() {
       state.pending.set(pageId, current);
     }
 
-    console.error("Failed to flush page view counters", error);
+    console.error("ثبت شمارنده‌های بازدید صفحه با خطا مواجه شد.", error);
   } finally {
     state.flushing = false;
     if (state.pending.size > 0) scheduleFlush();

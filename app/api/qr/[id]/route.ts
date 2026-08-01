@@ -21,7 +21,7 @@ export const GET = compose(
         .lean() as
         | { owner?: unknown }
         | null;
-    if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
+    if (!qr) return NextResponse.json({ message: "کد کیوآر پیدا نشد." }, { status: 404 });
     if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
@@ -37,7 +37,7 @@ export const PATCH = compose(
     const body = await req.json();
 
     const qr = await QR.findById(id);
-    if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
+    if (!qr) return NextResponse.json({ message: "کد کیوآر پیدا نشد." }, { status: 404 });
     if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
@@ -58,7 +58,7 @@ export const DELETE = compose(
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const qr = await QR.findById(id);
-    if (!qr) return NextResponse.json({ message: "کد QR پیدا نشد." }, { status: 404 });
+    if (!qr) return NextResponse.json({ message: "کد کیوآر پیدا نشد." }, { status: 404 });
     if (!(await canAccessActorOwner(req.ctx.user!, qr.owner))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
@@ -75,5 +75,5 @@ export const DELETE = compose(
         });
     }
 
-    return NextResponse.json({ message: "کد QR حذف شد." });
+    return NextResponse.json({ message: "کد کیوآر حذف شد." });
 });

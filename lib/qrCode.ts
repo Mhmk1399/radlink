@@ -65,7 +65,7 @@ export async function generateUniqueQrShortcode(length = 8) {
         if (!exists) return shortcode;
     }
 
-    throw new Error("امکان ساخت کد یکتای QR وجود ندارد.");
+    throw new Error("امکان ساخت کد یکتای کیوآر وجود ندارد.");
 }
 
 export async function createQrForPage({

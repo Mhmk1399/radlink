@@ -158,19 +158,19 @@ export const PATCH = compose(
         const name = typeof body.name === "string" ? body.name.trim() : "";
         if (!name) {
             return NextResponse.json(
-                { message: "نام Access الزامی است." },
+                { message: "نام دسترسی الزامی است." },
                 { status: 400 },
             );
         }
         if (name.length > 120) {
             return NextResponse.json(
-                { message: "نام Access نمی‌تواند بیشتر از ۱۲۰ کاراکتر باشد." },
+                { message: "نام دسترسی نمی‌تواند بیشتر از ۱۲۰ کاراکتر باشد." },
                 { status: 400 },
             );
         }
         if (await Access.exists({ _id: { $ne: id }, name })) {
             return NextResponse.json(
-                { message: "Access دیگری با این نام وجود دارد." },
+                { message: "دسترسی دیگری با این نام وجود دارد." },
                 { status: 409 },
             );
         }

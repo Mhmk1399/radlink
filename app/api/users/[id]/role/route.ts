@@ -20,7 +20,7 @@ export const PATCH = compose(
 
     if (req.ctx.user!.role !== "superAdmin") {
         return NextResponse.json(
-            { message: "فقط R A D اجازه تغییر نقش کاربران را دارد." },
+            { message: "فقط سوپر ادمین اجازه تغییر نقش کاربران را دارد." },
             { status: 403 },
         );
     }

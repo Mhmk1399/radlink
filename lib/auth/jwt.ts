@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { IUser } from "@/models/users";
 
 const SECRET = process.env.JWT_SECRET as string;
-if (!SECRET) throw new Error("JWT_SECRET is not defined");
+if (!SECRET) throw new Error("کلید امضای توکن تنظیم نشده است.");
 
 export type JwtPayload = {
     userId: string;

@@ -6,10 +6,15 @@ import Permission from "@/models/permission";
 import "@/models/access";
 import User from "@/models/users";
 import { accessCache } from "@/lib/auth/accessCache";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
+import {
+    buildPermissionAssignmentConflictMessage,
+    findExistingActivePermissionAssignments,
+    normalizeIdList,
+} from "@/lib/auth/permissionAssignment";
 
 function uniqueIds(ids: unknown) {
-    if (!Array.isArray(ids)) return [];
-    return [...new Set(ids.map(String).filter(Boolean))];
+    return normalizeIdList(ids);
 }
 
 export const POST = compose(
@@ -24,6 +29,19 @@ export const POST = compose(
 
     if (!name || !accesses?.length) {
         return NextResponse.json({ message: "نام و اکسس‌ها الزامی هستند." }, { status: 400 });
+    }
+
+    const conflicts = await findExistingActivePermissionAssignments(
+        assignedUserIds,
+    );
+    if (conflicts.length > 0) {
+        return NextResponse.json(
+            {
+                code: "USER_ALREADY_HAS_PERMISSION",
+                message: buildPermissionAssignmentConflictMessage(conflicts),
+            },
+            { status: 409 },
+        );
     }
 
     const permission = await Permission.create({
@@ -59,6 +77,8 @@ export const GET = compose(
 
     const query: Record<string, unknown> = {};
     if (isActive !== null) query.isActive = isActive === "true";
+
+    applyDateRangeFilters(query, searchParams, ["createdAt"]);
 
     const [permissions, total] = await Promise.all([
         Permission.find(query)

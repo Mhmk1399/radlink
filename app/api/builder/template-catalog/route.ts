@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { getBuilderBlocksForRequest } from "@/lib/auth/builderBlockAccess";
 import { withAuth, withDB, withStatus } from "@/lib/auth/middlewares";
-import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import type { AuthRequest } from "@/lib/auth/types";
 import Category from "@/models/category";
@@ -31,14 +30,6 @@ function getId(value: unknown) {
 function getBlockType(value: unknown) {
   if (!isRecord(value)) return "";
   return typeof value.type === "string" ? value.type : "";
-}
-
-async function canCreateBuilderPage(req: AuthRequest) {
-  const user = req.ctx.user!;
-  if (user.role === "superAdmin") return true;
-
-  const access = await resolveUserAccess(String(user._id), user.permissions);
-  return access.components["builder.page"]?.has("create") ?? false;
 }
 
 function templateUsesAllowedBlocks(
@@ -101,16 +92,6 @@ export const GET = compose(
   withAuth(),
   withStatus("active"),
 )(async (req: AuthRequest) => {
-  if (!(await canCreateBuilderPage(req))) {
-    return NextResponse.json(
-      {
-        code: "ACCESS_DENIED",
-        message: "شما دسترسی ساخت صفحه در صفحه‌ساز را ندارید.",
-      },
-      { status: 403 },
-    );
-  }
-
   const requestedTemplateId = new URL(req.url).searchParams.get("id") ?? "";
   if (
     requestedTemplateId &&

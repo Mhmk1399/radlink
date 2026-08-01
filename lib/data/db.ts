@@ -7,7 +7,7 @@ const MONGODB_DNS_SERVERS = process.env.MONGODB_DNS_SERVERS
     .map((server) => server.trim())
     .filter(Boolean);
 
-if (!MONGODB_URI) throw new Error("MONGODB_URI is not defined");
+if (!MONGODB_URI) throw new Error("آدرس اتصال پایگاه داده تنظیم نشده است.");
 
 async function resolveMongoUri(uri: string) {
     if (!MONGODB_DNS_SERVERS?.length || !uri.startsWith("mongodb+srv://")) {

@@ -41,6 +41,7 @@ const ContactMessagesSection = lazy(
   () => import("@/components/admin/ContactMessagesSection"),
 );
 const ProfileSection = lazy(() => import("@/components/admin/ProfileSection"));
+const SettingsSection = lazy(() => import("@/components/admin/SettingsSection"));
 
 function ComingSoon({
   section,
@@ -115,6 +116,8 @@ function SectionRouter({
       return <ContactMessagesSection navigate={navigate} />;
     case "profile":
       return <ProfileSection navigate={navigate} />;
+    case "settings":
+      return <SettingsSection navigate={navigate} />;
     default:
       return <ComingSoon section={section} navigate={navigate} />;
   }

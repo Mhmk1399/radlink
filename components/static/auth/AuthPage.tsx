@@ -24,6 +24,7 @@ import {
   normalizeNationalCode,
   normalizePhoneNumber,
 } from "@/lib/validation/identityFields";
+import TermsContent from "@/components/static/Terms/TermsContent";
 
 /* ══════════════════════════════════════════════
    KEYFRAMES
@@ -675,6 +676,7 @@ export default function AuthPage() {
   const [, setCurrentUser] = useState<BackendUser | null>(null);
   const [authToken, setAuthToken] = useState("");
   const [animKey, setAnimKey] = useState(0);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -699,6 +701,17 @@ export default function AuthPage() {
     const id = setInterval(() => setResendCooldown((t) => t - 1), 1000);
     return () => clearInterval(id);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    if (!isTermsModalOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsTermsModalOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isTermsModalOpen]);
 
   const changeStep = (newStep: AuthStep) => {
     setAnimKey((k) => k + 1);
@@ -1920,25 +1933,93 @@ export default function AuthPage() {
               >
                 <p className={cn(typography.labelSmall, "text-slate-500")}>
                   با ورود یا ثبت‌نام،{" "}
-                  <Link
-                    href="#terms"
-                    className={cn(accentTokens.amber.text, "hover:underline")}
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(true)}
+                    className={cn(
+                      accentTokens.amber.text,
+                      "hover:underline",
+                    )}
                   >
                     قوانین
-                  </Link>{" "}
+                  </button>{" "}
                   و{" "}
-                  <Link
-                    href="#privacy"
-                    className={cn(accentTokens.amber.text, "hover:underline")}
-                  >
+                 
                     حریم خصوصی
-                  </Link>{" "}
+                  
                   را می‌پذیرید.
                 </p>
               </div>
             )}
           </div>
         </div>
+
+        {isTermsModalOpen && (
+          <div
+            className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5"
+            role="dialog"
+            aria-modal="true"
+            aria-label="قوانین و شرایط استفاده"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setIsTermsModalOpen(false);
+              }
+            }}
+          >
+            <div
+              className={cn(
+                "auth-pop-in flex max-h-[88dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border shadow-2xl sm:rounded-3xl",
+                "border-white/10 bg-[#07111f]/95",
+              )}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+                <div>
+                  <p className="text-sm font-black text-white">
+                    قوانین و شرایط استفاده
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    خلاصه شرایط استفاده از رادلینک
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTermsModalOpen(false)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                  aria-label="بستن"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                <TermsContent compact />
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <Link
+                  href="/terms"
+                  className={cn(
+                    accentTokens.amber.text,
+                    "text-sm font-bold hover:underline",
+                  )}
+                  onClick={() => setIsTermsModalOpen(false)}
+                >
+                  مشاهده صفحه کامل قوانین
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsTermsModalOpen(false)}
+                  className={cn(
+                    components.ctaPrimary,
+                    "justify-center px-5 py-2.5 text-sm",
+                  )}
+                >
+                  متوجه شدم
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Back to home */}
         <Link

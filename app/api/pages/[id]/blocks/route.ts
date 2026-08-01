@@ -18,6 +18,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 async function canAccess(req: AuthRequest, ownerId: string, assignedUserId?: string) {
     const user = req.ctx.user;
     if (!user) return false;
+    if (!ownerId && (user.role === "admin" || user.role === "superAdmin")) return true;
     if (await canAccessActorOwner(user, ownerId)) return true;
     return assignedUserId ? canAccessActorOwner(user, assignedUserId) : false;
 }
@@ -43,7 +44,7 @@ export const PATCH = compose(
     if (
         !(await canAccess(
             req,
-            String(page.owner),
+            page.owner ? String(page.owner) : "",
             page.assignedUser ? String(page.assignedUser) : undefined,
         ))
     ) {
@@ -52,24 +53,29 @@ export const PATCH = compose(
 
     switch (action) {
         case "add": {
+            const pageOwnerId = page.owner ? String(page.owner) : "";
             const ownerUser =
-                String(page.owner) === String(req.ctx.user!._id)
+                pageOwnerId && pageOwnerId === String(req.ctx.user!._id)
                     ? req.ctx.user!
-                    : await User.findById(page.owner);
-            if (!ownerUser) {
+                    : pageOwnerId
+                      ? await User.findById(pageOwnerId)
+                      : null;
+            if (pageOwnerId && !ownerUser) {
                 return NextResponse.json(
                     { message: "مالک صفحه پیدا نشد." },
                     { status: 404 }
                 );
             }
 
-            const blockQuota = await checkUserQuota({
-                user: ownerUser,
-                resource: "blocks",
-                absoluteUsage: page.blocks.length + 1,
-                currentUsage: page.blocks.length,
-            });
-            if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+            if (ownerUser) {
+                const blockQuota = await checkUserQuota({
+                    user: ownerUser,
+                    resource: "blocks",
+                    absoluteUsage: page.blocks.length + 1,
+                    currentUsage: page.blocks.length,
+                });
+                if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+            }
 
             // payload: { blockId }
             const masterBlock = await Block.findById(payload.blockId);
@@ -128,15 +134,17 @@ export const PATCH = compose(
         }
 
         default:
-            return NextResponse.json({ message: "عملیات معتبر نیست. از add، remove، reorder یا update استفاده کنید." }, { status: 400 });
+            return NextResponse.json({ message: "عملیات معتبر نیست. از افزودن، حذف، مرتب‌سازی یا ویرایش استفاده کنید." }, { status: 400 });
     }
 
     await page.save();
-    await syncPageProducts({
-        pageId: page._id,
-        ownerId: page.owner,
-        blocks: page.blocks,
-    });
+    if (page.owner) {
+        await syncPageProducts({
+            pageId: page._id,
+            ownerId: page.owner,
+            blocks: page.blocks,
+        });
+    }
     revalidatePath("/[url]", "page");
     return NextResponse.json({ blocks: page.blocks });
 });

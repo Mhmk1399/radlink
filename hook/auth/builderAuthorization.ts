@@ -49,12 +49,12 @@ function canUseBuilder(me: MeResponse, target: BuilderAccessTarget) {
   const access = me.access;
 
   if (target.kind === "page-create") {
-    return hasAction(access, "components", "builder.page", "create");
+    return true;
   }
 
   if (target.kind === "page-edit") {
     return (
-      hasAction(access, "components", "builder.page", "update") ||
+      hasAction(access, "components", "admin.pages", "update") ||
       hasAction(access, "pages", target.pageId, "update")
     );
   }

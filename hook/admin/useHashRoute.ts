@@ -117,6 +117,7 @@ export const SECTION_META: SectionMeta[] = [
     { key: "contactMessages", label: "پیام‌های تماس", icon: "FaEnvelope", group: "پشتیبانی", minRole: "superAdmin" },
 
     // System
+     { key: "settings", label: "تنظیمات", icon: "FaGear", group: "سیستم", minRole: "admin" },
      { key: "profile", label: "پروفایل", icon: "FaUser", group: "سیستم", minRole: "user" },
 ];
 

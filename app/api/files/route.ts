@@ -3,6 +3,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import { withActorOwnerScope } from "@/lib/auth/agentScope";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import File from "@/models/files";
 import User from "@/models/users";
 import "@/models/pages";
@@ -45,8 +46,6 @@ export const GET = compose(
     const kind = searchParams.get("filter_kind");
     const ownerLabel = searchParams.get("filter_ownerLabel")?.trim();
     const fileType = searchParams.get("filter_fileType");
-    const dateFrom = searchParams.get("dateFrom_createdAt");
-    const dateTo = searchParams.get("dateTo_createdAt");
 
     if (search) {
         const pattern = escapeRegex(search);
@@ -103,19 +102,7 @@ export const GET = compose(
         }
     }
 
-    const createdAt: Record<string, Date> = {};
-    if (dateFrom) {
-        const from = new Date(dateFrom);
-        if (!Number.isNaN(from.getTime())) createdAt.$gte = from;
-    }
-    if (dateTo) {
-        const to = new Date(dateTo);
-        if (!Number.isNaN(to.getTime())) {
-            to.setUTCDate(to.getUTCDate() + 1);
-            createdAt.$lt = to;
-        }
-    }
-    if (Object.keys(createdAt).length) query.createdAt = createdAt;
+    applyDateRangeFilters(query, searchParams, ["createdAt"]);
 
     const requestedSortKey = searchParams.get("sortKey");
     const sortKey = ["filename", "kind", "createdAt"].includes(

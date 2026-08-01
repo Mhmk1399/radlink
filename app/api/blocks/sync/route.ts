@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
-import { AuthRequest } from "@/lib/auth/types";
 import Block from "@/models/blocks";
 import type { BlockElement, ContentField, PageBlock } from "@/types/blocks/builder.types";
 
@@ -63,7 +62,7 @@ export const POST = compose(
     withAuth(),
     withStatus("active"),
     withRole("admin", "superAdmin")
-)(async (_req: AuthRequest) => {
+)(async () => {
     const { blockRegistry } = await import("@/builder/blocks/blockRegistry");
     
     const results = {
@@ -107,12 +106,12 @@ export const POST = compose(
                 results.created++;
             }
         } catch (err) {
-            results.errors.push(`Failed to sync ${type}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            results.errors.push(`همگام‌سازی ${type} با خطا مواجه شد: ${err instanceof Error ? err.message : "خطای ناشناخته"}`);
         }
     }
 
     return NextResponse.json({ 
-        message: `Synced ${results.created} created, ${results.updated} updated`,
+        message: `${results.created} بلاک ساخته شد و ${results.updated} بلاک به‌روزرسانی شد.`,
         results 
     });
 });

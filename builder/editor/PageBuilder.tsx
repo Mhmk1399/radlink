@@ -713,6 +713,61 @@ function mergeAllowedKeys(
   return next;
 }
 
+function normalizeContactInfoGridColumns(
+  block: PageBlock,
+  elements: PageBlock["elements"],
+) {
+  if (block.type !== "contactInfo") return { elements, changed: false };
+
+  const container = elements.container;
+  const item = elements.item;
+  if (!container || !item) return { elements, changed: false };
+
+  let changed = false;
+  const itemStyle: EditableStyleMap = { ...(item.style ?? {}) };
+  const containerStyle: EditableStyleMap = { ...(container.style ?? {}) };
+  const itemGridColumns = itemStyle.gridColumns;
+
+  const nextContainerAllowed = container.allowedStyleKeys.includes("gridColumns")
+    ? container.allowedStyleKeys
+    : [...container.allowedStyleKeys, "gridColumns" as EditableStyleKey];
+  if (nextContainerAllowed !== container.allowedStyleKeys) changed = true;
+
+  if (containerStyle.gridColumns === undefined && itemGridColumns !== undefined) {
+    containerStyle.gridColumns = itemGridColumns;
+    changed = true;
+  }
+
+  const nextItemAllowed = item.allowedStyleKeys.filter(
+    (key) => key !== "gridColumns",
+  );
+  if (nextItemAllowed.length !== item.allowedStyleKeys.length) changed = true;
+
+  if (itemStyle.gridColumns !== undefined) {
+    delete itemStyle.gridColumns;
+    changed = true;
+  }
+
+  if (!changed) return { elements, changed: false };
+
+  return {
+    elements: {
+      ...elements,
+      container: {
+        ...container,
+        allowedStyleKeys: nextContainerAllowed,
+        style: containerStyle,
+      },
+      item: {
+        ...item,
+        allowedStyleKeys: nextItemAllowed,
+        style: itemStyle,
+      },
+    },
+    changed: true,
+  };
+}
+
 function syncBlockStyleKeysWithRegistry(block: PageBlock): PageBlock {
   const config = blockRegistry[block.type as keyof typeof blockRegistry];
   const schemaElements = config?.schema?.elements;
@@ -741,7 +796,10 @@ function syncBlockStyleKeysWithRegistry(block: PageBlock): PageBlock {
     };
   }
 
-  return changed ? { ...block, elements: nextElements } : block;
+  const normalized = normalizeContactInfoGridColumns(block, nextElements);
+  changed = changed || normalized.changed;
+
+  return changed ? { ...block, elements: normalized.elements } : block;
 }
 
 async function syncBlockStyleKeysWithRegistryProgressively(

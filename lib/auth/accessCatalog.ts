@@ -55,7 +55,6 @@ export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.tickets", label: "تیکت‌ها" },
   { key: "admin.bookings", label: "رزروها" },
   { key: "admin.notifications", label: "اعلانات" },
-  { key: "builder.page", label: "ساخت صفحه از ادمین" },
   { key: "builder.template", label: "صفحه‌ساز قالب‌ها" },
   { key: "landing.floatingActions", label: "دکمه شناور لندینگ" },
 ] as const;
