@@ -6,6 +6,18 @@ import { AuthRequest } from "@/lib/auth/types";
 import Category from "@/models/category";
 import Template from "@/models/template";
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 function normalizeTemplateIds(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
     return value
@@ -54,6 +66,8 @@ export const GET = compose(
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? searchParams.get("pageSize") ?? 100));
     const mode = searchParams.get("mode");
+    const search = searchParams.get("search")?.trim();
+    const isActive = getFilterParam(searchParams, "isActive");
 
     if (mode === "options") {
         const categories = await Category.find({ isActive: { $ne: false } })
@@ -74,13 +88,33 @@ export const GET = compose(
         });
     }
 
+    const query: Record<string, unknown> = {};
+    if (isActive === "true" || isActive === "false") {
+        query.isActive = isActive === "true";
+    }
+    if (search) {
+        const pattern = escapeRegex(search);
+        query.$or = [
+            { name: { $regex: pattern, $options: "i" } },
+            { description: { $regex: pattern, $options: "i" } },
+        ];
+    }
+    const sortFields: Record<string, string> = {
+        name: "name",
+        templateCount: "createdAt",
+        isActive: "isActive",
+        createdAt: "createdAt",
+    };
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
+    const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
+
     const [categories, total] = await Promise.all([
-        Category.find()
-            .sort({ createdAt: -1 })
+        Category.find(query)
+            .sort({ [sortField]: sortDirection, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        Category.countDocuments(),
+        Category.countDocuments(query),
     ]);
 
     const categoryIds = categories.map((category) => category._id);

@@ -8,6 +8,10 @@ import "@/models/users";
 import "@/models/category";
 import { getManagedUserIds } from "@/lib/auth/agentScope";
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export const POST = compose(
     withDB(),
     withAuth(),
@@ -54,6 +58,9 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const status = searchParams.get("status");
     const priority = searchParams.get("priority");
+    const search = searchParams.get("search")?.trim();
+    const sortKey = searchParams.get("sortKey")?.trim() || "createdAt";
+    const sortDir = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const isGlobal = user.role === "superAdmin" || user.role === "admin";
     const managedUserIds = isGlobal
@@ -64,6 +71,25 @@ export const GET = compose(
         : { requester: { $in: managedUserIds ?? [user._id] } };
     if (status) query.status = status;
     if (priority) query.priority = priority;
+    if (search) {
+        const pattern = escapeRegex(search);
+        query.$or = [
+            { title: { $regex: pattern, $options: "i" } },
+            { description: { $regex: pattern, $options: "i" } },
+            { "replies.message": { $regex: pattern, $options: "i" } },
+        ];
+    }
+
+    const sortField = [
+        "createdAt",
+        "updatedAt",
+        "title",
+        "status",
+        "priority",
+        "lastReplyAt",
+    ].includes(sortKey)
+        ? sortKey
+        : "createdAt";
 
     const [tickets, total] = await Promise.all([
         Ticket.find(query)
@@ -71,7 +97,7 @@ export const GET = compose(
             .populate("assignee", "firstName lastName phoneNumber")
             .populate("category", "name")
             .populate("attachments", "filename path url")
-            .sort({ createdAt: -1 })
+            .sort({ [sortField]: sortDir, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

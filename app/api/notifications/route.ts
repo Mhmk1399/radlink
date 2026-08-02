@@ -6,6 +6,7 @@ import { withAuth, withDB, withRole, withStatus } from "@/lib/auth/middlewares";
 import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
 import Page from "@/models/pages";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
 import {
     canAccessActorOwner,
@@ -17,8 +18,27 @@ const PAGE_POPULATE_FIELDS = "title url owner isPublished";
 const USER_POPULATE_FIELDS = "firstName lastName phoneNumber role";
 const NOTIFICATION_TYPES = new Set(["info", "danger"]);
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function cleanText(value: unknown, maxLength: number) {
     return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
+function getBooleanFilter(searchParams: URLSearchParams, key: string) {
+    const value = getFilterParam(searchParams, key);
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return null;
 }
 
 function getPageId(body: Record<string, unknown>) {
@@ -152,6 +172,11 @@ export const GET = compose(
     const includeInactive =
         isAdmin && searchParams.get("includeInactive") === "true";
     const conditions: Record<string, unknown>[] = [];
+    const typeFilter = getFilterParam(searchParams, "type");
+    const globalFilter = getBooleanFilter(searchParams, "isGlobal");
+    const closeableFilter = getBooleanFilter(searchParams, "closeable");
+    const activeFilter = getBooleanFilter(searchParams, "isActive");
+    const search = searchParams.get("search")?.trim();
 
     if (!includeInactive) {
         conditions.push({ isActive: { $ne: false } });
@@ -172,16 +197,71 @@ export const GET = compose(
         });
     }
 
+    if (NOTIFICATION_TYPES.has(typeFilter)) {
+        conditions.push({ type: typeFilter });
+    }
+
+    if (globalFilter !== null) {
+        conditions.push({ isGlobal: globalFilter });
+    }
+
+    if (closeableFilter !== null) {
+        conditions.push({ closeable: closeableFilter });
+    }
+
+    if (activeFilter !== null) {
+        conditions.push({ isActive: activeFilter });
+    }
+
+    const dateFilters: Record<string, unknown> = {};
+    applyDateRangeFilters(dateFilters, searchParams, ["createdAt"]);
+    if (Object.keys(dateFilters).length > 0) {
+        conditions.push(dateFilters);
+    }
+
+    if (search) {
+        const pattern = escapeRegex(search);
+        const pageIds = await Page.find({
+            $or: [
+                { title: { $regex: pattern, $options: "i" } },
+                { url: { $regex: pattern, $options: "i" } },
+            ],
+        }).distinct("_id");
+
+        conditions.push({
+            $or: [
+                { title: { $regex: pattern, $options: "i" } },
+                { subtitle: { $regex: pattern, $options: "i" } },
+                { description: { $regex: pattern, $options: "i" } },
+                { createdByName: { $regex: pattern, $options: "i" } },
+                { page: { $in: pageIds } },
+            ],
+        });
+    }
+
     const query: Record<string, unknown> =
         conditions.length > 1
             ? { $and: conditions }
             : conditions[0] ?? {};
+    const sortFields: Record<string, string> = {
+        title: "title",
+        subtitle: "subtitle",
+        type: "type",
+        pageLabel: "page",
+        createdByLabel: "createdByName",
+        closeable: "closeable",
+        isActive: "isActive",
+        isGlobal: "isGlobal",
+        createdAt: "createdAt",
+    };
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
+    const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const [notifications, total] = await Promise.all([
         Notification.find(query)
             .populate("page", PAGE_POPULATE_FIELDS)
             .populate("createdBy", USER_POPULATE_FIELDS)
-            .sort({ createdAt: -1 })
+            .sort({ [sortField]: sortDirection, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

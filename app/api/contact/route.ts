@@ -12,6 +12,18 @@ import {
 } from "@/lib/validation/identityFields";
 import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 export const POST = compose(withDB())(async (req: AuthRequest) => {
     const body = await req.json();
     const name = String(body.name ?? "").trim();
@@ -63,26 +75,43 @@ export const GET = compose(
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const status = searchParams.get("status");
+    const status = getFilterParam(searchParams, "status");
     const search = searchParams.get("search")?.trim();
+    const nameFilter = getFilterParam(searchParams, "name");
+    const subjectFilter = getFilterParam(searchParams, "subject");
 
     const query: Record<string, unknown> = {};
     if (status) query.status = status;
+    if (nameFilter) {
+        query.name = { $regex: escapeRegex(nameFilter), $options: "i" };
+    }
+    if (subjectFilter) {
+        query.subject = { $regex: escapeRegex(subjectFilter), $options: "i" };
+    }
     if (search) {
+        const pattern = escapeRegex(search);
         query.$or = [
-            { name: { $regex: search, $options: "i" } },
-            { email: { $regex: search, $options: "i" } },
-            { phoneNumber: { $regex: search, $options: "i" } },
-            { subject: { $regex: search, $options: "i" } },
-            { message: { $regex: search, $options: "i" } },
+            { name: { $regex: pattern, $options: "i" } },
+            { email: { $regex: pattern, $options: "i" } },
+            { phoneNumber: { $regex: pattern, $options: "i" } },
+            { subject: { $regex: pattern, $options: "i" } },
+            { message: { $regex: pattern, $options: "i" } },
         ];
     }
 
     applyDateRangeFilters(query, searchParams, ["createdAt"]);
+    const sortFields: Record<string, string> = {
+        name: "name",
+        subject: "subject",
+        status: "status",
+        createdAt: "createdAt",
+    };
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
+    const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const [contactMessages, total] = await Promise.all([
         ContactMessage.find(query)
-            .sort({ createdAt: -1 })
+            .sort({ [sortField]: sortDirection, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

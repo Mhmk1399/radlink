@@ -140,6 +140,18 @@ function canManageFooterBranding(role: unknown) {
     return role === "agent" || role === "admin" || role === "superAdmin";
 }
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 async function loadPageExpiryAlerts(): Promise<PageExpiryAlertsData> {
     const now = new Date();
     const warningLimit = new Date(now.getTime() + 10 * PAGE_EXPIRY_DAY_MS);
@@ -711,6 +723,40 @@ export const GET = compose(
     }
 
     applyDateRangeFilters(filters, searchParams, ["createdAt"]);
+    const titleFilter = getFilterParam(searchParams, "title");
+    const search = searchParams.get("search")?.trim();
+    const textConditions: Record<string, unknown>[] = [];
+
+    if (titleFilter) {
+        const pattern = escapeRegex(titleFilter);
+        textConditions.push({
+            $or: [
+                { title: { $regex: pattern, $options: "i" } },
+                { url: { $regex: pattern, $options: "i" } },
+            ],
+        });
+    }
+
+    if (search) {
+        const pattern = escapeRegex(search);
+        textConditions.push({
+            $or: [
+                { title: { $regex: pattern, $options: "i" } },
+                { description: { $regex: pattern, $options: "i" } },
+                { url: { $regex: pattern, $options: "i" } },
+                { "seo.title": { $regex: pattern, $options: "i" } },
+                { "seo.description": { $regex: pattern, $options: "i" } },
+                { "seo.canonical": { $regex: pattern, $options: "i" } },
+            ],
+        });
+    }
+
+    if (textConditions.length > 0) {
+        filters.$and = [
+            ...((filters.$and as Record<string, unknown>[]) ?? []),
+            ...textConditions,
+        ];
+    }
 
     const query = await withPageAccessScope(user, filters);
 

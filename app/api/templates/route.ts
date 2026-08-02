@@ -12,6 +12,18 @@ import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 import { normalizePageBackgroundSettings } from "@/lib/design/page-background";
 import { normalizePageFooterSettings } from "@/lib/design/page-footer";
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 const DEFAULT_TEMPLATE_STYLE = {
     fontFamily: "inherit",
     fontSizeBase: "16px",
@@ -163,19 +175,49 @@ export const GET = compose(
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? searchParams.get("pageSize") ?? 100));
-    const category = searchParams.get("category");
-    const isActive = searchParams.get("isActive");
+    const category = getFilterParam(searchParams, "category");
+    const categoryName = getFilterParam(searchParams, "categoryName");
+    const isActive = getFilterParam(searchParams, "isActive");
+    const search = searchParams.get("search")?.trim();
 
     const filters: Record<string, unknown> = {};
-    if (category) filters.category = category;
-    if (isActive !== null) filters.isActive = isActive === "true";
+    if (category && mongoose.Types.ObjectId.isValid(category)) {
+        filters.category = category;
+    }
+    if (categoryName) {
+        const pattern = escapeRegex(categoryName);
+        const categoryIds = await Category.find({
+            name: { $regex: pattern, $options: "i" },
+        }).distinct("_id");
+        filters.category = { $in: categoryIds };
+    }
+    if (isActive === "true" || isActive === "false") {
+        filters.isActive = isActive === "true";
+    }
+    if (search) {
+        const pattern = escapeRegex(search);
+        filters.$or = [
+            { name: { $regex: pattern, $options: "i" } },
+            { description: { $regex: pattern, $options: "i" } },
+        ];
+    }
 
     const query = await withTemplateAccessScope(user, filters);
+    const sortFields: Record<string, string> = {
+        name: "name",
+        categoryName: "category",
+        builderBlockCount: "createdAt",
+        isActive: "isActive",
+        createdAt: "createdAt",
+    };
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
+    const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const [templates, total] = await Promise.all([
         Template.find(query)
             .populate("category", "name")
             .populate("blocks", "name type icon style")
+            .sort({ [sortField]: sortDirection, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

@@ -10,7 +10,8 @@ import React, {
   useId,
   type ReactNode,
 } from "react";
-import DatePicker, { DateObject } from "react-multi-date-picker";
+import { createPortal } from "react-dom";
+import DatePicker, { Calendar, DateObject } from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import {
@@ -34,6 +35,7 @@ import {
   HiMiniExclamationCircle,
   HiMiniDocumentDuplicate,
   HiMiniClipboardDocumentCheck,
+  HiMiniEllipsisVertical,
 } from "react-icons/hi2";
 import { LuPackage } from "react-icons/lu";
 import { animation, focus } from "@/lib/design/tokens";
@@ -486,7 +488,7 @@ function SkeletonPulse({
   );
 }
 
-function DesktopTableSkeleton({
+function DesktopTableSkeleton<T extends Record<string, unknown>>({
   rowCount,
   visibleCols,
   showRowNumbers,
@@ -495,14 +497,14 @@ function DesktopTableSkeleton({
   t,
 }: {
   rowCount: number;
-  visibleCols: ColumnDef<any>[];
+  visibleCols: ColumnDef<T>[];
   showRowNumbers: boolean;
   hasActions: boolean;
   isDark: boolean;
   t: ThemeTokens;
 }) {
   // Vary widths per column type for realistic feel
-  const getColWidth = (col: ColumnDef<any>, seed: number) => {
+  const getColWidth = (col: ColumnDef<T>, seed: number) => {
     if (col.inputType === "number") return 40 + (seed % 20);
     if (col.dateFilter || col.inputType === "date") return 70;
     if (col.key.includes("name") || col.key.includes("title"))
@@ -842,6 +844,17 @@ const loadingKeyframes = `
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 `;
 function getDatePickerVariables(isDark: boolean): CSSProperties {
   return {
@@ -1014,6 +1027,7 @@ const Icon = {
   AlertCircle: () => <HiMiniExclamationCircle className="h-5 w-5" />,
   Copy: () => <HiMiniDocumentDuplicate className="h-3.5 w-3.5" />,
   CopyDone: () => <HiMiniClipboardDocumentCheck className="h-3.5 w-3.5" />,
+  More: () => <HiMiniEllipsisVertical className="h-4 w-4" />,
 };
 
 /* ══════════════════════════════════════════════
@@ -1056,6 +1070,24 @@ function truncate(str: string, max: number): string {
 function toPersianDigits(n: number | string): string {
   const pd = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
   return String(n).replace(/\d/g, (d) => pd[parseInt(d)]);
+}
+
+function CheckboxIcon({
+  checked,
+  indeterminate,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+}) {
+  return (
+    <svg viewBox="0 0 12 12" fill="currentColor" className="h-3 w-3">
+      {checked ? (
+        <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
+      ) : indeterminate ? (
+        <rect x="2" y="5" width="8" height="2" rx="1" />
+      ) : null}
+    </svg>
+  );
 }
 
 function parsePersianDate(val: unknown): DateObject | null {
@@ -1339,7 +1371,7 @@ function ActionBtn({
       title={title}
       aria-label={title}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-lg",
+        "inline-flex h-9 w-9 items-center justify-center rounded-lg md:h-8 md:w-8",
         "transition-all duration-200 touch-manipulation",
         focus.ring,
         "active:scale-[0.95]",
@@ -1356,6 +1388,131 @@ function ActionBtn({
     >
       {children}
     </button>
+  );
+}
+
+function MobileRowActionMenu<T extends Record<string, unknown>>({
+  row,
+  canUpdate,
+  canDelete,
+  rowActions,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  row: T;
+  canUpdate: boolean;
+  canDelete: boolean;
+  rowActions?: (row: T) => ReactNode;
+  onView: (row: T) => void;
+  onEdit: (row: T) => void;
+  onDelete: (row: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { t, panel, isDark } = useTableTheme();
+
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
+  const menuItemClass = cn(
+    "flex w-full items-center gap-2 px-3 py-3 text-right text-xs font-medium transition-colors duration-200",
+    t.textSecondary,
+    t.hoverBg,
+    isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
+  );
+
+  return (
+    <div ref={ref} className="relative shrink-0" data-row-dblclick-ignore>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-label="نمایش عملیات"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={cn(
+          "inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200",
+          t.borderSubtle,
+          t.inputBg,
+          t.textMuted,
+          t.hoverBg,
+          focus.ring,
+        )}
+      >
+        <Icon.More />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label="عملیات ردیف"
+          className={cn(
+            "absolute left-0 top-full z-50 mt-1 min-w-44 overflow-hidden rounded-xl",
+            panel,
+            "animate-[fade-up_.18s_cubic-bezier(.22,1,.36,1)_both]",
+          )}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onView(row);
+            }}
+            className={menuItemClass}
+          >
+            <Icon.Eye />
+            <span>مشاهده جزئیات</span>
+          </button>
+          {canUpdate && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onEdit(row);
+              }}
+              className={menuItemClass}
+            >
+              <Icon.Edit />
+              <span>ویرایش</span>
+            </button>
+          )}
+          {canDelete && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onDelete(row);
+              }}
+              className={cn(
+                menuItemClass,
+                isDark
+                  ? "text-[#e87c7c]/75 hover:text-[#e87c7c] hover:bg-[#c44040]/10"
+                  : "text-[#c44040]/75 hover:text-[#c44040] hover:bg-[#c44040]/6",
+              )}
+            >
+              <Icon.Trash />
+              <span>حذف</span>
+            </button>
+          )}
+          {rowActions && (
+            <div
+              className={cn("border-t p-1.5 [&_button]:min-h-10", t.divider)}
+            >
+              {rowActions(row)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1400,6 +1557,79 @@ function PaginationBtn({
   );
 }
 
+function CenteredFilterDialog({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const { t, isDark } = useTableTheme();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      ref={overlayRef}
+      data-centered-filter-dialog="true"
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px] md:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      dir="rtl"
+      onMouseDown={(event) => {
+        if (event.target === overlayRef.current) onClose();
+      }}
+    >
+      <div
+        className={cn(
+          "w-full max-w-sm overflow-hidden rounded-2xl border p-3 shadow-[0_24px_70px_-26px_rgba(0,0,0,0.8)]",
+          isDark
+            ? "border-[#2a2a32] bg-[#1a1a20]"
+            : "border-[#e4e4e7] bg-white",
+          "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
+        )}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h4 className={cn("text-sm font-bold", t.textPrimary)}>{title}</h4>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="بستن"
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
+              t.borderSubtle,
+              t.inputBg,
+              t.textMuted,
+              t.hoverBg,
+              focus.ring,
+            )}
+          >
+            <Icon.X />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function FilterDropdown({
   label,
   options,
@@ -1420,6 +1650,9 @@ function FilterDropdown({
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest("[data-centered-filter-dialog]")) {
+        return;
+      }
       if (ref.current && !ref.current.contains(e.target as Node))
         setOpen(false);
     };
@@ -1428,7 +1661,7 @@ function FilterDropdown({
   }, []);
 
   return (
-    <div ref={ref} className="relative w-full sm:w-auto">
+    <div ref={ref} className="relative w-full md:w-auto">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -1436,7 +1669,7 @@ function FilterDropdown({
         aria-haspopup="listbox"
         aria-label={`فیلتر ${label}`}
         className={cn(
-          "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium sm:h-9 sm:w-auto sm:justify-center sm:gap-1.5",
+          "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium md:h-9 md:w-auto md:justify-center md:gap-1.5",
           "transition-all duration-200",
           value
             ? cn(t.borderAccent, t.textAccent, t.inputBg)
@@ -1467,7 +1700,7 @@ function FilterDropdown({
           role="listbox"
           aria-label={`گزینه‌های ${label}`}
           className={cn(
-            "absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-xl sm:left-auto sm:min-w-40",
+            "absolute top-full right-0 left-0 z-50 mt-1 hidden overflow-hidden rounded-xl md:left-auto md:block md:min-w-40",
             panel,
             "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
           )}
@@ -1521,6 +1754,61 @@ function FilterDropdown({
           ))}
         </div>
       )}
+      <CenteredFilterDialog
+        open={open}
+        title={`فیلتر ${label}`}
+        onClose={() => setOpen(false)}
+      >
+        <div
+          role="listbox"
+          aria-label={`گزینه‌های ${label}`}
+          className={cn(
+            "max-h-[60vh] overflow-y-auto rounded-xl border p-1",
+            t.borderSubtle,
+            t.inputBg,
+          )}
+        >
+          <button
+            type="button"
+            role="option"
+            aria-selected={!value}
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-lg px-3 py-3 text-xs text-right transition-colors duration-200",
+              !value
+                ? cn(t.activeBg, t.textAccent)
+                : cn(t.textMuted, t.hoverBg),
+            )}
+          >
+            <span className="flex-1">همه</span>
+            {!value && <Icon.Check />}
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              role="option"
+              aria-selected={value === opt}
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-3 py-3 text-xs text-right transition-colors duration-200",
+                value === opt
+                  ? cn(t.activeBg, t.textAccent)
+                  : cn(t.textMuted, t.hoverBg),
+              )}
+            >
+              <span className="flex-1">{getOptionLabel(opt)}</span>
+              {value === opt && <Icon.Check />}
+            </button>
+          ))}
+        </div>
+      </CenteredFilterDialog>
     </div>
   );
 }
@@ -1535,45 +1823,124 @@ function TextFilter({
   onChange: (value: string) => void;
 }) {
   const { t } = useTableTheme();
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative w-full min-w-0 sm:w-auto sm:min-w-44">
-      <span
+    <div className="relative w-full min-w-0 md:w-auto md:min-w-44">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
         className={cn(
-          "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
-          t.textDisabled,
-        )}
-      >
-        <Icon.Search />
-      </span>
-      <input
-        type="search"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={`فیلتر ${label}`}
-        aria-label={`فیلتر متنی ${label}`}
-        className={cn(
-          "h-10 w-full rounded-xl border pr-9 pl-8 text-xs outline-none transition sm:h-9",
+          "flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium transition md:hidden",
           value ? t.borderAccent : t.borderInput,
           t.inputBg,
-          t.textPrimary,
+          value ? t.textAccent : t.textMuted,
           focus.ring,
         )}
-      />
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          aria-label={`پاک کردن فیلتر ${label}`}
+      >
+        <span className="flex items-center gap-2">
+          <Icon.Search />
+          {label}
+        </span>
+        {value && <span className="max-w-36 truncate">{value}</span>}
+      </button>
+      <CenteredFilterDialog
+        open={open}
+        title={`فیلتر ${label}`}
+        onClose={() => setOpen(false)}
+      >
+        <div className="grid gap-3">
+          <div className="relative">
+            <span
+              className={cn(
+                "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
+                t.textDisabled,
+              )}
+            >
+              <Icon.Search />
+            </span>
+            <input
+              autoFocus
+              type="search"
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder={`فیلتر ${label}`}
+              aria-label={`فیلتر متنی ${label}`}
+              className={cn(
+                "h-11 w-full rounded-xl border pr-9 pl-9 text-base outline-none transition",
+                value ? t.borderAccent : t.borderInput,
+                t.inputBg,
+                t.textPrimary,
+                focus.ring,
+              )}
+            />
+            {value && (
+              <button
+                type="button"
+                onClick={() => onChange("")}
+                aria-label={`پاک کردن فیلتر ${label}`}
+                className={cn(
+                  "absolute left-2 top-1/2 -translate-y-1/2 rounded p-1",
+                  t.textDisabled,
+                  t.hoverBg,
+                )}
+              >
+                <Icon.X />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className={cn(
+              "inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-bold transition",
+              t.activeBg,
+              t.textAccent,
+              focus.ring,
+            )}
+          >
+            اعمال
+          </button>
+        </div>
+      </CenteredFilterDialog>
+      <div className="relative hidden md:block">
+        <span
           className={cn(
-            "absolute left-2 top-1/2 -translate-y-1/2 rounded p-1",
+            "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
             t.textDisabled,
-            t.hoverBg,
           )}
         >
-          <Icon.X />
-        </button>
-      )}
+          <Icon.Search />
+        </span>
+        <input
+          type="search"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={`فیلتر ${label}`}
+          aria-label={`فیلتر متنی ${label}`}
+          className={cn(
+            "h-10 w-full rounded-xl border pr-9 pl-8 text-base outline-none transition md:h-9",
+            value ? t.borderAccent : t.borderInput,
+            t.inputBg,
+            t.textPrimary,
+            focus.ring,
+          )}
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            aria-label={`پاک کردن فیلتر ${label}`}
+            className={cn(
+              "absolute left-2 top-1/2 -translate-y-1/2 rounded p-1",
+              t.textDisabled,
+              t.hoverBg,
+            )}
+          >
+            <Icon.X />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1591,25 +1958,147 @@ function SearchableSelectFilter({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const { t } = useTableTheme();
+  const normalizedQuery = query.trim().toLowerCase();
+  const selectOptions = options.map((option) => ({
+    value: option,
+    label: optionLabels?.[option] ?? option,
+  }));
+  const selectedLabel =
+    selectOptions.find((option) => option.value === value)?.label ?? "";
+  const mobileOptions = selectOptions.filter((option) =>
+    option.label.toLowerCase().includes(normalizedQuery),
+  );
+
   return (
-    <div className="relative z-30 w-full min-w-0 sm:w-auto sm:min-w-52">
-      <CustomSelect
-        options={options.map((option) => ({
-          value: option,
-          label: optionLabels?.[option] ?? option,
-        }))}
-        value={value}
-        onChange={(nextValue) =>
-          onChange(Array.isArray(nextValue) ? (nextValue[0] ?? "") : nextValue)
-        }
-        placeholder={`فیلتر ${label}`}
-        searchPlaceholder={`جستجو در ${label}...`}
-        searchable
-        clearable
-        fullWidth
-        size="sm"
-        maxDropdownHeight={280}
-      />
+    <div className="relative z-30 w-full min-w-0 md:w-auto md:min-w-52">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium transition md:hidden",
+          value ? t.borderAccent : t.borderInput,
+          t.inputBg,
+          value ? t.textAccent : t.textMuted,
+          focus.ring,
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <Icon.Filter />
+          {label}
+        </span>
+        {selectedLabel && (
+          <span className="max-w-36 truncate">{selectedLabel}</span>
+        )}
+      </button>
+      <CenteredFilterDialog
+        open={open}
+        title={`فیلتر ${label}`}
+        onClose={() => setOpen(false)}
+      >
+        <div className="grid gap-3">
+          <div className="relative">
+            <span
+              className={cn(
+                "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2",
+                t.textDisabled,
+              )}
+            >
+              <Icon.Search />
+            </span>
+            <input
+              autoFocus
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`جستجو در ${label}...`}
+              className={cn(
+                "h-11 w-full rounded-xl border pr-9 pl-3 text-base outline-none transition",
+                t.borderInput,
+                t.inputBg,
+                t.textPrimary,
+                focus.ring,
+              )}
+            />
+          </div>
+          <div
+            role="listbox"
+            aria-label={`گزینه‌های ${label}`}
+            className={cn(
+              "max-h-[50vh] overflow-y-auto rounded-xl border p-1",
+              t.borderSubtle,
+              t.inputBg,
+            )}
+          >
+            <button
+              type="button"
+              role="option"
+              aria-selected={!value}
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+                setQuery("");
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-3 py-3 text-xs text-right transition",
+                !value
+                  ? cn(t.activeBg, t.textAccent)
+                  : cn(t.textMuted, t.hoverBg),
+              )}
+            >
+              <span className="flex-1">همه</span>
+              {!value && <Icon.Check />}
+            </button>
+            {mobileOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={value === option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                  setQuery("");
+                }}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-lg px-3 py-3 text-xs text-right transition",
+                  value === option.value
+                    ? cn(t.activeBg, t.textAccent)
+                    : cn(t.textMuted, t.hoverBg),
+                )}
+              >
+                <span className="flex-1">{option.label}</span>
+                {value === option.value && <Icon.Check />}
+              </button>
+            ))}
+            {mobileOptions.length === 0 && (
+              <div className={cn("px-3 py-6 text-center text-xs", t.textMuted)}>
+                نتیجه‌ای پیدا نشد
+              </div>
+            )}
+          </div>
+        </div>
+      </CenteredFilterDialog>
+      <div className="hidden md:block">
+        <CustomSelect
+          options={selectOptions}
+          value={value}
+          onChange={(nextValue) =>
+            onChange(
+              Array.isArray(nextValue) ? (nextValue[0] ?? "") : nextValue,
+            )
+          }
+          placeholder={`فیلتر ${label}`}
+          searchPlaceholder={`جستجو در ${label}...`}
+          searchable
+          clearable
+          fullWidth
+          size="sm"
+          maxDropdownHeight={280}
+        />
+      </div>
     </div>
   );
 }
@@ -1623,7 +2112,8 @@ function DateRangeFilter({
   value: DateRange;
   onChange: (range: DateRange) => void;
 }) {
-  const { isDark } = useTheme();
+  const { isDark, t } = useTableTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const hasRange = value.from || value.to;
   const formatRange = () => {
     if (!value.from && !value.to) return "";
@@ -1631,92 +2121,393 @@ function DateRangeFilter({
   };
 
   return (
-    <div className="dt-date-filter relative w-full sm:w-auto">
-      <DatePicker
-        value={
-          value.from && value.to
-            ? [value.from, value.to]
-            : value.from
-              ? [value.from]
-              : undefined
-        }
-        onChange={(dates) => {
-          if (Array.isArray(dates))
-            onChange({
-              from: dates[0] ? new DateObject(dates[0]) : null,
-              to: dates[1] ? new DateObject(dates[1]) : null,
-            });
-          else onChange({ from: null, to: null });
-        }}
-        range
-        rangeHover
-        calendar={persian}
-        locale={persian_fa}
-        calendarPosition="bottom-right"
-        fixMainPosition
-        arrow={false}
-        numberOfMonths={1}
-        render={(val, openCalendar) => (
+    <div className="dt-date-filter relative w-full md:w-auto">
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label={`فیلتر تاریخ ${label}`}
+        className={cn(
+          "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium transition-all duration-200 md:hidden",
+          isDark ? "bg-[#1e1e26]" : "bg-[#f5f3ee]",
+          hasRange
+            ? isDark
+              ? "border-[#c9a84c]/20 text-[#d4b863]"
+              : "border-[#8a7032]/20 text-[#7a6428]"
+            : isDark
+              ? "border-[#2e2e38] text-[#706c65]"
+              : "border-[#ddd9d0] text-[#9e9788]",
+          focus.ring,
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <Icon.Calendar />
+          {label}
+        </span>
+        {hasRange && <span className="max-w-38 truncate">{formatRange()}</span>}
+      </button>
+      <CenteredFilterDialog
+        open={mobileOpen}
+        title={`فیلتر تاریخ ${label}`}
+        onClose={() => setMobileOpen(false)}
+      >
+        <div className="grid gap-3">
+          <div className="max-w-full overflow-x-auto rounded-xl">
+            <Calendar
+              value={
+                value.from && value.to
+                  ? [value.from, value.to]
+                  : value.from
+                    ? [value.from]
+                    : undefined
+              }
+              onChange={(dates) => {
+                if (Array.isArray(dates))
+                  onChange({
+                    from: dates[0] ? new DateObject(dates[0]) : null,
+                    to: dates[1] ? new DateObject(dates[1]) : null,
+                  });
+                else onChange({ from: null, to: null });
+              }}
+              range
+              rangeHover
+              calendar={persian}
+              locale={persian_fa}
+              numberOfMonths={1}
+              className={
+                isDark ? "dt-calendar-theme-dark" : "dt-calendar-theme-light"
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => onChange({ from: null, to: null })}
+              className={cn(
+                "h-10 rounded-xl border px-3 text-xs font-medium transition",
+                t.borderSubtle,
+                t.textMuted,
+                t.hoverBg,
+                focus.ring,
+              )}
+            >
+              پاک کردن
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "h-10 rounded-xl px-3 text-xs font-bold transition",
+                t.activeBg,
+                t.textAccent,
+                focus.ring,
+              )}
+            >
+              اعمال
+            </button>
+          </div>
+        </div>
+      </CenteredFilterDialog>
+      <div className="hidden md:block">
+        <DatePicker
+          value={
+            value.from && value.to
+              ? [value.from, value.to]
+              : value.from
+                ? [value.from]
+                : undefined
+          }
+          onChange={(dates) => {
+            if (Array.isArray(dates))
+              onChange({
+                from: dates[0] ? new DateObject(dates[0]) : null,
+                to: dates[1] ? new DateObject(dates[1]) : null,
+              });
+            else onChange({ from: null, to: null });
+          }}
+          range
+          rangeHover
+          calendar={persian}
+          locale={persian_fa}
+          calendarPosition="bottom-right"
+          fixMainPosition
+          arrow={false}
+          numberOfMonths={1}
+          render={(val, openCalendar) => (
+            <button
+              type="button"
+              onClick={openCalendar}
+              aria-label={`فیلتر تاریخ ${label}`}
+              className={cn(
+                "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium md:h-9 md:w-auto md:justify-center md:gap-1.5",
+                "transition-all duration-200",
+                isDark ? "bg-[#1e1e26]" : "bg-[#f5f3ee]",
+                hasRange
+                  ? isDark
+                    ? "border-[#c9a84c]/20 text-[#d4b863]"
+                    : "border-[#8a7032]/20 text-[#7a6428]"
+                  : isDark
+                    ? "border-[#2e2e38] text-[#706c65]"
+                    : "border-[#ddd9d0] text-[#9e9788]",
+                focus.ring,
+                isDark
+                  ? "hover:border-[#3a3a44] hover:text-[#9e9a93]"
+                  : "hover:border-[#ccc7bc] hover:text-[#6b665c]",
+                "max-w-full md:max-w-70",
+              )}
+            >
+              <Icon.Calendar />
+              <span className="whitespace-nowrap">{label}</span>
+              {hasRange && (
+                <span
+                  className={cn(
+                    "mr-1 max-w-35 truncate whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px]",
+                    isDark
+                      ? "bg-[#c9a84c]/8 text-[#d4b863]"
+                      : "bg-[#8a7032]/6 text-[#7a6428]",
+                  )}
+                >
+                  {formatRange()}
+                </span>
+              )}
+              <Icon.ChevronDown />
+            </button>
+          )}
+        />
+        {hasRange && (
           <button
             type="button"
-            onClick={openCalendar}
-            aria-label={`فیلتر تاریخ ${label}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange({ from: null, to: null });
+            }}
+            aria-label="پاک کردن فیلتر تاریخ"
             className={cn(
-              "inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium sm:h-9 sm:w-auto sm:justify-center sm:gap-1.5",
-              "transition-all duration-200",
-              isDark ? "bg-[#1e1e26]" : "bg-[#f5f3ee]",
-              hasRange
-                ? isDark
-                  ? "border-[#c9a84c]/20 text-[#d4b863]"
-                  : "border-[#8a7032]/20 text-[#7a6428]"
-                : isDark
-                  ? "border-[#2e2e38] text-[#706c65]"
-                  : "border-[#ddd9d0] text-[#9e9788]",
-              focus.ring,
+              "absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full transition-all duration-150",
               isDark
-                ? "hover:border-[#3a3a44] hover:text-[#9e9a93]"
-                : "hover:border-[#ccc7bc] hover:text-[#6b665c]",
-              "max-w-full sm:max-w-70",
+                ? "bg-[#c44040]/15 text-[#e87c7c] hover:bg-[#c44040]/25"
+                : "bg-[#c44040]/8 text-[#c44040] hover:bg-[#c44040]/15",
             )}
           >
-            <Icon.Calendar />
-            <span className="whitespace-nowrap">{label}</span>
-            {hasRange && (
-              <span
-                className={cn(
-                  "mr-1 max-w-35 truncate whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px]",
-                  isDark
-                    ? "bg-[#c9a84c]/8 text-[#d4b863]"
-                    : "bg-[#8a7032]/6 text-[#7a6428]",
-                )}
-              >
-                {formatRange()}
-              </span>
-            )}
-            <Icon.ChevronDown />
+            <svg
+              viewBox="0 0 12 12"
+              fill="currentColor"
+              className="h-2.5 w-2.5"
+            >
+              <path d="M3.404 3.404a.55.55 0 01.778 0L6 5.222l1.818-1.818a.55.55 0 01.778.778L6.778 6l1.818 1.818a.55.55 0 11-.778.778L6 6.778 4.182 8.596a.55.55 0 11-.778-.778L5.222 6 3.404 4.182a.55.55 0 010-.778z" />
+            </svg>
           </button>
         )}
-      />
-      {hasRange && (
+      </div>
+    </div>
+  );
+}
+
+function FilterControls<T extends Record<string, unknown>>({
+  filterableCols,
+  dateFilterCols,
+  filters,
+  dateRanges,
+  filterOptions,
+  filterOptionLabels,
+  setFilters,
+  setDateRanges,
+  activeFiltersCount,
+  clearAllFilters,
+  onDone,
+}: {
+  filterableCols: ColumnDef<T>[];
+  dateFilterCols: ColumnDef<T>[];
+  filters: Record<string, string>;
+  dateRanges: Record<string, DateRange>;
+  filterOptions: Record<string, string[]>;
+  filterOptionLabels: Record<string, Record<string, string>>;
+  setFilters: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  setDateRanges: React.Dispatch<
+    React.SetStateAction<Record<string, DateRange>>
+  >;
+  activeFiltersCount: number;
+  clearAllFilters: () => void;
+  onDone?: () => void;
+}) {
+  const { isDark } = useTheme();
+  const setFilterValue = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+  const setDateRangeValue = (key: string, range: DateRange) => {
+    setDateRanges((prev) => ({ ...prev, [key]: range }));
+  };
+
+  return (
+    <>
+      {filterableCols.map((col) => {
+        const value = filters[col.key] || "";
+        const onChange = (nextValue: string) =>
+          setFilterValue(col.key, nextValue);
+
+        if (col.filterType === "text") {
+          return (
+            <TextFilter
+              key={col.key}
+              label={col.label}
+              value={value}
+              onChange={onChange}
+            />
+          );
+        }
+
+        if (col.filterSearchable) {
+          return (
+            <SearchableSelectFilter
+              key={col.key}
+              label={col.label}
+              options={filterOptions[col.key] || []}
+              optionLabels={filterOptionLabels[col.key]}
+              value={value}
+              onChange={onChange}
+            />
+          );
+        }
+
+        return (
+          <FilterDropdown
+            key={col.key}
+            label={col.label}
+            options={filterOptions[col.key] || []}
+            optionLabels={filterOptionLabels[col.key]}
+            value={value}
+            onChange={onChange}
+          />
+        );
+      })}
+      {dateFilterCols.map((col) => (
+        <DateRangeFilter
+          key={col.key}
+          label={col.label}
+          value={dateRanges[col.key] || { from: null, to: null }}
+          onChange={(range) => setDateRangeValue(col.key, range)}
+        />
+      ))}
+      {activeFiltersCount > 0 && (
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onChange({ from: null, to: null });
-          }}
-          aria-label="پاک کردن فیلتر تاریخ"
+          onClick={clearAllFilters}
+          aria-label="پاک کردن همه فیلترها"
           className={cn(
-            "absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full transition-all duration-150",
+            "inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl px-3 text-xs font-medium transition-all duration-200 md:h-9 md:w-auto",
             isDark
-              ? "bg-[#c44040]/15 text-[#e87c7c] hover:bg-[#c44040]/25"
-              : "bg-[#c44040]/8 text-[#c44040] hover:bg-[#c44040]/15",
+              ? "text-[#e87c7c]/70 hover:text-[#e87c7c] hover:bg-[#c44040]/8"
+              : "text-[#c44040]/70 hover:text-[#c44040] hover:bg-[#c44040]/5",
+            focus.ring,
           )}
         >
-          <svg viewBox="0 0 12 12" fill="currentColor" className="h-2.5 w-2.5">
-            <path d="M3.404 3.404a.55.55 0 01.778 0L6 5.222l1.818-1.818a.55.55 0 01.778.778L6.778 6l1.818 1.818a.55.55 0 11-.778.778L6 6.778 4.182 8.596a.55.55 0 11-.778-.778L5.222 6 3.404 4.182a.55.55 0 010-.778z" />
-          </svg>
+          <Icon.X />
+          پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
         </button>
       )}
+      {onDone && (
+        <button
+          type="button"
+          onClick={onDone}
+          className={cn(
+            "inline-flex h-11 w-full items-center justify-center rounded-xl px-4 text-xs font-bold transition-all duration-200 md:hidden",
+            isDark
+              ? "bg-[#d4b863] text-[#1a1a1f] hover:bg-[#dfc06a]"
+              : "bg-[#27272a] text-white hover:bg-[#3f3f46]",
+            focus.ring,
+          )}
+        >
+          اعمال فیلترها
+        </button>
+      )}
+    </>
+  );
+}
+
+function MobileFilterSheet({
+  open,
+  onClose,
+  activeFiltersCount,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  activeFiltersCount: number;
+  children: ReactNode;
+}) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const { isDark, t } = useTableTheme();
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      ref={sheetRef}
+      className={cn(
+        "fixed inset-0 z-200 flex items-end bg-black/35 backdrop-blur-[2px] md:hidden",
+        "animate-[fade-in_.2s_ease-out_both]",
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-label="فیلترهای جدول"
+      dir="rtl"
+      onClick={(event) => {
+        if (event.target === sheetRef.current) onClose();
+      }}
+    >
+      <div
+        className={cn(
+          "max-h-[88vh] w-full overflow-hidden rounded-t-3xl border-t px-4 pb-4 pt-3",
+          isDark
+            ? "border-[#2a2a32] bg-[#1a1a20]"
+            : "border-[#e4e4e7] bg-white",
+          "shadow-[0_-18px_48px_-22px_rgba(0,0,0,0.65)]",
+          "animate-[sheet-up_.24s_cubic-bezier(.22,1,.36,1)_both]",
+        )}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-current opacity-20" />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className={cn("text-sm font-bold", t.textPrimary)}>فیلترها</h3>
+            <p className={cn("mt-0.5 text-xs", t.textMuted)}>
+              {activeFiltersCount > 0
+                ? `${toPersianDigits(activeFiltersCount)} فیلتر فعال`
+                : "هیچ فیلتری فعال نیست"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="بستن فیلترها"
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200",
+              t.borderSubtle,
+              t.inputBg,
+              t.textMuted,
+              t.hoverBg,
+              focus.ring,
+            )}
+          >
+            <Icon.X />
+          </button>
+        </div>
+        <div className="grid max-h-[68vh] gap-2 overflow-y-auto overscroll-contain pb-1">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1862,91 +2653,6 @@ function ExportMenu({
   );
 }
 
-function PageSizeSelector({
-  value,
-  options,
-  onChange,
-}: {
-  value: number;
-  options: number[];
-  onChange: (size: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const { t, panel, isDark } = useTableTheme();
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        aria-label={`تعداد ردیف در هر صفحه: ${toPersianDigits(value)}`}
-        className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium",
-          "transition-all duration-200",
-          t.borderInput,
-          t.inputBg,
-          t.textMuted,
-          t.hoverBg,
-          isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
-          focus.ring,
-        )}
-      >
-        <span>{toPersianDigits(value)} ردیف</span>
-        <Icon.ChevronDown />
-      </button>
-      {open && (
-        <div
-          role="listbox"
-          aria-label="تعداد ردیف"
-          className={cn(
-            "absolute bottom-full right-0 z-50 mb-1 min-w-25 overflow-hidden rounded-xl",
-            panel,
-            "animate-[fade-up_.2s_cubic-bezier(.22,1,.36,1)_both]",
-          )}
-        >
-          {options.map((size) => (
-            <button
-              key={size}
-              type="button"
-              role="option"
-              aria-selected={value === size}
-              onClick={() => {
-                onChange(size);
-                setOpen(false);
-              }}
-              className={cn(
-                "flex w-full items-center justify-between px-3 py-2 text-xs transition-colors duration-200",
-                value === size
-                  ? cn(t.activeBg, t.textAccent)
-                  : cn(
-                      t.textMuted,
-                      t.hoverBg,
-                      isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
-                    ),
-              )}
-            >
-              <span>{toPersianDigits(size)} ردیف</span>
-              {value === size && <Icon.Check />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ErrorBanner({
   error,
   onRetry,
@@ -1959,7 +2665,7 @@ function ErrorBanner({
     <div
       role="alert"
       className={cn(
-        "flex items-center gap-3 rounded-xl border px-4 py-3 mb-3",
+        "mb-3 flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center",
         isDark
           ? "border-[#c44040]/15 bg-[#c44040]/6"
           : "border-[#c44040]/12 bg-[#fce8e8]",
@@ -1968,7 +2674,7 @@ function ErrorBanner({
       <div className={isDark ? "text-[#e87c7c]" : "text-[#c44040]"}>
         <Icon.AlertCircle />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <p
           className={cn(
             "text-sm font-medium",
@@ -1979,7 +2685,7 @@ function ErrorBanner({
         </p>
         <p
           className={cn(
-            "text-xs truncate mt-0.5",
+            "mt-0.5 text-xs leading-5 break-words",
             isDark ? "text-[#e87c7c]/60" : "text-[#c44040]/60",
           )}
         >
@@ -1991,7 +2697,7 @@ function ErrorBanner({
         onClick={onRetry}
         aria-label="تلاش مجدد برای دریافت داده"
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all duration-200",
+          "inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all duration-200 sm:h-8 sm:w-auto",
           isDark
             ? "border-[#c44040]/20 text-[#e87c7c] hover:bg-[#c44040]/10"
             : "border-[#c44040]/15 text-[#c44040] hover:bg-[#c44040]/6",
@@ -2001,6 +2707,66 @@ function ErrorBanner({
         <Icon.Refresh />
         تلاش مجدد
       </button>
+    </div>
+  );
+}
+
+function EmptyTableState({
+  emptyMessage,
+  hasActiveFilters,
+  onClearFilters,
+}: {
+  emptyMessage: string;
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
+}) {
+  const { t, isDark } = useTableTheme();
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 px-4 text-center",
+        t.textMuted,
+        "animate-[fade-in_.4s_ease-out_both]",
+      )}
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className={cn(
+          "flex h-16 w-16 items-center justify-center rounded-2xl",
+          isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
+        )}
+      >
+        <Icon.Empty />
+      </div>
+      <div>
+        <p className={cn("mb-1 text-sm font-bold", t.textSecondary)}>
+          {hasActiveFilters ? "نتیجه‌ای پیدا نشد" : emptyMessage}
+        </p>
+        <p className={cn("text-xs leading-5", t.textDisabled)}>
+          {hasActiveFilters
+            ? "فیلترها یا عبارت جستجو را تغییر بدهید تا نتیجه‌های بیشتری دیده شود."
+            : "وقتی داده جدید ثبت شود، همین‌جا نمایش داده می‌شود."}
+        </p>
+      </div>
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className={cn(
+            "inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-all duration-200",
+            t.borderSubtle,
+            t.inputBg,
+            t.textSecondary,
+            t.hoverBg,
+            focus.ring,
+          )}
+        >
+          <Icon.X />
+          پاک کردن فیلترها
+        </button>
+      )}
     </div>
   );
 }
@@ -2093,8 +2859,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   canDelete: requestedCanDelete = true,
   primaryKey = "id" as keyof T & string,
   pageSize: initialPageSize = 10,
-  pageSizes = [10, 25, 50, 100],
-  searchable = true,
   searchDebounceMs = 300,
   emptyMessage = "داده‌ای یافت نشد",
   rowActions,
@@ -2139,7 +2903,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [page, setPage] = useState(1);
-  const [currentPageSize, setCurrentPageSize] = useState(initialPageSize);
+  const [currentPageSize] = useState(initialPageSize);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedRow, setSelectedRow] = useState<T | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
@@ -2149,8 +2913,22 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, DateRange>>({});
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [portalTarget] = useState<HTMLElement | null>(() =>
+    typeof document === "undefined" ? null : document.body,
+  );
+  const [desktopCanScrollX, setDesktopCanScrollX] = useState(false);
   const mobileFiltersId = useId();
+  const desktopScrollerRef = useRef<HTMLDivElement | null>(null);
+  const desktopDragRef = useRef({
+    active: false,
+    captured: false,
+    didDrag: false,
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    suppressClickUntil: 0,
+  });
 
   const debouncedSearch = useDebounce(search, searchDebounceMs);
   const { copied, copiedCell, copy } = useCopyToClipboard();
@@ -2245,7 +3023,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const {
     containerRef: pullRef,
     pullDistance,
-    isPulling,
     isRefreshing,
   } = usePullToRefresh({
     onRefresh: async () => {
@@ -2255,9 +3032,6 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     threshold: 80,
   });
 
-  useEffect(() => {
-    setPortalTarget(document.body);
-  }, []);
   useEffect(() => {
     if (fetchError && onError) onError(fetchError);
   }, [fetchError, onError]);
@@ -2410,13 +3184,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   }, [filtered, currentPage, currentPageSize, serverSide, data]);
 
   useEffect(() => {
-    setPage(1);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setPage(1);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedSearch, filters, dateRanges]);
-
-  const handlePageSizeChange = useCallback((newSize: number) => {
-    setCurrentPageSize(newSize);
-    setPage(1);
-  }, []);
 
   const toggleRowSelection = useCallback(
     (row: T) => {
@@ -2719,6 +3494,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     setSearch("");
   }, []);
 
+  const closeMobileFilters = useCallback(() => {
+    setMobileFiltersOpen(false);
+  }, []);
+
   const pageNumbers = useMemo(() => {
     const pages: number[] = [];
     const max = 5;
@@ -2734,22 +3513,119 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const totalColCount =
     (showRowNumbers ? 1 : 0) + 1 + visibleCols.length + (hasActions ? 1 : 0);
 
-  /* ── Checkbox helper ── */
-  const CheckboxIcon = ({
-    checked,
-    indeterminate,
-  }: {
-    checked: boolean;
-    indeterminate?: boolean;
-  }) => (
-    <svg viewBox="0 0 12 12" fill="currentColor" className="h-3 w-3">
-      {checked ? (
-        <path d="M10.28 2.22a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.19l4.97-4.97a.75.75 0 011.06 0z" />
-      ) : indeterminate ? (
-        <rect x="2" y="5" width="8" height="2" rx="1" />
-      ) : null}
-    </svg>
+  const handleDesktopDragStart = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
+
+      const target = event.target as HTMLElement;
+      if (
+        target.closest(
+          "button,a,input,textarea,select,[role='button'],[data-no-drag]",
+        )
+      ) {
+        return;
+      }
+
+      const scroller = desktopScrollerRef.current;
+      if (!scroller) return;
+
+      desktopDragRef.current = {
+        active: true,
+        captured: false,
+        didDrag: false,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        scrollLeft: scroller.scrollLeft,
+        suppressClickUntil: desktopDragRef.current.suppressClickUntil,
+      };
+    },
+    [],
   );
+
+  const handleDesktopDragMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = desktopDragRef.current;
+      const scroller = desktopScrollerRef.current;
+      if (!drag.active || drag.pointerId !== event.pointerId || !scroller) {
+        return;
+      }
+
+      const deltaX = event.clientX - drag.startX;
+      const deltaY = event.clientY - drag.startY;
+      const isHorizontalDrag =
+        Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY);
+      if (!drag.didDrag && !isHorizontalDrag) return;
+
+      if (!drag.captured) {
+        scroller.setPointerCapture(event.pointerId);
+        drag.captured = true;
+      }
+      drag.didDrag = true;
+      event.preventDefault();
+      scroller.scrollLeft = drag.scrollLeft - deltaX;
+    },
+    [],
+  );
+
+  const handleDesktopDragEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = desktopDragRef.current;
+      const scroller = desktopScrollerRef.current;
+      if (drag.didDrag) {
+        drag.suppressClickUntil = Date.now() + 220;
+      }
+      if (
+        drag.active &&
+        drag.pointerId === event.pointerId &&
+        scroller?.hasPointerCapture(event.pointerId)
+      ) {
+        scroller.releasePointerCapture(event.pointerId);
+      }
+      desktopDragRef.current.active = false;
+      desktopDragRef.current.captured = false;
+      desktopDragRef.current.didDrag = false;
+      desktopDragRef.current.pointerId = -1;
+    },
+    [],
+  );
+
+  const handleDesktopClickCapture = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (Date.now() < desktopDragRef.current.suppressClickUntil) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    [],
+  );
+
+  /* ── Checkbox helper ── */
+  useEffect(() => {
+    const scroller = desktopScrollerRef.current;
+    if (!scroller) return;
+
+    const updateCanScroll = () => {
+      setDesktopCanScrollX(scroller.scrollWidth > scroller.clientWidth + 1);
+    };
+
+    queueMicrotask(updateCanScroll);
+
+    const resizeObserver = new ResizeObserver(updateCanScroll);
+    resizeObserver.observe(scroller);
+    window.addEventListener("resize", updateCanScroll);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateCanScroll);
+    };
+  }, [
+    hasActions,
+    loading,
+    paginatedRows.length,
+    showRowNumbers,
+    visibleCols.length,
+  ]);
 
   const checkboxClasses = (active: boolean) =>
     cn(
@@ -2766,6 +3642,22 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   /* ══════════════════════════════════════════════
      RENDER
      ══════════════════════════════════════════════ */
+
+  const renderFilterControls = (onDone?: () => void) => (
+    <FilterControls<T>
+      filterableCols={filterableCols}
+      dateFilterCols={dateFilterCols}
+      filters={filters}
+      dateRanges={dateRanges}
+      filterOptions={filterOptions}
+      filterOptionLabels={filterOptionLabels}
+      setFilters={setFilters}
+      setDateRanges={setDateRanges}
+      activeFiltersCount={activeFiltersCount}
+      clearAllFilters={clearAllFilters}
+      onDone={onDone}
+    />
+  );
 
   return (
     <>
@@ -2886,91 +3778,139 @@ export default function DynamicTable<T extends Record<string, unknown>>({
 
         {/* ── Filters ── */}
         {hasFilters && (
-          <div
-            className={cn(
-              "mb-4 grid gap-2 rounded-2xl border p-3",
-              isDark
-                ? "border-[#2a2a32] bg-[#1c1c22]/72 shadow-[0_12px_30px_-22px_rgba(0,0,0,0.75)]"
-                : "border-[#e4e4e7] bg-white/82 shadow-[0_12px_30px_-24px_rgba(24,24,27,0.2)]",
-              "sm:mb-3 sm:flex sm:flex-wrap sm:items-center sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none",
-            )}
-            role="toolbar"
-            aria-label="فیلترها"
-          >
-            <div
-              className={cn(
-                "flex items-center justify-between gap-2 pb-1 text-xs font-medium sm:justify-start sm:pb-0",
-                t.textMuted,
-              )}
-            >
-              <span className="flex items-center gap-1">
-                <Icon.Filter />
-                فیلترها:
-              </span>
-              {activeFiltersCount > 0 && (
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] sm:hidden",
-                    t.activeBg,
-                    t.textAccent,
-                  )}
-                >
-                  {toPersianDigits(activeFiltersCount)} فعال
-                </span>
-              )}
+          <>
+            <div className="mb-3 md:hidden">
               <button
                 type="button"
-                onClick={() => setMobileFiltersOpen((open) => !open)}
+                onClick={() => setMobileFiltersOpen(true)}
                 aria-expanded={mobileFiltersOpen}
                 aria-controls={mobileFiltersId}
                 className={cn(
-                  "inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] transition-all duration-200 sm:hidden",
-                  isDark
-                    ? "border-[#3a3a44] bg-[#22222a] text-[#e8e6e3]"
-                    : "border-[#d4d4d8] bg-[#f3f4f6] text-[#27272a]",
+                  "flex h-11 w-full items-center justify-between rounded-2xl border px-4 text-xs font-bold transition-all duration-200",
+                  t.borderSubtle,
+                  t.inputBg,
+                  t.textPrimary,
+                  t.hoverBg,
                   focus.ring,
                 )}
               >
-                {mobileFiltersOpen ? "بستن" : "نمایش"}
-                <span
-                  className={cn(
-                    "transition-transform duration-200",
-                    mobileFiltersOpen && "rotate-180",
+                <span className="flex items-center gap-2">
+                  <Icon.Filter />
+                  فیلترها
+                </span>
+                <span className={cn("flex items-center gap-2", t.textMuted)}>
+                  {activeFiltersCount > 0 && (
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px]",
+                        t.activeBg,
+                        t.textAccent,
+                      )}
+                    >
+                      {toPersianDigits(activeFiltersCount)} فعال
+                    </span>
                   )}
-                >
                   <Icon.ChevronDown />
                 </span>
               </button>
             </div>
             <div
-              id={mobileFiltersId}
               className={cn(
-                mobileFiltersOpen ? "grid" : "hidden",
-                "gap-2 sm:contents",
+                "mb-4 grid gap-2 rounded-2xl border p-3",
+                isDark
+                  ? "border-[#2a2a32] bg-[#1c1c22]/72 shadow-[0_12px_30px_-22px_rgba(0,0,0,0.75)]"
+                  : "border-[#e4e4e7] bg-white/82 shadow-[0_12px_30px_-24px_rgba(24,24,27,0.2)]",
+                "hidden md:mb-3 md:flex md:flex-wrap md:items-center md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none",
               )}
+              role="toolbar"
+              aria-label="فیلترها"
             >
-              {filterableCols.map((col) => {
-                const value = filters[col.key] || "";
-                const onChange = (nextValue: string) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    [col.key]: nextValue,
-                  }));
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-2 pb-1 text-xs font-medium sm:justify-start sm:pb-0",
+                  t.textMuted,
+                )}
+              >
+                <span className="flex items-center gap-1">
+                  <Icon.Filter />
+                  فیلترها:
+                </span>
+                {activeFiltersCount > 0 && (
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] sm:hidden",
+                      t.activeBg,
+                      t.textAccent,
+                    )}
+                  >
+                    {toPersianDigits(activeFiltersCount)} فعال
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setMobileFiltersOpen((open) => !open)}
+                  aria-expanded={mobileFiltersOpen}
+                  aria-controls={mobileFiltersId}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-[11px] transition-all duration-200 sm:hidden",
+                    isDark
+                      ? "border-[#3a3a44] bg-[#22222a] text-[#e8e6e3]"
+                      : "border-[#d4d4d8] bg-[#f3f4f6] text-[#27272a]",
+                    focus.ring,
+                  )}
+                >
+                  {mobileFiltersOpen ? "بستن" : "نمایش"}
+                  <span
+                    className={cn(
+                      "transition-transform duration-200",
+                      mobileFiltersOpen && "rotate-180",
+                    )}
+                  >
+                    <Icon.ChevronDown />
+                  </span>
+                </button>
+              </div>
+              <div
+                id={`${mobileFiltersId}-desktop`}
+                className={cn(
+                  mobileFiltersOpen ? "grid" : "hidden",
+                  "gap-2 sm:contents",
+                )}
+              >
+                {filterableCols.map((col) => {
+                  const value = filters[col.key] || "";
+                  const onChange = (nextValue: string) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      [col.key]: nextValue,
+                    }));
 
-                if (col.filterType === "text") {
-                  return (
-                    <TextFilter
-                      key={col.key}
-                      label={col.label}
-                      value={value}
-                      onChange={onChange}
-                    />
-                  );
-                }
+                  if (col.filterType === "text") {
+                    return (
+                      <TextFilter
+                        key={col.key}
+                        label={col.label}
+                        value={value}
+                        onChange={onChange}
+                      />
+                    );
+                  }
 
-                if (col.filterSearchable) {
+                  if (col.filterSearchable) {
+                    return (
+                      <SearchableSelectFilter
+                        key={col.key}
+                        label={col.label}
+                        options={filterOptions[col.key] || []}
+                        optionLabels={filterOptionLabels[col.key]}
+                        value={value}
+                        onChange={onChange}
+                      />
+                    );
+                  }
+
                   return (
-                    <SearchableSelectFilter
+                    <FilterDropdown
                       key={col.key}
                       label={col.label}
                       options={filterOptions[col.key] || []}
@@ -2979,51 +3919,50 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                       onChange={onChange}
                     />
                   );
-                }
-
-                return (
-                  <FilterDropdown
+                })}
+                {dateFilterCols.map((col) => (
+                  <DateRangeFilter
                     key={col.key}
                     label={col.label}
-                    options={filterOptions[col.key] || []}
-                    optionLabels={filterOptionLabels[col.key]}
-                    value={value}
-                    onChange={onChange}
+                    value={dateRanges[col.key] || { from: null, to: null }}
+                    onChange={(range) =>
+                      setDateRanges((prev) => ({ ...prev, [col.key]: range }))
+                    }
                   />
-                );
-              })}
-              {dateFilterCols.map((col) => (
-                <DateRangeFilter
-                  key={col.key}
-                  label={col.label}
-                  value={dateRanges[col.key] || { from: null, to: null }}
-                  onChange={(range) =>
-                    setDateRanges((prev) => ({ ...prev, [col.key]: range }))
-                  }
-                />
-              ))}
-              {activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  aria-label="پاک کردن همه فیلترها"
-                  className={cn(
-                    "inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl px-3 text-xs font-medium transition-all duration-200 sm:h-9 sm:w-auto",
-                    isDark
-                      ? "text-[#e87c7c]/70 hover:text-[#e87c7c] hover:bg-[#c44040]/8"
-                      : "text-[#c44040]/70 hover:text-[#c44040] hover:bg-[#c44040]/5",
-                    focus.ring,
-                  )}
-                >
-                  <Icon.X />
-                  پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
-                </button>
-              )}
+                ))}
+                {activeFiltersCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    aria-label="پاک کردن همه فیلترها"
+                    className={cn(
+                      "inline-flex h-10 w-full items-center justify-center gap-1 rounded-xl px-3 text-xs font-medium transition-all duration-200 sm:h-9 sm:w-auto",
+                      isDark
+                        ? "text-[#e87c7c]/70 hover:text-[#e87c7c] hover:bg-[#c44040]/8"
+                        : "text-[#c44040]/70 hover:text-[#c44040] hover:bg-[#c44040]/5",
+                      focus.ring,
+                    )}
+                  >
+                    <Icon.X />
+                    پاک کردن فیلترها ({toPersianDigits(activeFiltersCount)})
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+
+            {/* ── Selected ── */}
+            <MobileFilterSheet
+              open={mobileFiltersOpen}
+              onClose={closeMobileFilters}
+              activeFiltersCount={activeFiltersCount}
+            >
+              <div id={mobileFiltersId} className="grid gap-2">
+                {renderFilterControls(closeMobileFilters)}
+              </div>
+            </MobileFilterSheet>
+          </>
         )}
 
-        {/* ── Selected ── */}
         {selectedRows.size > 0 && (
           <div
             className={cn(
@@ -3053,7 +3992,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         )}
 
         {/* ── Table Card ── */}
-        <div ref={pullRef as any} className={cn(tableCard, "relative")}>
+        <div ref={pullRef} className={cn(tableCard, "relative")}>
           <div className="block md:hidden">
             <PullIndicator
               distance={pullDistance}
@@ -3077,310 +4016,385 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             aria-busy={isValidating && !isLoading}
           >
             {/* ── Desktop Table ── */}
-            <div className="hidden md:block overflow-x-auto">
-              <table
-                className="w-full text-right text-nowrap"
-                role="table"
-                aria-label={title || "جدول"}
-                aria-rowcount={totalItems}
-                aria-busy={loading}
+            <div className="relative hidden md:block">
+              <div
+                ref={desktopScrollerRef}
+                className="overflow-x-auto overscroll-x-contain cursor-grab active:cursor-grabbing"
+                onPointerDown={handleDesktopDragStart}
+                onPointerMove={handleDesktopDragMove}
+                onPointerUp={handleDesktopDragEnd}
+                onPointerCancel={handleDesktopDragEnd}
+                onPointerLeave={handleDesktopDragEnd}
+                onClickCapture={handleDesktopClickCapture}
               >
-                <thead
-                  className={
-                    stickyHeader ? cn("sticky top-0 z-10", stickyHead) : ""
-                  }
+                <table
+                  className="w-full min-w-max text-right text-nowrap"
+                  role="table"
+                  aria-label={title || "جدول"}
+                  aria-rowcount={totalItems}
+                  aria-busy={loading}
                 >
-                  <tr className={cn("border-b", t.divider)} role="row">
-                    <th
-                      className="w-10 px-3 py-3"
-                      role="columnheader"
-                      aria-label="انتخاب همه"
-                    >
-                      <button
-                        type="button"
-                        onClick={toggleAllSelection}
-                        disabled={loading && data.length === 0}
-                        title={isAllSelected ? "لغو انتخاب همه" : "انتخاب همه"}
-                        aria-label={
-                          isAllSelected
-                            ? "لغو انتخاب همه ردیف‌ها"
-                            : "انتخاب همه ردیف‌ها"
-                        }
-                        aria-pressed={isAllSelected}
-                        className={cn(
-                          checkboxClasses(isAllSelected || isSomeSelected),
-                          loading &&
-                            data.length === 0 &&
-                            "opacity-30 pointer-events-none",
-                        )}
-                      >
-                        <CheckboxIcon
-                          checked={isAllSelected}
-                          indeterminate={isSomeSelected}
-                        />
-                      </button>
-                    </th>
-                    {showRowNumbers && (
+                  <thead
+                    className={
+                      stickyHeader ? cn("sticky top-0 z-10", stickyHead) : ""
+                    }
+                  >
+                    <tr className={cn("border-b", t.divider)} role="row">
                       <th
                         className={cn(
-                          "w-12 px-3 py-3 text-xs font-semibold",
-                          t.textMuted,
+                          "sticky right-0 z-30 w-10 px-3 py-3 md:static",
+                          t.cardBg,
                         )}
                         role="columnheader"
-                        aria-label="شماره ردیف"
+                        aria-label="انتخاب همه"
                       >
-                        #
-                      </th>
-                    )}
-                    {hasActions && (
-                      <th
-                        className={cn(
-                          "px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider",
-                          t.textMuted,
-                        )}
-                        role="columnheader"
-                      >
-                        عملیات
-                      </th>
-                    )}
-                    {visibleCols.map((col) => {
-                      const isSorted = sortKey === col.key;
-                      const canSort = col.sortable !== false;
-                      return (
-                        <th
-                          key={col.key}
-                          role="columnheader"
-                          aria-sort={
-                            isSorted
-                              ? sortDir === "asc"
-                                ? "ascending"
-                                : "descending"
-                              : "none"
+                        <button
+                          type="button"
+                          onClick={toggleAllSelection}
+                          disabled={loading && data.length === 0}
+                          title={
+                            isAllSelected ? "لغو انتخاب همه" : "انتخاب همه"
                           }
+                          aria-label={
+                            isAllSelected
+                              ? "لغو انتخاب همه ردیف‌ها"
+                              : "انتخاب همه ردیف‌ها"
+                          }
+                          aria-pressed={isAllSelected}
                           className={cn(
-                            "px-4 py-3 text-xs font-semibold uppercase tracking-wider",
-                            t.textMuted,
-                            canSort && "cursor-pointer select-none",
-                            "transition-colors duration-200",
-                            canSort &&
-                              (isDark
-                                ? "hover:text-[#d4b863]"
-                                : "hover:text-[#7a6428]"),
+                            checkboxClasses(isAllSelected || isSomeSelected),
+                            loading &&
+                              data.length === 0 &&
+                              "opacity-30 pointer-events-none",
                           )}
-                          onClick={() => canSort && handleSort(col.key)}
                         >
-                          <span className="inline-flex items-center gap-1">
-                            {col.label}
-                            {isSorted && sortDir === "asc" && (
-                              <Icon.ChevronUp />
-                            )}
-                            {isSorted && sortDir === "desc" && (
-                              <Icon.ChevronDown />
-                            )}
-                          </span>
+                          <CheckboxIcon
+                            checked={isAllSelected}
+                            indeterminate={isSomeSelected}
+                          />
+                        </button>
+                      </th>
+                      {showRowNumbers && (
+                        <th
+                          className={cn(
+                            "sticky right-10 z-30 w-12 px-3 py-3 text-xs font-semibold md:static",
+                            t.cardBg,
+                            t.textMuted,
+                          )}
+                          role="columnheader"
+                          aria-label="شماره ردیف"
+                        >
+                          #
                         </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* ═══ LOADING STATE: Initial load with no data ═══ */}
-                  {loading && data.length === 0 ? (
-                    <DesktopTableSkeleton
-                      rowCount={Math.min(currentPageSize, 8)}
-                      visibleCols={visibleCols}
-                      showRowNumbers={showRowNumbers}
-                      hasActions={hasActions}
-                      isDark={isDark}
-                      t={t}
-                    />
-                  ) : /* ═══ EMPTY STATE ═══ */
-                  paginatedRows.length === 0 ? (
-                    <tr role="row">
-                      <td colSpan={totalColCount} className="py-16 text-center">
-                        <div
+                      )}
+                      {hasActions && (
+                        <th
                           className={cn(
-                            "flex flex-col items-center gap-3",
+                            "sticky z-20 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.65)] md:static md:shadow-none",
+                            showRowNumbers ? "right-[5.5rem]" : "right-10",
+                            t.cardBg,
                             t.textMuted,
-                            "animate-[fade-in_.4s_ease-out_both]",
                           )}
+                          role="columnheader"
                         >
+                          عملیات
+                        </th>
+                      )}
+                      {visibleCols.map((col) => {
+                        const isSorted = sortKey === col.key;
+                        const canSort = col.sortable !== false;
+                        return (
+                          <th
+                            key={col.key}
+                            role="columnheader"
+                            aria-sort={
+                              isSorted
+                                ? sortDir === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
+                            className={cn(
+                              "px-4 py-3 text-xs font-semibold uppercase tracking-wider",
+                              t.textMuted,
+                              canSort && "cursor-pointer select-none",
+                              "transition-colors duration-200",
+                              canSort &&
+                                (isDark
+                                  ? "hover:text-[#d4b863]"
+                                  : "hover:text-[#7a6428]"),
+                            )}
+                            onClick={() => canSort && handleSort(col.key)}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {col.label}
+                              {isSorted && sortDir === "asc" && (
+                                <Icon.ChevronUp />
+                              )}
+                              {isSorted && sortDir === "desc" && (
+                                <Icon.ChevronDown />
+                              )}
+                            </span>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* ═══ LOADING STATE: Initial load with no data ═══ */}
+                    {loading && data.length === 0 ? (
+                      <DesktopTableSkeleton
+                        rowCount={Math.min(currentPageSize, 8)}
+                        visibleCols={visibleCols}
+                        showRowNumbers={showRowNumbers}
+                        hasActions={hasActions}
+                        isDark={isDark}
+                        t={t}
+                      />
+                    ) : /* ═══ EMPTY STATE ═══ */
+                    paginatedRows.length === 0 ? (
+                      <tr role="row">
+                        <td
+                          colSpan={totalColCount}
+                          className="py-16 text-center"
+                        >
+                          <EmptyTableState
+                            emptyMessage={emptyMessage}
+                            hasActiveFilters={
+                              Boolean(debouncedSearch) || activeFiltersCount > 0
+                            }
+                            onClearFilters={clearAllFilters}
+                          />
                           <div
                             className={cn(
-                              "flex h-16 w-16 items-center justify-center rounded-2xl",
-                              isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
+                              "hidden flex-col items-center gap-3",
+                              t.textMuted,
+                              "animate-[fade-in_.4s_ease-out_both]",
                             )}
                           >
-                            <Icon.Empty />
-                          </div>
-                          <div>
-                            <p
+                            <div
                               className={cn(
-                                "text-sm font-medium mb-1",
-                                t.textSecondary,
+                                "flex h-16 w-16 items-center justify-center rounded-2xl",
+                                isDark ? "bg-[#2a2a32]/40" : "bg-[#e8e4dc]/40",
                               )}
                             >
-                              {emptyMessage}
-                            </p>
-                            {(debouncedSearch || activeFiltersCount > 0) && (
-                              <p className={cn("text-xs", t.textDisabled)}>
-                                فیلترها را تغییر دهید یا عبارت جستجو را ویرایش
-                                کنید
+                              <Icon.Empty />
+                            </div>
+                            <div>
+                              <p
+                                className={cn(
+                                  "text-sm font-medium mb-1",
+                                  t.textSecondary,
+                                )}
+                              >
+                                {emptyMessage}
                               </p>
-                            )}
+                              {(debouncedSearch || activeFiltersCount > 0) && (
+                                <p className={cn("text-xs", t.textDisabled)}>
+                                  فیلترها را تغییر دهید یا عبارت جستجو را ویرایش
+                                  کنید
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    /* ═══ DATA ROWS ═══ */
-                    paginatedRows.map((row, ri) => {
-                      const rowKey = String(row[primaryKey] ?? ri);
-                      const isSelected = selectedRows.has(rowKey);
-                      const globalRowIndex =
-                        (currentPage - 1) * currentPageSize + ri + 1;
-                      return (
-                        <tr
-                          key={rowKey}
-                          role="row"
-                          aria-selected={isSelected}
-                          aria-rowindex={globalRowIndex}
-                          onDoubleClick={(event) =>
-                            handleRowDoubleClick(event, row)
-                          }
-                          className={cn(
-                            "group border-b last:border-b-0",
-                            t.divider,
-                            "transition-all duration-200",
-                            isSelected ? rowSelected : rowHover,
-                            canOpenRowModalOnDoubleClick && "cursor-pointer",
-                            // Subtle fade when revalidating existing data
-                            isValidating &&
-                              !isLoading &&
-                              "opacity-80 transition-opacity duration-300",
-                          )}
-                        >
-                          <td className="w-10 px-3 py-3" role="cell">
-                            <button
-                              type="button"
-                              onClick={() => toggleRowSelection(row)}
-                              aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف ${toPersianDigits(globalRowIndex)}`}
-                              aria-pressed={isSelected}
-                              className={checkboxClasses(isSelected)}
-                            >
-                              {isSelected && <CheckboxIcon checked />}
-                            </button>
-                          </td>
-                          {showRowNumbers && (
+                        </td>
+                      </tr>
+                    ) : (
+                      /* ═══ DATA ROWS ═══ */
+                      paginatedRows.map((row, ri) => {
+                        const rowKey = String(row[primaryKey] ?? ri);
+                        const isSelected = selectedRows.has(rowKey);
+                        const globalRowIndex =
+                          (currentPage - 1) * currentPageSize + ri + 1;
+                        return (
+                          <tr
+                            key={rowKey}
+                            role="row"
+                            aria-selected={isSelected}
+                            aria-rowindex={globalRowIndex}
+                            onDoubleClick={(event) =>
+                              handleRowDoubleClick(event, row)
+                            }
+                            className={cn(
+                              "group border-b last:border-b-0",
+                              t.divider,
+                              "transition-all duration-200",
+                              isSelected ? rowSelected : rowHover,
+                              canOpenRowModalOnDoubleClick && "cursor-pointer",
+                              // Subtle fade when revalidating existing data
+                              isValidating &&
+                                !isLoading &&
+                                "opacity-80 transition-opacity duration-300",
+                            )}
+                          >
                             <td
                               className={cn(
-                                "w-12 px-3 py-3 text-xs font-mono",
-                                t.textMuted,
+                                "sticky right-0 z-30 w-10 px-3 py-3 md:static",
+                                t.cardBg,
                               )}
                               role="cell"
-                              aria-label={`ردیف ${toPersianDigits(globalRowIndex)}`}
                             >
-                              {toPersianDigits(globalRowIndex)}
-                            </td>
-                          )}
-                          {hasActions && (
-                            <td className="px-4 py-3" role="cell">
-                              <div
-                                className="flex items-center justify-start gap-1"
-                                role="toolbar"
-                                aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
+                              <button
+                                type="button"
+                                onClick={() => toggleRowSelection(row)}
+                                aria-label={`${isSelected ? "لغو انتخاب" : "انتخاب"} ردیف ${toPersianDigits(globalRowIndex)}`}
+                                aria-pressed={isSelected}
+                                className={checkboxClasses(isSelected)}
                               >
-                                <ActionBtn
-                                  onClick={() => openView(row)}
-                                  title="مشاهده جزئیات"
-                                >
-                                  <Icon.Eye />
-                                </ActionBtn>
-                                {canUpdate && (
-                                  <ActionBtn
-                                    onClick={() => openEdit(row)}
-                                    title="ویرایش"
-                                  >
-                                    <Icon.Edit />
-                                  </ActionBtn>
-                                )}
-                                {canDelete && (
-                                  <ActionBtn
-                                    onClick={() => openDelete(row)}
-                                    title="حذف"
-                                    variant="danger"
-                                  >
-                                    <Icon.Trash />
-                                  </ActionBtn>
-                                )}
-                                {rowActions?.(row)}
-                              </div>
+                                {isSelected && <CheckboxIcon checked />}
+                              </button>
                             </td>
-                          )}
-                          {visibleCols.map((col) => {
-                            const raw = getNestedValue(row, col.key);
-                            const display = col.render
-                              ? col.render(raw as T[keyof T], row)
-                              : formatCellValue(raw);
-                            const cellId = `${rowKey}-${col.key}`;
-                            const isCopied = copiedCell === cellId;
-                            const canCopy =
-                              enableCellCopy && col.copyable !== false;
-                            return (
+                            {showRowNumbers && (
                               <td
-                                key={col.key}
-                                role="cell"
                                 className={cn(
-                                  "px-4 py-3 text-sm relative group/cell",
-                                  t.textSecondary,
-                                  canCopy && "cursor-copy",
+                                  "sticky right-10 z-30 w-12 px-3 py-3 text-xs font-mono md:static",
+                                  t.cardBg,
+                                  t.textMuted,
                                 )}
-                                onClick={() =>
-                                  canCopy &&
-                                  handleCellCopy(raw, rowKey, col.key)
-                                }
-                                title={canCopy ? "کلیک برای کپی" : undefined}
+                                role="cell"
+                                aria-label={`ردیف ${toPersianDigits(globalRowIndex)}`}
                               >
-                                <div className="flex items-center gap-1.5">
-                                  <span className="flex-1">
-                                    {typeof display === "string"
-                                      ? truncate(display, 60)
-                                      : display}
-                                  </span>
-                                  {canCopy && (
-                                    <span
-                                      className={cn(
-                                        "shrink-0 transition-all duration-200",
-                                        isCopied
-                                          ? isDark
-                                            ? "text-[#6ec99a] opacity-100"
-                                            : "text-[#2d7a50] opacity-100"
-                                          : cn(
-                                              "opacity-0 group-hover/cell:opacity-40",
-                                              t.textMuted,
-                                            ),
-                                      )}
+                                {toPersianDigits(globalRowIndex)}
+                              </td>
+                            )}
+                            {hasActions && (
+                              <td
+                                className={cn(
+                                  "sticky z-10 px-4 py-3 shadow-[-10px_0_18px_-18px_rgba(0,0,0,0.65)] md:static md:shadow-none",
+                                  showRowNumbers
+                                    ? "right-[5.5rem]"
+                                    : "right-10",
+                                  t.cardBg,
+                                )}
+                                role="cell"
+                              >
+                                <div
+                                  className="flex items-center justify-start gap-1"
+                                  role="toolbar"
+                                  aria-label={`عملیات ردیف ${toPersianDigits(globalRowIndex)}`}
+                                >
+                                  <ActionBtn
+                                    onClick={() => openView(row)}
+                                    title="مشاهده جزئیات"
+                                  >
+                                    <Icon.Eye />
+                                  </ActionBtn>
+                                  {canUpdate && (
+                                    <ActionBtn
+                                      onClick={() => openEdit(row)}
+                                      title="ویرایش"
                                     >
-                                      {isCopied ? (
-                                        <Icon.CopyDone />
-                                      ) : (
-                                        <Icon.Copy />
-                                      )}
-                                    </span>
+                                      <Icon.Edit />
+                                    </ActionBtn>
                                   )}
+                                  {canDelete && (
+                                    <ActionBtn
+                                      onClick={() => openDelete(row)}
+                                      title="حذف"
+                                      variant="danger"
+                                    >
+                                      <Icon.Trash />
+                                    </ActionBtn>
+                                  )}
+                                  {rowActions?.(row)}
                                 </div>
                               </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                            )}
+                            {visibleCols.map((col) => {
+                              const raw = getNestedValue(row, col.key);
+                              const display = col.render
+                                ? col.render(raw as T[keyof T], row)
+                                : formatCellValue(raw);
+                              const cellId = `${rowKey}-${col.key}`;
+                              const isCopied = copiedCell === cellId;
+                              const canCopy =
+                                enableCellCopy && col.copyable !== false;
+                              return (
+                                <td
+                                  key={col.key}
+                                  role="cell"
+                                  className={cn(
+                                    "px-4 py-3 text-sm relative group/cell",
+                                    t.textSecondary,
+                                    canCopy && "cursor-copy",
+                                  )}
+                                  onClick={() =>
+                                    canCopy &&
+                                    handleCellCopy(raw, rowKey, col.key)
+                                  }
+                                  title={canCopy ? "کلیک برای کپی" : undefined}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="flex-1">
+                                      {typeof display === "string"
+                                        ? truncate(display, 60)
+                                        : display}
+                                    </span>
+                                    {canCopy && (
+                                      <span
+                                        className={cn(
+                                          "shrink-0 transition-all duration-200",
+                                          isCopied
+                                            ? isDark
+                                              ? "text-[#6ec99a] opacity-100"
+                                              : "text-[#2d7a50] opacity-100"
+                                            : cn(
+                                                "opacity-0 group-hover/cell:opacity-40",
+                                                t.textMuted,
+                                              ),
+                                        )}
+                                      >
+                                        {isCopied ? (
+                                          <Icon.CopyDone />
+                                        ) : (
+                                          <Icon.Copy />
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {desktopCanScrollX && (
+                <>
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute inset-y-0 right-0 w-10",
+                      isDark
+                        ? "bg-gradient-to-l from-[#1c1c22] to-transparent"
+                        : "bg-gradient-to-l from-white to-transparent",
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute inset-y-0 left-0 w-10",
+                      isDark
+                        ? "bg-gradient-to-r from-[#1c1c22] to-transparent"
+                        : "bg-gradient-to-r from-white to-transparent",
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border px-3 py-1 text-[11px] font-medium shadow-sm",
+                      t.borderSubtle,
+                      t.inputBg,
+                      t.textMuted,
+                    )}
+                  >
+                    برای اسکرول افقی کلیک را نگه دارید و بکشید
+                  </div>
+                </>
+              )}
             </div>
             {/* ── Mobile Card List ── */}
-            <div className={cn("block md:hidden divide-y", t.divider)}>
+            <div className={cn("block divide-y md:hidden", t.divider)}>
               {/* ═══ MOBILE LOADING STATE ═══ */}
               {loading && data.length === 0 ? (
                 <MobileCardSkeleton
@@ -3392,9 +4406,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 />
               ) : paginatedRows.length === 0 ? (
                 <div className="py-16 text-center">
+                  <EmptyTableState
+                    emptyMessage={emptyMessage}
+                    hasActiveFilters={
+                      Boolean(debouncedSearch) || activeFiltersCount > 0
+                    }
+                    onClearFilters={clearAllFilters}
+                  />
                   <div
                     className={cn(
-                      "flex flex-col items-center gap-3",
+                      "hidden flex-col items-center gap-3",
                       t.textMuted,
                       "animate-[fade-in_.4s_ease-out_both]",
                     )}
@@ -3426,7 +4447,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 </div>
               ) : (
                 paginatedRows.map((row, ri) => {
-                  const mobileCols = visibleCols.filter((c) => !c.hideOnMobile);
+                  const mobileCols = visibleCols;
                   const rowKey = String(row[primaryKey] ?? ri);
                   const isSelected = selectedRows.has(rowKey);
                   const globalIdx =
@@ -3455,7 +4476,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         canOpenRowModalOnDoubleClick && "cursor-pointer",
                       )}
                     >
-                      <div className="flex items-start gap-3 mb-2">
+                      <div className="mb-3 flex flex-wrap items-start gap-3">
                         <div className="flex items-center gap-2">
                           {showRowNumbers && (
                             <span
@@ -3482,10 +4503,23 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         </div>
                         {hasActions && (
                           <div
-                            className="flex shrink-0 flex-wrap items-center gap-1"
+                            className={cn(
+                              "mr-auto flex items-center [&>*:not(:first-child)]:hidden",
+                              t.borderSubtle,
+                              t.inputBg,
+                            )}
                             role="toolbar"
                             aria-label="عملیات"
                           >
+                            <MobileRowActionMenu<T>
+                              row={row}
+                              canUpdate={canUpdate}
+                              canDelete={canDelete}
+                              rowActions={rowActions}
+                              onView={openView}
+                              onEdit={openEdit}
+                              onDelete={openDelete}
+                            />
                             <ActionBtn
                               onClick={() => openView(row)}
                               title="مشاهده جزئیات"
@@ -3512,7 +4546,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                             {rowActions?.(row)}
                           </div>
                         )}
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-full flex-1">
                           {mobileCols.slice(0, 1).map((col) => {
                             const raw = getNestedValue(row, col.key);
                             const display = col.render
@@ -3542,16 +4576,16 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                 {typeof display === "string" ? (
                                   <p
                                     className={cn(
-                                      "text-sm font-semibold",
+                                      "text-sm font-semibold leading-6 whitespace-normal break-words",
                                       t.textPrimary,
                                     )}
                                   >
-                                    {truncate(display, 40)}
+                                    {display}
                                   </p>
                                 ) : (
                                   <div
                                     className={cn(
-                                      "text-sm font-semibold",
+                                      "text-sm font-semibold [&_*]:max-w-full",
                                       t.textPrimary,
                                     )}
                                   >
@@ -3563,8 +4597,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           })}
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 mr-8">
-                        {mobileCols.slice(1, 5).map((col) => {
+                      <div
+                        className={cn(
+                          "mt-3 grid grid-cols-1 gap-2 rounded-xl border p-3 sm:grid-cols-2",
+                          t.borderSubtle,
+                          t.inputBg,
+                        )}
+                      >
+                        {mobileCols.slice(1).map((col) => {
                           const raw = getNestedValue(row, col.key);
                           const display = col.render
                             ? col.render(raw as T[keyof T], row)
@@ -3576,11 +4616,15 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                 enableCellCopy &&
                                 handleCellCopy(raw, rowKey, col.key)
                               }
-                              className={
-                                enableCellCopy
-                                  ? "cursor-copy active:opacity-70"
-                                  : ""
-                              }
+                              className={cn(
+                                "min-w-0 rounded-lg border px-3 py-2",
+                                t.borderSubtle,
+                                isDark
+                                  ? "bg-white/[0.015]"
+                                  : "bg-black/[0.015]",
+                                enableCellCopy &&
+                                  "cursor-copy active:opacity-70",
+                              )}
                             >
                               <p
                                 className={cn(
@@ -3591,11 +4635,21 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                                 {col.label}
                               </p>
                               {typeof display === "string" ? (
-                                <p className={cn("text-xs", t.textSecondary)}>
-                                  {truncate(display, 30)}
+                                <p
+                                  className={cn(
+                                    "text-xs leading-6 whitespace-normal break-words",
+                                    t.textSecondary,
+                                  )}
+                                >
+                                  {display}
                                 </p>
                               ) : (
-                                <div className={cn("text-xs", t.textSecondary)}>
+                                <div
+                                  className={cn(
+                                    "text-xs [&_*]:max-w-full",
+                                    t.textSecondary,
+                                  )}
+                                >
                                   {display}
                                 </div>
                               )}
@@ -3869,8 +4923,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               {editableCols.map((col) => {
                 const formMode = modalMode === "create" ? "create" : "edit";
                 const currentFormData = formData as Partial<T>;
-                if (col.hiddenInForm?.(currentFormData, formMode))
-                  return null;
+                if (col.hiddenInForm?.(currentFormData, formMode)) return null;
 
                 const fv = formData[col.key];
                 const error = formErrors[col.key];
@@ -4023,8 +5076,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                           }
                           className={checkboxBase}
                         />
-                        <span className={cn("text-sm", checkboxLabel)}>
-                          {formPlaceholderText || col.placeholder || formLabelText}
+                        <span className={cn("text-base", checkboxLabel)}>
+                          {formPlaceholderText ||
+                            col.placeholder ||
+                            formLabelText}
                         </span>
                       </label>
                     ) : (
@@ -4061,7 +5116,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         dir={identityInputProps.dir}
                         className={cn(
                           fieldBase,
-                          "h-10 px-3 text-sm",
+                          "h-10 px-3 text-base",
                           error && fieldError,
                         )}
                       />

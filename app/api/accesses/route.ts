@@ -9,12 +9,21 @@ import {
     getAccessActionsForComponent,
     getAccessActionsForResource,
 } from "@/lib/auth/accessCatalog";
+import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import "@/models/template";
 import "@/models/blocks";
 import "@/models/pages";
 
 function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
 }
 
 function normalizeActions(
@@ -157,13 +166,42 @@ export const GET = compose(
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const search = String(searchParams.get("search") ?? "").trim();
-    const query = search
-        ? { name: { $regex: escapeRegex(search), $options: "i" } }
-        : {};
+    const nameFilter = getFilterParam(searchParams, "name");
+    const isActive = getFilterParam(searchParams, "isActive");
+    const query: Record<string, unknown> = {};
+
+    if (nameFilter) {
+        query.name = { $regex: escapeRegex(nameFilter), $options: "i" };
+    }
+    if (search) {
+        const pattern = escapeRegex(search);
+        query.$or = [
+            { name: { $regex: pattern, $options: "i" } },
+            {
+                "staticComponents.componentName": {
+                    $regex: pattern,
+                    $options: "i",
+                },
+            },
+        ];
+    }
+    if (isActive === "true" || isActive === "false") {
+        query.isActive = isActive === "true";
+    }
+    applyDateRangeFilters(query, searchParams, ["createdAt"]);
+
+    const sortFields: Record<string, string> = {
+        name: "name",
+        isActive: "isActive",
+        createdAt: "createdAt",
+    };
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
+    const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const [accesses, total] = await Promise.all([
         populateAccessQuery()
             .find(query)
+            .sort({ [sortField]: sortDirection, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

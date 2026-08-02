@@ -14,7 +14,6 @@ import {
   FaLayerGroup,
   FaCubes,
   FaFile,
-  FaCircleInfo,
 } from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
@@ -805,7 +804,10 @@ export default function AccessesSection({
     typeof window !== "undefined"
       ? (localStorage.getItem("auth_token") ?? "")
       : "";
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const headers = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+    [token],
+  );
   const canCreate = can("admin.accesses", "create");
   const canUpdate = can("admin.accesses", "update");
   const canDelete = can("admin.accesses", "delete");
@@ -989,6 +991,8 @@ export default function AccessesSection({
         label: "نام Access",
         editable: false,
         sortable: true,
+        filterable: true,
+        filterType: "text",
         copyable: true,
         render: (value) => (
           <span className={cn("text-sm font-bold", t.textPrimary)}>
@@ -1096,6 +1100,8 @@ export default function AccessesSection({
         key: "createdAt",
         label: "تاریخ ساخت",
         editable: false,
+        sortable: true,
+        dateFilter: true,
         hideOnMobile: true,
         render: (value) => (
           <span className={cn("text-xs", t.textDisabled)}>
@@ -1166,7 +1172,7 @@ export default function AccessesSection({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [headers]);
 
   function openCreate() {
     setForm(emptyForm());
