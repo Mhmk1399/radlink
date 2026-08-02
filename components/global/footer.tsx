@@ -89,10 +89,9 @@ const socialLinks = [
 ];
 
 const ENAMAD = {
-  id: "6802735",
+  id: "754413",
   code: "P9TZBGkuLhWv4KuLpyEaZdRk7k75NRaQ",
 };
-
 /* ── Small shared pieces ── */
 
 function GroupTitle({ children }: { children: React.ReactNode }) {
@@ -118,36 +117,28 @@ function FooterLink({ label, href }: { label: string; href: string }) {
     </Link>
   );
 }
-
-function EnamadTrustSeal() {
-  const href = `https://trustseal.enamad.ir/?id=${ENAMAD.id}&Code=${ENAMAD.code}`;
-  const src = `https://trustseal.enamad.ir/logo.aspx?id=${ENAMAD.id}&Code=${ENAMAD.code}`;
-
+const EnamadBadge = () => {
   return (
     <a
       referrerPolicy="origin"
       target="_blank"
-      rel="noopener noreferrer"
-      href={href}
-      aria-label="مشاهده نماد اعتماد الکترونیکی رادلینک"
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-xl bg-white/95 p-2",
-        "transition-transform duration-200 hover:bg-white active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60",
-      )}
+      rel="noopener"
+      href="https://trustseal.enamad.ir/?id=754413&code=P9TZBGkuLhWv4KuLpyEaZdRk7k75NRaQ"
+      aria-label="مشاهده نماد اعتماد الکترونیکی املاک اوج"
+      className="group flex h-24 w-24 items-center justify-center rounded-2xl border border-gray-100 bg-white p-2 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#01ae9b]/30 hover:shadow-lg"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         referrerPolicy="origin"
-        src={src}
-        alt="نماد اعتماد الکترونیکی رادلینک"
-        loading="lazy"
-        className="h-16 w-16 object-contain"
-        {...({ code: ENAMAD.code } as Record<string, string>)}
+        src="https://trustseal.enamad.ir/logo.aspx?id=754413&Code=P9TZBGkuLhWv4KuLpyEaZdRk7k75NRaQ"
+        alt="نماد اعتماد الکترونیکی املاک اوج"
+        className="max-h-full max-w-full object-contain"
+        style={{ cursor: "pointer" }}
       />
     </a>
   );
-}
+};
+
+ 
 
 /* ── FOOTER ── */
 
@@ -268,14 +259,12 @@ export function SmartLandingFooter() {
 
             {/* One trust card: free-signup note + Enamad, side by side */}
             <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-              <EnamadTrustSeal />
+              <EnamadBadge />
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-white">
+                <p className="text-xs text-nowrap font-semibold text-white">
                   نماد اعتماد الکترونیکی
                 </p>
-                <p className="text-xs leading-5 text-slate-400">
-                  ثبت‌نام رایگان — بدون نیاز به کارت بانکی
-                </p>
+             
               </div>
             </div>
           </div>
