@@ -838,6 +838,31 @@ function syncBlockStyleKeysWithRegistry(block: PageBlock): PageBlock {
     };
   }
 
+  if (block.type === "bankAccount") {
+    const defaultBlock = config.createDefaultBlock(block.order);
+
+    for (const [elementId, schemaElement] of Object.entries(schemaElements)) {
+      if (nextElements[elementId]) continue;
+
+      const defaultElements = defaultBlock.elements as PageBlock["elements"];
+      const defaultElement = defaultElements[elementId];
+      nextElements[elementId] = defaultElement
+        ? {
+            ...defaultElement,
+            allowedStyleKeys: mergeAllowedKeys(
+              defaultElement.allowedStyleKeys,
+              schemaElement.allowedStyleKeys,
+            ),
+          }
+        : {
+            label: schemaElement.label,
+            allowedStyleKeys: [...schemaElement.allowedStyleKeys],
+            style: {},
+          };
+      changed = true;
+    }
+  }
+
   const normalized = normalizeContactInfoGridColumns(block, nextElements);
   changed = changed || normalized.changed;
 

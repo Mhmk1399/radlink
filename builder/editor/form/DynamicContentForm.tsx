@@ -265,6 +265,57 @@ function toInputValue(value: unknown): string {
   return "";
 }
 
+type BankAccountFieldKey = "cardNumber" | "shebaNumber" | "accountNumber";
+
+function getBankAccountField(key: string): BankAccountFieldKey | null {
+  return key === "cardNumber" || key === "shebaNumber" || key === "accountNumber"
+    ? key
+    : null;
+}
+
+function normalizeBankDigits(value: string) {
+  return value
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+}
+
+function sanitizeBankAccountValue(
+  key: BankAccountFieldKey,
+  value: string,
+) {
+  const normalized = normalizeBankDigits(value).toUpperCase();
+
+  if (key === "shebaNumber") {
+    const hasIranPrefix = normalized.startsWith("IR");
+    const digits = normalized.replace(/^IR/, "").replace(/\D/g, "");
+    return `${hasIranPrefix || digits ? "IR" : ""}${digits.slice(0, 24)}`;
+  }
+
+  const maxLength = key === "cardNumber" ? 16 : 19;
+  return normalized.replace(/\D/g, "").slice(0, maxLength);
+}
+
+function getBankAccountValidationError(
+  key: BankAccountFieldKey,
+  value: string,
+) {
+  if (!value) return null;
+
+  if (key === "cardNumber" && value.length !== 16) {
+    return "شماره کارت باید دقیقاً ۱۶ رقم باشد.";
+  }
+
+  if (key === "shebaNumber" && !/^IR\d{24}$/.test(value)) {
+    return "شماره شبا باید IR به همراه دقیقاً ۲۴ رقم باشد.";
+  }
+
+  if (key === "accountNumber" && (value.length < 4 || value.length > 19)) {
+    return "شماره حساب باید بین ۴ تا ۱۹ رقم باشد.";
+  }
+
+  return null;
+}
+
 function isValidImageUrl(url: string): boolean {
   if (!url) return false;
   try {
@@ -981,6 +1032,61 @@ export function DynamicContentForm({
                   options={options}
                   onChange={(val) => onChange(field.key, val)}
                 />
+              </FieldCard>
+            );
+          }
+
+          const bankAccountField = getBankAccountField(field.key);
+          if (bankAccountField) {
+            const bankValue = sanitizeBankAccountValue(
+              bankAccountField,
+              toInputValue(value),
+            );
+            const bankError = getBankAccountValidationError(
+              bankAccountField,
+              bankValue,
+            );
+
+            return (
+              <FieldCard key={field.key}>
+                <FieldHeader
+                  icon={icon}
+                  label={field.label}
+                  type="اطلاعات بانکی"
+                />
+                <input
+                  type="text"
+                  value={bankValue}
+                  onChange={(event) =>
+                    onChange(
+                      field.key,
+                      sanitizeBankAccountValue(
+                        bankAccountField,
+                        event.target.value,
+                      ),
+                    )
+                  }
+                  inputMode="numeric"
+                  maxLength={bankAccountField === "shebaNumber" ? 26 : bankAccountField === "cardNumber" ? 16 : 19}
+                  dir="ltr"
+                  aria-invalid={Boolean(bankError)}
+                  placeholder={
+                    bankAccountField === "shebaNumber"
+                      ? "IR000000000000000000000000"
+                      : "فقط عدد وارد کنید"
+                  }
+                  className={[
+                    "w-full rounded-xl border bg-white px-3 py-2.5 text-left font-mono text-base text-neutral-800 outline-none transition focus:ring-2",
+                    bankError
+                      ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+                      : "border-neutral-200 focus:border-neutral-400 focus:ring-neutral-100",
+                  ].join(" ")}
+                />
+                {bankError && (
+                  <p className="mt-1.5 text-xs font-medium text-red-500">
+                    {bankError}
+                  </p>
+                )}
               </FieldCard>
             );
           }

@@ -66,6 +66,9 @@ import { createDefaultProductCardsBlock } from "./product-cards/productCards.def
 import BookingFormBlock from "./booking-form/BookingFormBlock";
 import { bookingFormSchema } from "./booking-form/bookingForm.schema";
 import { createDefaultBookingFormBlock } from "./booking-form/bookingForm.default";
+import BankAccountBlock from "./bank-account/BankAccountBlock";
+import { bankAccountSchema } from "./bank-account/bankAccount.schema";
+import { createDefaultBankAccountBlock } from "./bank-account/bankAccount.default";
 
 import React from "react";
 import type {
@@ -92,6 +95,7 @@ import {
   HiOutlineShoppingBag,
   HiOutlineCalendarDays,
   HiOutlineUserPlus,
+  HiOutlineCreditCard,
 } from "react-icons/hi2";
 
 const SHADOW_STYLE_KEY: EditableStyleKey = "shadow";
@@ -429,6 +433,17 @@ export const blockRegistry = {
     component: BookingFormBlock,
     schema: withBuilderStyleSchema(bookingFormSchema),
     createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultBookingFormBlock),
+  },
+
+  bankAccount: {
+    type: "bankAccount",
+    label: "شماره کارت و حساب",
+    description: "نمایش شماره کارت، شبا و شماره حساب با امکان کپی سریع.",
+    icon: React.createElement(HiOutlineCreditCard, { size: 18 }),
+    category: "conversion",
+    component: BankAccountBlock,
+    schema: withBuilderStyleSchema(bankAccountSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultBankAccountBlock),
   },
 } as const;
 
