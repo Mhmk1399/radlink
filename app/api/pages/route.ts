@@ -233,6 +233,10 @@ function canAssignPageUser(role: unknown) {
     return role === "agent" || role === "admin" || role === "superAdmin";
 }
 
+function canBypassTargetUserQuota(role: unknown) {
+    return role === "admin" || role === "superAdmin";
+}
+
 function normalizeBlocks(blocks: unknown) {
     if (!Array.isArray(blocks)) return [];
 
@@ -411,6 +415,7 @@ export const POST = compose(
 
     let ownerId: mongoose.Types.ObjectId | string = user._id;
     let ownerUser = user;
+    let assignedUser = null;
     if (requestedOwnerId && requestedOwnerId !== String(user._id)) {
         if (!(await canAccessActorOwner(user, requestedOwnerId))) {
             return NextResponse.json(
@@ -450,12 +455,12 @@ export const POST = compose(
             );
         }
 
-        const assignedUserExists = await User.exists({
+        assignedUser = await User.findOne({
             _id: requestedAssignedUserId,
             isDeleted: { $ne: true },
         });
 
-        if (!assignedUserExists) {
+        if (!assignedUser) {
             return NextResponse.json(
                 { message: "کاربر انتخاب‌شده برای اختصاص صفحه پیدا نشد." },
                 { status: 404 }
@@ -463,11 +468,16 @@ export const POST = compose(
         }
     }
 
-    const pageQuota = await checkUserQuota({
-        user: ownerUser,
-        resource: "pages",
-    });
-    if (!pageQuota.allowed) return quotaExceededResponse(pageQuota);
+    const quotaUser = assignedUser ?? ownerUser;
+    const shouldCheckTargetQuota = !canBypassTargetUserQuota(user.role);
+
+    if (shouldCheckTargetQuota) {
+        const pageQuota = await checkUserQuota({
+            user: quotaUser,
+            resource: "pages",
+        });
+        if (!pageQuota.allowed) return quotaExceededResponse(pageQuota);
+    }
 
     let blocks = Array.isArray(body.blocks) ? normalizeBlocks(body.blocks) : [];
     let templateLogoHeader: unknown;
@@ -515,13 +525,15 @@ export const POST = compose(
     });
     if (blockAccessError) return blockAccessError;
 
-    const blockQuota = await checkUserQuota({
-        user: ownerUser,
-        resource: "blocks",
-        absoluteUsage: blocks.length,
-        currentUsage: 0,
-    });
-    if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+    if (shouldCheckTargetQuota) {
+        const blockQuota = await checkUserQuota({
+            user: quotaUser,
+            resource: "blocks",
+            absoluteUsage: blocks.length,
+            currentUsage: 0,
+        });
+        if (!blockQuota.allowed) return quotaExceededResponse(blockQuota);
+    }
 
     const pageSettings =
         body.settings && typeof body.settings === "object"
@@ -707,7 +719,10 @@ export const GET = compose(
     }
 
     const ownerIdFilter =
-        searchParams.get("filter_ownerId") ?? searchParams.get("ownerId");
+        searchParams.get("filter_ownerId") ??
+        searchParams.get("ownerId") ??
+        searchParams.get("filter_creatorId") ??
+        searchParams.get("creatorId");
     if (ownerIdFilter && mongoose.Types.ObjectId.isValid(ownerIdFilter)) {
         filters.owner = ownerIdFilter;
     }

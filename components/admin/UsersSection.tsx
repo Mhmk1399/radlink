@@ -80,7 +80,9 @@ type UserRow = {
   agentid?: string; // matches model field name (lowercase)
   agentLabel?: string;
   createdBy?: string;
+  createdById?: string;
   updatedBy?: string;
+  updatedById?: string;
   createdAt: string;
   updatedAt: string;
   "limits.files"?: number;
@@ -230,6 +232,10 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
   };
 
   delete payload.fullName;
+  delete payload.createdBy;
+  delete payload.createdById;
+  delete payload.updatedBy;
+  delete payload.updatedById;
   delete payload["limits.files"];
   delete payload["limits.blocks"];
   delete payload["limits.pages"];
@@ -277,6 +283,7 @@ export default function UsersSection({
     [token],
   );
   const [agentOptions, setAgentOptions] = useState<SelectOption[]>([]);
+  const [creatorOptions, setCreatorOptions] = useState<SelectOption[]>([]);
   const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
 
@@ -382,6 +389,82 @@ export default function UsersSection({
     };
   }, [authUser?.role, headers, token]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCreatorOptions() {
+      if (!token || authUser?.role === "user") {
+        if (!ignore) setCreatorOptions([]);
+        return;
+      }
+
+      try {
+        const allUsers: Record<string, unknown>[] = [];
+        let usersPage = 1;
+        let total = 0;
+
+        do {
+          const response = await fetch(
+            `/api/users?includeDeleted=true&page=${usersPage}&limit=100`,
+            { headers },
+          );
+          const json = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            throw new Error(
+              typeof json?.message === "string"
+                ? json.message
+                : "دریافت لیست سازنده‌ها با خطا مواجه شد.",
+            );
+          }
+
+          const users = Array.isArray(json?.users)
+            ? (json.users as Record<string, unknown>[])
+            : [];
+          allUsers.push(...users);
+          total =
+            typeof json?.total === "number" ? json.total : allUsers.length;
+          usersPage += 1;
+        } while (allUsers.length < total && usersPage <= 50);
+
+        const unique = new Map<string, SelectOption>();
+
+        if (authUser?.id) {
+          unique.set(authUser.id, {
+            value: authUser.id,
+            label: getPersonLabel(authUser, authUser.phoneNumber ?? authUser.id),
+          });
+        }
+
+        allUsers.forEach((user) => {
+          const value = getObjectId(user);
+          if (!value) return;
+          unique.set(value, {
+            value,
+            label: getPersonLabel(user, value),
+          });
+        });
+
+        if (!ignore) setCreatorOptions(Array.from(unique.values()));
+      } catch (error) {
+        if (!ignore) {
+          setCreatorOptions([]);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "دریافت لیست سازنده‌ها با خطا مواجه شد.",
+          );
+        }
+      }
+    }
+
+    void loadCreatorOptions();
+
+    return () => {
+      ignore = true;
+    };
+  }, [authUser, authUser?.role, headers, token]);
+
   /* ── Transform API response → UserRow[] ── */
   const transformResponse = useMemo(
     () =>
@@ -450,7 +533,9 @@ export default function UsersSection({
             "limits.pages": Number(limits.pages ?? 0),
             // Normalise createdBy / updatedBy
             createdBy: formatUserRef(u.createdBy),
+            createdById: getObjectId(u.createdBy),
             updatedBy: formatUserRef(u.updatedBy),
+            updatedById: getObjectId(u.updatedBy),
           } as UserRow;
         });
       },
@@ -713,13 +798,25 @@ export default function UsersSection({
       },
       {
         key: "createdBy",
-        label: "ایجاد شده توسط",
+        label: "سازنده کاربر",
         hideOnMobile: true,
         editable: false,
         copyable: true,
         render: (value) => (
-          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
+          <span className="text-sm text-slate-400">
+            {String(value ?? "—")}
+          </span>
         ),
+      },
+      {
+        key: "createdById",
+        label: "فیلتر سازنده کاربر",
+        visible: false,
+        viewable: false,
+        editable: false,
+        filterable: creatorOptions.length > 0,
+        filterSearchable: true,
+        options: creatorOptions,
       },
       {
         key: "updatedBy",
@@ -752,7 +849,7 @@ export default function UsersSection({
         render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
     ],
-    [agentOptions, authUser?.role],
+    [agentOptions, authUser?.role, creatorOptions],
   );
 
   /* ══════════════════════════════════════════

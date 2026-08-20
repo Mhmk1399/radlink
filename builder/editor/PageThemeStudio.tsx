@@ -483,24 +483,6 @@ export function PageThemeStudio({
                   </button>
                 );
               })}
-
-              <button
-                type="button"
-                onClick={() => {
-                  const next = normalizePageThemeDraft({
-                    ...createThemeDraftFrom(BUILDER_PAGE_THEMES[0]),
-                    id: createCustomId(),
-                    name: "تم سفارشی",
-                    custom: true,
-                  });
-                  setSelectedId(next.id);
-                  setDraft(next);
-                }}
-                className="flex min-h-52 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50 text-neutral-500 transition hover:border-neutral-300 hover:bg-white"
-              >
-                <HiOutlinePlus size={24} />
-                <span className="mt-2 text-[13px] font-bold">ساخت تم جدید</span>
-              </button>
             </div>
           </div>
 
@@ -837,25 +819,7 @@ export function PageThemeStudio({
           >
             انصراف
           </button>
-          <button
-            type="button"
-            onClick={saveCustomTheme}
-            className="rounded-2xl border border-neutral-200 bg-neutral-50 px-5 py-3 text-[13px] font-bold text-neutral-700 transition hover:bg-neutral-100"
-          >
-            {selectedIsCustom ? "ذخیره تغییرات تم" : "ذخیره به عنوان تم شخصی"}
-          </button>
-          {selectedIsCustom ? (
-            <button
-              type="button"
-              onClick={deleteCustomTheme}
-              className="rounded-2xl border border-red-100 bg-red-50 px-5 py-3 text-[13px] font-bold text-red-600 transition hover:bg-red-100"
-            >
-              <span className="inline-flex items-center gap-2">
-                <HiOutlineTrash size={15} />
-                حذف تم
-              </span>
-            </button>
-          ) : null}
+
           <button
             type="button"
             onClick={() => {

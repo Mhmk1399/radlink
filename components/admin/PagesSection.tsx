@@ -504,7 +504,7 @@ function buildColumns(
       editable: false,
       options: ownerOptions,
       placeholder: "سازنده صفحه را انتخاب کنید",
-      label: "سازنده",
+      label: "سازنده صفحه",
       filterable: canEditOwner,
       filterSearchable: true,
       hideOnMobile: true,
@@ -932,6 +932,13 @@ export default function PagesSection({
 
         const unique = new Map<string, SelectOption>();
 
+        if (user?.id) {
+          unique.set(user.id, {
+            value: user.id,
+            label: getUserLabel(user as UserOptionSource) || user.id,
+          });
+        }
+
         allUsers.forEach((userOption) => {
           const value = getObjectId(userOption);
 
@@ -958,7 +965,7 @@ export default function PagesSection({
     return () => {
       controller.abort();
     };
-  }, [shouldLoadUsers, headers]);
+  }, [shouldLoadUsers, headers, user]);
 
   /* rebuild columns whenever theme or options change */
   const columns = useMemo(

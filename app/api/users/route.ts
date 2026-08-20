@@ -54,6 +54,9 @@ export const GET = compose(
     const status = searchParams.get("status");
     const search = searchParams.get("search");
     const mode = searchParams.get("mode");
+    const createdByIdFilter =
+        searchParams.get("filter_createdById") ??
+        searchParams.get("createdById");
     const includeDeleted =
         searchParams.get("includeDeleted") === "true" && !mode;
 
@@ -72,6 +75,12 @@ export const GET = compose(
 
     if (role) query.role = role;
     if (status) query.status = status;
+    if (
+        createdByIdFilter &&
+        mongoose.Types.ObjectId.isValid(createdByIdFilter)
+    ) {
+        query.createdBy = createdByIdFilter;
+    }
 
     if (mode === "agent-options") {
         query.status = "active";

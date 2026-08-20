@@ -28,11 +28,16 @@ function normalizeLimit(value: unknown) {
 
 async function getPersistedUsage(userId: string, resource: QuotaResource) {
   if (resource === "files") {
-    return FileModel.countDocuments({ owner: userId, kind: "upload" });
+    return FileModel.countDocuments({
+      owner: userId,
+      kind: { $in: ["upload", "logo-header", "ticket"] },
+    });
   }
 
   if (resource === "pages") {
-    return Page.countDocuments({ owner: userId });
+    return Page.countDocuments({
+      $or: [{ owner: userId }, { assignedUser: userId }],
+    });
   }
 
   return 0;
