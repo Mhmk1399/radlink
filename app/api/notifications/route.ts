@@ -10,6 +10,7 @@ import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
 import {
     canAccessActorOwner,
+    hasAgentScopedRole,
     withActorOwnerScope,
 } from "@/lib/auth/agentScope";
 import "@/models/users";
@@ -70,7 +71,7 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin"),
+    withRole("agent", "agentManager", "admin", "superAdmin"),
 )(async (req: AuthRequest) => {
     const body = (await req.json()) as Record<string, unknown>;
     const isGlobal = Boolean(body.isGlobal);
@@ -78,7 +79,7 @@ export const POST = compose(
     const content = normalizeNotificationContent(body);
     const type = cleanText(body.type, 20);
     const iconKey = cleanText(body.iconKey, 30);
-    if (req.ctx.user!.role === "agent" && isGlobal) {
+    if (hasAgentScopedRole(req.ctx.user!.role) && isGlobal) {
         return NextResponse.json(
             { message: "نماینده فقط می‌تواند برای صفحات مجموعه خودش اعلان بسازد." },
             { status: 403 },
@@ -186,7 +187,7 @@ export const GET = compose(
         const ownedPageQuery = await withActorOwnerScope(user);
         const ownedPageIds = await Page.find(ownedPageQuery).distinct("_id");
         conditions.push({
-            ...(user.role === "agent"
+            ...(hasAgentScopedRole(user.role)
                 ? { page: { $in: ownedPageIds } }
                 : {
                     $or: [

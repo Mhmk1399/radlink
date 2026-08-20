@@ -87,7 +87,7 @@ export interface SectionMeta {
     minRole: UserRoleLevel;
 }
 
-type UserRoleLevel = "user" | "agent" | "admin" | "superAdmin";
+type UserRoleLevel = "user" | "agent" | "agentManager" | "admin" | "superAdmin";
 
 export const SECTION_META: SectionMeta[] = [
     // Main
@@ -125,6 +125,7 @@ export const SECTION_META: SectionMeta[] = [
 const ROLE_LEVELS: Record<UserRoleLevel, number> = {
     user: 0,
     agent: 1,
+    agentManager: 1,
     admin: 2,
     superAdmin: 3,
 };

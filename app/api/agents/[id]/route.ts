@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
-import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
+import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
+import {
+    getManagedUserIds,
+    hasAgentScopedRole,
+} from "@/lib/auth/agentScope";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import type { AccessAction } from "@/models/access";
 import {
     isValidPhoneNumber,
     normalizePhoneNumber,
@@ -25,6 +31,51 @@ function normalizeLimits(value: unknown) {
     };
 }
 
+function getAgentUserId(value: unknown) {
+    if (value && typeof value === "object") {
+        const record = value as Record<string, unknown>;
+        return String(record._id ?? record.id ?? "");
+    }
+
+    return String(value ?? "");
+}
+
+async function hasAgentsPermission(
+    user: AuthRequest["ctx"]["user"],
+    action: AccessAction,
+) {
+    if (!user) return false;
+    if (user.role === "superAdmin") return true;
+
+    const access = await resolveUserAccess(String(user._id), user.permissions);
+    return access.components["admin.agents"]?.has(action) ?? false;
+}
+
+async function canAccessAgentUser(
+    user: AuthRequest["ctx"]["user"],
+    agentUserId: string,
+    action: AccessAction,
+    options?: { allowSelf?: boolean },
+) {
+    if (!user) return false;
+
+    const isSelf = agentUserId === String(user._id);
+    if (isSelf && options?.allowSelf !== false) return true;
+    if (!(await hasAgentsPermission(user, action))) return false;
+    if (user.role === "admin" || user.role === "superAdmin") return true;
+
+    if (hasAgentScopedRole(user.role)) {
+        const managedUserIds = await getManagedUserIds(user, {
+            includeSelf: false,
+        });
+        return (managedUserIds ?? []).some(
+            (managedId) => String(managedId) === agentUserId,
+        );
+    }
+
+    return false;
+}
+
 // GET /api/agents/[id] — admin or the agent themselves
 export const GET = compose(
     withDB(),
@@ -43,10 +94,8 @@ export const GET = compose(
 
     if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
 
-    // Only admin/superAdmin or the agent's own user can view
-    const isSelf = String(agent.user._id ?? agent.user) === String(user._id);
-    const isAdmin = ["admin", "superAdmin"].includes(user.role);
-    if (!isSelf && !isAdmin) {
+    const agentUserId = getAgentUserId(agent.user);
+    if (!(await canAccessAgentUser(user, agentUserId, "view"))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -68,10 +117,10 @@ export const PATCH = compose(
     const agent = await Agent.findById(id);
     if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
 
-    const isSelf = String(agent.user) === String(user._id);
+    const agentUserId = getAgentUserId(agent.user);
     const isAdmin = ["admin", "superAdmin"].includes(user.role);
 
-    if (!isSelf && !isAdmin) {
+    if (!(await canAccessAgentUser(user, agentUserId, "update"))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -134,12 +183,24 @@ export const PATCH = compose(
 export const DELETE = compose(
     withDB(),
     withAuth(),
-    withStatus("active")
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+    withStatus("active"),
+    withRole("agent", "agentManager", "admin", "superAdmin"),
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const user = req.ctx.user!;
 
-    const agent = await Agent.findByIdAndDelete(id);
+    const agent = await Agent.findById(id);
     if (!agent) return NextResponse.json({ message: "نماینده پیدا نشد." }, { status: 404 });
+
+    if (
+        !(await canAccessAgentUser(user, getAgentUserId(agent.user), "delete", {
+            allowSelf: false,
+        }))
+    ) {
+        return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
+    }
+
+    await agent.deleteOne();
 
     await Promise.all([
         User.updateOne(
@@ -147,7 +208,7 @@ export const DELETE = compose(
             { $unset: { agentid: "" } }
         ),
         User.updateOne(
-            { _id: agent.user, role: "agent" },
+            { _id: agent.user, role: { $in: ["agent", "agentManager"] } },
             { $set: { role: "user" } }
         ),
         User.updateMany(

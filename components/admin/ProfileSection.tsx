@@ -262,6 +262,7 @@ async function uploadAvatar(
 const roleLabels: Record<UserRole, string> = {
   user: "کاربر",
   agent: "نماینده",
+  agentManager: "مدیر نماینده",
   admin: "مدیر",
   superAdmin: "R A D",
 };

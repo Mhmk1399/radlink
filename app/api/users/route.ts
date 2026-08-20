@@ -23,7 +23,7 @@ import {
     normalizePhoneNumber,
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
-import { getManagedUserIds } from "@/lib/auth/agentScope";
+import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import {
     hashPassword,
@@ -39,7 +39,7 @@ export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("user", "agent", "admin", "superAdmin"),
+    withRole("user", "agent", "agentManager", "admin", "superAdmin"),
 )(async (req: AuthRequest) => {
     const requester = req.ctx.user!;
     const { searchParams } = new URL(req.url);
@@ -64,9 +64,11 @@ export const GET = compose(
         ? {}
         : { isDeleted: false };
 
+    const isAgentOptionsMode = mode === "agent-options";
+
     if (requester.role === "user") {
         query._id = requester._id;
-    } else if (requester.role === "agent") {
+    } else if (hasAgentScopedRole(requester.role) && !isAgentOptionsMode) {
         const managedUserIds = await getManagedUserIds(requester, {
             includeSelf: false,
         });
@@ -171,7 +173,7 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin"),
+    withRole("agent", "agentManager", "admin", "superAdmin"),
 )(async (req: AuthRequest) => {
     try {
         const currentUser = req.ctx?.user;
@@ -260,13 +262,13 @@ export const POST = compose(
         }
 
         const requesterAgent =
-            currentUser.role === "agent"
+            hasAgentScopedRole(currentUser.role)
                 ? await Agent.findOne({
                     user: currentUser._id,
                     isActive: true,
                 }).select("_id limits").lean()
                 : null;
-        if (currentUser.role === "agent" && !requesterAgent) {
+        if (hasAgentScopedRole(currentUser.role) && !requesterAgent) {
             return NextResponse.json(
                 { message: "پروفایل نمایندگی فعال برای شما پیدا نشد." },
                 { status: 403 },
@@ -298,6 +300,7 @@ export const POST = compose(
         const allowedRoles: UserRole[] = [
             "user",
             "agent",
+            "agentManager",
             "admin",
             "superAdmin",
         ];
@@ -307,13 +310,13 @@ export const POST = compose(
             "inactive",
         ];
 
-        const role: UserRole = currentUser.role === "agent"
+        const role: UserRole = hasAgentScopedRole(currentUser.role)
             ? "user"
             : allowedRoles.includes(body.role)
             ? body.role
             : "user";
 
-        const status: UserStatus = currentUser.role === "agent"
+        const status: UserStatus = hasAgentScopedRole(currentUser.role)
             ? "active"
             : allowedStatuses.includes(
             body.status,
@@ -327,7 +330,7 @@ export const POST = compose(
             typeof body.password === "string" ? body.password : "";
         const hasRequestedPassword = requestedPassword.trim().length > 0;
         const permissionIds =
-            currentUser.role !== "agent" && Array.isArray(body.permissions)
+            !hasAgentScopedRole(currentUser.role) && Array.isArray(body.permissions)
                 ? normalizeIdList(body.permissions)
                 : [];
         if (!permissionIds.every((id) => mongoose.Types.ObjectId.isValid(id))) {

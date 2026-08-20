@@ -81,7 +81,7 @@ export interface UserProviderProps {
    USER
    ══════════════════════════════════════════════ */
 
-export type UserRole = "user" | "agent" | "admin" | "superAdmin";
+export type UserRole = "user" | "agent" | "agentManager" | "admin" | "superAdmin";
 export type UserStatus = "active" | "inactive";
 
 export interface UserLimits {
@@ -153,6 +153,7 @@ export interface UserStats {
     active: number;
     inactive: number;
     agents: number;
+    agentManagers?: number;
     admins: number;
 }
 
@@ -970,6 +971,7 @@ export interface SelectOption {
 export const USER_ROLE_OPTIONS: SelectOption[] = [
     { label: "کاربر", value: "user" },
     { label: "نماینده", value: "agent" },
+    { label: "مدیر نماینده", value: "agentManager" },
     { label: "مدیر", value: "admin" },
     { label: "R A D", value: "superAdmin" },
 ];

@@ -15,7 +15,7 @@ import {
     normalizePhoneNumber,
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
-import { getManagedUserIds } from "@/lib/auth/agentScope";
+import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import {
     hashPassword,
     validateStrongPassword,
@@ -27,7 +27,7 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const VALID_ROLES = ["user", "agent", "admin", "superAdmin"];
+const VALID_ROLES = ["user", "agent", "agentManager", "admin", "superAdmin"];
 const VALID_STATUSES = ["active", "inactive"];
 
 function isValidObjectId(id: string): boolean {
@@ -42,7 +42,7 @@ function isSelfOrAdmin(user: AuthRequest["ctx"]["user"], targetId: string) {
 
 async function canAccessUserRequest(req: AuthRequest, targetId: string) {
     if (isSelfOrAdmin(req.ctx.user, targetId)) return true;
-    if (req.ctx.user?.role === "agent") {
+    if (hasAgentScopedRole(req.ctx.user?.role)) {
         const managedUserIds = await getManagedUserIds(req.ctx.user, {
             includeSelf: false,
         });
@@ -117,7 +117,7 @@ export const PATCH = compose(
     const isSuperAdmin = requester.role === "superAdmin";
     const isSelf = String(requester._id) === id;
     const isAgentManager =
-        requester.role === "agent" &&
+        hasAgentScopedRole(requester.role) &&
         !isSelf &&
         (await getManagedUserIds(requester, { includeSelf: false }))?.some(
             (managedId) => String(managedId) === id,
@@ -403,7 +403,7 @@ export const PATCH = compose(
     }
 
     // A normal user may only update themselves.
-    if (!isAdmin && !isSelf) {
+    if (!isAdmin && !isSelf && !isAgentManager) {
         return NextResponse.json(
             { message: "شما فقط می‌توانید حساب خودتان را ویرایش کنید." },
             { status: 403 }
@@ -454,7 +454,7 @@ export const DELETE = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const requester = req.ctx.user!;
@@ -474,7 +474,7 @@ export const DELETE = compose(
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
     if (
-        requester.role === "agent" &&
+        hasAgentScopedRole(requester.role) &&
         !(await getManagedUserIds(requester, { includeSelf: false }))?.some(
             (managedId) => String(managedId) === id,
         )

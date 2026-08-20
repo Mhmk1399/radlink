@@ -30,7 +30,7 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin")
 )(async (req: AuthRequest) => {
     const body = await req.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";

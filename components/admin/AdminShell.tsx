@@ -1494,6 +1494,17 @@ const ISLAND_BY_ROLE: Record<UserRole, IslandConfig> = {
     items: ["dashboard", "pages", "files", "tickets"],
     moreItems: ["qrcodes", "notifications", "profile", "settings"],
   },
+  agentManager: {
+    items: ["dashboard", "pages", "files", "tickets"],
+    moreItems: [
+      "agents",
+      "users",
+      "qrcodes",
+      "notifications",
+      "profile",
+      "settings",
+    ],
+  },
   admin: {
     items: ["dashboard", "users", "pages", "tickets"],
     moreItems: [

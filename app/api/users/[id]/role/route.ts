@@ -6,7 +6,7 @@ import User from "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const VALID_ROLES = ["user", "agent", "admin", "superAdmin"];
+const VALID_ROLES = ["user", "agent", "agentManager", "admin", "superAdmin"];
 
 // PATCH /api/users/[id]/role — superAdmin only
 export const PATCH = compose(

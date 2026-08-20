@@ -88,7 +88,7 @@ import { buildPageTargetUrl } from "@/lib/qrCode";
 import {
     hasGlobalOwnerScope,
 } from "@/lib/auth/ownership";
-import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { canAccessActorOwner, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import {
     withPageAccessScope,
     withTemplateAccessScope,
@@ -132,7 +132,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function canManageFooterBranding(role: unknown) {
-    return role === "agent" || role === "admin" || role === "superAdmin";
+    return hasAgentScopedRole(role) || role === "admin" || role === "superAdmin";
 }
 
 function getOptionalObjectId(value: unknown) {
@@ -144,7 +144,7 @@ function getOptionalObjectId(value: unknown) {
 }
 
 function canAssignPageUser(role: unknown) {
-    return role === "agent" || role === "admin" || role === "superAdmin";
+    return hasAgentScopedRole(role) || role === "admin" || role === "superAdmin";
 }
 
 function normalizeBlocks(blocks: unknown) {

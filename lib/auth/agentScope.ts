@@ -12,6 +12,10 @@ export type ActorScope = {
 
 const ACTOR_SCOPE_CACHE_TTL_MS = 60 * 1000;
 
+export function hasAgentScopedRole(role: unknown) {
+  return role === "agent" || role === "agentManager";
+}
+
 type ActorScopeCacheEntry = {
   value: ActorScope;
   expiresAt: number;
@@ -91,7 +95,7 @@ export async function resolveActorScope(
     });
   }
 
-  if (user.role !== "agent") {
+  if (!hasAgentScopedRole(user.role)) {
     return setCachedActorScope(cacheKey, {
       global: false,
       agentId: null,

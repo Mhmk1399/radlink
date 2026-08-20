@@ -2,6 +2,7 @@ export function getUserRoleLabel(role?: string): string {
   const labels: Record<string, string> = {
     user: "کاربر",
     agent: "نماینده",
+    agentManager: "مدیر نماینده",
     admin: "مدیر",
     superAdmin: "R A D",
   };

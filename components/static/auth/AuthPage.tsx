@@ -67,7 +67,7 @@ interface BackendUser {
   avatarUrl?: string;
   nationalCode?: string;
   fatherName?: string;
-  role: "user" | "agent" | "admin" | "superAdmin";
+  role: "user" | "agent" | "agentManager" | "admin" | "superAdmin";
   status: "active" | "inactive";
   permissions: string[];
   limits: {
@@ -1141,7 +1141,7 @@ export default function AuthPage() {
                 <div className="flex flex-col items-center gap-4 text-center">
                   <LogoMark />
                   <div>
-                    <h1 className={cn(typography.h3, "text-xl")}>
+                    <h1 className={cn(  "text-xl text-white")}>
                       ورود یا ثبت‌نام
                     </h1>
                     <p
@@ -1345,7 +1345,7 @@ export default function AuthPage() {
                   <LogoMark />
 
                   <div>
-                    <h1 className={cn(typography.h3, "text-xl")}>کد تأیید</h1>
+                    <h1 className={cn(  "text-xl text-white")}>کد تأیید</h1>
                     <p
                       className={cn(
                         "mt-2",
@@ -1486,7 +1486,7 @@ export default function AuthPage() {
 
                   <LogoMark />
                   <div>
-                    <h1 className={cn(typography.h3, "text-xl")}>
+                    <h1 className={cn( " text-white text-xl")}>
                       ساخت رمز عبور
                     </h1>
                     <p
@@ -1623,7 +1623,7 @@ export default function AuthPage() {
                 <div className="flex flex-col items-center gap-4 text-center">
                   <LogoMark />
                   <div>
-                    <h1 className={cn(typography.h3, "text-xl")}>
+                    <h1 className={cn( "text-xl text-white" )}>
                       تکمیل ثبت‌نام
                     </h1>
                     <p
@@ -1863,7 +1863,7 @@ export default function AuthPage() {
                 <SuccessCheck />
 
                 <div>
-                  <h1 className={cn(typography.h3, "text-xl")}>
+                  <h1 className={cn(  "text-xl text-white")}>
                     {isExistingUser ? "ورود موفق!" : "ثبت‌نام موفق!"}
                   </h1>
                   <p

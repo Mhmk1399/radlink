@@ -36,6 +36,7 @@ import {
 } from "@/lib/validation/identityFields";
 
 type AgentType = "personal" | "company";
+type AgentUserRole = "agent" | "agentManager";
 
 type AgentUser = {
   _id?: string;
@@ -65,6 +66,7 @@ type AgentRow = {
   userLabel: string;
   userPhone: string;
   userEmail?: string;
+  userRole: AgentUserRole;
   type: AgentType;
   typeLabel: string;
   postalCode?: string;
@@ -91,6 +93,7 @@ type UserOption = {
 type AgentFormState = {
   id?: string;
   userId: string;
+  userRole: AgentUserRole;
   type: AgentType;
   postalCode: string;
   fixedNumber: string;
@@ -158,6 +161,7 @@ function normalizeUser(value: unknown): AgentUser | null {
 function emptyForm(): AgentFormState {
   return {
     userId: "",
+    userRole: "agent",
     type: "personal",
     postalCode: "",
     fixedNumber: "",
@@ -173,6 +177,7 @@ function formFromRow(row: AgentRow): AgentFormState {
   return {
     id: row._id,
     userId: row.userId,
+    userRole: row.userRole ?? "agent",
     type: row.type,
     postalCode: row.postalCode ?? "",
     fixedNumber: row.fixedNumber ?? "",
@@ -191,6 +196,7 @@ function formFromRow(row: AgentRow): AgentFormState {
 function toPayload(form: AgentFormState) {
   return {
     userId: form.userId || undefined,
+    userRole: form.userRole,
     type: form.type,
     postalCode: emptyToUndefined(form.postalCode),
     fixedNumber: emptyToUndefined(form.fixedNumber),
@@ -457,6 +463,7 @@ export default function AgentsSection({
             _id: id,
             id,
             userId,
+            userRole: user?.role === "agentManager" ? "agentManager" : "agent",
             userLabel: userLabel(user, userId.slice(-8) || "-"),
             userPhone: user?.phoneNumber ?? "-",
             userEmail: user?.email,
@@ -767,8 +774,6 @@ export default function AgentsSection({
     t.borderInputFocus,
     isDark ? "placeholder:text-[#47443e]" : "placeholder:text-[#b0aa9e]",
   );
-  const themedSelect = cn(fieldInput, "cursor-pointer");
-
   return (
     <div className="space-y-5 sm:space-y-6" dir="rtl">
       {/* ── Page header ── */}
@@ -996,129 +1001,157 @@ export default function AgentsSection({
               >
                 {/* User select (create only) */}
                 {!form.id && (
-                  <Field label="کاربر" icon={<FaUserTie />}>
-                    <CustomSelect
-                      id="userId"
-                      name="userId"
-                      value={form.userId}
-                      options={userOptions}
-                      onChange={(value) => {
-                        updateField(
-                          "userId",
-                          typeof value === "string" ? value : "",
-                        );
-                      }}
-                      placeholder={
-                        loadingUsers
-                          ? "در حال دریافت کاربران..."
-                          : "انتخاب کاربر"
-                      }
-                      searchPlaceholder="جستجوی نام، شماره موبایل یا ایمیل..."
-                      loading={loadingUsers}
-                      disabled={loadingUsers}
-                      searchable
-                      clearable
-                      fullWidth
-                      size="md"
-                      position="auto"
-                      emptyMessage="کاربری برای انتخاب وجود ندارد"
-                      noResultsMessage="کاربری با این مشخصات پیدا نشد"
-                    />
-                    {selectedUser && (
-                      <div
-                        className={cn(
-                          "mt-3 rounded-xl border p-3.5",
-                          t.borderSubtle,
-                          t.inputBg,
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black",
-                              isDark
-                                ? "bg-blue-500/10 text-blue-300"
-                                : "bg-blue-50 text-blue-700",
-                            )}
-                          >
-                            {`${selectedUser.firstName?.[0] ?? ""}${selectedUser.lastName?.[0] ?? ""}` ||
-                              "U"}
-                          </div>
-                          <div className="min-w-0">
-                            <p
+                  <>
+                    <Field label="کاربر" icon={<FaUserTie />}>
+                      <CustomSelect
+                        id="userId"
+                        name="userId"
+                        value={form.userId}
+                        options={userOptions}
+                        onChange={(value) => {
+                          updateField(
+                            "userId",
+                            typeof value === "string" ? value : "",
+                          );
+                        }}
+                        placeholder={
+                          loadingUsers
+                            ? "در حال دریافت کاربران..."
+                            : "انتخاب کاربر"
+                        }
+                        searchPlaceholder="جستجوی نام، شماره موبایل یا ایمیل..."
+                        loading={loadingUsers}
+                        disabled={loadingUsers}
+                        searchable
+                        clearable
+                        fullWidth
+                        size="md"
+                        position="auto"
+                        emptyMessage="کاربری برای انتخاب وجود ندارد"
+                        noResultsMessage="کاربری با این مشخصات پیدا نشد"
+                      />
+                      {selectedUser && (
+                        <div
+                          className={cn(
+                            "mt-3 rounded-xl border p-3.5",
+                            t.borderSubtle,
+                            t.inputBg,
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
                               className={cn(
-                                "truncate text-sm font-extrabold",
-                                t.textPrimary,
+                                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-black",
+                                isDark
+                                  ? "bg-blue-500/10 text-blue-300"
+                                  : "bg-blue-50 text-blue-700",
                               )}
                             >
-                              {userLabel(selectedUser, "کاربر بدون نام")}
-                            </p>
-                            <p
+                              {`${selectedUser.firstName?.[0] ?? ""}${selectedUser.lastName?.[0] ?? ""}` ||
+                                "U"}
+                            </div>
+                            <div className="min-w-0">
+                              <p
+                                className={cn(
+                                  "truncate text-sm font-extrabold",
+                                  t.textPrimary,
+                                )}
+                              >
+                                {userLabel(selectedUser, "کاربر بدون نام")}
+                              </p>
+                              <p
+                                className={cn(
+                                  "mt-0.5 text-[11px]",
+                                  t.textMuted,
+                                )}
+                              >
+                                {selectedUser.role || "user"} ·{" "}
+                                {selectedUser.status === "active"
+                                  ? "فعال"
+                                  : "غیرفعال"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <div
                               className={cn(
-                                "mt-0.5 text-[11px]",
+                                "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                                t.cardBg,
                                 t.textMuted,
                               )}
                             >
-                              {selectedUser.role || "user"} ·{" "}
-                              {selectedUser.status === "active"
-                                ? "فعال"
-                                : "غیرفعال"}
-                            </p>
+                              <FaPhone className="h-3 w-3 shrink-0" />
+                              <span dir="ltr">
+                                {selectedUser.phoneNumber || "-"}
+                              </span>
+                            </div>
+                            <div
+                              className={cn(
+                                "flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                                t.cardBg,
+                                t.textMuted,
+                              )}
+                            >
+                              <FaEnvelope className="h-3 w-3 shrink-0" />
+                              <span className="truncate" dir="ltr">
+                                {selectedUser.email || "-"}
+                              </span>
+                            </div>
+                            <div
+                              className={cn(
+                                "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                                t.cardBg,
+                                t.textMuted,
+                              )}
+                            >
+                              <FaIdCard className="h-3 w-3 shrink-0" />
+                              <span>
+                                کد ملی: {selectedUser.nationalCode || "-"}
+                              </span>
+                            </div>
+                            <div
+                              className={cn(
+                                "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
+                                t.cardBg,
+                                t.textMuted,
+                              )}
+                            >
+                              <FaUserTie className="h-3 w-3 shrink-0" />
+                              <span>
+                                نام پدر: {selectedUser.fatherName || "-"}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <div
-                            className={cn(
-                              "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
-                              t.cardBg,
-                              t.textMuted,
-                            )}
-                          >
-                            <FaPhone className="h-3 w-3 shrink-0" />
-                            <span dir="ltr">
-                              {selectedUser.phoneNumber || "-"}
-                            </span>
-                          </div>
-                          <div
-                            className={cn(
-                              "flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
-                              t.cardBg,
-                              t.textMuted,
-                            )}
-                          >
-                            <FaEnvelope className="h-3 w-3 shrink-0" />
-                            <span className="truncate" dir="ltr">
-                              {selectedUser.email || "-"}
-                            </span>
-                          </div>
-                          <div
-                            className={cn(
-                              "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
-                              t.cardBg,
-                              t.textMuted,
-                            )}
-                          >
-                            <FaIdCard className="h-3 w-3 shrink-0" />
-                            <span>
-                              کد ملی: {selectedUser.nationalCode || "-"}
-                            </span>
-                          </div>
-                          <div
-                            className={cn(
-                              "flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs",
-                              t.cardBg,
-                              t.textMuted,
-                            )}
-                          >
-                            <FaUserTie className="h-3 w-3 shrink-0" />
-                            <span>
-                              نام پدر: {selectedUser.fatherName || "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </Field>
+                      )}
+                    </Field>
+                    <Field label="نقش نمایندگی" icon={<FaUserTie />}>
+                      <CustomSelect
+                        id="userRole"
+                        name="userRole"
+                        value={form.userRole}
+                        options={[
+                          { value: "agent", label: "نماینده" },
+                          {
+                            value: "agentManager",
+                            label: "مدیر نماینده",
+                          },
+                        ]}
+                        onChange={(value) => {
+                          updateField(
+                            "userRole",
+                            value === "agentManager"
+                              ? "agentManager"
+                              : "agent",
+                          );
+                        }}
+                        placeholder="انتخاب نقش نمایندگی"
+                        fullWidth
+                        size="md"
+                        position="auto"
+                      />
+                    </Field>
+                  </>
                 )}
 
                 {/* Agent type toggle */}

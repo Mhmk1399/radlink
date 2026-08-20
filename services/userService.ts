@@ -78,7 +78,9 @@ function asString(value: unknown, fallback = ""): string {
 }
 
 function isUserRole(value: unknown): value is UserRole {
-  return ["user", "agent", "admin", "superAdmin"].includes(String(value));
+  return ["user", "agent", "agentManager", "admin", "superAdmin"].includes(
+    String(value),
+  );
 }
 
 function isUserStatus(value: unknown): value is UserStatus {
@@ -142,6 +144,7 @@ function computeStats(users: User[]): UserStats {
     active: users.filter((user) => user.status === "active").length,
     inactive: users.filter((user) => user.status === "inactive").length,
     agents: users.filter((user) => user.role === "agent").length,
+    agentManagers: users.filter((user) => user.role === "agentManager").length,
     admins: users.filter((user) =>
       ["admin", "superAdmin"].includes(user.role),
     ).length,

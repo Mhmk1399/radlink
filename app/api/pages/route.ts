@@ -111,7 +111,7 @@ import {
 } from "@/lib/pages/pageExpiration";
 import "@/models/blocks";
 import { syncPageProducts } from "@/lib/products/syncPageProducts";
-import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { canAccessActorOwner, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import {
     getCachedPageExpiryAlerts,
     invalidatePageExpiryAlertsCache,
@@ -137,7 +137,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function canManageFooterBranding(role: unknown) {
-    return role === "agent" || role === "admin" || role === "superAdmin";
+    return hasAgentScopedRole(role) || role === "admin" || role === "superAdmin";
 }
 
 function escapeRegex(value: string) {
@@ -230,7 +230,7 @@ function getOptionalObjectId(value: unknown) {
 }
 
 function canAssignPageUser(role: unknown) {
-    return role === "agent" || role === "admin" || role === "superAdmin";
+    return hasAgentScopedRole(role) || role === "admin" || role === "superAdmin";
 }
 
 function canBypassTargetUserQuota(role: unknown) {

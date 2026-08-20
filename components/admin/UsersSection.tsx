@@ -49,6 +49,10 @@ function formatUserRef(value: unknown) {
   );
 }
 
+function hasAgentScopedRole(role?: string) {
+  return role === "agent" || role === "agentManager";
+}
+
 /* ══════════════════════════════════════════════
    TYPES  (aligned with Mongoose IUser)
    ══════════════════════════════════════════════ */
@@ -109,6 +113,10 @@ function RoleBadge({ role }: { role: UserRole }) {
     agent: {
       label: "نماینده",
       className: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    },
+    agentManager: {
+      label: "مدیر نماینده",
+      className: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
     },
     admin: {
       label: "مدیر",
@@ -634,13 +642,14 @@ export default function UsersSection({
         options: [
           { label: "کاربر", value: "user" },
           { label: "نماینده", value: "agent" },
+          { label: "مدیر نماینده", value: "agentManager" },
           { label: "مدیر", value: "admin" },
           { label: "R A D", value: "superAdmin" },
         ],
         render: (value) => <RoleBadge role={value as UserRole} />,
         copyable: false,
         hiddenInForm: () =>
-          authUser?.role === "agent" || authUser?.role === "user",
+          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
       },
       {
         key: "status",
@@ -665,7 +674,7 @@ export default function UsersSection({
         hideOnMobile: true,
         placeholder: "انتخاب نماینده یا بدون نماینده",
         hiddenInForm: () =>
-          authUser?.role === "agent" || authUser?.role === "user",
+          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
         render: (value, row) => (
           <span className="text-sm text-slate-400">
             {row.agentLabel ||
@@ -699,7 +708,7 @@ export default function UsersSection({
         visible: false,
         placeholder: "0",
         hiddenInForm: () =>
-          authUser?.role === "agent" || authUser?.role === "user",
+          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
       },
       {
         key: "limits.blocks",
@@ -708,7 +717,7 @@ export default function UsersSection({
         visible: false,
         placeholder: "0",
         hiddenInForm: () =>
-          authUser?.role === "agent" || authUser?.role === "user",
+          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
       },
       {
         key: "limits.pages",
@@ -717,7 +726,7 @@ export default function UsersSection({
         visible: false,
         placeholder: "0",
         hiddenInForm: () =>
-          authUser?.role === "agent" || authUser?.role === "user",
+          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
       },
       {
         key: "limits",

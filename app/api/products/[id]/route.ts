@@ -69,7 +69,7 @@ export const PATCH = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     if (invalidProductId(id)) {
@@ -150,7 +150,7 @@ export const DELETE = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     if (invalidProductId(id)) {

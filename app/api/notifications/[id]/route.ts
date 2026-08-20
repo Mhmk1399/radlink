@@ -7,7 +7,7 @@ import type { AuthRequest } from "@/lib/auth/types";
 import Notification from "@/models/notification";
 import Page from "@/models/pages";
 import { isNotificationIconKey } from "@/lib/notifications/notificationIcons";
-import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { canAccessActorOwner, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import "@/models/users";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -85,7 +85,7 @@ export const PATCH = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin"),
+    withRole("agent", "agentManager", "admin", "superAdmin"),
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const user = req.ctx.user!;
@@ -109,7 +109,7 @@ export const PATCH = compose(
 
     const isGlobal =
         "isGlobal" in body ? Boolean(body.isGlobal) : Boolean(current.isGlobal);
-    if (user.role === "agent" && isGlobal) {
+    if (hasAgentScopedRole(user.role) && isGlobal) {
         return NextResponse.json(
             { message: "نماینده اجازه مدیریت اعلان عمومی را ندارد." },
             { status: 403 },
@@ -224,7 +224,7 @@ export const DELETE = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin"),
+    withRole("agent", "agentManager", "admin", "superAdmin"),
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -243,7 +243,7 @@ export const DELETE = compose(
             { status: 404 },
         );
     }
-    if (req.ctx.user!.role === "agent") {
+    if (hasAgentScopedRole(req.ctx.user!.role)) {
         if (current.isGlobal) {
             return NextResponse.json(
                 { message: "نماینده اجازه حذف اعلان عمومی را ندارد." },

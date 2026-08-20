@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withAuth, withDB, withStatus } from "@/lib/auth/middlewares";
 import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
-import { getManagedUserIds } from "@/lib/auth/agentScope";
+import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import type { AuthRequest } from "@/lib/auth/types";
 import User from "@/models/users";
@@ -129,7 +129,7 @@ export const GET = compose(
       ? {
           _id: {
             $in:
-              user.role === "agent"
+              hasAgentScopedRole(user.role)
                 ? scopedUserIds.filter(
                     (id) => String(id) !== String(user._id),
                   )
@@ -144,7 +144,15 @@ export const GET = compose(
   const ticketQuery = hasGlobalScope
     ? {}
     : { requester: { $in: scopedUserIds } };
-  const agentQuery = hasGlobalScope ? {} : { user: user._id };
+  const agentQuery = hasGlobalScope
+    ? {}
+    : {
+        user: {
+          $in: hasAgentScopedRole(user.role)
+            ? scopedUserIds.filter((id) => String(id) !== String(user._id))
+            : scopedUserIds,
+        },
+      };
   const pageQuery = ownerQuery;
   const grantedTemplateIds = hasGlobalScope
     ? null
@@ -181,7 +189,7 @@ export const GET = compose(
     ? { isActive: { $ne: false } }
     : {
         isActive: { $ne: false },
-        ...(user.role === "agent"
+        ...(hasAgentScopedRole(user.role)
           ? { page: { $in: notificationPageIds } }
           : {
               $or: [

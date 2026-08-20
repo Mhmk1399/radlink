@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
-import { withDB, withAuth, withRole, withStatus } from "@/lib/auth/middlewares";
+import {
+    withDB,
+    withAuth,
+    withRole,
+    withStatus,
+    withPermission,
+} from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
 import User from "@/models/users";
+import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import {
     isValidPhoneNumber,
     normalizePhoneNumber,
@@ -28,10 +35,13 @@ export const POST = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin"),
+    withPermission({ component: "admin.agents", action: "create" }),
 )(async (req: AuthRequest) => {
     const body = await req.json();
     const { userId, type, postalCode, fixedNumber, pricePerLanding, companyName, ceoName, economicNumber, registrationNumber, limits } = body;
+    const targetRole =
+        body.userRole === "agentManager" ? "agentManager" : "agent";
     const rawFixedNumber =
         typeof fixedNumber === "string" ? toEnglishDigits(fixedNumber).trim() : "";
     const normalizedFixedNumber = normalizePhoneNumber(rawFixedNumber);
@@ -76,9 +86,9 @@ export const POST = compose(
         limits: normalizedLimits,
     });
 
-    // Promote user role to agent and link agentid
+    // Promote user role to the selected representative role and link agentid.
     await User.findByIdAndUpdate(userId, {
-        role: "agent",
+        role: targetRole,
         agentid: agent._id,
         limits: normalizedLimits,
     });
@@ -91,7 +101,8 @@ export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin"),
+    withPermission({ component: "admin.agents", action: "view" }),
 )(async (req: AuthRequest) => {
     const requester = req.ctx.user!;
     const { searchParams } = new URL(req.url);
@@ -101,7 +112,12 @@ export const GET = compose(
     const isActive = searchParams.get("isActive");   // filter by active state
 
     const query: Record<string, unknown> = {};
-    if (requester.role === "agent") query.user = requester._id;
+    if (hasAgentScopedRole(requester.role)) {
+        const managedUserIds = await getManagedUserIds(requester, {
+            includeSelf: false,
+        });
+        query.user = { $in: managedUserIds ?? [] };
+    }
     if (type) query.type = type;
     if (isActive !== null) query.isActive = isActive === "true";
 

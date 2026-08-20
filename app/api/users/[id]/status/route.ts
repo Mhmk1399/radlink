@@ -3,7 +3,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import User from "@/models/users";
-import { getManagedUserIds } from "@/lib/auth/agentScope";
+import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -14,7 +14,7 @@ export const PATCH = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
-    withRole("agent", "admin", "superAdmin")
+    withRole("agent", "agentManager", "admin", "superAdmin")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
     const { status } = await req.json();
@@ -48,7 +48,7 @@ export const PATCH = compose(
         );
     }
     if (
-        requester.role === "agent" &&
+        hasAgentScopedRole(requester.role) &&
         !(await getManagedUserIds(requester, {
             includeSelf: false,
         }))?.some((managedId) => String(managedId) === id)

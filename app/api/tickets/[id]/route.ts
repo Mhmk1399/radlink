@@ -7,7 +7,7 @@ import Ticket from "@/models/tickets";
 import File from "@/models/files";
 import "@/models/users";
 import "@/models/category";
-import { canAccessActorOwner } from "@/lib/auth/agentScope";
+import { canAccessActorOwner, hasAgentScopedRole } from "@/lib/auth/agentScope";
 import { deleteFileByIdentifier } from "@/lib/fileDeletion";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -75,7 +75,10 @@ export const PATCH = compose(
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
-    const isStaff = ["agent", "admin", "superAdmin"].includes(user.role);
+    const isStaff =
+        hasAgentScopedRole(user.role) ||
+        user.role === "admin" ||
+        user.role === "superAdmin";
     const $set: Record<string, unknown> = {};
     const $unset: Record<string, unknown> = {};
     const update: Record<string, unknown> = {};
@@ -96,7 +99,7 @@ export const PATCH = compose(
         $unset.assignee = "";
     } else if (isStaff && isObjectId(assigneeId)) {
         if (
-            user.role === "agent" &&
+            hasAgentScopedRole(user.role) &&
             !(await canAccessActorOwner(user, assigneeId))
         ) {
             return NextResponse.json(
