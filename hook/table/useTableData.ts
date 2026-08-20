@@ -65,26 +65,39 @@ export interface UseTableDataReturn<T> {
 function createDefaultFetcher<T>(
     headers: Record<string, string>,
     transformResponse?: (raw: unknown) => T[],
+    signal?: AbortSignal,
 ) {
     return async (url: string): Promise<T[]> => {
         const res = await fetch(url, {
-            headers: { "Content-Type": "application/json", ...headers },
+            headers: {
+                "Content-Type": "application/json",
+                ...headers,
+            },
+            signal,
         });
 
         if (!res.ok) {
             const errorBody = await res.text().catch(() => "");
+
             const error = new Error(
                 `خطا در دریافت داده: ${res.status} ${res.statusText}`,
-            ) as Error & { status?: number; body?: string };
+            ) as Error & {
+                status?: number;
+                body?: string;
+            };
+
             error.status = res.status;
             error.body = errorBody;
+
             throw error;
         }
 
         const json = await res.json();
 
         if (transformResponse) return transformResponse(json);
+
         if (Array.isArray(json)) return json as T[];
+
         if (json && typeof json === "object") {
             if (Array.isArray(json.data)) return json.data as T[];
             if (Array.isArray(json.results)) return json.results as T[];
@@ -309,6 +322,9 @@ export function useTableData<T extends Record<string, unknown>>(
             })
             : { total: 0, totalPages: 0 },
     );
+
+
+    
     const [mountedAt] = useState(() => Date.now());
 
     const finalFetcher = useCallback(

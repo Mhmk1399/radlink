@@ -106,6 +106,40 @@ function VideoPlaceholder() {
     </div>
   );
 }
+function getAparatVideoHash(value: string): string | null {
+  const url = value.trim();
+
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+
+    if (
+      parsed.hostname !== "aparat.com" &&
+      parsed.hostname !== "www.aparat.com"
+    ) {
+      return null;
+    }
+
+    const match = parsed.pathname.match(/^\/v\/([^/?#]+)/);
+
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getAparatEmbedUrl(value: string): string | null {
+  const hash = getAparatVideoHash(value);
+
+  if (!hash) return null;
+
+  const origin = ["https:", "", "www.aparat.com"].join("//");
+
+  return `${origin}/video/video/embed/videohash/${encodeURIComponent(
+    hash,
+  )}/vt/frame`;
+}
 
 /* ================================================================== */
 /*  Main Component                                                     */
@@ -152,7 +186,12 @@ export function VideoBlock({
     { mobileOnly, effect: "button" },
   );
 
-  const hasVideo = Boolean(String(block.data.videoUrl ?? "").trim());
+  const videoUrl = String(block.data.videoUrl ?? "").trim();
+
+  const aparatEmbedUrl = getAparatEmbedUrl(videoUrl);
+
+  const hasVideo = Boolean(videoUrl);
+
   const buttonHref =
     mode === "editor"
       ? undefined
@@ -235,9 +274,18 @@ export function VideoBlock({
               data-media-kind={hasVideo ? "video" : "empty"}
               $styleCss={videoStyle}
             >
-              {hasVideo ? (
+              {aparatEmbedUrl ? (
+                <iframe
+                  src={aparatEmbedUrl}
+                  title={String(block.data.title ?? "ویدئو آپارات")}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                  className="block aspect-video w-full border-0 bg-black"
+                />
+              ) : hasVideo ? (
                 <video
-                  src={String(block.data.videoUrl ?? "")}
+                  src={videoUrl}
                   poster={
                     String(block.data.posterUrl ?? "").trim() || undefined
                   }

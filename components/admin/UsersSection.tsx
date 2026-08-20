@@ -321,16 +321,12 @@ export default function UsersSection({
       }
 
       toast.success(
-        nextStatus === "active"
-          ? "کاربر فعال شد."
-          : "کاربر غیرفعال شد.",
+        nextStatus === "active" ? "کاربر فعال شد." : "کاربر غیرفعال شد.",
       );
       setRefreshToken((current) => current + 1);
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "تغییر وضعیت کاربر انجام نشد.",
+        error instanceof Error ? error.message : "تغییر وضعیت کاربر انجام نشد.",
       );
     } finally {
       setTogglingStatusId(null);
@@ -440,7 +436,10 @@ export default function UsersSection({
         if (authUser?.id) {
           unique.set(authUser.id, {
             value: authUser.id,
-            label: getPersonLabel(authUser, authUser.phoneNumber ?? authUser.id),
+            label: getPersonLabel(
+              authUser,
+              authUser.phoneNumber ?? authUser.id,
+            ),
           });
         }
 
@@ -555,6 +554,8 @@ export default function UsersSection({
     () => [
       {
         key: "firstName",
+        filterable: true,
+        filterSearchable: true,
         label: "نام",
         sortable: true,
         required: true,
@@ -578,6 +579,8 @@ export default function UsersSection({
       {
         key: "phoneNumber",
         label: "شماره موبایل",
+        filterable: true,
+        filterSearchable: true,
         sortable: true,
         required: true,
         inputType: "tel",
@@ -700,7 +703,7 @@ export default function UsersSection({
         },
         hideOnMobile: true,
         copyable: false,
-       },
+      },
       {
         key: "limits.files",
         label: "محدودیت فایل",
@@ -760,7 +763,7 @@ export default function UsersSection({
         key: "lastLoginAt",
         label: "آخرین ورود",
         sortable: true,
-        dateFilter: true,
+
         editable: false,
         hideOnMobile: true,
         copyable: true,
@@ -770,7 +773,7 @@ export default function UsersSection({
         key: "lastOtpRequestAt",
         label: "آخرین درخواست OTP",
         sortable: true,
-        dateFilter: true,
+
         editable: false,
         hideOnMobile: true,
         copyable: true,
@@ -780,7 +783,7 @@ export default function UsersSection({
         key: "phoneVerifiedAt",
         label: "تاریخ تأیید موبایل",
         sortable: true,
-        dateFilter: true,
+
         editable: false,
         hideOnMobile: true,
         copyable: true,
@@ -812,9 +815,7 @@ export default function UsersSection({
         editable: false,
         copyable: true,
         render: (value) => (
-          <span className="text-sm text-slate-400">
-            {String(value ?? "—")}
-          </span>
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
       },
       {
@@ -851,7 +852,7 @@ export default function UsersSection({
         key: "updatedAt",
         label: "آخرین بروزرسانی",
         sortable: true,
-        dateFilter: true,
+
         editable: false,
         hideOnMobile: true,
         copyable: true,

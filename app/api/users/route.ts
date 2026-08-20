@@ -54,6 +54,15 @@ export const GET = compose(
     const status = searchParams.get("status");
     const search = searchParams.get("search");
     const mode = searchParams.get("mode");
+    const firstNameFilter =
+        searchParams.get("filter_firstName") ??
+        searchParams.get("firstName");
+
+
+
+    const phoneNumberFilter =
+        searchParams.get("filter_phoneNumber") ??
+        searchParams.get("phoneNumber");
     const createdByIdFilter =
         searchParams.get("filter_createdById") ??
         searchParams.get("createdById");
@@ -77,6 +86,24 @@ export const GET = compose(
 
     if (role) query.role = role;
     if (status) query.status = status;
+    const escapeRegex = (value: string) =>
+        value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    if (firstNameFilter) {
+        query.firstName = {
+            $regex: escapeRegex(firstNameFilter.trim()),
+            $options: "i",
+        };
+    }
+
+
+
+    if (phoneNumberFilter) {
+        query.phoneNumber = {
+            $regex: escapeRegex(phoneNumberFilter.trim()),
+            $options: "i",
+        };
+    }
     if (
         createdByIdFilter &&
         mongoose.Types.ObjectId.isValid(createdByIdFilter)
@@ -86,7 +113,7 @@ export const GET = compose(
 
     if (mode === "agent-options") {
         query.status = "active";
-        query.role = "user";
+        query.role = { $in: ["agentManager", "agent"] };
         query.agentid = { $exists: false };
     }
 
@@ -144,7 +171,7 @@ export const GET = compose(
                     select: "firstName lastName phoneNumber email",
                 },
             })
-             .populate(
+            .populate(
                 "createdBy",
                 "firstName lastName phoneNumber role",
             )
@@ -278,8 +305,8 @@ export const POST = compose(
         const agentId = requesterAgent
             ? String(requesterAgent._id)
             : typeof body.agentid === "string"
-              ? body.agentid.trim()
-              : "";
+                ? body.agentid.trim()
+                : "";
         if (agentId) {
             if (!mongoose.Types.ObjectId.isValid(agentId)) {
                 return NextResponse.json(
@@ -313,16 +340,16 @@ export const POST = compose(
         const role: UserRole = hasAgentScopedRole(currentUser.role)
             ? "user"
             : allowedRoles.includes(body.role)
-            ? body.role
-            : "user";
+                ? body.role
+                : "user";
 
         const status: UserStatus = hasAgentScopedRole(currentUser.role)
             ? "active"
             : allowedStatuses.includes(
-            body.status,
-        )
-            ? body.status
-            : "active";
+                body.status,
+            )
+                ? body.status
+                : "active";
         const effectiveLimits = requesterAgent
             ? requesterAgent.limits
             : body.limits;
