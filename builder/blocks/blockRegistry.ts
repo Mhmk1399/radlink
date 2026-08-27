@@ -449,8 +449,17 @@ export const blockRegistry = {
 
 export type BlockType = keyof typeof blockRegistry;
 
+const blockTypeAliases: Record<string, BlockType> = {
+  "bank-account": "bankAccount",
+  bank_account: "bankAccount",
+};
+
+export function normalizeBlockType(type: string): BlockType | string {
+  return blockTypeAliases[type] ?? type;
+}
+
 export function getBlockConfig(type: BlockType) {
-  return blockRegistry[type];
+  return blockRegistry[normalizeBlockType(type) as BlockType];
 }
 
 export function getAvailableBlocks() {
@@ -462,5 +471,5 @@ export function getBlocksByCategory(category: BlockCategory) {
 }
 
 export function isBlockType(type: string): type is BlockType {
-  return type in blockRegistry;
+  return normalizeBlockType(type) in blockRegistry;
 }

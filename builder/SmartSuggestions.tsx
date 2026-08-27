@@ -735,7 +735,7 @@ export function SmartSuggestions({
                             className={`group flex flex-col overflow-hidden rounded-2xl border ${t.borderSubtle} ${t.cardBg} text-right ${t.cardShadow} transition-all duration-200 hover:-translate-y-1 ${t.borderHover} ${t.cardBgHover} disabled:cursor-wait disabled:opacity-65`}
                           >
                             <span
-                              className={`relative block aspect-[16/10] overflow-hidden ${t.pageBg}`}
+                              className={`relative block aspect-[16/12] overflow-hidden ${t.pageBg}`}
                             >
                               {template.thumbnail ? (
                                 <span

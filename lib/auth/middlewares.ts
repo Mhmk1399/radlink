@@ -36,10 +36,15 @@ export function withAuth(options?: { allowUnverifiedPhone?: boolean }): Middlewa
         const token = req.headers.get("authorization")?.split(" ")[1];
         if (!token) return unauthorizedResponse();
 
+        let payload: ReturnType<typeof verifyToken>;
         try {
-            const payload = verifyToken(token);
-            const user = await User.findById(payload.userId);
+            payload = verifyToken(token);
+        } catch {
+            return NextResponse.json({ code: "INVALID_TOKEN", message: AUTH_MESSAGES.invalidToken }, { status: 401 });
+        }
 
+        try {
+            const user = await User.findById(payload.userId);
             if (!user) return NextResponse.json({ code: "USER_NOT_FOUND", message: AUTH_MESSAGES.userNotFound }, { status: 401 });
 
             if (!options?.allowUnverifiedPhone && !user.isPhoneVerified) {
@@ -48,8 +53,15 @@ export function withAuth(options?: { allowUnverifiedPhone?: boolean }): Middlewa
 
             req.ctx = { ...req.ctx, user };
             return next();
-        } catch {
-            return NextResponse.json({ code: "INVALID_TOKEN", message: AUTH_MESSAGES.invalidToken }, { status: 401 });
+        } catch (error) {
+            console.error("[auth] Failed to load authenticated user", error);
+            return NextResponse.json(
+                {
+                    code: "AUTH_SERVICE_UNAVAILABLE",
+                    message: "در حال حاضر امکان بررسی ورود وجود ندارد. لطفاً دوباره تلاش کنید.",
+                },
+                { status: 503 },
+            );
         }
     };
 }

@@ -67,6 +67,29 @@ function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+const BLOCK_TYPE_ALIASES: Record<string, string> = {
+  "bank-account": "bankAccount",
+  bank_account: "bankAccount",
+};
+
+function canonicalBlockType(type: unknown) {
+  const value = stringValue(type);
+  return value ? (BLOCK_TYPE_ALIASES[value] ?? value) : value;
+}
+
+function blockTypeCandidates(type: string) {
+  return [
+    type,
+    ...Object.entries(BLOCK_TYPE_ALIASES)
+      .filter(([, canonical]) => canonical === type)
+      .map(([alias]) => alias),
+  ];
+}
+
 function blockRef(value: unknown) {
   const directId = objectIdString(value);
   const block =
@@ -74,7 +97,7 @@ function blockRef(value: unknown) {
 
   return {
     id: directId ?? objectIdString(block.blockId ?? block._id ?? block.id),
-    type: stringValue(block.type),
+    type: canonicalBlockType(block.type),
     instanceId: stringValue(block.instanceId),
   };
 }
@@ -131,7 +154,12 @@ async function describeBlocks(values: unknown[]) {
   const refs = values.map(blockRef);
   const ids = [...new Set(refs.map((ref) => ref.id).filter(Boolean))] as string[];
   const types = [
-    ...new Set(refs.map((ref) => ref.type).filter(Boolean)),
+    ...new Set(
+      refs
+        .map((ref) => ref.type)
+        .filter(isString)
+        .flatMap((type) => blockTypeCandidates(type)),
+    ),
   ] as string[];
 
   const records =
@@ -148,7 +176,10 @@ async function describeBlocks(values: unknown[]) {
 
   const byId = new Map(records.map((block) => [String(block._id), block]));
   const byType = new Map(
-    records.map((block) => [String(block.type), block]),
+    records.map((block) => [
+      String(canonicalBlockType(block.type) ?? block.type),
+      block,
+    ]),
   );
 
   return values.map((raw, index): BlockDescriptor => {
@@ -276,6 +307,7 @@ export async function getBuilderBlocksForRequest(req: AuthRequest) {
 
   return blocks.map((block) => ({
     ...block,
+    type: canonicalBlockType(block.type) ?? block.type,
     builderActions: effectiveActions(policy, String(block._id)),
   }));
 }

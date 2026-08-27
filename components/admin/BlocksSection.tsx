@@ -249,7 +249,17 @@ export default function BlocksSection({
       if (!response.ok) {
         throw new Error(json?.message ?? "خطا در همگام سازی بلاک‌ها");
       }
-      toast.success(json?.message ?? "بلاک‌ها همگام سازی شدند");
+      const syncErrors = Array.isArray(json?.results?.errors)
+        ? json.results.errors.filter(
+            (error: unknown): error is string =>
+              typeof error === "string" && error.trim().length > 0,
+          )
+        : [];
+      if (syncErrors.length > 0) {
+        toast.error(syncErrors.slice(0, 3).join("\n"));
+      } else {
+        toast.success(json?.message ?? "بلاک‌ها همگام سازی شدند");
+      }
       setRefreshToken((token) => token + 1);
     } catch (error) {
       toast.error(

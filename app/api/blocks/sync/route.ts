@@ -56,6 +56,14 @@ function buildDefaultBlock(config: {
     };
 }
 
+const LEGACY_BLOCK_TYPES: Record<string, string[]> = {
+    bankAccount: ["bank-account", "bank_account"],
+};
+
+function getBlockTypeCandidates(type: string) {
+    return [type, ...(LEGACY_BLOCK_TYPES[type] ?? [])];
+}
+
 // Sync blocks from blockRegistry to database
 export const POST = compose(
     withDB(),
@@ -64,17 +72,21 @@ export const POST = compose(
     withRole("admin", "superAdmin")
 )(async () => {
     const { blockRegistry } = await import("@/builder/blocks/blockRegistry");
+    const registryEntries = Object.entries(blockRegistry);
     
     const results = {
+        registryTotal: registryEntries.length,
         created: 0,
         updated: 0,
         skipped: 0,
         errors: [] as string[]
     };
 
-    for (const [type, config] of Object.entries(blockRegistry)) {
+    for (const [type, config] of registryEntries) {
         try {
-            const existing = await Block.findOne({ type });
+            const existing = await Block.findOne({
+                type: { $in: getBlockTypeCandidates(type) },
+            });
             const defaultBlock = buildDefaultBlock(config);
             
             const blockData = {
@@ -96,7 +108,7 @@ export const POST = compose(
                 await Block.findByIdAndUpdate(existing._id, {
                     ...blockData,
                     stats: existing.stats ?? { usageCount: 0 },
-                });
+                }, { runValidators: true });
                 results.updated++;
             } else {
                 await Block.create({
@@ -110,8 +122,13 @@ export const POST = compose(
         }
     }
 
+    const failed = results.errors.length;
+    const status = failed > 0 ? 207 : 200;
+
     return NextResponse.json({ 
-        message: `${results.created} بلاک ساخته شد و ${results.updated} بلاک به‌روزرسانی شد.`,
+        message: failed > 0
+            ? `${results.created} بلاک ساخته شد، ${results.updated} بلاک به‌روزرسانی شد و ${failed} بلاک با خطا مواجه شد.`
+            : `${results.created} بلاک ساخته شد و ${results.updated} بلاک به‌روزرسانی شد.`,
         results 
-    });
+    }, { status });
 });

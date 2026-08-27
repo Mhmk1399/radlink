@@ -21,12 +21,32 @@ type AdminAuthContextValue = {
 const AdminAuthContext = createContext<AdminAuthContextValue | null>(null);
 
 let hasShownMissingTokenToast = false;
+let hasShownExpiredTokenToast = false;
+const AUTH_STORAGE_KEYS = ["auth_token", "token", "accessToken", "jwt"];
 
 function readAuthToken(): string | null {
   if (typeof window === "undefined") return null;
 
   const token = window.localStorage.getItem("auth_token");
   return token && token.trim() ? token : null;
+}
+
+function clearStoredAuth() {
+  if (typeof window === "undefined") return;
+
+  AUTH_STORAGE_KEYS.forEach((key) => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {}
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch {}
+    window.document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+
+  try {
+    window.localStorage.removeItem("radlink_admin_profile_override");
+  } catch {}
 }
 
 function AdminAuthFallback() {
@@ -52,12 +72,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const authToken = readAuthToken();
+    let cancelled = false;
 
-    if (!authToken) {
-      if (!redirectedRef.current) {
-        redirectedRef.current = true;
+    function redirectToAuth() {
+      if (redirectedRef.current) return;
+      redirectedRef.current = true;
+      router.replace("/auth");
+    }
 
+    async function verifyAdminToken() {
+      const authToken = readAuthToken();
+
+      if (!authToken) {
         if (!hasShownMissingTokenToast) {
           hasShownMissingTokenToast = true;
           toast.warning("برای ورود به پنل مدیریت ابتدا وارد حساب کاربری شوید.", {
@@ -65,16 +91,55 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
           });
         }
 
-        router.replace("/auth");
+        clearStoredAuth();
+        if (!cancelled) {
+          setToken(null);
+          setIsChecking(false);
+          redirectToAuth();
+        }
+        return;
       }
 
-      setToken(null);
-      setIsChecking(false);
-      return;
+      try {
+        const response = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          clearStoredAuth();
+
+          if (!hasShownExpiredTokenToast) {
+            hasShownExpiredTokenToast = true;
+            toast.warning("نشست شما منقضی شده است. لطفاً دوباره وارد شوید.", {
+              title: "نیاز به ورود مجدد",
+            });
+          }
+
+          if (!cancelled) {
+            setToken(null);
+            setIsChecking(false);
+            redirectToAuth();
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setToken(authToken);
+          setIsChecking(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setToken(authToken);
+          setIsChecking(false);
+        }
+      }
     }
 
-    setToken(authToken);
-    setIsChecking(false);
+    void verifyAdminToken();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const value = useMemo<AdminAuthContextValue>(

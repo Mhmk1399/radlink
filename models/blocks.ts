@@ -154,6 +154,7 @@ export type BlockType =
   | "video"
   | "testimonial"
   | "contactInfo"
+  | "contactSave"
   | "mapLinks"
   | "messengerLinks"
   | "cta"
@@ -165,6 +166,7 @@ export type BlockType =
   | "storyHighlights"
   | "productCards"
   | "bookingForm"
+  | "bankAccount"
   | string;
 
 export interface IBlock extends Document {
