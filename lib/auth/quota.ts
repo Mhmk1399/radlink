@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { IUser } from "@/models/users";
+import Agent from "@/models/agent";
 import FileModel from "@/models/files";
 import Page from "@/models/pages";
 
@@ -26,6 +27,33 @@ function normalizeLimit(value: unknown) {
   return Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
 }
 
+function normalizeLimits(value: unknown) {
+  const limits =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, unknown>)
+      : {};
+
+  return {
+    files: normalizeLimit(limits.files),
+    blocks: normalizeLimit(limits.blocks),
+    pages: normalizeLimit(limits.pages),
+  };
+}
+
+async function resolveEffectiveLimits(
+  user: Pick<
+    IUser,
+    "_id" | "role" | "limits" | "agentid" | "limitsOverrideEnabled"
+  >,
+) {
+  if (!user.agentid || user.limitsOverrideEnabled) {
+    return normalizeLimits(user.limits);
+  }
+
+  const agent = await Agent.findById(user.agentid).select("limits").lean();
+  return normalizeLimits(agent?.limits ?? user.limits);
+}
+
 async function getPersistedUsage(userId: string, resource: QuotaResource) {
   if (resource === "files") {
     return FileModel.countDocuments({
@@ -50,13 +78,17 @@ export async function checkUserQuota({
   absoluteUsage,
   currentUsage,
 }: {
-  user: Pick<IUser, "_id" | "role" | "limits">;
+  user: Pick<
+    IUser,
+    "_id" | "role" | "limits" | "agentid" | "limitsOverrideEnabled"
+  >;
   resource: QuotaResource;
   amount?: number;
   absoluteUsage?: number;
   currentUsage?: number;
 }): Promise<QuotaStatus> {
-  const limit = normalizeLimit(user.limits?.[resource]);
+  const effectiveLimits = await resolveEffectiveLimits(user);
+  const limit = normalizeLimit(effectiveLimits[resource]);
   const unlimited = user.role === "superAdmin" || limit === 0;
   const used =
     resource === "blocks"
