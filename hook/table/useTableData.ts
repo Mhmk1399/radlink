@@ -58,6 +58,44 @@ export interface UseTableDataReturn<T> {
     serverTotalPages: number;
 }
 
+type TableRequestError = Error & {
+    status?: number;
+    body?: string;
+    code?: string;
+    field?: string;
+};
+
+function getResponseErrorPayload(body: string): Record<string, unknown> {
+    try {
+        const parsed = JSON.parse(body);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? (parsed as Record<string, unknown>)
+            : {};
+    } catch {
+        return {};
+    }
+}
+
+async function createFetchError(
+    response: Response,
+    fallback: string,
+): Promise<TableRequestError> {
+    const body = await response.text().catch(() => "");
+    const payload = getResponseErrorPayload(body);
+    const message =
+        typeof payload.message === "string" && payload.message.trim()
+            ? payload.message
+            : `${fallback}: ${response.status} ${response.statusText}`.trim();
+    const error = new Error(message) as TableRequestError;
+
+    error.status = response.status;
+    error.body = body;
+    if (typeof payload.code === "string") error.code = payload.code;
+    if (typeof payload.field === "string") error.field = payload.field;
+
+    return error;
+}
+
 /* ══════════════════════════════════════════════
    DEFAULT FETCHER
    ══════════════════════════════════════════════ */
@@ -77,19 +115,7 @@ function createDefaultFetcher<T>(
         });
 
         if (!res.ok) {
-            const errorBody = await res.text().catch(() => "");
-
-            const error = new Error(
-                `خطا در دریافت داده: ${res.status} ${res.statusText}`,
-            ) as Error & {
-                status?: number;
-                body?: string;
-            };
-
-            error.status = res.status;
-            error.body = errorBody;
-
-            throw error;
+            throw await createFetchError(res, "خطا در دریافت داده");
         }
 
         const json = await res.json();
@@ -152,6 +178,41 @@ const tablePaginationInfo = new Map<
     { total: number; totalPages: number }
 >();
 const tableCacheFamilyByKey = new Map<string, string>();
+const emptyServerInfo = { total: 0, totalPages: 1 };
+
+function toSafeNonNegativeNumber(value: unknown, fallback: number) {
+    return typeof value === "number" && Number.isFinite(value)
+        ? Math.max(0, value)
+        : fallback;
+}
+
+function toSafePageSize(value: unknown, fallback: number) {
+    return typeof value === "number" && Number.isFinite(value) && value > 0
+        ? value
+        : Math.max(1, fallback);
+}
+
+function normalizeServerInfo(
+    total: unknown,
+    totalPages: unknown,
+    pageSize: number,
+    fallbackTotal: number,
+) {
+    const safeTotal = toSafeNonNegativeNumber(total, fallbackTotal);
+    const calculatedPages = Math.max(
+        1,
+        Math.ceil(safeTotal / Math.max(1, pageSize)),
+    );
+    const safeTotalPages =
+        typeof totalPages === "number" && Number.isFinite(totalPages)
+            ? Math.max(1, totalPages)
+            : calculatedPages;
+
+    return {
+        total: safeTotal,
+        totalPages: safeTotalPages,
+    };
+}
 
 function markTableCacheFresh(key: string, familyKey: string) {
     tableCacheFetchedAt.delete(key);
@@ -311,20 +372,6 @@ export function useTableData<T extends Record<string, unknown>>(
         serializedHeaders,
     )}`;
 
-    const [serverInfo, setServerInfo] = useState<{
-        total: number;
-        totalPages: number;
-    }>(() =>
-        swrKey
-            ? (tablePaginationInfo.get(swrKey) ?? {
-                total: 0,
-                totalPages: 0,
-            })
-            : { total: 0, totalPages: 0 },
-    );
-
-
-    
     const [mountedAt] = useState(() => Date.now());
 
     const finalFetcher = useCallback(
@@ -340,11 +387,7 @@ export function useTableData<T extends Record<string, unknown>>(
                 });
 
                 if (!res.ok) {
-                    const error = new Error(
-                        `خطا در دریافت داده: ${res.status}`,
-                    ) as Error & { status?: number };
-                    error.status = res.status;
-                    throw error;
+                    throw await createFetchError(res, "خطا در دریافت داده");
                 }
 
                 const json = await res.json();
@@ -383,14 +426,24 @@ export function useTableData<T extends Record<string, unknown>>(
                         ),
                     };
 
-                const nextServerInfo = {
-                    total: paginated.total,
-                    totalPages: paginated.totalPages,
-                };
-                setServerInfo(nextServerInfo);
-                if (swrKey) tablePaginationInfo.set(swrKey, nextServerInfo);
+                const safePageSize = toSafePageSize(
+                    paginated.pageSize,
+                    pageSize,
+                );
+                const nextServerInfo = normalizeServerInfo(
+                    paginated.total,
+                    paginated.totalPages,
+                    safePageSize,
+                    total,
+                );
+                const responseSWRKey = `${url}::table-scope:${hashCacheScope(
+                    serializedHeaders,
+                )}`;
+                tablePaginationInfo.set(responseSWRKey, nextServerInfo);
 
-                return paginated.data;
+                return Array.isArray(paginated.data)
+                    ? paginated.data
+                    : transformedData;
             }
 
             return createDefaultFetcher<T>(
@@ -405,19 +458,25 @@ export function useTableData<T extends Record<string, unknown>>(
             transformPaginatedResponse,
             serverPaginationParams,
             requestHeaders,
-            swrKey,
+            serializedHeaders,
         ],
     );
 
     const lastFetchedAt = swrKey
         ? tableCacheFetchedAt.get(swrKey)
         : undefined;
+    const hasCachedPaginationInfo = swrKey
+        ? tablePaginationInfo.has(swrKey)
+        : false;
     const cacheExpired =
         typeof lastFetchedAt === "number" &&
         mountedAt - lastFetchedAt >= cacheTtlMs;
     const configuredOnSuccess = swrConfig?.onSuccess;
     const revalidateOnMount =
-        swrConfig?.revalidateOnMount ?? (cacheExpired ? true : undefined);
+        swrConfig?.revalidateOnMount ??
+        (cacheExpired || (serverSide && swrKey && !hasCachedPaginationInfo)
+            ? true
+            : undefined);
 
     const {
         data: rawData,
@@ -453,6 +512,23 @@ export function useTableData<T extends Record<string, unknown>>(
     }, [cacheFamilyKey, mutate, refreshKey, swrKey]);
 
     const data: T[] = rawData ?? [];
+    const cachedServerInfo =
+        serverSide && swrKey ? tablePaginationInfo.get(swrKey) : undefined;
+    const resolvedServerInfo = cachedServerInfo
+        ? normalizeServerInfo(
+            cachedServerInfo.total,
+            cachedServerInfo.totalPages,
+            serverPaginationParams?.pageSize ?? 1,
+            cachedServerInfo.total,
+        )
+        : serverSide && swrKey
+            ? normalizeServerInfo(
+                data.length,
+                undefined,
+                serverPaginationParams?.pageSize ?? data.length,
+                data.length,
+            )
+            : emptyServerInfo;
 
     /* ── CRUD wrappers ── */
 
@@ -567,7 +643,7 @@ export function useTableData<T extends Record<string, unknown>>(
         create,
         update,
         remove,
-        serverTotal: serverInfo.total,
-        serverTotalPages: serverInfo.totalPages,
+        serverTotal: resolvedServerInfo.total,
+        serverTotalPages: resolvedServerInfo.totalPages,
     };
 }

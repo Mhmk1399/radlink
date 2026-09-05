@@ -13,6 +13,7 @@ import LandingFloatingActions from "@/components/landing/LandingFloatingActions"
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingIconHeadSync from "@/components/landing/LandingIconHeadSync";
 import LandingInstallPrompt from "@/components/landing/LandingInstallPrompt";
+import LandingTopActions from "@/components/landing/LandingTopActions";
 import { LogoHeaderFrame } from "@/components/landing/LogoHeaderFrame";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
 import { normalizePageFooterSettings } from "@/lib/design/page-footer";
@@ -390,6 +391,11 @@ export default async function PageRoute({ params }: Props) {
         backgroundColor={pageBackground.color}
         accentColor={pageBackground.pattern.color}
         secondaryColor={pageBackground.pattern.secondaryColor}
+      />
+      <LandingTopActions
+        pageId={String(page._id)}
+        pageTitle={String(page.title || "")}
+        pageUrl={String(page.url || url)}
       />
       <PageNotificationModal notifications={notifications} />
       <header className="flex flex-col items-center justify-center " dir="rtl">

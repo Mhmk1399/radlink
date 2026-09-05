@@ -7,6 +7,7 @@ export type UserStatus = "active" | "inactive";
 export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
+  collectionName?: string;
   agentid?: Types.ObjectId;
   phoneNumber: string;
   email?: string;
@@ -27,6 +28,7 @@ export interface IUser extends Document {
     blocks: number;
     pages: number;
   };
+  limitsOverrideEnabled: boolean;
 
   lastLoginAt?: Date;
   lastOtpRequestAt?: Date;
@@ -54,6 +56,12 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
       maxlength: 80,
+    },
+
+    collectionName: {
+      type: String,
+      trim: true,
+      maxlength: 120,
     },
 
     phoneNumber: {
@@ -148,6 +156,12 @@ const UserSchema = new Schema<IUser>(
         min: 0,
       },
 
+    },
+
+    limitsOverrideEnabled: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
 
     lastLoginAt: {

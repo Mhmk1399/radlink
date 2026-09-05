@@ -57,15 +57,24 @@ export const GET = compose(
     const firstNameFilter =
         searchParams.get("filter_firstName") ??
         searchParams.get("firstName");
+    const lastNameFilter =
+        searchParams.get("filter_lastName") ??
+        searchParams.get("lastName");
 
 
 
     const phoneNumberFilter =
         searchParams.get("filter_phoneNumber") ??
         searchParams.get("phoneNumber");
-    const createdByIdFilter =
+    const createdByIdFilter = (
         searchParams.get("filter_createdById") ??
-        searchParams.get("createdById");
+        searchParams.get("createdById") ??
+        searchParams.get("filter_createdBy") ??
+        searchParams.get("createdBy") ??
+        searchParams.get("filter_creatorId") ??
+        searchParams.get("creatorId") ??
+        ""
+    ).trim();
     const includeDeleted =
         searchParams.get("includeDeleted") === "true" && !mode;
 
@@ -96,11 +105,16 @@ export const GET = compose(
         };
     }
 
-
+    if (lastNameFilter) {
+        query.lastName = {
+            $regex: escapeRegex(lastNameFilter.trim()),
+            $options: "i",
+        };
+    }
 
     if (phoneNumberFilter) {
         query.phoneNumber = {
-            $regex: escapeRegex(phoneNumberFilter.trim()),
+            $regex: escapeRegex(toEnglishDigits(phoneNumberFilter.trim())),
             $options: "i",
         };
     }
@@ -122,12 +136,13 @@ export const GET = compose(
     }
 
     if (search) {
-        const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const safeSearch = escapeRegex(toEnglishDigits(search.trim()));
 
         query.$or = [
             { phoneNumber: { $regex: safeSearch, $options: "i" } },
             { firstName: { $regex: safeSearch, $options: "i" } },
             { lastName: { $regex: safeSearch, $options: "i" } },
+            { collectionName: { $regex: safeSearch, $options: "i" } },
             { email: { $regex: safeSearch, $options: "i" } },
         ];
     }
@@ -179,7 +194,7 @@ export const GET = compose(
                 "updatedBy",
                 "firstName lastName phoneNumber role",
             )
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
@@ -204,13 +219,6 @@ export const POST = compose(
 )(async (req: AuthRequest) => {
     try {
         const currentUser = req.ctx?.user;
-        if (currentUser?.role === "user") {
-            return NextResponse.json(
-                { message: "شما اجازه ساخت کاربر را ندارید." },
-                { status: 403 },
-            );
-        }
-
         if (!currentUser) {
             return NextResponse.json(
                 {
@@ -239,6 +247,10 @@ export const POST = compose(
         const lastName =
             typeof body.lastName === "string"
                 ? body.lastName.trim()
+                : "";
+        const collectionName =
+            typeof body.collectionName === "string"
+                ? body.collectionName.trim()
                 : "";
 
         if (!firstName || !lastName) {
@@ -356,8 +368,9 @@ export const POST = compose(
         const requestedPassword =
             typeof body.password === "string" ? body.password : "";
         const hasRequestedPassword = requestedPassword.trim().length > 0;
+        const canUseFullCreatePayload = !hasAgentScopedRole(currentUser.role);
         const permissionIds =
-            !hasAgentScopedRole(currentUser.role) && Array.isArray(body.permissions)
+            canUseFullCreatePayload && Array.isArray(body.permissions)
                 ? normalizeIdList(body.permissions)
                 : [];
         if (!permissionIds.every((id) => mongoose.Types.ObjectId.isValid(id))) {
@@ -378,8 +391,7 @@ export const POST = compose(
 
         if (
             hasRequestedPassword &&
-            currentUser.role !== "admin" &&
-            currentUser.role !== "superAdmin"
+            !canUseFullCreatePayload
         ) {
             return NextResponse.json(
                 { message: "فقط مدیر می‌تواند برای کاربر رمز عبور تعیین کند." },
@@ -435,6 +447,7 @@ export const POST = compose(
         const user = await User.create({
             firstName,
             lastName,
+            collectionName: collectionName || undefined,
 
             phoneNumber,
 

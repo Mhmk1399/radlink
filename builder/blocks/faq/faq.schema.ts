@@ -17,7 +17,6 @@ export const faqSchema: BlockSchema = {
             type: "repeater",
             itemLabel: "سوال",
             addLabel: "افزودن سوال جدید",
-            maxItems: 20,
             fields: [
                 { key: "question", label: "سوال", type: "text" },
                 { key: "answer", label: "پاسخ", type: "textarea" },

@@ -153,7 +153,7 @@ export const POST = compose(
             style && typeof style === "object" ? style : undefined
         ),
         logoHeader: normalizeLogoHeaderSettings(logoHeader),
-        footer: normalizePageFooterSettings({ ...(footer ?? {}), logo: "" }),
+        footer: normalizePageFooterSettings(footer),
     });
 
     if (normalizedCategory) {

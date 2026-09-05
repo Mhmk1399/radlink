@@ -17,7 +17,6 @@ export const sliderSchema: BlockSchema = {
             type: "repeater",
             itemLabel: "اسلاید",
             addLabel: "افزودن اسلاید جدید",
-            maxItems: 10,
             fields: [
                 { key: "title", label: "عنوان", type: "text" },
                 { key: "description", label: "توضیحات", type: "textarea" },

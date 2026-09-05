@@ -7,6 +7,12 @@ export const ACCESS_ACTIONS = [
 ] as const;
 
 export type AccessActionValue = (typeof ACCESS_ACTIONS)[number]["value"];
+export type AccessResourceKind =
+  | "templates"
+  | "blocks"
+  | "pages"
+  | "accesses"
+  | "permissions";
 
 export const COMMON_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
   (action) => action.value !== "publish",
@@ -32,7 +38,7 @@ export function getAccessActionsForComponent(componentName: string) {
 }
 
 export function getAccessActionsForResource(
-  resource: "templates" | "blocks" | "pages",
+  resource: AccessResourceKind,
 ) {
   if (resource === "pages") return PAGE_ACCESS_ACTIONS;
   if (resource === "blocks") return BLOCK_ACCESS_ACTIONS;

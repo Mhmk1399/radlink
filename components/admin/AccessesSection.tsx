@@ -14,6 +14,7 @@ import {
   FaLayerGroup,
   FaCubes,
   FaFile,
+  FaLock,
 } from "react-icons/fa6";
 import DynamicTable from "@/components/global/DynamicTable";
 import { toast } from "@/components/ui/CustomToast";
@@ -27,6 +28,7 @@ import {
   getAccessActionsForComponent,
   getAccessActionsForResource,
   type AccessActionValue,
+  type AccessResourceKind,
 } from "@/lib/auth/accessCatalog";
 import type { ColumnDef } from "@/types/table";
 
@@ -41,7 +43,7 @@ type ResourceRule = {
   actions: AccessActionValue[];
 };
 
-type ResourceKind = "templates" | "blocks" | "pages";
+type ResourceKind = AccessResourceKind;
 
 type AccessRow = {
   _id: string;
@@ -53,6 +55,8 @@ type AccessRow = {
   templateCount: number;
   blockCount: number;
   pageCount: number;
+  accessCount: number;
+  permissionCount: number;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -119,7 +123,7 @@ function normalizeStaticRule(value: unknown): StaticAccessRule | null {
 
 function normalizeResourceRule(
   value: unknown,
-  idKey: "templateId" | "blockId" | "pageId",
+  idKey: "templateId" | "blockId" | "pageId" | "accessId" | "permissionId",
 ): ResourceRule | null {
   if (!isRecord(value)) return null;
   const rawResource = value[idKey];
@@ -129,7 +133,11 @@ function normalizeResourceRule(
       ? "blocks"
       : idKey === "templateId"
         ? "templates"
-        : "pages";
+        : idKey === "accessId"
+          ? "accesses"
+          : idKey === "permissionId"
+            ? "permissions"
+            : "pages";
   const actions = normalizeActions(
     value.actions,
     getAccessActionsForResource(resource),
@@ -163,6 +171,16 @@ function normalizeAccessRow(value: unknown): AccessRow | null {
         .map((item) => normalizeResourceRule(item, "pageId"))
         .filter((item): item is ResourceRule => !!item)
     : [];
+  const accesses = Array.isArray(dynamic.accesses)
+    ? dynamic.accesses
+        .map((item) => normalizeResourceRule(item, "accessId"))
+        .filter((item): item is ResourceRule => !!item)
+    : [];
+  const permissions = Array.isArray(dynamic.permissions)
+    ? dynamic.permissions
+        .map((item) => normalizeResourceRule(item, "permissionId"))
+        .filter((item): item is ResourceRule => !!item)
+    : [];
   const staticComponents = Array.isArray(value.staticComponents)
     ? value.staticComponents
         .map(normalizeStaticRule)
@@ -175,11 +193,13 @@ function normalizeAccessRow(value: unknown): AccessRow | null {
     id,
     name: typeof value.name === "string" ? value.name : "",
     staticComponents,
-    dynamicAccess: { templates, blocks, pages },
+    dynamicAccess: { templates, blocks, pages, accesses, permissions },
     staticCount: staticComponents.length,
     templateCount: templates.length,
     blockCount: blocks.length,
     pageCount: pages.length,
+    accessCount: accesses.length,
+    permissionCount: permissions.length,
     isActive: value.isActive !== false,
     createdAt:
       typeof value.createdAt === "string" ? value.createdAt : undefined,
@@ -196,6 +216,8 @@ function emptyForm(): AccessFormState {
       templates: [],
       blocks: [],
       pages: [],
+      accesses: [],
+      permissions: [],
     },
   };
 }
@@ -220,6 +242,16 @@ function formFromRow(row: AccessRow, includeId = false): AccessFormState {
         actions: [...item.actions],
       })),
       pages: row.dynamicAccess.pages.map((item) => ({
+        id: item.id,
+        label: item.label,
+        actions: [...item.actions],
+      })),
+      accesses: row.dynamicAccess.accesses.map((item) => ({
+        id: item.id,
+        label: item.label,
+        actions: [...item.actions],
+      })),
+      permissions: row.dynamicAccess.permissions.map((item) => ({
         id: item.id,
         label: item.label,
         actions: [...item.actions],
@@ -268,6 +300,14 @@ function toPayload(form: AccessFormState) {
         pageId: item.id,
         actions: item.actions,
       })),
+      accesses: form.dynamicAccess.accesses.map((item) => ({
+        accessId: item.id,
+        actions: item.actions,
+      })),
+      permissions: form.dynamicAccess.permissions.map((item) => ({
+        permissionId: item.id,
+        actions: item.actions,
+      })),
     },
   };
 }
@@ -277,7 +317,9 @@ function hasRules(form: AccessFormState) {
     form.staticComponents.length > 0 ||
     form.dynamicAccess.templates.length > 0 ||
     form.dynamicAccess.blocks.length > 0 ||
-    form.dynamicAccess.pages.length > 0
+    form.dynamicAccess.pages.length > 0 ||
+    form.dynamicAccess.accesses.length > 0 ||
+    form.dynamicAccess.permissions.length > 0
   );
 }
 
@@ -360,13 +402,14 @@ function CollapsibleSection({
   const t = useThemeTokens();
   const { isDark } = useTheme();
   const [open, setOpen] = useState(defaultOpen);
+  const isOpen = open && !loading;
 
   return (
     <section
       className={cn(
         "overflow-hidden rounded-xl border transition-colors duration-200",
         t.borderSubtle,
-        open
+        isOpen
           ? isDark
             ? "bg-white/[0.02]"
             : "bg-black/[0.015]"
@@ -375,33 +418,59 @@ function CollapsibleSection({
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        disabled={loading}
+        aria-busy={loading}
+        aria-expanded={isOpen}
+        onClick={() => {
+          if (loading) return;
+          setOpen((value) => !value);
+        }}
         className={cn(
-          "flex w-full items-center gap-3 px-4 py-3.5 text-right transition-colors duration-200",
-          t.hoverBg,
+          "flex w-full items-center gap-3 px-4 py-3.5 text-right transition-all duration-200",
+          loading ? "cursor-wait" : t.hoverBg,
         )}
       >
+        {/* icon / loader */}
         <span
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-300",
             isDark
               ? "bg-[#c8a84b]/10 text-[#c8a84b]"
               : "bg-[#8a7030]/8 text-[#8a7030]",
           )}
         >
-          {icon}
+          {loading ? (
+            <span
+              className={cn(
+                "h-4 w-4 animate-spin rounded-full border-2 border-t-transparent",
+                isDark ? "border-[#c8a84b]" : "border-[#8a7030]",
+              )}
+            />
+          ) : (
+            <span className="animate-in fade-in zoom-in-95 duration-200">
+              {icon}
+            </span>
+          )}
         </span>
+
         <span className="min-w-0 flex-1">
           <span className={cn("block text-sm font-bold", t.textPrimary)}>
             {title}
           </span>
-          {description && (
-            <span className={cn("mt-0.5 block text-xs", t.textDisabled)}>
-              {description}
+
+          {(description || loading) && (
+            <span
+              className={cn(
+                "mt-0.5 block text-xs transition-colors",
+                t.textDisabled,
+              )}
+            >
+              {loading ? "در حال دریافت اطلاعات..." : description}
             </span>
           )}
         </span>
-        {badge !== undefined && badge > 0 && (
+
+        {!loading && badge !== undefined && badge > 0 && (
           <span
             className={cn(
               "rounded-full px-2 py-0.5 text-[11px] font-bold",
@@ -413,33 +482,20 @@ function CollapsibleSection({
             {badge}
           </span>
         )}
+
         <FaChevronDown
           className={cn(
-            "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+            "h-3.5 w-3.5 shrink-0 transition-all duration-200",
             t.textDisabled,
-            open && "rotate-180",
+            loading && "opacity-20",
+            isOpen && "rotate-180",
           )}
         />
       </button>
-      {open && (
+
+      {isOpen && (
         <div className={cn("border-t px-4 pb-4 pt-3", t.divider)}>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex flex-col items-center gap-2">
-                <div
-                  className={cn(
-                    "h-6 w-6 animate-spin rounded-full border-2 border-t-transparent",
-                    isDark ? "border-[#c8a84b]" : "border-[#8a7030]",
-                  )}
-                />
-                <span className={cn("text-xs", t.textDisabled)}>
-                  در حال بارگذاری...
-                </span>
-              </div>
-            </div>
-          ) : (
-            children
-          )}
+          {children}
         </div>
       )}
     </section>
@@ -784,20 +840,30 @@ export default function AccessesSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const { can } = useAccess();
+  const { can, isLoading: accessLoading } = useAccess();
   const [refreshToken, setRefreshToken] = useState(0);
   const [form, setForm] = useState<AccessFormState>(() => emptyForm());
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState<
+    Record<ResourceKind, boolean>
+  >({
+    templates: true,
+    blocks: true,
+    pages: true,
+    accesses: true,
+    permissions: true,
+  });
   const [options, setOptions] = useState<
     Record<ResourceKind, ResourceOption[]>
   >({
     templates: [],
     blocks: [],
     pages: [],
+    accesses: [],
+    permissions: [],
   });
 
   const token =
@@ -811,6 +877,16 @@ export default function AccessesSection({
   const canCreate = can("admin.accesses", "create");
   const canUpdate = can("admin.accesses", "update");
   const canDelete = can("admin.accesses", "delete");
+  const canViewResources = useMemo<Record<ResourceKind, boolean>>(
+    () => ({
+      templates: can("admin.templates", "view"),
+      blocks: can("admin.blocks", "view"),
+      pages: can("admin.pages", "view"),
+      accesses: can("admin.accesses", "view"),
+      permissions: can("admin.permissions", "view"),
+    }),
+    [can],
+  );
   function selectAllStaticComponents() {
     setForm((prev) => ({
       ...prev,
@@ -849,10 +925,10 @@ export default function AccessesSection({
             ),
           )
           .every((key) => {
-          const currentActions =
-            prev.staticComponents.find((item) => item.componentName === key)
-              ?.actions ?? [];
-          return currentActions.includes(action);
+            const currentActions =
+              prev.staticComponents.find((item) => item.componentName === key)
+                ?.actions ?? [];
+            return currentActions.includes(action);
           });
 
       const nextComponents: StaticAccessRule[] = [];
@@ -868,10 +944,10 @@ export default function AccessesSection({
         const nextActions = !actionIsAvailable
           ? currentActions.filter((item) => item !== action)
           : allHaveAction
-          ? currentActions.filter((item) => item !== action)
-          : currentActions.includes(action)
-            ? currentActions
-            : [...currentActions, action];
+            ? currentActions.filter((item) => item !== action)
+            : currentActions.includes(action)
+              ? currentActions
+              : [...currentActions, action];
 
         if (nextActions.length > 0) {
           nextComponents.push({ componentName: key, actions: nextActions });
@@ -1060,6 +1136,28 @@ export default function AccessesSection({
         ),
       },
       {
+        key: "accessCount",
+        label: "Access",
+        editable: false,
+        sortable: true,
+        render: (value) => (
+          <span className={cn("text-sm font-medium", t.textMuted)}>
+            {String(value ?? 0)}
+          </span>
+        ),
+      },
+      {
+        key: "permissionCount",
+        label: "Permission",
+        editable: false,
+        sortable: true,
+        render: (value) => (
+          <span className={cn("text-sm font-medium", t.textMuted)}>
+            {String(value ?? 0)}
+          </span>
+        ),
+      },
+      {
         key: "isActive",
         label: "وضعیت",
         editable: false,
@@ -1126,53 +1224,144 @@ export default function AccessesSection({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadOptions() {
-      setOptionsLoading(true);
+    async function loadResource(
+      resource: ResourceKind,
+      url: string,
+      labelKey: string,
+      errorMessage: string,
+      allow403 = true,
+    ) {
+      setOptionsLoading((prev) => ({
+        ...prev,
+        [resource]: true,
+      }));
+
       try {
-        const [templatesRes, blocksRes, pagesRes] = await Promise.all([
-          fetch("/api/templates?limit=100", { headers }),
-          fetch("/api/blocks?limit=100", { headers }),
-          fetch("/api/pages?limit=100", { headers }),
-        ]);
+        const response = await fetch(url, { headers });
+        const json = await response.json().catch(() => null);
 
-        const [templatesJson, blocksJson, pagesJson] = await Promise.all([
-          templatesRes.json().catch(() => null),
-          blocksRes.json().catch(() => null),
-          pagesRes.json().catch(() => null),
-        ]);
+        if (!response.ok) {
+          if (allow403 && response.status === 403) {
+            if (!cancelled) {
+              setOptions((prev) => ({
+                ...prev,
+                [resource]: [],
+              }));
+            }
 
-        if (!templatesRes.ok) {
-          throw new Error(templatesJson?.message ?? "خطا در دریافت قالب‌ها");
-        }
-        if (!blocksRes.ok) {
-          throw new Error(blocksJson?.message ?? "خطا در دریافت بلاک‌ها");
-        }
-        if (!pagesRes.ok) {
-          throw new Error(pagesJson?.message ?? "خطا در دریافت صفحات");
+            return;
+          }
+
+          throw new Error(json?.message ?? errorMessage);
         }
 
         if (cancelled) return;
 
-        setOptions({
-          templates: normalizeOptions(templatesJson?.templates, "name"),
-          blocks: normalizeOptions(blocksJson?.blocks, "name"),
-          pages: normalizeOptions(pagesJson?.pages, "title"),
-        });
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "خطا در دریافت گزینه‌ها",
-        );
+        setOptions((prev) => ({
+          ...prev,
+          [resource]: normalizeOptions(json?.[resource], labelKey),
+        }));
       } finally {
-        if (!cancelled) setOptionsLoading(false);
+        if (!cancelled) {
+          setOptionsLoading((prev) => ({
+            ...prev,
+            [resource]: false,
+          }));
+        }
       }
     }
 
-    loadOptions();
+    async function loadOptions() {
+      if (accessLoading) return;
+
+      const skippedResources = (
+        Object.keys(canViewResources) as ResourceKind[]
+      ).filter((resource) => !canViewResources[resource]);
+
+      if (skippedResources.length > 0) {
+        setOptions((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            skippedResources.map((resource) => [resource, []]),
+          ),
+        }));
+        setOptionsLoading((prev) => ({
+          ...prev,
+          ...Object.fromEntries(
+            skippedResources.map((resource) => [resource, false]),
+          ),
+        }));
+      }
+
+      const results = await Promise.allSettled([
+        canViewResources.templates
+          ? loadResource(
+          "templates",
+          "/api/templates?limit=100",
+          "name",
+          "خطا در دریافت قالب‌ها",
+            )
+          : Promise.resolve(),
+
+        canViewResources.blocks
+          ? loadResource(
+          "blocks",
+          "/api/blocks?limit=100",
+          "name",
+          "خطا در دریافت بلاک‌ها",
+            )
+          : Promise.resolve(),
+
+        canViewResources.pages
+          ? loadResource(
+          "pages",
+          "/api/pages?limit=100",
+          "title",
+          "خطا در دریافت صفحات",
+            )
+          : Promise.resolve(),
+
+        canViewResources.accesses
+          ? loadResource(
+          "accesses",
+          "/api/accesses?limit=100",
+          "name",
+          "خطا در دریافت Accessها",
+            )
+          : Promise.resolve(),
+
+        canViewResources.permissions
+          ? loadResource(
+          "permissions",
+          "/api/permissions?limit=100",
+          "name",
+          "خطا در دریافت Permissionها",
+            )
+          : Promise.resolve(),
+      ]);
+
+      if (cancelled) return;
+
+      const failedRequest = results.find(
+        (result): result is PromiseRejectedResult =>
+          result.status === "rejected",
+      );
+
+      if (failedRequest) {
+        toast.error(
+          failedRequest.reason instanceof Error
+            ? failedRequest.reason.message
+            : "خطا در دریافت گزینه‌ها",
+        );
+      }
+    }
+
+    void loadOptions();
 
     return () => {
       cancelled = true;
     };
-  }, [headers]);
+  }, [accessLoading, canViewResources, headers]);
 
   function openCreate() {
     setForm(emptyForm());
@@ -1364,7 +1553,9 @@ export default function AccessesSection({
     form.staticComponents.length +
     form.dynamicAccess.templates.length +
     form.dynamicAccess.blocks.length +
-    form.dynamicAccess.pages.length;
+    form.dynamicAccess.pages.length +
+    form.dynamicAccess.accesses.length +
+    form.dynamicAccess.permissions.length;
 
   return (
     <div className="space-y-5 sm:space-y-6" dir="rtl">
@@ -1757,59 +1948,105 @@ export default function AccessesSection({
               </CollapsibleSection>
 
               {/* Templates */}
-              <ResourceRulePanel
-                title="قالب‌ها"
-                icon={<FaLayerGroup className="h-3.5 w-3.5" />}
-                options={options.templates}
-                rules={form.dynamicAccess.templates}
-                emptyText="قالبی برای انتخاب وجود ندارد."
-                loading={optionsLoading}
-                onChange={(option, actions) =>
-                  updateResourceActions("templates", option, actions)
-                }
-                onSelectAll={() => selectAllResources("templates")}
-                onClearAll={() => clearAllResources("templates")}
-                onToggleActionForAll={(action) =>
-                  toggleResourceActionForAll("templates", action)
-                }
-                availableActions={getAccessActionsForResource("templates")}
-              />
+              {canViewResources.templates && (
+                <ResourceRulePanel
+                  title="قالب‌ها"
+                  icon={<FaLayerGroup className="h-3.5 w-3.5" />}
+                  options={options.templates}
+                  rules={form.dynamicAccess.templates}
+                  emptyText="قالبی برای انتخاب وجود ندارد."
+                  loading={optionsLoading.templates}
+                  onChange={(option, actions) =>
+                    updateResourceActions("templates", option, actions)
+                  }
+                  onSelectAll={() => selectAllResources("templates")}
+                  onClearAll={() => clearAllResources("templates")}
+                  onToggleActionForAll={(action) =>
+                    toggleResourceActionForAll("templates", action)
+                  }
+                  availableActions={getAccessActionsForResource("templates")}
+                />
+              )}
 
-              <ResourceRulePanel
-                title="بلاک‌ها"
-                icon={<FaCubes className="h-3.5 w-3.5" />}
-                options={options.blocks}
-                rules={form.dynamicAccess.blocks}
-                emptyText="بلاکی برای انتخاب وجود ندارد."
-                loading={optionsLoading}
-                onChange={(option, actions) =>
-                  updateResourceActions("blocks", option, actions)
-                }
-                onSelectAll={() => selectAllResources("blocks")}
-                onClearAll={() => clearAllResources("blocks")}
-                onToggleActionForAll={(action) =>
-                  toggleResourceActionForAll("blocks", action)
-                }
-                availableActions={getAccessActionsForResource("blocks")}
-              />
+              {canViewResources.blocks && (
+                <ResourceRulePanel
+                  title="بلاک‌ها"
+                  icon={<FaCubes className="h-3.5 w-3.5" />}
+                  options={options.blocks}
+                  rules={form.dynamicAccess.blocks}
+                  emptyText="بلاکی برای انتخاب وجود ندارد."
+                  loading={optionsLoading.blocks}
+                  onChange={(option, actions) =>
+                    updateResourceActions("blocks", option, actions)
+                  }
+                  onSelectAll={() => selectAllResources("blocks")}
+                  onClearAll={() => clearAllResources("blocks")}
+                  onToggleActionForAll={(action) =>
+                    toggleResourceActionForAll("blocks", action)
+                  }
+                  availableActions={getAccessActionsForResource("blocks")}
+                />
+              )}
 
-              <ResourceRulePanel
-                title="صفحات"
-                icon={<FaFile className="h-3.5 w-3.5" />}
-                options={options.pages}
-                rules={form.dynamicAccess.pages}
-                emptyText="صفحه‌ای برای انتخاب وجود ندارد."
-                loading={optionsLoading}
-                onChange={(option, actions) =>
-                  updateResourceActions("pages", option, actions)
-                }
-                onSelectAll={() => selectAllResources("pages")}
-                onClearAll={() => clearAllResources("pages")}
-                onToggleActionForAll={(action) =>
-                  toggleResourceActionForAll("pages", action)
-                }
-                availableActions={getAccessActionsForResource("pages")}
-              />
+              {canViewResources.pages && (
+                <ResourceRulePanel
+                  title="صفحات"
+                  icon={<FaFile className="h-3.5 w-3.5" />}
+                  options={options.pages}
+                  rules={form.dynamicAccess.pages}
+                  emptyText="صفحه‌ای برای انتخاب وجود ندارد."
+                  loading={optionsLoading.pages}
+                  onChange={(option, actions) =>
+                    updateResourceActions("pages", option, actions)
+                  }
+                  onSelectAll={() => selectAllResources("pages")}
+                  onClearAll={() => clearAllResources("pages")}
+                  onToggleActionForAll={(action) =>
+                    toggleResourceActionForAll("pages", action)
+                  }
+                  availableActions={getAccessActionsForResource("pages")}
+                />
+              )}
+
+              {canViewResources.accesses && (
+                <ResourceRulePanel
+                  title="Accessها"
+                  icon={<FaKey className="h-3.5 w-3.5" />}
+                  options={options.accesses}
+                  rules={form.dynamicAccess.accesses}
+                  emptyText="Accessای برای انتخاب وجود ندارد."
+                  loading={optionsLoading.accesses}
+                  onChange={(option, actions) =>
+                    updateResourceActions("accesses", option, actions)
+                  }
+                  onSelectAll={() => selectAllResources("accesses")}
+                  onClearAll={() => clearAllResources("accesses")}
+                  onToggleActionForAll={(action) =>
+                    toggleResourceActionForAll("accesses", action)
+                  }
+                  availableActions={getAccessActionsForResource("accesses")}
+                />
+              )}
+
+              {canViewResources.permissions && (
+                <ResourceRulePanel
+                  title="Permissionها"
+                  icon={<FaLock className="h-3.5 w-3.5" />}
+                  options={options.permissions}
+                  rules={form.dynamicAccess.permissions}
+                  emptyText="Permissionای برای انتخاب وجود ندارد."
+                  loading={optionsLoading.permissions}
+                  onChange={(option, actions) =>
+                    updateResourceActions("permissions", option, actions)
+                  }
+                  onSelectAll={() => selectAllResources("permissions")}
+                  onClearAll={() => clearAllResources("permissions")}
+                  onToggleActionForAll={(action) =>
+                    toggleResourceActionForAll("permissions", action)
+                  }
+                  availableActions={getAccessActionsForResource("permissions")}
+                />
+              )}
             </div>
 
             {/* Footer — sticky at bottom */}

@@ -524,7 +524,6 @@ export const PATCH = compose(
 
     if (requestedFooter) {
         const footerPatch: Record<string, unknown> = { ...requestedFooter };
-        footerPatch.logo = "";
 
         if (!canManageFooterBranding(user.role)) {
             delete footerPatch.showRadlinkBranding;

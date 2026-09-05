@@ -1,6 +1,5 @@
 import { Types } from "mongoose";
 import Permission from "@/models/permission";
-import Access from "@/models/access";
 import { accessCache, ResolvedAccess } from "@/lib/auth/accessCache";
 
 // Merges actions from multiple access docs into a single flat ResolvedAccess.
@@ -74,6 +73,18 @@ export async function resolveUserAccess(
             if (!resolved.pages[id]) resolved.pages[id] = new Set();
             p.actions.forEach((a: string) => resolved.pages[id].add(a));
         }
+
+        for (const a of doc.dynamicAccess?.accesses ?? []) {
+            const id = String(a.accessId);
+            if (!resolved.accesses[id]) resolved.accesses[id] = new Set();
+            a.actions.forEach((action: string) => resolved.accesses[id].add(action));
+        }
+
+        for (const p of doc.dynamicAccess?.permissions ?? []) {
+            const id = String(p.permissionId);
+            if (!resolved.permissions[id]) resolved.permissions[id] = new Set();
+            p.actions.forEach((a: string) => resolved.permissions[id].add(a));
+        }
     }
 
     accessCache.set(cacheKey, resolved);
@@ -81,5 +92,12 @@ export async function resolveUserAccess(
 }
 
 function emptyAccess(): ResolvedAccess {
-    return { components: {}, templates: {}, blocks: {}, pages: {} };
+    return {
+        components: {},
+        templates: {},
+        blocks: {},
+        pages: {},
+        accesses: {},
+        permissions: {},
+    };
 }

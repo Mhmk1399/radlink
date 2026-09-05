@@ -131,10 +131,7 @@ export const PATCH = compose(
         template.logoHeader = normalizeLogoHeaderSettings(body.logoHeader);
     }
     if (body.footer && typeof body.footer === "object") {
-        template.footer = normalizePageFooterSettings({
-            ...body.footer,
-            logo: "",
-        });
+        template.footer = normalizePageFooterSettings(body.footer);
     }
     if (body.blocks !== undefined) template.set("blocks", normalizeObjectIdArray(body.blocks));
     if (body.builderBlocks !== undefined) template.builderBlocks = normalizeBuilderBlocks(body.builderBlocks);

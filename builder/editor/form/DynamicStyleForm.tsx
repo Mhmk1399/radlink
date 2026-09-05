@@ -27,6 +27,7 @@ import type {
   ShadowStyleValue,
   TextAlignValue,
   ContentAlignValue,
+  LayoutModeValue,
 } from "@/types/blocks/builder.types";
 import { ANIMATION_OPTIONS, previewAnimation } from "../animationOptions";
 import { RgbaColorInput } from "./RgbaColorInput";
@@ -81,6 +82,7 @@ const styleLabels: Partial<Record<EditableStyleKey, string>> = {
   borderColor: "رنگ حاشیه",
   borderWidth: "ضخامت حاشیه",
   gridColumns: "تعداد ستون‌های گرید",
+  layoutMode: "چینش محصولات",
   animation: "انیمیشن",
 };
 styleLabels.shadow = "سایه";
@@ -100,6 +102,7 @@ const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
   borderRadius: <RxCornerBottomRight size={15} />,
   borderWidth: <RxBorderWidth size={15} />,
   gridColumns: <HiOutlineSwatch size={15} />,
+  layoutMode: <HiOutlineSwatch size={15} />,
   animation: <HiOutlineSparkles size={15} />,
 };
 styleIcons.shadow = <HiOutlineSparkles size={15} />;
@@ -145,6 +148,14 @@ const contentAlignOptions: Array<{
     icon: <RxAlignCenterHorizontally size={15} />,
   },
   { value: "right", label: "راست", icon: <RxAlignRight size={15} /> },
+];
+
+const layoutModeOptions: Array<{
+  value: LayoutModeValue;
+  label: string;
+}> = [
+  { value: "grid", label: "گرید" },
+  { value: "horizontal", label: "افقی" },
 ];
 
 function getResponsiveValue<T>(
@@ -196,6 +207,12 @@ function isContentAlignStyleKey(
   return k === "contentAlign";
 }
 
+function isLayoutModeStyleKey(
+  k: EditableStyleKey,
+): k is Extract<EditableStyleKey, "layoutMode"> {
+  return k === "layoutMode";
+}
+
 function getTextAlignValue(value: unknown): TextAlignValue {
   return value === "left" || value === "center" || value === "right"
     ? value
@@ -206,6 +223,10 @@ function getContentAlignValue(value: unknown): ContentAlignValue {
   return value === "left" || value === "center" || value === "right"
     ? value
     : "right";
+}
+
+function getLayoutModeValue(value: unknown): LayoutModeValue {
+  return value === "horizontal" ? "horizontal" : "grid";
 }
 
 function getStyleLabel(styleKey: EditableStyleKey) {
@@ -295,7 +316,6 @@ export function DynamicStyleForm({
   element,
   allowedStyleKeys,
   breakpoint,
-  onBreakpointChange,
   onChange,
 }: DynamicStyleFormProps) {
   if (!element) {
@@ -445,6 +465,53 @@ export function DynamicStyleForm({
                       >
                         {option.icon}
                         <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+
+          if (isLayoutModeStyleKey(styleKey)) {
+            const currentValue = getLayoutModeValue(value);
+
+            return (
+              <div
+                key={styleKey}
+                className="rounded-2xl border border-neutral-100 bg-neutral-50 p-3.5"
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-500">{icon}</span>
+                    <div>
+                      <span className="block text-[13px] font-semibold text-neutral-700">
+                        {getStyleLabel(styleKey)}
+                      </span>
+                      <span className="block text-[10px] font-medium text-neutral-400">
+                        حالت نمایش محصولات در دسکتاپ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1 rounded-xl bg-white p-1 shadow-sm">
+                  {layoutModeOptions.map((option) => {
+                    const active = option.value === currentValue;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => onChange(styleKey, option.value)}
+                        className={[
+                          "flex h-10 items-center justify-center rounded-lg text-[12px] font-bold transition-all",
+                          active
+                            ? "bg-neutral-900 text-white shadow-sm"
+                            : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800",
+                        ].join(" ")}
+                        aria-pressed={active}
+                      >
+                        {option.label}
                       </button>
                     );
                   })}

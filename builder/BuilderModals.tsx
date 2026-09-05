@@ -1244,9 +1244,13 @@ export function PageFooterEditorModal({
   onClose: () => void;
 }) {
   const settings = normalizePageFooterSettings(value);
+  const footerLogoInputRef = useRef<HTMLInputElement>(null);
   const trustBadgeInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadingFooterImage, setUploadingFooterImage] = useState<
+    "logo" | "trustBadgeImage" | null
+  >(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const isUploading = uploadingFooterImage !== null;
 
   const update = useCallback(
     (patch: Partial<PageFooterSettings>) => {
@@ -1254,15 +1258,17 @@ export function PageFooterEditorModal({
         normalizePageFooterSettings({
           ...settings,
           ...patch,
-          logo: "",
         }),
       );
     },
     [onChange, settings],
   );
 
-  const handleTrustBadgeFile = useCallback(
-    async (file: File | null | undefined) => {
+  const handleFooterImageFile = useCallback(
+    async (
+      target: "logo" | "trustBadgeImage",
+      file: File | null | undefined,
+    ) => {
       if (!file) return;
 
       if (!file.type.startsWith("image/")) {
@@ -1276,10 +1282,10 @@ export function PageFooterEditorModal({
       }
 
       try {
-        setIsUploading(true);
+        setUploadingFooterImage(target);
         setUploadError(null);
         const uploaded = await uploadFile(file);
-        update({ trustBadgeImage: uploaded.url });
+        update({ [target]: uploaded.url });
       } catch (error) {
         setUploadError(
           error instanceof Error
@@ -1287,7 +1293,7 @@ export function PageFooterEditorModal({
             : "آپلود تصویر نماد انجام نشد.",
         );
       } finally {
-        setIsUploading(false);
+        setUploadingFooterImage(null);
       }
     },
     [update],
@@ -1333,7 +1339,7 @@ export function PageFooterEditorModal({
               ویرایش فوتر لندینگ
             </h2>
             <p className="mt-1 text-[11px] text-neutral-400">
-              لوگوی فوتر از لوگوی اصلی صفحه استفاده می‌کند.
+              می‌توانید برای فوتر لوگویی جدا از لوگوی هدر انتخاب کنید.
             </p>
           </div>
           <button
@@ -1384,6 +1390,65 @@ export function PageFooterEditorModal({
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[12px] font-black text-neutral-700">
+                  لوگوی فوتر
+                </p>
+                <p className="mt-1 text-[10px] leading-5 text-neutral-400">
+                  اگر خالی باشد، فوتر از لوگوی اصلی صفحه استفاده می‌کند.
+                </p>
+              </div>
+              {settings.logo ? (
+                <button
+                  type="button"
+                  onClick={() => update({ logo: "" })}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100"
+                  title="حذف لوگوی فوتر"
+                >
+                  <HiOutlineTrash className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => footerLogoInputRef.current?.click()}
+              disabled={isUploading}
+              className="relative flex min-h-[112px] w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 text-neutral-500 transition hover:border-[#064789]/45 hover:bg-[#064789]/5 hover:text-[#064789] disabled:cursor-wait disabled:opacity-70"
+            >
+              {settings.logo ? (
+                <Image
+                  src={settings.logo}
+                  alt="لوگوی فوتر"
+                  fill
+                  unoptimized
+                  sizes="320px"
+                  className="object-contain p-5"
+                />
+              ) : (
+                <span className="flex flex-col items-center text-center text-[11px] font-bold">
+                  <HiOutlineCloudArrowUp className="mb-2 h-8 w-8" />
+                  انتخاب لوگوی فوتر
+                </span>
+              )}
+              {uploadingFooterImage === "logo" ? (
+                <span className="relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : null}
+            </button>
+            <input
+              ref={footerLogoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                void handleFooterImageFile("logo", event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 bg-white p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[12px] font-black text-neutral-700">
                   تصویر نماد اعتماد
                 </p>
                 <p className="mt-1 text-[10px] leading-5 text-neutral-400">
@@ -1423,7 +1488,7 @@ export function PageFooterEditorModal({
                   انتخاب تصویر نماد
                 </span>
               )}
-              {isUploading ? (
+              {uploadingFooterImage === "trustBadgeImage" ? (
                 <span className="relative z-10 h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
               ) : null}
             </button>
@@ -1433,7 +1498,10 @@ export function PageFooterEditorModal({
               accept="image/*"
               className="hidden"
               onChange={(event) => {
-                void handleTrustBadgeFile(event.target.files?.[0]);
+                void handleFooterImageFile(
+                  "trustBadgeImage",
+                  event.target.files?.[0],
+                );
                 event.currentTarget.value = "";
               }}
             />

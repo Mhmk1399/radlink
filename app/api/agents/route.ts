@@ -11,6 +11,8 @@ import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
 import User from "@/models/users";
 import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
+import { forbiddenAccessResponse } from "@/lib/auth/enforceAccess";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import {
     isValidPhoneNumber,
     normalizePhoneNumber,
@@ -102,7 +104,6 @@ export const GET = compose(
     withAuth(),
     withStatus("active"),
     withRole("agent", "agentManager", "admin", "superAdmin"),
-    withPermission({ component: "admin.agents", action: "view" }),
 )(async (req: AuthRequest) => {
     const requester = req.ctx.user!;
     const { searchParams } = new URL(req.url);
@@ -110,6 +111,27 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const type = searchParams.get("type");           // filter by personal|company
     const isActive = searchParams.get("isActive");   // filter by active state
+    const mode = searchParams.get("mode");
+    const isUserFormOptionsMode = mode === "user-form-options";
+
+    if (requester.role !== "superAdmin") {
+        const resolved = await resolveUserAccess(
+            String(requester._id),
+            requester.permissions,
+        );
+        const canViewAgents =
+            resolved.components["admin.agents"]?.has("view") ?? false;
+        const canCreateUsers =
+            resolved.components["admin.users"]?.has("create") ?? false;
+
+        if (!canViewAgents && !(isUserFormOptionsMode && canCreateUsers)) {
+            return forbiddenAccessResponse(
+                isUserFormOptionsMode
+                    ? { component: "admin.users", action: "create" }
+                    : { component: "admin.agents", action: "view" },
+            );
+        }
+    }
 
     const query: Record<string, unknown> = {};
     if (hasAgentScopedRole(requester.role)) {
@@ -127,6 +149,7 @@ export const GET = compose(
                 "user",
                 "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
             )
+            .sort({ createdAt: -1, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

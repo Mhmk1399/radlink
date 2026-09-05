@@ -6,6 +6,10 @@ import Permission from "@/models/permission";
 import "@/models/access";
 import User from "@/models/users";
 import { accessCache } from "@/lib/auth/accessCache";
+import { forbiddenAccessResponse } from "@/lib/auth/enforceAccess";
+import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import type { AccessActionValue } from "@/lib/auth/accessCatalog";
 import {
     buildPermissionAssignmentConflictMessage,
     findExistingActivePermissionAssignments,
@@ -18,14 +22,35 @@ function uniqueIds(ids: unknown) {
     return normalizeIdList(ids);
 }
 
+async function assertPermissionDocumentAccess(
+    req: AuthRequest,
+    permissionId: string,
+    action: AccessActionValue,
+) {
+    const user = req.ctx.user;
+    if (!user || hasGlobalOwnerScope(user)) return null;
+
+    const resolved = await resolveUserAccess(String(user._id), user.permissions);
+    if (resolved.permissions[permissionId]?.has(action)) return null;
+
+    return forbiddenAccessResponse({
+        component: "admin.permissions",
+        resource: "permissions",
+        resourceId: permissionId,
+        action,
+    });
+}
+
 export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active"),
     withRole("admin", "superAdmin"),
     withPermission({ component: "admin.permissions", action: "view" })
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const accessDenied = await assertPermissionDocumentAccess(req, id, "view");
+    if (accessDenied) return accessDenied;
 
     const permission = await Permission.findById(id)
         .populate("accesses")
@@ -45,6 +70,8 @@ export const PATCH = compose(
     withPermission({ component: "admin.permissions", action: "update" })
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const accessDenied = await assertPermissionDocumentAccess(req, id, "update");
+    if (accessDenied) return accessDenied;
     const body = await req.json();
 
     const permission = await Permission.findById(id);
@@ -123,8 +150,10 @@ export const DELETE = compose(
     withStatus("active"),
     withRole("superAdmin"),
     withPermission({ component: "admin.permissions", action: "delete" })
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const accessDenied = await assertPermissionDocumentAccess(req, id, "delete");
+    if (accessDenied) return accessDenied;
 
     const permission = await Permission.findById(id);
     if (!permission) return NextResponse.json({ message: "پرمیشن پیدا نشد." }, { status: 404 });

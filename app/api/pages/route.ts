@@ -608,7 +608,7 @@ export const POST = compose(
         logoHeader: normalizeLogoHeaderSettings(
             body.logoHeader ?? templateLogoHeader,
         ),
-        footer: normalizePageFooterSettings({ ...footerSource, logo: "" }),
+        footer: normalizePageFooterSettings(footerSource),
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
         expiresAt,
         isPublished: effectivePublished,
@@ -709,7 +709,7 @@ export const GET = compose(
         viewCount: "stats.views",
         visitorCount: "stats.visitors",
     };
-    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "updatedAt";
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
     const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const filters: Record<string, unknown> = {};
@@ -719,10 +719,10 @@ export const GET = compose(
     }
 
     const ownerIdFilter =
-        searchParams.get("filter_ownerId") ??
-        searchParams.get("ownerId") ??
-        searchParams.get("filter_creatorId") ??
-        searchParams.get("creatorId");
+        getFilterParam(searchParams, "ownerId") ||
+        getFilterParam(searchParams, "creatorId") ||
+        getFilterParam(searchParams, "createdById") ||
+        getFilterParam(searchParams, "createdBy");
     if (ownerIdFilter && mongoose.Types.ObjectId.isValid(ownerIdFilter)) {
         filters.owner = ownerIdFilter;
     }

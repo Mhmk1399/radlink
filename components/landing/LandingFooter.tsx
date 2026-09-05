@@ -57,7 +57,7 @@ export function LandingFooter({
   const footer = normalizePageFooterSettings(settings);
   if (!footer.enabled) return null;
 
-  const logo = pageLogo || "";
+  const logo = footer.logo || pageLogo || "";
   const title = String(pageTitle || "رادلینک").trim();
   const description = footer.description.trim();
   const brandText = footer.brandingText.trim();

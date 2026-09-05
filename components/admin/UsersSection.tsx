@@ -62,6 +62,7 @@ type UserRow = {
   id: string;
   firstName?: string;
   lastName?: string;
+  collectionName?: string;
   fullName?: string;
   phoneNumber: string;
   email?: string;
@@ -232,6 +233,10 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
       typeof item.firstName === "string" ? item.firstName.trim() : undefined,
     lastName:
       typeof item.lastName === "string" ? item.lastName.trim() : undefined,
+    collectionName:
+      typeof item.collectionName === "string"
+        ? item.collectionName.trim()
+        : undefined,
     limits: {
       files: Math.max(0, Number(item["limits.files"]) || 0),
       blocks: Math.max(0, Number(item["limits.blocks"]) || 0),
@@ -277,8 +282,26 @@ export default function UsersSection({
   const { can, user: authUser } = useAccess();
   const canUpdateUsers = can("admin.users", "update");
   const isNormalUser = authUser?.role === "user";
-  const canCreateUsers = !isNormalUser && can("admin.users", "create");
+  const canCreateUsers = can("admin.users", "create");
+  const canViewAgents = can("admin.agents", "view");
   const canDeleteUsers = !isNormalUser && can("admin.users", "delete");
+  const hasFullUserCreateAccess =
+    canCreateUsers && !hasAgentScopedRole(authUser?.role);
+  const hasFullUserEditAccess =
+    canUpdateUsers && !hasAgentScopedRole(authUser?.role);
+  const roleOptions = useMemo(
+    () =>
+      [
+        { label: "کاربر", value: "user" },
+        { label: "نماینده", value: "agent" },
+        { label: "مدیر نماینده", value: "agentManager" },
+        { label: "مدیر", value: "admin" },
+        ...(authUser?.role === "superAdmin"
+          ? [{ label: "R A D", value: "superAdmin" }]
+          : []),
+      ],
+    [authUser?.role],
+  );
 
   /* ── Auth header ─────────────────────────── */
   const token =
@@ -339,14 +362,23 @@ export default function UsersSection({
     async function loadAgentOptions() {
       if (
         !token ||
-        (authUser?.role !== "admin" && authUser?.role !== "superAdmin")
+        (!hasFullUserCreateAccess &&
+          !hasFullUserEditAccess &&
+          !canViewAgents)
       ) {
         if (!ignore) setAgentOptions([]);
         return;
       }
 
       try {
-        const response = await fetch("/api/agents?limit=100", { headers });
+        const canReadFullAgentList =
+          canViewAgents || authUser?.role === "superAdmin";
+        const response = await fetch(
+          canReadFullAgentList
+            ? "/api/agents?limit=100"
+            : "/api/agents?limit=100&mode=user-form-options",
+          { headers },
+        );
         const json = await response.json().catch(() => null);
 
         if (!response.ok) {
@@ -391,7 +423,14 @@ export default function UsersSection({
     return () => {
       ignore = true;
     };
-  }, [authUser?.role, headers, token]);
+  }, [
+    authUser?.role,
+    canViewAgents,
+    hasFullUserEditAccess,
+    hasFullUserCreateAccess,
+    headers,
+    token,
+  ]);
 
   useEffect(() => {
     let ignore = false;
@@ -555,7 +594,7 @@ export default function UsersSection({
       {
         key: "firstName",
         filterable: true,
-        filterSearchable: true,
+        filterType: "text",
         label: "نام",
         sortable: true,
         required: true,
@@ -568,6 +607,8 @@ export default function UsersSection({
       {
         key: "lastName",
         label: "نام خانوادگی",
+        filterable: true,
+        filterType: "text",
         sortable: true,
         required: true,
         placeholder: "نام خانوادگی",
@@ -577,10 +618,21 @@ export default function UsersSection({
         ),
       },
       {
+        key: "collectionName",
+        label: "اسم مجموعه",
+        sortable: true,
+        placeholder: "اسم مجموعه",
+        copyable: true,
+        hideOnMobile: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
+        ),
+      },
+      {
         key: "phoneNumber",
         label: "شماره موبایل",
         filterable: true,
-        filterSearchable: true,
+        filterType: "text",
         sortable: true,
         required: true,
         inputType: "tel",
@@ -616,8 +668,10 @@ export default function UsersSection({
           mode === "create"
             ? "اختیاری است؛ اگر پر شود کاربر می‌تواند با این رمز وارد شود."
             : "برای تغییر رمز پر کنید؛ اگر خالی بماند رمز فعلی تغییر نمی‌کند.",
-        hiddenInForm: () =>
-          authUser?.role !== "admin" && authUser?.role !== "superAdmin",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
         copyable: false,
       },
       {
@@ -642,17 +696,13 @@ export default function UsersSection({
         sortable: true,
         required: true,
         filterable: true,
-        options: [
-          { label: "کاربر", value: "user" },
-          { label: "نماینده", value: "agent" },
-          { label: "مدیر نماینده", value: "agentManager" },
-          { label: "مدیر", value: "admin" },
-          { label: "R A D", value: "superAdmin" },
-        ],
+        options: roleOptions,
         render: (value) => <RoleBadge role={value as UserRole} />,
         copyable: false,
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "status",
@@ -666,7 +716,10 @@ export default function UsersSection({
         ],
         render: (value) => <StatusBadge status={value as UserStatus} />,
         copyable: false,
-        hiddenInForm: () => authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "agentid",
@@ -676,8 +729,10 @@ export default function UsersSection({
         copyable: true,
         hideOnMobile: true,
         placeholder: "انتخاب نماینده یا بدون نماینده",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
         render: (value, row) => (
           <span className="text-sm text-slate-400">
             {row.agentLabel ||
@@ -710,8 +765,10 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "limits.blocks",
@@ -719,8 +776,10 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "limits.pages",
@@ -728,8 +787,10 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "limits",
@@ -820,7 +881,7 @@ export default function UsersSection({
       },
       {
         key: "createdById",
-        label: "فیلتر سازنده کاربر",
+        label: "  سازنده کاربر",
         visible: false,
         viewable: false,
         editable: false,
@@ -859,7 +920,13 @@ export default function UsersSection({
         render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
     ],
-    [agentOptions, authUser?.role, creatorOptions],
+    [
+      agentOptions,
+      creatorOptions,
+      hasFullUserEditAccess,
+      hasFullUserCreateAccess,
+      roleOptions,
+    ],
   );
 
   /* ══════════════════════════════════════════

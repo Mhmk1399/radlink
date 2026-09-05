@@ -24,6 +24,7 @@ import {
     normalizeIdList,
     validateSinglePermissionIdSelection,
 } from "@/lib/auth/permissionAssignment";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -96,8 +97,16 @@ export const PATCH = compose(
 
     const body = await req.json();
     const requester = req.ctx.user!;
+    const resolvedRequesterAccess =
+        requester.role === "superAdmin"
+            ? null
+            : await resolveUserAccess(String(requester._id), requester.permissions);
+    const hasUsersUpdateAccess =
+        requester.role === "superAdmin" ||
+        (resolvedRequesterAccess?.components["admin.users"]?.has("update") ??
+            false);
 
-    if (!(await canAccessUserRequest(req, id))) {
+    if (!(await canAccessUserRequest(req, id)) && !hasUsersUpdateAccess) {
         return NextResponse.json(
             { message: "شما اجازه انجام این عملیات را ندارید." },
             { status: 403 }
@@ -115,6 +124,8 @@ export const PATCH = compose(
 
     const isAdmin = ["admin", "superAdmin"].includes(requester.role);
     const isSuperAdmin = requester.role === "superAdmin";
+    const canUseFullUpdatePayload =
+        (isAdmin || hasUsersUpdateAccess) && !hasAgentScopedRole(requester.role);
     const isSelf = String(requester._id) === id;
     const isAgentManager =
         hasAgentScopedRole(requester.role) &&
@@ -133,6 +144,7 @@ export const PATCH = compose(
     const selfAllowed = [
         "firstName",
         "lastName",
+        "collectionName",
         "email",
         "avatarUrl",
         "nationalCode",
@@ -149,7 +161,7 @@ export const PATCH = compose(
         "isDeleted",
     ];
 
-    const allowedFields = isAdmin
+    const allowedFields = canUseFullUpdatePayload
         ? [...selfAllowed, ...adminOnly]
         : isAgentManager
           ? [
@@ -161,7 +173,7 @@ export const PATCH = compose(
             ]
           : selfAllowed;
 
-    if (isSuperAdmin) {
+    if (canUseFullUpdatePayload) {
         allowedFields.push("role");
     }
 
@@ -255,6 +267,13 @@ export const PATCH = compose(
                     { status: 400 }
                 );
             }
+        }
+
+        if (key === "role" && String(value) === "superAdmin" && !isSuperAdmin) {
+            return NextResponse.json(
+                { message: "فقط سوپر ادمین می‌تواند نقش سوپر ادمین تعیین کند." },
+                { status: 403 }
+            );
         }
 
         if (key === "status") {
@@ -356,7 +375,7 @@ export const PATCH = compose(
         }
 
         if (
-            ["firstName", "lastName", "phoneNumber", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
+            ["firstName", "lastName", "collectionName", "phoneNumber", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
                 key
             )
         ) {
@@ -370,7 +389,7 @@ export const PATCH = compose(
     }
 
     if (hasRequestedPassword) {
-        if (!isAdmin) {
+        if (!canUseFullUpdatePayload) {
             return NextResponse.json(
                 { message: "فقط مدیر می‌تواند رمز عبور کاربر را تغییر دهد." },
                 { status: 403 },
@@ -403,7 +422,7 @@ export const PATCH = compose(
     }
 
     // A normal user may only update themselves.
-    if (!isAdmin && !isSelf && !isAgentManager) {
+    if (!canUseFullUpdatePayload && !isSelf && !isAgentManager) {
         return NextResponse.json(
             { message: "شما فقط می‌توانید حساب خودتان را ویرایش کنید." },
             { status: 403 }

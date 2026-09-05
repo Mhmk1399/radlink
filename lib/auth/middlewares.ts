@@ -5,6 +5,7 @@ import { AuthRequest } from "@/lib/auth/types";
 import User, { UserRole, UserStatus } from "@/models/users";
 import Agent from "@/models/agent";
 import { AccessAction } from "@/models/access";
+import type { AccessResourceKind } from "@/lib/auth/accessCatalog";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import {
     AUTH_MESSAGES,
@@ -129,7 +130,7 @@ export function withAgent(options?: { requireActive?: boolean }): Middleware {
 // superAdmin bypasses all permission checks.
 type PermissionOptions =
     | { component: string; action: AccessAction }
-    | { resource: "templates" | "blocks" | "pages"; resourceId: string; action: AccessAction };
+    | { resource: AccessResourceKind; resourceId: string; action: AccessAction };
 
 export function withPermission(options: PermissionOptions): Middleware {
     return async (req, next) => {

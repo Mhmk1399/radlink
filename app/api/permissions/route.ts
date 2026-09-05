@@ -6,6 +6,8 @@ import Permission from "@/models/permission";
 import "@/models/access";
 import User from "@/models/users";
 import { accessCache } from "@/lib/auth/accessCache";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
 import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import {
     buildPermissionAssignmentConflictMessage,
@@ -27,6 +29,23 @@ function getFilterParam(searchParams: URLSearchParams, key: string) {
 
 function uniqueIds(ids: unknown) {
     return normalizeIdList(ids);
+}
+
+async function withPermissionDocumentScope(
+    user: AuthRequest["ctx"]["user"],
+    query: Record<string, unknown>,
+    action = "view",
+) {
+    if (!user || hasGlobalOwnerScope(user)) return query;
+
+    const resolved = await resolveUserAccess(String(user._id), user.permissions);
+    const grantedIds = Object.entries(resolved.permissions)
+        .filter(([, actions]) => actions.has(action))
+        .map(([id]) => id);
+
+    return {
+        $and: [query, { _id: { $in: grantedIds } }],
+    };
 }
 
 export const POST = compose(
@@ -82,6 +101,7 @@ export const GET = compose(
     withRole("admin", "superAdmin"),
     withPermission({ component: "admin.permissions", action: "view" })
 )(async (req: AuthRequest) => {
+    const user = req.ctx.user!;
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
@@ -117,8 +137,10 @@ export const GET = compose(
     const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
     const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
+    const scopedQuery = await withPermissionDocumentScope(user, query);
+
     const [permissions, total] = await Promise.all([
-        Permission.find(query)
+        Permission.find(scopedQuery)
             .populate("accesses")
             .populate("assignedToUsers", "firstName lastName phoneNumber role")
             .populate("grantedBy", "firstName lastName phoneNumber role")
@@ -126,7 +148,7 @@ export const GET = compose(
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        Permission.countDocuments(query),
+        Permission.countDocuments(scopedQuery),
     ]);
 
     return NextResponse.json({ permissions, total, page, limit });

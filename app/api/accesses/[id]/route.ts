@@ -6,11 +6,16 @@ import { AuthRequest } from "@/lib/auth/types";
 import Access from "@/models/access";
 import Permission from "@/models/permission";
 import { accessCache } from "@/lib/auth/accessCache";
+import { forbiddenAccessResponse } from "@/lib/auth/enforceAccess";
 import {
     ACCESS_ACTIONS,
+    type AccessActionValue,
+    type AccessResourceKind,
     getAccessActionsForComponent,
     getAccessActionsForResource,
 } from "@/lib/auth/accessCatalog";
+import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import "@/models/template";
 import "@/models/blocks";
 import "@/models/pages";
@@ -54,8 +59,8 @@ function normalizeStaticComponents(value: unknown) {
 
 function normalizeDynamicItems(
     value: unknown,
-    idKey: "templateId" | "blockId" | "pageId",
-    resource: "templates" | "blocks" | "pages",
+    idKey: "templateId" | "blockId" | "pageId" | "accessId" | "permissionId",
+    resource: AccessResourceKind,
 ) {
     if (!Array.isArray(value)) return [];
 
@@ -85,6 +90,8 @@ function normalizeAccessPayload(body: Record<string, unknown>) {
             templates: normalizeDynamicItems(dynamicAccess.templates, "templateId", "templates"),
             blocks: normalizeDynamicItems(dynamicAccess.blocks, "blockId", "blocks"),
             pages: normalizeDynamicItems(dynamicAccess.pages, "pageId", "pages"),
+            accesses: normalizeDynamicItems(dynamicAccess.accesses, "accessId", "accesses"),
+            permissions: normalizeDynamicItems(dynamicAccess.permissions, "permissionId", "permissions"),
         },
     };
 }
@@ -93,7 +100,28 @@ function populateAccessById(id: string) {
     return Access.findById(id)
         .populate("dynamicAccess.templates.templateId", "name thumbnail")
         .populate("dynamicAccess.blocks.blockId", "name type icon category")
-        .populate("dynamicAccess.pages.pageId", "title url isPublished");
+        .populate("dynamicAccess.pages.pageId", "title url isPublished")
+        .populate("dynamicAccess.accesses.accessId", "name isActive")
+        .populate("dynamicAccess.permissions.permissionId", "name isActive");
+}
+
+async function assertAccessDocumentAccess(
+    req: AuthRequest,
+    accessId: string,
+    action: AccessActionValue,
+) {
+    const user = req.ctx.user;
+    if (!user || hasGlobalOwnerScope(user)) return null;
+
+    const resolved = await resolveUserAccess(String(user._id), user.permissions);
+    if (resolved.accesses[accessId]?.has(action)) return null;
+
+    return forbiddenAccessResponse({
+        component: "admin.accesses",
+        resource: "accesses",
+        resourceId: accessId,
+        action,
+    });
 }
 
 // Bust cache for all users that have a permission referencing this access
@@ -109,8 +137,10 @@ export const GET = compose(
     withStatus("active"),
     withRole("admin", "superAdmin"),
     withPermission({ component: "admin.accesses", action: "view" })
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const accessDenied = await assertAccessDocumentAccess(req, id, "view");
+    if (accessDenied) return accessDenied;
 
     const access = await populateAccessById(id).lean();
     if (!access) return NextResponse.json({ message: "اکسس پیدا نشد." }, { status: 404 });
@@ -126,6 +156,8 @@ export const PATCH = compose(
     withPermission({ component: "admin.accesses", action: "update" })
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const accessDenied = await assertAccessDocumentAccess(req, id, "update");
+    if (accessDenied) return accessDenied;
     const body = await req.json();
     const hasRulePayload =
         "staticComponents" in body ||
@@ -184,6 +216,8 @@ export const PATCH = compose(
         access.dynamicAccess.templates = payload.dynamicAccess.templates;
         access.dynamicAccess.blocks = payload.dynamicAccess.blocks;
         access.dynamicAccess.pages = payload.dynamicAccess.pages;
+        access.dynamicAccess.accesses = payload.dynamicAccess.accesses;
+        access.dynamicAccess.permissions = payload.dynamicAccess.permissions;
     }
 
     await access.save();
@@ -205,8 +239,10 @@ export const DELETE = compose(
     withStatus("active"),
     withRole("superAdmin"),
     withPermission({ component: "admin.accesses", action: "delete" })
-)(async (_req: AuthRequest, ctx: RouteContext) => {
+)(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
+    const accessDenied = await assertAccessDocumentAccess(req, id, "delete");
+    if (accessDenied) return accessDenied;
 
     const access = await Access.findById(id);
     if (!access) return NextResponse.json({ message: "اکسس پیدا نشد." }, { status: 404 });

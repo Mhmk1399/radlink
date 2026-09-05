@@ -312,11 +312,17 @@ export default function TicketsSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const { isSuperAdmin, user: authUser } = useAccess();
+  const {
+    can,
+    isLoading: accessLoading,
+    isSuperAdmin,
+    user: authUser,
+  } = useAccess();
   const canManageTickets =
     isSuperAdmin ||
     authUser?.role === "admin" ||
     authUser?.role === "agent";
+  const canViewUsers = can("admin.users", "view");
 
   const [refreshToken, setRefreshToken] = useState(0);
   const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null);
@@ -497,7 +503,11 @@ export default function TicketsSection({
   );
 
   useEffect(() => {
-    if (!canManageTickets) return;
+    if (accessLoading) return;
+    if (!canManageTickets || !canViewUsers) {
+      const timer = window.setTimeout(() => setUserOptions([]), 0);
+      return () => window.clearTimeout(timer);
+    }
     let cancelled = false;
     async function loadUsers() {
       try {
@@ -509,11 +519,11 @@ export default function TicketsSection({
         toast.error(e instanceof Error ? e.message : "خطا در دریافت کاربران");
       }
     }
-    loadUsers();
+    void loadUsers();
     return () => {
       cancelled = true;
     };
-  }, [canManageTickets, headers]);
+  }, [accessLoading, canManageTickets, canViewUsers, headers]);
 
   function refreshTable() {
     setRefreshToken((v) => v + 1);
@@ -786,7 +796,7 @@ export default function TicketsSection({
               <p className={cn("mt-0.5 text-xs sm:text-sm", t.textMuted)}>
                 {canManageTickets
                   ? "مشاهده، پاسخ‌دهی و مدیریت تمامی تیکت‌ها"
-                  : "مشاهده و پیگیری تیکت‌های شما"}
+                  : "مشاهده تیکت‌های شما و گفت‌وگوهای صفحه‌هایتان"}
               </p>
             </div>
           </div>
@@ -829,7 +839,7 @@ export default function TicketsSection({
         subtitle={
           canManageTickets
             ? "R A D همه تیکت‌ها را می‌بیند"
-            : "فقط تیکت‌های خودتان نمایش داده می‌شود"
+            : "تیکت‌های شما و گفت‌وگوهای صفحه‌هایتان نمایش داده می‌شود"
         }
         primaryKey="_id"
         headers={headers}

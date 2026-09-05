@@ -97,6 +97,20 @@ const RESEND_COOLDOWN = 60; // seconds — matches backend 60_000 ms
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 72;
 
+function sanitizeReturnTo(returnTo: string | null | undefined) {
+  if (!returnTo || !returnTo.startsWith("/") || returnTo.startsWith("//")) {
+    return "";
+  }
+  return returnTo;
+}
+
+function getSafeReturnTo() {
+  if (typeof window === "undefined") return "";
+  return sanitizeReturnTo(
+    new URLSearchParams(window.location.search).get("returnTo"),
+  );
+}
+
 /* ══════════════════════════════════════════════
    API HELPERS
    ══════════════════════════════════════════════ */
@@ -648,8 +662,14 @@ function ErrorLine({ msg, center }: { msg: string; center?: boolean }) {
    AUTH COMPONENT
    ══════════════════════════════════════════════ */
 
-export default function AuthPage() {
+export default function AuthPage({
+  initialReturnTo = "",
+}: {
+  initialReturnTo?: string;
+}) {
   const router = useRouter();
+  const safeReturnTo = sanitizeReturnTo(initialReturnTo) || getSafeReturnTo();
+  const isReturningToLandingChat = safeReturnTo.includes("chat=1");
 
   // ── State ──
   const [step, setStep] = useState<AuthStep>("phone");
@@ -1042,7 +1062,8 @@ export default function AuthPage() {
   // ── After success, redirect to dashboard ──
   useEffect(() => {
     if (step === "success") {
-      const id = setTimeout(() => router.push("/admin"), 3000);
+      const returnTo = getSafeReturnTo();
+      const id = setTimeout(() => router.push(returnTo || "/admin"), returnTo ? 0 : 3000);
       return () => clearTimeout(id);
     }
   }, [step, router]);
@@ -1154,6 +1175,11 @@ export default function AuthPage() {
                       شماره موبایل را وارد کنید و با پیامک یا رمز عبور وارد شوید
                     </p>
                   </div>
+                  {isReturningToLandingChat && (
+                    <div className="w-full rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-right text-xs leading-6 text-yellow-100">
+                      بعد از ورود یا ثبت‌نام، مستقیم به همان صفحه برمی‌گردید و گفت‌وگو برایتان باز می‌شود.
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-8 space-y-4">
@@ -1873,14 +1899,16 @@ export default function AuthPage() {
                       "text-slate-400",
                     )}
                   >
-                    {isExistingUser
+                    {isReturningToLandingChat
+                      ? "ورود انجام شد. در حال برگشت به همان صفحه برای ادامه گفت‌وگو..."
+                      : isExistingUser
                       ? "خوش آمدی! در حال انتقال به داشبورد..."
                       : "حساب شما ساخته شد. در حال انتقال به داشبورد..."}
                   </p>
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full max-w-xs">
+                <div className={cn("w-full max-w-xs", isReturningToLandingChat && "hidden")}>
                   <div
                     className={cn(
                       "h-1 overflow-hidden rounded-full",
@@ -1905,6 +1933,7 @@ export default function AuthPage() {
                   className={cn(
                     components.ctaPrimary,
                     "w-full max-w-xs justify-center py-3.5",
+                    isReturningToLandingChat && "hidden",
                   )}
                 >
                   <span className="relative z-10">رفتن به داشبورد</span>

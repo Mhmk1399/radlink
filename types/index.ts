@@ -96,6 +96,7 @@ export interface User extends BaseDocument {
     firstName?: string;
     lastName?: string;
     fullName?: string;
+    collectionName?: string;
     phoneNumber: string;
     email?: string;
     avatarUrl?: string;
@@ -105,6 +106,10 @@ export interface User extends BaseDocument {
     status: UserStatus;
     permissions: string[];
     limits: AgentLimits;
+    limitsOverrideEnabled?: boolean;
+    inheritedLimits?: AgentLimits;
+    effectiveLimits?: AgentLimits;
+    limitsSource?: "user" | "agent";
     agentId?: string;
     agent?: Agent;
     lastLoginAt?: string;
@@ -119,6 +124,7 @@ export interface User extends BaseDocument {
 export interface CreateUserPayload {
     firstName?: string;
     lastName?: string;
+    collectionName?: string;
     phoneNumber: string;
     email?: string;
     nationalCode?: string;
@@ -778,6 +784,11 @@ export interface Ticket extends BaseDocument {
     priority: TicketPriority;
     requesterId: string;
     requester?: User;
+    pageId?: string;
+    page?: Page;
+    siteOwnerId?: string;
+    siteOwner?: User;
+    source?: "admin" | "landing";
     assigneeId?: string;
     assignee?: User;
     categoryId?: string;
@@ -797,6 +808,9 @@ export interface CreateTicketPayload {
     description?: string;
     priority?: TicketPriority;
     requesterId: string;
+    pageId?: string;
+    siteOwnerId?: string;
+    source?: "admin" | "landing";
     assigneeId?: string;
     categoryId?: string;
     attachmentIds?: string[];
