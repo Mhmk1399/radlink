@@ -93,6 +93,7 @@ export const POST = compose(
         role: targetRole,
         agentid: agent._id,
         limits: normalizedLimits,
+        limitsOverrideEnabled: false,
     });
 
     return NextResponse.json({ agent }, { status: 201 });

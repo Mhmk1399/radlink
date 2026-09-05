@@ -133,6 +133,7 @@ export interface CreateUserPayload {
     role?: UserRole;
     status?: UserStatus;
     limits?: Partial<AgentLimits>;
+    limitsOverrideEnabled?: boolean;
     agentId?: string;
 }
 

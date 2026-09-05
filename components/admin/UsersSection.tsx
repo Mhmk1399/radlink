@@ -77,6 +77,18 @@ type UserRow = {
     blocks: number;
     pages: number;
   };
+  limitsOverrideEnabled?: boolean;
+  limitsSource?: "user" | "agent";
+  ownLimits?: {
+    files: number;
+    blocks: number;
+    pages: number;
+  };
+  inheritedLimits?: {
+    files: number;
+    blocks: number;
+    pages: number;
+  } | null;
   lastLoginAt?: string;
   lastOtpRequestAt?: string;
   phoneVerifiedAt?: string;
@@ -242,6 +254,7 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
       blocks: Math.max(0, Number(item["limits.blocks"]) || 0),
       pages: Math.max(0, Number(item["limits.pages"]) || 0),
     },
+    limitsOverrideEnabled: Boolean(item.limitsOverrideEnabled),
   };
 
   delete payload.fullName;
@@ -249,6 +262,9 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
   delete payload.createdById;
   delete payload.updatedBy;
   delete payload.updatedById;
+  delete payload.ownLimits;
+  delete payload.inheritedLimits;
+  delete payload.limitsSource;
   delete payload["limits.files"];
   delete payload["limits.blocks"];
   delete payload["limits.pages"];
@@ -264,6 +280,9 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
     typeof item.agentid === "string" && item.agentid.trim()
       ? item.agentid.trim()
       : "";
+  payload.limitsOverrideEnabled = payload.agentid
+    ? Boolean(item.limitsOverrideEnabled)
+    : true;
 
   return payload;
 }
@@ -536,6 +555,14 @@ export default function UsersSection({
             u.limits && typeof u.limits === "object"
               ? (u.limits as Record<string, unknown>)
               : {};
+          const ownLimits =
+            u.ownLimits && typeof u.ownLimits === "object"
+              ? (u.ownLimits as Record<string, unknown>)
+              : limits;
+          const inheritedLimits =
+            u.inheritedLimits && typeof u.inheritedLimits === "object"
+              ? (u.inheritedLimits as Record<string, unknown>)
+              : null;
           const userId = String(u._id ?? u.id ?? "");
           const agentId = getObjectId(u.agentid);
           const agentLabel =
@@ -574,6 +601,25 @@ export default function UsersSection({
               blocks: Number(limits.blocks ?? 0),
               pages: Number(limits.pages ?? 0),
             },
+            ownLimits: {
+              files: Number(ownLimits.files ?? 0),
+              blocks: Number(ownLimits.blocks ?? 0),
+              pages: Number(ownLimits.pages ?? 0),
+            },
+            inheritedLimits: inheritedLimits
+              ? {
+                  files: Number(inheritedLimits.files ?? 0),
+                  blocks: Number(inheritedLimits.blocks ?? 0),
+                  pages: Number(inheritedLimits.pages ?? 0),
+                }
+              : null,
+            limitsOverrideEnabled: Boolean(u.limitsOverrideEnabled),
+            limitsSource:
+              u.limitsSource === "agent" || u.limitsSource === "user"
+                ? u.limitsSource
+                : agentId
+                  ? "agent"
+                  : "user",
             "limits.files": Number(limits.files ?? 0),
             "limits.blocks": Number(limits.blocks ?? 0),
             "limits.pages": Number(limits.pages ?? 0),
@@ -760,11 +806,30 @@ export default function UsersSection({
         copyable: false,
       },
       {
+        key: "limitsOverrideEnabled",
+        label: "محدودیت اختصاصی",
+        inputType: "checkbox",
+        visible: false,
+        defaultValue: false,
+        formHelpText: (_, formData) =>
+          formData.agentid
+            ? "اگر روشن باشد، محدودیت‌های همین کاربر جدا از نماینده ذخیره می‌شود."
+            : "کاربر بدون نماینده همیشه از محدودیت اختصاصی خودش استفاده می‌کند.",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
+      },
+      {
         key: "limits.files",
         label: "محدودیت فایل",
         inputType: "number",
         visible: false,
         placeholder: "0",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
         hiddenInForm: (_, mode) =>
           mode === "create"
             ? !hasFullUserCreateAccess
@@ -776,6 +841,10 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
         hiddenInForm: (_, mode) =>
           mode === "create"
             ? !hasFullUserCreateAccess
@@ -787,6 +856,10 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
         hiddenInForm: (_, mode) =>
           mode === "create"
             ? !hasFullUserCreateAccess
@@ -796,15 +869,20 @@ export default function UsersSection({
         key: "limits",
         label: "محدودیت‌ها",
         editable: false,
-        render: (value) => {
+        render: (value, row) => {
           const l = value as UserRow["limits"];
           if (!l) return "—";
           const showLimit = (value: number) =>
             value > 0 ? String(value) : "نامحدود";
+          const source =
+            row.limitsSource === "agent" ? "از نماینده" : "اختصاصی کاربر";
           return (
-            <span className="text-xs text-slate-500">
-              فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
-              {showLimit(l.pages)}
+            <span className="flex flex-col gap-1 text-xs text-slate-500">
+              <span>
+                فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
+                {showLimit(l.pages)}
+              </span>
+              <span className="text-[10px] text-slate-400">{source}</span>
             </span>
           );
         },

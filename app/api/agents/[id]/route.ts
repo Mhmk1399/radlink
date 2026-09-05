@@ -172,6 +172,7 @@ export const PATCH = compose(
             {
                 agentid: agent._id,
                 isDeleted: false,
+                limitsOverrideEnabled: { $ne: true },
             },
             { $set: { limits: normalizeLimits(body.limits) } },
         );
