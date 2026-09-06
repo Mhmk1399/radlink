@@ -992,7 +992,7 @@ export function LogoHeaderFrame({
         >
           {hasBackgroundImage ? (
             <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              className="absolute inset-0 bg-contain bg-center bg-no-repeat sm:bg-cover"
               style={{
                 backgroundImage: `url(${JSON.stringify(normalized.backgroundImage)})`,
               }}

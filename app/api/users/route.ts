@@ -34,6 +34,43 @@ import {
     validateSinglePermissionIdSelection,
 } from "@/lib/auth/permissionAssignment";
 
+function normalizeLimits(value: unknown) {
+    const limits =
+        typeof value === "object" && value !== null
+            ? (value as Record<string, unknown>)
+            : {};
+
+    return {
+        files: Math.max(0, Number(limits.files) || 0),
+        blocks: Math.max(0, Number(limits.blocks) || 0),
+        pages: Math.max(0, Number(limits.pages) || 0),
+    };
+}
+
+function resolveUserLimitView(user: Record<string, unknown>) {
+    const ownLimits = normalizeLimits(user.limits);
+    const agent =
+        user.agentid && typeof user.agentid === "object"
+            ? (user.agentid as Record<string, unknown>)
+            : null;
+    const inheritedLimits = agent ? normalizeLimits(agent.limits) : null;
+    const hasAgent = Boolean(agent || user.agentid);
+    const overrideEnabled = Boolean(user.limitsOverrideEnabled);
+    const usesAgentLimits = Boolean(hasAgent && !overrideEnabled && inheritedLimits);
+    const effectiveLimits = usesAgentLimits && inheritedLimits
+        ? inheritedLimits
+        : ownLimits;
+
+    return {
+        ...user,
+        limits: effectiveLimits,
+        ownLimits,
+        inheritedLimits,
+        limitsOverrideEnabled: hasAgent ? overrideEnabled : true,
+        limitsSource: usesAgentLimits ? "agent" : "user",
+    };
+}
+
 // GET /api/users
 export const GET = compose(
     withDB(),
@@ -57,15 +94,24 @@ export const GET = compose(
     const firstNameFilter =
         searchParams.get("filter_firstName") ??
         searchParams.get("firstName");
+    const lastNameFilter =
+        searchParams.get("filter_lastName") ??
+        searchParams.get("lastName");
 
 
 
     const phoneNumberFilter =
         searchParams.get("filter_phoneNumber") ??
         searchParams.get("phoneNumber");
-    const createdByIdFilter =
+    const createdByIdFilter = (
         searchParams.get("filter_createdById") ??
-        searchParams.get("createdById");
+        searchParams.get("createdById") ??
+        searchParams.get("filter_createdBy") ??
+        searchParams.get("createdBy") ??
+        searchParams.get("filter_creatorId") ??
+        searchParams.get("creatorId") ??
+        ""
+    ).trim();
     const includeDeleted =
         searchParams.get("includeDeleted") === "true" && !mode;
 
@@ -96,11 +142,16 @@ export const GET = compose(
         };
     }
 
-
+    if (lastNameFilter) {
+        query.lastName = {
+            $regex: escapeRegex(lastNameFilter.trim()),
+            $options: "i",
+        };
+    }
 
     if (phoneNumberFilter) {
         query.phoneNumber = {
-            $regex: escapeRegex(phoneNumberFilter.trim()),
+            $regex: escapeRegex(toEnglishDigits(phoneNumberFilter.trim())),
             $options: "i",
         };
     }
@@ -122,12 +173,13 @@ export const GET = compose(
     }
 
     if (search) {
-        const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const safeSearch = escapeRegex(toEnglishDigits(search.trim()));
 
         query.$or = [
             { phoneNumber: { $regex: safeSearch, $options: "i" } },
             { firstName: { $regex: safeSearch, $options: "i" } },
             { lastName: { $regex: safeSearch, $options: "i" } },
+            { collectionName: { $regex: safeSearch, $options: "i" } },
             { email: { $regex: safeSearch, $options: "i" } },
         ];
     }
@@ -165,7 +217,7 @@ export const GET = compose(
             .populate("permissions", "name isActive")
             .populate({
                 path: "agentid",
-                select: "user type companyName",
+                select: "user type companyName limits",
                 populate: {
                     path: "user",
                     select: "firstName lastName phoneNumber email",
@@ -179,7 +231,7 @@ export const GET = compose(
                 "updatedBy",
                 "firstName lastName phoneNumber role",
             )
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
@@ -188,7 +240,9 @@ export const GET = compose(
     ]);
 
     return NextResponse.json({
-        users,
+        users: users.map((user) =>
+            resolveUserLimitView(user as Record<string, unknown>),
+        ),
         total,
         page,
         limit,
@@ -204,13 +258,6 @@ export const POST = compose(
 )(async (req: AuthRequest) => {
     try {
         const currentUser = req.ctx?.user;
-        if (currentUser?.role === "user") {
-            return NextResponse.json(
-                { message: "شما اجازه ساخت کاربر را ندارید." },
-                { status: 403 },
-            );
-        }
-
         if (!currentUser) {
             return NextResponse.json(
                 {
@@ -239,6 +286,10 @@ export const POST = compose(
         const lastName =
             typeof body.lastName === "string"
                 ? body.lastName.trim()
+                : "";
+        const collectionName =
+            typeof body.collectionName === "string"
+                ? body.collectionName.trim()
                 : "";
 
         if (!firstName || !lastName) {
@@ -307,6 +358,10 @@ export const POST = compose(
             : typeof body.agentid === "string"
                 ? body.agentid.trim()
                 : "";
+        let selectedAgentForUser:
+            | { limits?: { files?: number; blocks?: number; pages?: number } }
+            | null = null;
+
         if (agentId) {
             if (!mongoose.Types.ObjectId.isValid(agentId)) {
                 return NextResponse.json(
@@ -315,8 +370,11 @@ export const POST = compose(
                 );
             }
 
-            const agentExists = await Agent.exists({ _id: agentId });
-            if (!agentExists) {
+            selectedAgentForUser = await Agent.findOne({
+                _id: agentId,
+                isActive: true,
+            }).select("limits").lean();
+            if (!selectedAgentForUser) {
                 return NextResponse.json(
                     { message: "نماینده انتخاب‌شده پیدا نشد." },
                     { status: 404 },
@@ -350,14 +408,25 @@ export const POST = compose(
             )
                 ? body.status
                 : "active";
+        const canUseFullCreatePayload = !hasAgentScopedRole(currentUser.role);
+        const requestedLimitsOverrideEnabled =
+            typeof body.limitsOverrideEnabled === "boolean"
+                ? body.limitsOverrideEnabled
+                : false;
+        const limitsOverrideEnabled =
+            canUseFullCreatePayload && agentId
+                ? requestedLimitsOverrideEnabled
+                : !agentId;
         const effectiveLimits = requesterAgent
             ? requesterAgent.limits
+            : agentId && !limitsOverrideEnabled
+                ? selectedAgentForUser?.limits
             : body.limits;
         const requestedPassword =
             typeof body.password === "string" ? body.password : "";
         const hasRequestedPassword = requestedPassword.trim().length > 0;
         const permissionIds =
-            !hasAgentScopedRole(currentUser.role) && Array.isArray(body.permissions)
+            canUseFullCreatePayload && Array.isArray(body.permissions)
                 ? normalizeIdList(body.permissions)
                 : [];
         if (!permissionIds.every((id) => mongoose.Types.ObjectId.isValid(id))) {
@@ -378,8 +447,7 @@ export const POST = compose(
 
         if (
             hasRequestedPassword &&
-            currentUser.role !== "admin" &&
-            currentUser.role !== "superAdmin"
+            !canUseFullCreatePayload
         ) {
             return NextResponse.json(
                 { message: "فقط مدیر می‌تواند برای کاربر رمز عبور تعیین کند." },
@@ -435,6 +503,7 @@ export const POST = compose(
         const user = await User.create({
             firstName,
             lastName,
+            collectionName: collectionName || undefined,
 
             phoneNumber,
 
@@ -459,20 +528,8 @@ export const POST = compose(
 
             permissions: permissionIds,
 
-            limits: {
-                files: Math.max(
-                    0,
-                    Number(effectiveLimits?.files ?? 0),
-                ),
-                blocks: Math.max(
-                    0,
-                    Number(effectiveLimits?.blocks ?? 0),
-                ),
-                pages: Math.max(
-                    0,
-                    Number(effectiveLimits?.pages ?? 0),
-                ),
-            },
+            limits: normalizeLimits(effectiveLimits),
+            limitsOverrideEnabled,
 
             isPhoneVerified: Boolean(body.isPhoneVerified),
             phoneVerifiedAt: body.isPhoneVerified
@@ -497,7 +554,7 @@ export const POST = compose(
             .populate("permissions", "name isActive")
             .populate({
                 path: "agentid",
-                select: "user type companyName",
+                select: "user type companyName limits",
                 populate: {
                     path: "user",
                     select: "firstName lastName phoneNumber email",
@@ -516,7 +573,9 @@ export const POST = compose(
         return NextResponse.json(
             {
                 message: "کاربر با موفقیت ساخته شد.",
-                user: populatedUser,
+                user: populatedUser
+                    ? resolveUserLimitView(populatedUser as Record<string, unknown>)
+                    : populatedUser,
             },
             { status: 201 },
         );

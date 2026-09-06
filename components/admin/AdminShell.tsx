@@ -55,6 +55,7 @@ import {
   FaAngleRight,
   FaEllipsis,
   FaTriangleExclamation,
+  FaMagnifyingGlass,
   FaPlus,
   FaX,
 } from "react-icons/fa6";
@@ -69,97 +70,78 @@ import { createPortal } from "react-dom";
 
 const shell = {
   dark: {
-    page: "bg-[#111116]",
-    sidebar: "bg-[#16161b]",
-    header: "bg-[#16161b]/80",
-    card: "bg-[#1c1c23]",
-    input: "bg-[#1e1e26]",
-    dropdown: "bg-[#1c1c23]/98 backdrop-blur-2xl",
-    hover: "hover:bg-[#ffffff09]",
-    active: "bg-[#c8a84b]/[0.08]",
-    tooltip: "bg-[#2a2a34]",
-    textPrimary: "text-[#e8e5e0]",
-    textSecondary: "text-[#a39f97]",
-    textMuted: "text-[#9c9890]",
-    textDisabled: "text-[#76726a]",
-    textAccent: "text-[#d6bb66]",
-    textAccentSub: "text-[#c8a84b]/75",
-    border: "border-[#2a2a34]",
-    borderAccent: "border-[#c8a84b]/22",
-    divider: "border-[#22222a]/70",
-    cardShadow: "shadow-[0_2px_10px_-3px_rgba(0,0,0,0.35)]",
+    page: "bg-[#090e16]",
+    sidebar: "bg-[#0d131d]",
+    header: "bg-[#0d131d]/92",
+    card: "bg-[#111923]",
+    input: "bg-[#111a26]",
+    dropdown: "bg-[#101823]/98 backdrop-blur-2xl",
+    hover: "hover:bg-white/[0.045]",
+    active: "bg-[#f3bd45]/[0.10]",
+    tooltip: "bg-[#18212e]",
+    textPrimary: "text-[#f3f5f7]",
+    textSecondary: "text-[#b2bac7]",
+    textMuted: "text-[#818c9d]",
+    textDisabled: "text-[#5f6978]",
+    textAccent: "text-[#f6c652]",
+    textAccentSub: "text-[#eab94c]/80",
+    border: "border-[#202b39]",
+    borderAccent: "border-[#f2bd45]/35",
+    divider: "border-[#192431]/90",
+    cardShadow: "shadow-[0_8px_30px_-18px_rgba(0,0,0,0.75)]",
     dropShadow:
-      "shadow-[0_12px_40px_-10px_rgba(0,0,0,0.6),0_2px_8px_-2px_rgba(0,0,0,0.35)]",
-    accentBadge: "bg-[#c8a84b]/[0.07] ring-1 ring-[#c8a84b]/18 text-[#d6bb66]",
-    accentDot: "bg-[#d6bb66]",
+      "shadow-[0_24px_70px_-26px_rgba(0,0,0,0.9),0_12px_26px_-18px_rgba(0,0,0,0.72)]",
+    accentBadge: "bg-[#f4bd45]/[0.10] ring-1 ring-[#f4bd45]/20 text-[#f6c652]",
+    accentDot: "bg-[#f6c652]",
     avatarBg:
-      "bg-gradient-to-br from-[#c8a84b]/20 to-[#a07830]/12 text-[#d6bb66] ring-1 ring-[#c8a84b]/15",
-    logoBg: "bg-[#c8a84b]/[0.08] border-[#c8a84b]/18",
-    activePill: "bg-[#d6bb66]",
+      "bg-gradient-to-br from-[#f4bd45]/24 via-[#b98932]/15 to-[#26344a] text-[#f6c652] ring-1 ring-[#f4bd45]/22",
+    logoBg: "bg-[#f4bd45]/[0.10] border-[#f4bd45]/25",
+    activePill: "bg-[#f6c652] shadow-[0_0_18px_rgba(246,198,82,0.55)]",
     scrollbar:
-      "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent]",
-    unreadDot: "bg-[#d6bb66]",
-    info: "text-[#7aabce]",
-    success: "text-[#6ec99a]",
-    warning: "text-[#d6bb66]",
-    error: "text-[#e08080]",
+      "[scrollbar-width:thin] [scrollbar-color:rgba(246,198,82,0.16)_transparent]",
+    unreadDot: "bg-[#f6c652]",
+    info: "text-[#63a9ff]",
+    success: "text-[#3fd7a0]",
+    warning: "text-[#f6c652]",
+    error: "text-[#ff7383]",
   },
 
- 
-light: {
-  // ── Surfaces ───────────────────────────────
-  page: "bg-[#f1f2f4]",
-  sidebar: "bg-[#f8f8f9]",
-  header: "bg-[#f8f8f9]/88 backdrop-blur-xl",
-  card: "bg-[#ffffff]",
-  input: "bg-[#f3f4f6]",
-  dropdown: "bg-white/95 backdrop-blur-2xl",
-  hover: "hover:bg-black/[0.04]",
-  active: "bg-black/[0.07]",
-  tooltip: "bg-[#27272a]",
-
-  // ── Text ───────────────────────────────────
-  textPrimary: "text-[#18181b]",
-  textSecondary: "text-[#52525b]",
-  textMuted: "text-[#71717a]",
-  textDisabled: "text-[#a1a1aa]",
-  textAccent: "text-[#27272a]",
-  textAccentSub: "text-[#52525b]/75",
-
-  // ── Borders ────────────────────────────────
-  border: "border-[#dedfe3]",
-  borderAccent: "border-[#a1a1aa]/45",
-  divider: "border-[#e5e5e7]/80",
-
-  // ── Shadows ────────────────────────────────
-  cardShadow:
-    "shadow-[0_2px_10px_-4px_rgba(24,24,27,0.12)]",
-  dropShadow:
-    "shadow-[0_14px_38px_-12px_rgba(24,24,27,0.18),0_3px_8px_-3px_rgba(24,24,27,0.08)]",
-
-  // ── Accent elements ────────────────────────
-  accentBadge:
-    "bg-[#f0f0f2] ring-1 ring-[#d4d4d8] text-[#27272a]",
-  accentDot: "bg-[#52525b]",
-  avatarBg:
-    "bg-gradient-to-br from-[#e4e4e7] to-[#f4f4f5] text-[#27272a] ring-1 ring-[#a1a1aa]/35",
-  logoBg:
-    "bg-[#f0f0f2] border-[#d4d4d8]",
-  activePill: "bg-[#27272a]",
-
-  // ── Utility ────────────────────────────────
-  scrollbar:
-    "[scrollbar-width:thin] [scrollbar-color:rgba(39,39,42,0.18)_transparent]",
-  unreadDot: "bg-[#27272a]",
-
-  // ── Status ─────────────────────────────────
-  info: "text-[#52525b]",
-  success: "text-[#3f3f46]",
-  warning: "text-[#71717a]",
-  error: "text-[#27272a]",
-},
- 
-
+  light: {
+    page: "bg-[#f4f1ea]",
+    sidebar: "bg-[#fffdf8]",
+    header: "bg-[#fffdf8]/92 backdrop-blur-xl",
+    card: "bg-[#fffdfa]",
+    input: "bg-[#f5f1e8]",
+    dropdown: "bg-[#fffdfa]/98 backdrop-blur-2xl",
+    hover: "hover:bg-[#7b5d1f]/[0.055]",
+    active: "bg-[#d99e23]/[0.11]",
+    tooltip: "bg-[#20242b]",
+    textPrimary: "text-[#1d2430]",
+    textSecondary: "text-[#555f6f]",
+    textMuted: "text-[#7c8491]",
+    textDisabled: "text-[#a1a6af]",
+    textAccent: "text-[#a36c06]",
+    textAccentSub: "text-[#9b6a12]/80",
+    border: "border-[#e4ddcf]",
+    borderAccent: "border-[#c88c19]/35",
+    divider: "border-[#ece5d9]/95",
+    cardShadow: "shadow-[0_10px_30px_-22px_rgba(49,42,31,0.28)]",
+    dropShadow:
+      "shadow-[0_24px_65px_-30px_rgba(49,42,31,0.34),0_10px_24px_-20px_rgba(49,42,31,0.20)]",
+    accentBadge: "bg-[#f7ecd1] ring-1 ring-[#e7c985] text-[#8f610b]",
+    accentDot: "bg-[#b88016]",
+    avatarBg:
+      "bg-gradient-to-br from-[#f4ddb0] via-[#fff4d9] to-[#ece5d8] text-[#8b5d08] ring-1 ring-[#ddb85f]/38",
+    logoBg: "bg-[#fbefd1] border-[#e5c772]",
+    activePill: "bg-[#b67a0e] shadow-[0_0_14px_rgba(182,122,14,0.24)]",
+    scrollbar:
+      "[scrollbar-width:thin] [scrollbar-color:rgba(125,93,31,0.18)_transparent]",
+    unreadDot: "bg-[#b67a0e]",
+    info: "text-[#3a6fb8]",
+    success: "text-[#198b63]",
+    warning: "text-[#9d6d13]",
+    error: "text-[#c44656]",
+  },
 } as const;
 
 /* ══════════════════════════════════════════════
@@ -1057,7 +1039,7 @@ function NotificationDropdown({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         className={cn(
-          "relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95",
+          "relative flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-200 active:scale-95",
           s.border,
           s.hover,
           focus.ring,
@@ -1321,7 +1303,7 @@ function UserDropdown({
         aria-controls={open ? panelId : undefined}
         aria-label={`حساب کاربری ${displayName}`}
         className={cn(
-          "flex items-center gap-2 rounded-xl border px-2 py-1.5 h-10 transition-all duration-200 active:scale-95",
+          "flex items-center gap-2.5 rounded-2xl border px-2.5 py-1.5 h-11 transition-all duration-200 active:scale-95",
           s.border,
           s.hover,
           focus.ring,
@@ -1873,11 +1855,11 @@ function Sidebar({
         dir="rtl"
         aria-label="ناوبری پنل"
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex flex-col w-[260px]",
+          "fixed inset-y-0 right-0 z-50 flex flex-col w-[258px]",
           "transition-[transform,width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
           open ? "translate-x-0" : "translate-x-full",
-          "lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen",
-          isCollapsed ? "lg:w-[76px]" : "lg:w-[260px]",
+          "lg:translate-x-0 lg:fixed lg:top-0 lg:h-screen",
+          isCollapsed ? "lg:w-[80px]" : "lg:w-[258px]",
           s.sidebar,
           "border-l",
           s.border,
@@ -1886,7 +1868,7 @@ function Sidebar({
         {/* ── Logo ── */}
         <div
           className={cn(
-            "flex h-14 shrink-0 items-center border-b",
+            "flex h-[72px] shrink-0 items-center border-b",
             s.divider,
             collapsed ? "justify-center px-2" : "justify-between px-4",
           )}
@@ -1910,12 +1892,12 @@ function Sidebar({
                 width={100}
                 height={100}
                 alt="logo"
-                className="h-8 w-8 object-contain"
+                className="h-9 w-9 object-contain drop-shadow-[0_0_12px_rgba(246,198,82,0.16)]"
               />
               <div className="text-right">
                 <p
                   className={cn(
-                    "text-sm font-bold leading-none",
+                    "text-[15px] font-black leading-none tracking-tight",
                     s.textPrimary,
                   )}
                 >
@@ -1957,8 +1939,8 @@ function Sidebar({
         <nav
           aria-label="بخش‌ها"
           className={cn(
-            "flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-5",
-            collapsed ? "px-2" : "px-3",
+            "flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-5",
+            collapsed ? "px-2.5" : "px-3.5",
             s.scrollbar,
           )}
         >
@@ -2001,7 +1983,7 @@ function Sidebar({
                           focus.ring,
                           collapsed
                             ? "justify-center h-11 w-11 mx-auto"
-                            : "gap-3 px-3 py-2.5",
+                            : "gap-3 px-3.5 py-2.5 min-h-[44px]",
                           active
                             ? cn(
                                 s.active,
@@ -2251,7 +2233,7 @@ function Header({
     <header
       dir="rtl"
       className={cn(
-        "sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-4 px-4 sm:px-6",
+        "sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between gap-4 px-4 sm:px-6 lg:px-7",
         s.header,
         "border-b",
         s.divider,
@@ -2303,11 +2285,13 @@ function Header({
         </nav>
       </div>
 
+     
+
       <div className="flex items-center gap-2">
         <button
           onClick={toggleTheme}
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95",
+            "flex h-11 w-11 items-center justify-center rounded-2xl border transition-all duration-200 active:scale-95",
             s.border,
             s.hover,
             focus.ring,
@@ -2328,7 +2312,7 @@ function Header({
           <Link
             href="/builder"
             className={cn(
-              "inline-flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all duration-200 active:scale-95",
+              "inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-3.5 text-xs font-bold transition-all duration-200 active:scale-95",
               s.border,
               s.hover,
               s.textAccent,
@@ -2501,8 +2485,16 @@ export default function AdminShell({
   }, []);
 
   return (
-    <div className={cn("flex min-h-screen", s.page)} dir="rtl">
+    <div className={cn("relative flex min-h-screen overflow-x-hidden", s.page)} dir="rtl">
       <style>{animation.keyframes}</style>
+      <div
+        className="pointer-events-none fixed inset-0 z-0 opacity-70"
+        aria-hidden="true"
+        style={{
+          background:
+            "radial-gradient(circle at 70% -10%, rgba(246,198,82,0.055), transparent 32%), radial-gradient(circle at 10% 90%, rgba(80,125,190,0.035), transparent 30%)",
+        }}
+      />
 
       {/* ── Skip to content (keyboard a11y) ── */}
       <a
@@ -2539,7 +2531,12 @@ export default function AdminShell({
         onLogoutRequest={requestLogout}
       />
 
-      <div className="flex flex-1 flex-col min-w-0">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          collapsed ? "lg:mr-[80px]" : "lg:mr-[258px]",
+        )}
+      >
         <Header
           onMenuClick={() => setSidebarOpen((p) => !p)}
           currentSection={resolvedSection}
@@ -2551,7 +2548,7 @@ export default function AdminShell({
           id="admin-main-content"
           tabIndex={-1}
           className={cn(
-            "flex-1 p-4 sm:p-6 lg:p-8 pb-28 lg:pb-8 focus:outline-none",
+            "flex-1 overflow-x-hidden p-4 sm:p-5 lg:p-6 pb-28 lg:pb-6 focus:outline-none",
             s.scrollbar,
           )}
         >

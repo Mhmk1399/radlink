@@ -5,6 +5,7 @@ import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
 import { AuthRequest } from "@/lib/auth/types";
 import Ticket from "@/models/tickets";
 import File from "@/models/files";
+import "@/models/pages";
 import "@/models/users";
 import "@/models/category";
 import { canAccessActorOwner, hasAgentScopedRole } from "@/lib/auth/agentScope";
@@ -30,6 +31,8 @@ function populateTicketById(id: string) {
     return Ticket.findById(id)
         .populate("requester", "firstName lastName phoneNumber email role status")
         .populate("assignee", "firstName lastName phoneNumber email role status")
+        .populate("siteOwner", "firstName lastName phoneNumber email role status")
+        .populate("page", "title url")
         .populate("category", "name")
         .populate("attachments", "filename path url")
         .populate({
@@ -44,16 +47,48 @@ function populateTicketById(id: string) {
         });
 }
 
+async function canAccessTicket(
+    user: NonNullable<AuthRequest["ctx"]["user"]>,
+    ticket: Record<string, unknown>,
+) {
+    if (user.role === "admin" || user.role === "superAdmin") return true;
+
+    const visibleOwnerIds = [
+        getRefId(ticket.requester),
+        getRefId(ticket.siteOwner),
+        getRefId(ticket.assignee),
+    ].filter(Boolean);
+
+    for (const ownerId of visibleOwnerIds) {
+        if (await canAccessActorOwner(user, ownerId)) return true;
+    }
+
+    return false;
+}
+
+function isTicketStaff(
+    user: NonNullable<AuthRequest["ctx"]["user"]>,
+    ticket: Record<string, unknown>,
+) {
+    return (
+        hasAgentScopedRole(user.role) ||
+        user.role === "admin" ||
+        user.role === "superAdmin" ||
+        getRefId(ticket.siteOwner) === String(user._id) ||
+        getRefId(ticket.assignee) === String(user._id)
+    );
+}
+
 export const GET = compose(
     withDB(),
     withAuth(),
     withStatus("active")
 )(async (req: AuthRequest, ctx: RouteContext) => {
     const { id } = await ctx.params;
-    const ticket = await populateTicketById(id).lean() as { requester?: unknown } | null;
+    const ticket = await populateTicketById(id).lean() as Record<string, unknown> | null;
 
     if (!ticket) return NextResponse.json({ message: "تیکت پیدا نشد." }, { status: 404 });
-    if (!(await canAccessActorOwner(req.ctx.user!, getRefId(ticket.requester)))) {
+    if (!(await canAccessTicket(req.ctx.user!, ticket))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
@@ -71,14 +106,11 @@ export const PATCH = compose(
 
     const ticket = await Ticket.findById(id).lean() as Record<string, unknown> | null;
     if (!ticket) return NextResponse.json({ message: "تیکت پیدا نشد." }, { status: 404 });
-    if (!(await canAccessActorOwner(user, getRefId(ticket.requester)))) {
+    if (!(await canAccessTicket(user, ticket))) {
         return NextResponse.json({ message: "شما اجازه انجام این عملیات را ندارید." }, { status: 403 });
     }
 
-    const isStaff =
-        hasAgentScopedRole(user.role) ||
-        user.role === "admin" ||
-        user.role === "superAdmin";
+    const isStaff = isTicketStaff(user, ticket);
     const $set: Record<string, unknown> = {};
     const $unset: Record<string, unknown> = {};
     const update: Record<string, unknown> = {};

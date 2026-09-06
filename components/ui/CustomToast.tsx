@@ -14,6 +14,7 @@ import {
   accentTokens,
   type AccentColor,
 } from "@/lib/design/design-system";
+import { isAccessDeniedError } from "@/lib/errors/accessDenied";
 
 /* ══════════════════════════════════════════════
    TYPES
@@ -390,7 +391,7 @@ export function toast(m: string | ToastOptions) {
 toast.success = (m: string, o?: Partial<ToastOptions>) =>
   add({ ...o, message: m, type: "success" });
 toast.error = (m: string, o?: Partial<ToastOptions>) =>
-  add({ ...o, message: m, type: "error" });
+  add({ ...o, message: m, type: isAccessDeniedError(m) ? "warning" : "error" });
 toast.warning = (m: string, o?: Partial<ToastOptions>) =>
   add({ ...o, message: m, type: "warning" });
 toast.info = (m: string, o?: Partial<ToastOptions>) =>
@@ -421,9 +422,14 @@ toast.promise = async <T,>(
     });
     return d;
   } catch (e) {
+    const errorMessage =
+      typeof msgs.error === "function" ? msgs.error(e) : msgs.error;
     toast.update(id, {
-      type: "error",
-      message: typeof msgs.error === "function" ? msgs.error(e) : msgs.error,
+      type:
+        isAccessDeniedError(e) || isAccessDeniedError(errorMessage)
+          ? "warning"
+          : "error",
+      message: errorMessage,
     });
     throw e;
   }

@@ -26,7 +26,6 @@ export const productCardsSchema: BlockSchema = {
             type: "repeater",
             itemLabel: "محصول",
             addLabel: "افزودن محصول جدید",
-            maxItems: 20,
             fields: [
                 {
                     key: "name",
@@ -116,8 +115,10 @@ export const productCardsSchema: BlockSchema = {
             allowedStyleKeys: ["color", "fontSize"],
         },
         scrollArea: {
-            label: "ناحیه اسکرول",
+            label: "چینش محصولات",
             allowedStyleKeys: [
+                "layoutMode",
+                "gridColumns",
                 "backgroundColor",
                 "borderRadius",
                 "borderColor",

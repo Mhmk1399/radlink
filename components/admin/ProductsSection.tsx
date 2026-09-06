@@ -267,6 +267,7 @@ export default function ProductsSection({
   const canUpdateProducts = can("admin.products", "update");
   const canDeleteProducts = can("admin.products", "delete");
   const canViewProducts = can("admin.products", "view");
+  const canViewUsers = can("admin.users", "view");
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     title: string;
@@ -339,7 +340,7 @@ export default function ProductsSection({
         );
 
         const usersPromise =
-          currentUser.role === "admin" || currentUser.role === "superAdmin"
+          canViewUsers
             ? loadPagedOptions("/api/users", "users", (optionUser) => {
                 const value = getId(optionUser);
                 if (!value) return null;
@@ -382,7 +383,7 @@ export default function ProductsSection({
 
     void loadFilters();
     return () => controller.abort();
-  }, [headers, user]);
+  }, [canViewUsers, headers, user]);
 
   const columns: ColumnDef<ProductRow>[] = useMemo(
     () => [
@@ -449,8 +450,8 @@ export default function ProductsSection({
         label: "مالک محصول",
         editable: false,
         sortable: true,
-        filterable: true,
-        filterSearchable: true,
+        filterable: canViewUsers && ownerOptions.length > 0,
+        filterSearchable: canViewUsers,
         options: ownerOptions,
         hideOnMobile: true,
         render: (_, row) => (
@@ -528,7 +529,7 @@ export default function ProductsSection({
         ),
       },
     ],
-    [openPreviewImage, ownerOptions, pageOptions, t],
+    [canViewUsers, openPreviewImage, ownerOptions, pageOptions, t],
   );
 
   const transformResponse = useMemo(

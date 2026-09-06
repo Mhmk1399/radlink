@@ -62,6 +62,7 @@ import {
   sanitizeIdentityField,
   validateIdentityField,
 } from "@/lib/validation/identityFields";
+import { isAccessDeniedError } from "@/lib/errors/accessDenied";
 import type { CSSProperties } from "react";
 type ThemeTokens = typeof themeTokens.dark | typeof themeTokens.light;
 
@@ -1849,23 +1850,25 @@ function TextFilter({
   label,
   value,
   onChange,
+  resetToken,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  resetToken: number;
 }) {
   const { t } = useTableTheme();
   const [open, setOpen] = useState(false);
-  const [draftValue, setDraftValue] = useState(value);
+  const [draftState, setDraftState] = useState({
+    value,
+    sourceValue: value,
+    resetToken,
+  });
+  const draftValue =
+    draftState.sourceValue === value && draftState.resetToken === resetToken
+      ? draftState.value
+      : value;
   const debouncedDraftValue = useDebounce(draftValue, 350);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDraftValue(value);
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [value]);
 
   useEffect(() => {
     /*
@@ -1874,21 +1877,38 @@ function TextFilter({
      * در موبایل فقط دکمه "اعمال" commit می‌کند.
      */
     if (open) return;
+    if (draftState.sourceValue !== value) return;
+    if (draftState.resetToken !== resetToken) return;
 
     if (debouncedDraftValue !== value) {
       onChange(debouncedDraftValue);
     }
-  }, [debouncedDraftValue, onChange, open, value]);
+  }, [
+    debouncedDraftValue,
+    draftState.resetToken,
+    draftState.sourceValue,
+    onChange,
+    open,
+    resetToken,
+    value,
+  ]);
 
   const clearValue = useCallback(() => {
-    setDraftValue("");
+    setDraftState({ value: "", sourceValue: value, resetToken });
 
     // Desktop: فوری پاک شود
     // Mobile dialog: صبر کن تا کاربر Apply بزند
     if (!open && value) {
       onChange("");
     }
-  }, [onChange, open, value]);
+  }, [onChange, open, resetToken, value]);
+
+  const updateDraftValue = useCallback(
+    (nextValue: string) => {
+      setDraftState({ value: nextValue, sourceValue: value, resetToken });
+    },
+    [resetToken, value],
+  );
 
   const applyValue = useCallback(() => {
     if (draftValue !== value) onChange(draftValue);
@@ -1931,9 +1951,9 @@ function TextFilter({
             </span>
             <input
               autoFocus
-              type="search"
+              type="text"
               value={draftValue}
-              onChange={(event) => setDraftValue(event.target.value)}
+              onChange={(event) => updateDraftValue(event.target.value)}
               placeholder={`فیلتر ${label}`}
               aria-label={`فیلتر متنی ${label}`}
               className={cn(
@@ -1983,9 +2003,9 @@ function TextFilter({
           <Icon.Search />
         </span>
         <input
-          type="search"
+          type="text"
           value={draftValue}
-          onChange={(event) => setDraftValue(event.target.value)}
+          onChange={(event) => updateDraftValue(event.target.value)}
           placeholder={`فیلتر ${label}`}
           aria-label={`فیلتر متنی ${label}`}
           className={cn(
@@ -2185,11 +2205,17 @@ function DateRangeFilter({
   const { isDark, t } = useTableTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [draftRange, setDraftRange] = useState<DateRange>(value);
+  const committedRangeRef = useRef<DateRange>(value);
 
   useEffect(() => {
-    if (!mobileOpen) {
+    committedRangeRef.current = value;
+    if (mobileOpen) return;
+
+    const timer = window.setTimeout(() => {
       setDraftRange(value);
-    }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [mobileOpen, value]);
 
   const isSameRange = (left: DateRange, right: DateRange) => {
@@ -2201,10 +2227,15 @@ function DateRangeFilter({
     return leftFrom === rightFrom && leftTo === rightTo;
   };
 
-  const commitDraftRange = () => {
-    if (!isSameRange(draftRange, value)) {
-      onChange(draftRange);
+  const commitRange = (range: DateRange) => {
+    if (!isSameRange(range, committedRangeRef.current)) {
+      committedRangeRef.current = range;
+      onChange(range);
     }
+  };
+
+  const commitDraftRange = () => {
+    commitRange(draftRange);
   };
   const hasRange = value.from || value.to;
   const formatRange = () => {
@@ -2253,16 +2284,20 @@ function DateRangeFilter({
                     : undefined
               }
               onChange={(dates) => {
-                if (Array.isArray(dates)) {
-                  setDraftRange({
+                const nextRange = Array.isArray(dates)
+                  ? {
                     from: dates[0] ? new DateObject(dates[0]) : null,
                     to: dates[1] ? new DateObject(dates[1]) : null,
-                  });
-                } else {
-                  setDraftRange({
+                  }
+                  : {
                     from: null,
                     to: null,
-                  });
+                  };
+
+                setDraftRange(nextRange);
+                if (nextRange.from && nextRange.to) {
+                  commitRange(nextRange);
+                  setMobileOpen(false);
                 }
               }}
               range
@@ -2322,16 +2357,19 @@ function DateRangeFilter({
                 : undefined
           }
           onChange={(dates) => {
-            if (Array.isArray(dates)) {
-              setDraftRange({
+            const nextRange = Array.isArray(dates)
+              ? {
                 from: dates[0] ? new DateObject(dates[0]) : null,
                 to: dates[1] ? new DateObject(dates[1]) : null,
-              });
-            } else {
-              setDraftRange({
+              }
+              : {
                 from: null,
                 to: null,
-              });
+              };
+
+            setDraftRange(nextRange);
+            if (nextRange.from && nextRange.to) {
+              commitRange(nextRange);
             }
           }}
           onClose={commitDraftRange}
@@ -2427,6 +2465,7 @@ function FilterControls<T extends Record<string, unknown>>({
   dateRanges,
   filterOptions,
   filterOptionLabels,
+  resetToken,
   setFilters,
   setDateRanges,
   activeFiltersCount,
@@ -2439,6 +2478,7 @@ function FilterControls<T extends Record<string, unknown>>({
   dateRanges: Record<string, DateRange>;
   filterOptions: Record<string, string[]>;
   filterOptionLabels: Record<string, Record<string, string>>;
+  resetToken: number;
   setFilters: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   setDateRanges: React.Dispatch<
     React.SetStateAction<Record<string, DateRange>>
@@ -2469,6 +2509,7 @@ function FilterControls<T extends Record<string, unknown>>({
               label={col.label}
               value={value}
               onChange={onChange}
+              resetToken={resetToken}
             />
           );
         }
@@ -2779,34 +2820,45 @@ function ErrorBanner({
   onRetry: () => void;
 }) {
   const { isDark } = useTheme();
+  const isAccessDenied = isAccessDeniedError(error);
+  const tone = isAccessDenied
+    ? {
+        border: isDark
+          ? "border-amber-400/20 bg-amber-400/8"
+          : "border-amber-500/22 bg-amber-50",
+        text: isDark ? "text-amber-200" : "text-amber-700",
+        muted: isDark ? "text-amber-100/70" : "text-amber-800/65",
+        button: isDark
+          ? "border-amber-300/25 text-amber-200 hover:bg-amber-400/10"
+          : "border-amber-500/25 text-amber-700 hover:bg-amber-100/70",
+      }
+    : {
+        border: isDark
+          ? "border-[#c44040]/15 bg-[#c44040]/6"
+          : "border-[#c44040]/12 bg-[#fce8e8]",
+        text: isDark ? "text-[#e87c7c]" : "text-[#c44040]",
+        muted: isDark ? "text-[#e87c7c]/60" : "text-[#c44040]/60",
+        button: isDark
+          ? "border-[#c44040]/20 text-[#e87c7c] hover:bg-[#c44040]/10"
+          : "border-[#c44040]/15 text-[#c44040] hover:bg-[#c44040]/6",
+      };
+
   return (
     <div
       role="alert"
       className={cn(
         "mb-3 flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center",
-        isDark
-          ? "border-[#c44040]/15 bg-[#c44040]/6"
-          : "border-[#c44040]/12 bg-[#fce8e8]",
+        tone.border,
       )}
     >
-      <div className={isDark ? "text-[#e87c7c]" : "text-[#c44040]"}>
-        <Icon.AlertCircle />
+      <div className={tone.text}>
+        {isAccessDenied ? <Icon.AlertTriangle /> : <Icon.AlertCircle />}
       </div>
       <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "text-sm font-medium",
-            isDark ? "text-[#e87c7c]" : "text-[#c44040]",
-          )}
-        >
-          خطا در دریافت داده
+        <p className={cn("text-sm font-medium", tone.text)}>
+          {isAccessDenied ? "دسترسی محدود" : "خطا در دریافت داده"}
         </p>
-        <p
-          className={cn(
-            "mt-0.5 text-xs leading-5 break-words",
-            isDark ? "text-[#e87c7c]/60" : "text-[#c44040]/60",
-          )}
-        >
+        <p className={cn("mt-0.5 text-xs leading-5 break-words", tone.muted)}>
           {error.message}
         </p>
       </div>
@@ -2816,9 +2868,7 @@ function ErrorBanner({
         aria-label="تلاش مجدد برای دریافت داده"
         className={cn(
           "inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all duration-200 sm:h-8 sm:w-auto",
-          isDark
-            ? "border-[#c44040]/20 text-[#e87c7c] hover:bg-[#c44040]/10"
-            : "border-[#c44040]/15 text-[#c44040] hover:bg-[#c44040]/6",
+          tone.button,
           focus.ring,
         )}
       >
@@ -3030,6 +3080,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [dateRanges, setDateRanges] = useState<Record<string, DateRange>>({});
+  const [filterResetToken, setFilterResetToken] = useState(0);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [portalTarget] = useState<HTMLElement | null>(() =>
     typeof document === "undefined" ? null : document.body,
@@ -3381,11 +3432,14 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     sortCollator,
   ]);
 
-  const totalItems = serverSide ? serverTotal : filtered.length;
+  const totalItems = serverSide ? Math.max(0, serverTotal) : filtered.length;
   const totalPages = serverSide
-    ? serverTotalPages
+    ? Math.max(1, serverTotalPages)
     : Math.max(1, Math.ceil(filtered.length / currentPageSize));
-  const currentPage = Math.min(page, totalPages);
+  const currentPage = Math.max(1, Math.min(page, totalPages));
+  const hasActiveTableQuery = Boolean(debouncedSearch) || activeFiltersCount > 0;
+  const shouldShowPagination =
+    totalItems > 0 && (serverSide || totalPages > 1 || hasActiveTableQuery);
 
   const paginatedRows = useMemo(() => {
     if (serverSide) return data;
@@ -3696,6 +3750,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     setFilters({});
     setDateRanges({});
     setSearch("");
+    setFilterResetToken((token) => token + 1);
   }, []);
 
   const closeMobileFilters = useCallback(() => {
@@ -3855,6 +3910,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       dateRanges={dateRanges}
       filterOptions={filterOptions}
       filterOptionLabels={filterOptionLabels}
+      resetToken={filterResetToken}
       setFilters={setFiltersAndResetPage}
       setDateRanges={setDateRangesAndResetPage}
       activeFiltersCount={activeFiltersCount}
@@ -4093,6 +4149,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         label={col.label}
                         value={value}
                         onChange={onChange}
+                        resetToken={filterResetToken}
                       />
                     );
                   }
@@ -4879,7 +4936,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             )}
           </div>
           {/* ── Pagination ── */}
-          {totalPages > 1 && (
+          {shouldShowPagination && (
             <nav
               aria-label="صفحه‌بندی"
               className={cn(

@@ -14,7 +14,6 @@ export const storyHighlightsSchema: BlockSchema = {
             label: "استوری‌ها",
             type: "repeater",
             itemLabel: "استوری",
-            maxItems: 20,
             fields: [
                 { key: "title", label: "عنوان", type: "text" },
                 { key: "caption", label: "کپشن", type: "textarea" },

@@ -113,7 +113,7 @@ type AdminPageRow = Omit<Page, "blocks"> & {
   visitorCount?: number;
 };
 
-type BrandingImageKind = "logo" | "favicon" | "trustBadge";
+type BrandingImageKind = "logo" | "favicon" | "footerLogo" | "trustBadge";
 
 type UserOptionSource = {
   _id?: unknown;
@@ -695,11 +695,15 @@ export default function PagesSection({
   const canEditHomeScreenIcon = user?.role === "superAdmin";
   const canEditSitemapIndexing = user?.role === "superAdmin";
   const expiryAlertsUserId = user?.id ?? "";
+  const canViewUsers = can("admin.users", "view");
 
-  const shouldLoadUsers = !isAccessLoading && user !== null && canManageOwners;
+  const shouldLoadUsers =
+    !isAccessLoading && user !== null && canManageOwners && canViewUsers;
 
-  const canEditOwner = !isAccessLoading && user !== null && canManageOwners;
-  const canAssignPages = !isAccessLoading && user !== null && canManageOwners;
+  const canEditOwner =
+    !isAccessLoading && user !== null && canManageOwners && canViewUsers;
+  const canAssignPages =
+    !isAccessLoading && user !== null && canManageOwners && canViewUsers;
   const canEditExpiration =
     !isAccessLoading && user !== null && canManageOwners;
   const canCreatePages = !isAccessLoading && user !== null;
@@ -717,6 +721,7 @@ export default function PagesSection({
   const [brandingLogo, setBrandingLogo] = useState("");
   const [brandingFavicon, setBrandingFavicon] = useState("");
   const [brandingTrustBadge, setBrandingTrustBadge] = useState("");
+  const [brandingFooterLogo, setBrandingFooterLogo] = useState("");
   const [brandingFooterDescription, setBrandingFooterDescription] =
     useState("");
   const [brandingFooterBg, setBrandingFooterBg] = useState("");
@@ -1075,6 +1080,7 @@ export default function PagesSection({
   function getCurrentBrandingImage(kind: BrandingImageKind) {
     if (kind === "logo") return brandingLogo;
     if (kind === "favicon") return brandingFavicon;
+    if (kind === "footerLogo") return brandingFooterLogo;
     return brandingTrustBadge;
   }
 
@@ -1089,12 +1095,14 @@ export default function PagesSection({
     }
 
     const footer = getBrandingFooter();
+    if (kind === "footerLogo") return footer.logo;
     return footer.trustBadgeImage;
   }
 
   function setBrandingImage(kind: BrandingImageKind, url: string) {
     if (kind === "logo") setBrandingLogo(url);
     else if (kind === "favicon") setBrandingFavicon(url);
+    else if (kind === "footerLogo") setBrandingFooterLogo(url);
     else setBrandingTrustBadge(url);
   }
 
@@ -1105,6 +1113,7 @@ export default function PagesSection({
     setBrandingPage(row);
     setBrandingLogo(typeof row.logo === "string" ? row.logo : "");
     setBrandingFavicon(typeof row.favicon === "string" ? row.favicon : "");
+    setBrandingFooterLogo(footer.logo);
     setBrandingTrustBadge(footer.trustBadgeImage);
     setBrandingFooterDescription(footer.description);
     setBrandingFooterBg(footer.backgroundColor);
@@ -1183,6 +1192,10 @@ export default function PagesSection({
       brandingFavicon && brandingFavicon !== originalFavicon
         ? brandingFavicon
         : "",
+      brandingFooterLogo &&
+      brandingFooterLogo !== getBrandingFooter().logo
+        ? brandingFooterLogo
+        : "",
       brandingTrustBadge &&
       brandingTrustBadge !== getBrandingFooter().trustBadgeImage
         ? brandingTrustBadge
@@ -1220,7 +1233,7 @@ export default function PagesSection({
               }
             : {}),
           footer: {
-            logo: "",
+            logo: brandingFooterLogo,
             trustBadgeImage: brandingTrustBadge,
             description: brandingFooterDescription,
             backgroundColor: brandingFooterBg,
@@ -1618,6 +1631,11 @@ export default function PagesSection({
                       value: brandingFavicon,
                     },
                     {
+                      kind: "footerLogo" as const,
+                      label: "لوگوی فوتر",
+                      value: brandingFooterLogo,
+                    },
+                    {
                       kind: "trustBadge" as const,
                       label: "تصویر نماد",
                       value: brandingTrustBadge,
@@ -1715,7 +1733,7 @@ export default function PagesSection({
                     brandingModalTheme.textMuted,
                   )}
                 >
-                  لوگوی فوتر به صورت خودکار از لوگوی اصلی صفحه استفاده می‌کند.
+                  اگر لوگوی فوتر خالی باشد، فوتر از لوگوی اصلی صفحه استفاده می‌کند.
                 </div>
 
                 <label className="block">

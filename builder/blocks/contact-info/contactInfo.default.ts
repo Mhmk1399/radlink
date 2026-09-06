@@ -28,7 +28,15 @@ export function createDefaultContactInfoBlock(order: number): PageBlock {
             primaryButtonText: "تماس تلفنی",
             secondaryButtonText: "ارسال پیام",
             addressLabel: "آدرس",
-            contactItems: [],
+            contactItems: [
+                {
+                    id: "default-landline",
+                    type: "landline",
+                    label: "تلفن ثابت",
+                    value: "",
+                    enabled: true,
+                },
+            ],
             showDescription: true,
             showPhone: true,
             showWhatsapp: true,

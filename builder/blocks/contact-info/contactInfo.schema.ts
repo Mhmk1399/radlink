@@ -2,6 +2,7 @@ import type { BlockSchema } from "@/types/blocks/builder.types";
 
 const contactItemTypeOptions = [
   { value: "phone", label: "تلفن" },
+  { value: "landline", label: "تلفن ثابت" },
   { value: "whatsapp", label: "واتساپ" },
   { value: "email", label: "ایمیل" },
   { value: "address", label: "آدرس" },
@@ -36,10 +37,10 @@ export const contactInfoSchema: BlockSchema = {
           key: "type",
           label: "نوع راه تماس",
           type: "select",
-          defaultValue: "phone",
+          defaultValue: "landline",
           options: contactItemTypeOptions,
         },
-        { key: "label", label: "لیبل", type: "text" },
+        { key: "label", label: "لیبل", type: "text", defaultValue: "تلفن ثابت" },
         { key: "value", label: "مقدار", type: "text" },
         { key: "enabled", label: "نمایش", type: "boolean", defaultValue: true },
         { key: "backgroundColor", label: "رنگ آیتم", type: "color" },

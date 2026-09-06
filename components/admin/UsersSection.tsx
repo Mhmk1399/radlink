@@ -2,15 +2,24 @@
 // components/sections/UsersSection.tsx
 // ─────────────────────────────────────────────────────────────────
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
 import { gradients } from "@/lib/design/tokens";
 import { useTheme } from "@/contexts/ThemeContext";
-import { FaUsers, FaArrowRight, FaPowerOff } from "react-icons/fa6";
+import {
+  FaArrowRight,
+  FaArrowUpRightFromSquare,
+  FaFileLines,
+  FaPenToSquare,
+  FaPowerOff,
+  FaRotateRight,
+  FaUsers,
+} from "react-icons/fa6";
 import type { ColumnDef } from "@/types/table";
 import DynamicTable from "../global/DynamicTable";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 import { superAdminBadgeClass } from "@/lib/userRole";
 import type { UserRole, UserStatus } from "@/types/index";
 import { toast } from "@/components/ui/CustomToast";
@@ -62,6 +71,7 @@ type UserRow = {
   id: string;
   firstName?: string;
   lastName?: string;
+  collectionName?: string;
   fullName?: string;
   phoneNumber: string;
   email?: string;
@@ -76,6 +86,18 @@ type UserRow = {
     blocks: number;
     pages: number;
   };
+  limitsOverrideEnabled?: boolean;
+  limitsSource?: "user" | "agent";
+  ownLimits?: {
+    files: number;
+    blocks: number;
+    pages: number;
+  };
+  inheritedLimits?: {
+    files: number;
+    blocks: number;
+    pages: number;
+  } | null;
   lastLoginAt?: string;
   lastOtpRequestAt?: string;
   phoneVerifiedAt?: string;
@@ -89,6 +111,7 @@ type UserRow = {
   updatedById?: string;
   createdAt: string;
   updatedAt: string;
+  pagesQuickView?: string;
   "limits.files"?: number;
   "limits.blocks"?: number;
   "limits.pages"?: number;
@@ -189,6 +212,50 @@ function VerifyBadge({ verified }: { verified: boolean }) {
   );
 }
 
+const DEFAULT_USER_AVATAR = `data:image/svg+xml,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <rect width="96" height="96" rx="48" fill="#1f2937"/>
+  <circle cx="48" cy="36" r="16" fill="#94a3b8"/>
+  <path d="M22 80c4.5-14.5 14.4-22 26-22s21.5 7.5 26 22" fill="#94a3b8"/>
+</svg>
+`)}`;
+
+function getAvatarImage(value: unknown) {
+  return typeof value === "string" && value.trim()
+    ? value.trim()
+    : DEFAULT_USER_AVATAR;
+}
+
+function UserAvatar({
+  src,
+  label,
+  onPreview,
+}: {
+  src?: string;
+  label: string;
+  onPreview: (src: string, title: string) => void;
+}) {
+  const image = getAvatarImage(src);
+  const hasCustomAvatar = typeof src === "string" && src.trim().length > 0;
+  const title = hasCustomAvatar
+    ? `تصویر پروفایل ${label}`
+    : `تصویر پیش‌فرض ${label}`;
+
+  return (
+    <button
+      type="button"
+      aria-label={`نمایش ${title}`}
+      title={`نمایش ${title}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onPreview(image, title);
+      }}
+      className="inline-flex h-11 w-11 shrink-0 cursor-pointer rounded-full border border-white/10 bg-slate-800 bg-cover bg-center shadow-[0_0_0_3px_rgba(255,255,255,0.03)] transition hover:scale-105 hover:border-[#D4AF37]/45 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+      style={{ backgroundImage: `url("${image.replace(/"/g, "%22")}")` }}
+    />
+  );
+}
+
 function getObjectId(value: unknown) {
   if (typeof value === "string") return value;
   if (!value || typeof value !== "object") return "";
@@ -232,11 +299,16 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
       typeof item.firstName === "string" ? item.firstName.trim() : undefined,
     lastName:
       typeof item.lastName === "string" ? item.lastName.trim() : undefined,
+    collectionName:
+      typeof item.collectionName === "string"
+        ? item.collectionName.trim()
+        : undefined,
     limits: {
       files: Math.max(0, Number(item["limits.files"]) || 0),
       blocks: Math.max(0, Number(item["limits.blocks"]) || 0),
       pages: Math.max(0, Number(item["limits.pages"]) || 0),
     },
+    limitsOverrideEnabled: Boolean(item.limitsOverrideEnabled),
   };
 
   delete payload.fullName;
@@ -244,6 +316,10 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
   delete payload.createdById;
   delete payload.updatedBy;
   delete payload.updatedById;
+  delete payload.ownLimits;
+  delete payload.inheritedLimits;
+  delete payload.limitsSource;
+  delete payload.pagesQuickView;
   delete payload["limits.files"];
   delete payload["limits.blocks"];
   delete payload["limits.pages"];
@@ -259,6 +335,9 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
     typeof item.agentid === "string" && item.agentid.trim()
       ? item.agentid.trim()
       : "";
+  payload.limitsOverrideEnabled = payload.agentid
+    ? Boolean(item.limitsOverrideEnabled)
+    : true;
 
   return payload;
 }
@@ -266,6 +345,260 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
 /* ══════════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════════ */
+
+type UserPageSummary = {
+  id: string;
+  title: string;
+  url: string;
+  relation: "created" | "assigned" | "both";
+  isPublished?: boolean;
+};
+
+function getPageRelationLabel(relation: UserPageSummary["relation"]) {
+  if (relation === "both") return "سازنده و صاحب سایت";
+  if (relation === "assigned") return "صاحب سایت";
+  return "سازنده صفحه";
+}
+
+function normalizePageSummary(
+  value: unknown,
+  relation: UserPageSummary["relation"],
+): UserPageSummary | null {
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  const id = String(record._id ?? record.id ?? "");
+  if (!id) return null;
+
+  return {
+    id,
+    title: String(record.title ?? record.url ?? "صفحه بدون عنوان"),
+    url: typeof record.url === "string" ? record.url : "",
+    relation,
+    isPublished:
+      typeof record.isPublished === "boolean" ? record.isPublished : undefined,
+  };
+}
+
+async function fetchUserPagesByRelation(
+  userId: string,
+  relation: "created" | "assigned",
+  headers?: Record<string, string>,
+) {
+  const queryKey = relation === "created" ? "ownerId" : "assignedUserId";
+  const pages: UserPageSummary[] = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const response = await fetch(
+      `/api/pages?${queryKey}=${encodeURIComponent(userId)}&page=${page}&limit=100`,
+      { headers },
+    );
+    const json = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        typeof json?.message === "string"
+          ? json.message
+          : "دریافت صفحات کاربر با خطا مواجه شد.",
+      );
+    }
+
+    const batch = Array.isArray(json?.pages) ? json.pages : [];
+    pages.push(
+      ...batch
+        .map((item: unknown) => normalizePageSummary(item, relation))
+        .filter((item: UserPageSummary | null): item is UserPageSummary =>
+          Boolean(item),
+        ),
+    );
+
+    total = typeof json?.total === "number" ? json.total : pages.length;
+    page += 1;
+  } while (pages.length < total && page <= 50);
+
+  return pages;
+}
+
+function UserPagesLazyPanel({
+  userId,
+  headers,
+  compact = false,
+}: {
+  userId?: string;
+  headers?: Record<string, string>;
+  compact?: boolean;
+}) {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pages, setPages] = useState<UserPageSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  async function loadPages(event?: MouseEvent) {
+    event?.stopPropagation();
+    if (!userId || isLoading) return;
+
+    setOpen(true);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [createdPages, assignedPages] = await Promise.all([
+        fetchUserPagesByRelation(userId, "created", headers),
+        fetchUserPagesByRelation(userId, "assigned", headers),
+      ]);
+      const merged = new Map<string, UserPageSummary>();
+
+      [...createdPages, ...assignedPages].forEach((page) => {
+        const previous = merged.get(page.id);
+        merged.set(page.id, {
+          ...(previous ?? page),
+          relation: previous ? "both" : page.relation,
+        });
+      });
+
+      setPages(Array.from(merged.values()));
+      setLoaded(true);
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error
+          ? loadError.message
+          : "دریافت صفحات کاربر با خطا مواجه شد.";
+      setError(message);
+      toast.warning(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  if (!userId) {
+    return <span className={cn("text-xs", t.textDisabled)}>کاربر نامشخص</span>;
+  }
+
+  const buttonClass = cn(
+    "inline-flex items-center justify-center gap-2 rounded-xl border text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60",
+    compact ? "h-9 px-3" : "h-10 w-full px-4 sm:w-auto",
+    isDark
+      ? "border-sky-400/20 bg-sky-500/[0.08] text-sky-300 hover:bg-sky-500/15"
+      : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100",
+  );
+
+  return (
+    <div className={cn("space-y-2", compact ? "min-w-[8rem]" : "sm:col-span-2")}>
+      <button
+        type="button"
+        onClick={
+          open && loaded
+            ? (event) => {
+                event.stopPropagation();
+                setOpen((value) => !value);
+              }
+            : loadPages
+        }
+        disabled={isLoading}
+        className={buttonClass}
+      >
+        {isLoading ? (
+          <FaRotateRight className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <FaFileLines className="h-3.5 w-3.5" />
+        )}
+        <span>{compact ? "صفحات" : "دیدن صفحات کاربر"}</span>
+      </button>
+
+      {open && compact && loaded ? (
+        <span className={cn("block text-[11px]", t.textDisabled)}>
+          {pages.length.toLocaleString("fa-IR")} صفحه
+        </span>
+      ) : null}
+
+      {open && !compact ? (
+        <div className={cn("rounded-xl border p-3", t.inputBg, t.borderSubtle)}>
+          {isLoading ? (
+            <p className={cn("text-xs", t.textMuted)}>در حال دریافت صفحات...</p>
+          ) : error ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-amber-400">{error}</p>
+              <button
+                type="button"
+                onClick={loadPages}
+                className={cn("shrink-0 rounded-lg px-2 py-1 text-xs", t.hoverBg)}
+              >
+                تلاش دوباره
+              </button>
+            </div>
+          ) : pages.length === 0 ? (
+            <p className={cn("text-xs", t.textMuted)}>
+              صفحه‌ای برای این کاربر ثبت نشده است.
+            </p>
+          ) : (
+            <div className="max-h-64 space-y-2 overflow-y-auto pe-1">
+              {pages.map((page) => {
+                const viewHref = page.url
+                  ? `/${page.url.replace(/^\/+/, "")}`
+                  : "";
+
+                return (
+                  <div
+                    key={page.id}
+                    className={cn(
+                      "flex flex-col gap-2 rounded-lg border px-3 py-2 sm:flex-row sm:items-center sm:justify-between",
+                      t.borderSubtle,
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className={cn("truncate text-sm font-bold", t.textPrimary)}>
+                        {page.title}
+                      </p>
+                      <p className={cn("mt-0.5 text-[11px]", t.textDisabled)}>
+                        {getPageRelationLabel(page.relation)}
+                        {page.isPublished === false ? " · پیش‌نویس" : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <a
+                        href={`/builder/${page.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={cn(
+                          "inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs transition",
+                          t.hoverBg,
+                          t.textAccent,
+                        )}
+                      >
+                        <FaPenToSquare className="h-3 w-3" />
+                        ویرایش
+                      </a>
+                      {viewHref ? (
+                        <a
+                          href={viewHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={cn(
+                            "inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs transition",
+                            t.hoverBg,
+                            t.textMuted,
+                          )}
+                        >
+                          <FaArrowUpRightFromSquare className="h-3 w-3" />
+                          دیدن
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function UsersSection({
   navigate,
@@ -277,8 +610,26 @@ export default function UsersSection({
   const { can, user: authUser } = useAccess();
   const canUpdateUsers = can("admin.users", "update");
   const isNormalUser = authUser?.role === "user";
-  const canCreateUsers = !isNormalUser && can("admin.users", "create");
+  const canCreateUsers = can("admin.users", "create");
+  const canViewAgents = can("admin.agents", "view");
   const canDeleteUsers = !isNormalUser && can("admin.users", "delete");
+  const hasFullUserCreateAccess =
+    canCreateUsers && !hasAgentScopedRole(authUser?.role);
+  const hasFullUserEditAccess =
+    canUpdateUsers && !hasAgentScopedRole(authUser?.role);
+  const roleOptions = useMemo(
+    () =>
+      [
+        { label: "کاربر", value: "user" },
+        { label: "نماینده", value: "agent" },
+        { label: "مدیر نماینده", value: "agentManager" },
+        { label: "مدیر", value: "admin" },
+        ...(authUser?.role === "superAdmin"
+          ? [{ label: "R A D", value: "superAdmin" }]
+          : []),
+      ],
+    [authUser?.role],
+  );
 
   /* ── Auth header ─────────────────────────── */
   const token =
@@ -294,6 +645,14 @@ export default function UsersSection({
   const [creatorOptions, setCreatorOptions] = useState<SelectOption[]>([]);
   const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    title: string;
+  } | null>(null);
+  const openPreviewImage = useCallback((src: string, title: string) => {
+    setPreviewImage({ src, title });
+  }, []);
+  const closePreviewImage = useCallback(() => setPreviewImage(null), []);
 
   async function toggleUserStatus(row: UserRow) {
     if (!row._id || togglingStatusId) return;
@@ -339,14 +698,23 @@ export default function UsersSection({
     async function loadAgentOptions() {
       if (
         !token ||
-        (authUser?.role !== "admin" && authUser?.role !== "superAdmin")
+        (!hasFullUserCreateAccess &&
+          !hasFullUserEditAccess &&
+          !canViewAgents)
       ) {
         if (!ignore) setAgentOptions([]);
         return;
       }
 
       try {
-        const response = await fetch("/api/agents?limit=100", { headers });
+        const canReadFullAgentList =
+          canViewAgents || authUser?.role === "superAdmin";
+        const response = await fetch(
+          canReadFullAgentList
+            ? "/api/agents?limit=100"
+            : "/api/agents?limit=100&mode=user-form-options",
+          { headers },
+        );
         const json = await response.json().catch(() => null);
 
         if (!response.ok) {
@@ -391,7 +759,14 @@ export default function UsersSection({
     return () => {
       ignore = true;
     };
-  }, [authUser?.role, headers, token]);
+  }, [
+    authUser?.role,
+    canViewAgents,
+    hasFullUserEditAccess,
+    hasFullUserCreateAccess,
+    headers,
+    token,
+  ]);
 
   useEffect(() => {
     let ignore = false;
@@ -497,6 +872,14 @@ export default function UsersSection({
             u.limits && typeof u.limits === "object"
               ? (u.limits as Record<string, unknown>)
               : {};
+          const ownLimits =
+            u.ownLimits && typeof u.ownLimits === "object"
+              ? (u.ownLimits as Record<string, unknown>)
+              : limits;
+          const inheritedLimits =
+            u.inheritedLimits && typeof u.inheritedLimits === "object"
+              ? (u.inheritedLimits as Record<string, unknown>)
+              : null;
           const userId = String(u._id ?? u.id ?? "");
           const agentId = getObjectId(u.agentid);
           const agentLabel =
@@ -535,6 +918,25 @@ export default function UsersSection({
               blocks: Number(limits.blocks ?? 0),
               pages: Number(limits.pages ?? 0),
             },
+            ownLimits: {
+              files: Number(ownLimits.files ?? 0),
+              blocks: Number(ownLimits.blocks ?? 0),
+              pages: Number(ownLimits.pages ?? 0),
+            },
+            inheritedLimits: inheritedLimits
+              ? {
+                  files: Number(inheritedLimits.files ?? 0),
+                  blocks: Number(inheritedLimits.blocks ?? 0),
+                  pages: Number(inheritedLimits.pages ?? 0),
+                }
+              : null,
+            limitsOverrideEnabled: Boolean(u.limitsOverrideEnabled),
+            limitsSource:
+              u.limitsSource === "agent" || u.limitsSource === "user"
+                ? u.limitsSource
+                : agentId
+                  ? "agent"
+                  : "user",
             "limits.files": Number(limits.files ?? 0),
             "limits.blocks": Number(limits.blocks ?? 0),
             "limits.pages": Number(limits.pages ?? 0),
@@ -553,9 +955,30 @@ export default function UsersSection({
   const columns: ColumnDef<UserRow>[] = useMemo(
     () => [
       {
+        key: "avatarUrl",
+        label: "آواتار",
+        editable: false,
+        sortable: false,
+        copyable: false,
+        render: (value, row) => {
+          const displayName =
+            [row.firstName, row.lastName].filter(Boolean).join(" ") ||
+            row.phoneNumber ||
+            "کاربر";
+
+          return (
+            <UserAvatar
+              src={String(value ?? "")}
+              label={displayName}
+              onPreview={openPreviewImage}
+            />
+          );
+        },
+      },
+      {
         key: "firstName",
         filterable: true,
-        filterSearchable: true,
+        filterType: "text",
         label: "نام",
         sortable: true,
         required: true,
@@ -568,6 +991,8 @@ export default function UsersSection({
       {
         key: "lastName",
         label: "نام خانوادگی",
+        filterable: true,
+        filterType: "text",
         sortable: true,
         required: true,
         placeholder: "نام خانوادگی",
@@ -577,10 +1002,21 @@ export default function UsersSection({
         ),
       },
       {
+        key: "collectionName",
+        label: "اسم مجموعه",
+        sortable: true,
+        placeholder: "اسم مجموعه",
+        copyable: true,
+        hideOnMobile: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
+        ),
+      },
+      {
         key: "phoneNumber",
         label: "شماره موبایل",
         filterable: true,
-        filterSearchable: true,
+        filterType: "text",
         sortable: true,
         required: true,
         inputType: "tel",
@@ -590,6 +1026,23 @@ export default function UsersSection({
           <span className="font-mono text-sm tracking-wide">
             {String(value ?? "—")}
           </span>
+        ),
+      },
+            {
+        key: "pagesQuickView",
+        label: "صفحات کاربر",
+        editable: true,
+        sortable: false,
+        copyable: false,
+        hiddenInForm: (_formData, mode) => mode === "create",
+        render: (_value, row) => (
+          <UserPagesLazyPanel userId={row._id || row.id} headers={headers} />
+        ),
+        renderFormField: ({ formData }) => (
+          <UserPagesLazyPanel
+            userId={String(formData._id ?? formData.id ?? "")}
+            headers={headers}
+          />
         ),
       },
       {
@@ -616,8 +1069,10 @@ export default function UsersSection({
           mode === "create"
             ? "اختیاری است؛ اگر پر شود کاربر می‌تواند با این رمز وارد شود."
             : "برای تغییر رمز پر کنید؛ اگر خالی بماند رمز فعلی تغییر نمی‌کند.",
-        hiddenInForm: () =>
-          authUser?.role !== "admin" && authUser?.role !== "superAdmin",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
         copyable: false,
       },
       {
@@ -642,17 +1097,13 @@ export default function UsersSection({
         sortable: true,
         required: true,
         filterable: true,
-        options: [
-          { label: "کاربر", value: "user" },
-          { label: "نماینده", value: "agent" },
-          { label: "مدیر نماینده", value: "agentManager" },
-          { label: "مدیر", value: "admin" },
-          { label: "R A D", value: "superAdmin" },
-        ],
+        options: roleOptions,
         render: (value) => <RoleBadge role={value as UserRole} />,
         copyable: false,
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "status",
@@ -666,7 +1117,10 @@ export default function UsersSection({
         ],
         render: (value) => <StatusBadge status={value as UserStatus} />,
         copyable: false,
-        hiddenInForm: () => authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "agentid",
@@ -676,8 +1130,10 @@ export default function UsersSection({
         copyable: true,
         hideOnMobile: true,
         placeholder: "انتخاب نماینده یا بدون نماینده",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
         render: (value, row) => (
           <span className="text-sm text-slate-400">
             {row.agentLabel ||
@@ -686,6 +1142,7 @@ export default function UsersSection({
           </span>
         ),
       },
+
       {
         key: "permissions",
         label: "دسترسی‌ها",
@@ -705,13 +1162,34 @@ export default function UsersSection({
         copyable: false,
       },
       {
+        key: "limitsOverrideEnabled",
+        label: "محدودیت اختصاصی",
+        inputType: "checkbox",
+        visible: false,
+        defaultValue: false,
+        formHelpText: (_, formData) =>
+          formData.agentid
+            ? "اگر روشن باشد، محدودیت‌های همین کاربر جدا از نماینده ذخیره می‌شود."
+            : "کاربر بدون نماینده همیشه از محدودیت اختصاصی خودش استفاده می‌کند.",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
+      },
+      {
         key: "limits.files",
         label: "محدودیت فایل",
         inputType: "number",
         visible: false,
         placeholder: "0",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "limits.blocks",
@@ -719,8 +1197,14 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "limits.pages",
@@ -728,22 +1212,33 @@ export default function UsersSection({
         inputType: "number",
         visible: false,
         placeholder: "0",
-        hiddenInForm: () =>
-          hasAgentScopedRole(authUser?.role) || authUser?.role === "user",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
+        hiddenInForm: (_, mode) =>
+          mode === "create"
+            ? !hasFullUserCreateAccess
+            : !hasFullUserEditAccess,
       },
       {
         key: "limits",
         label: "محدودیت‌ها",
         editable: false,
-        render: (value) => {
+        render: (value, row) => {
           const l = value as UserRow["limits"];
           if (!l) return "—";
           const showLimit = (value: number) =>
             value > 0 ? String(value) : "نامحدود";
+          const source =
+            row.limitsSource === "agent" ? "از نماینده" : "اختصاصی کاربر";
           return (
-            <span className="text-xs text-slate-500">
-              فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
-              {showLimit(l.pages)}
+            <span className="flex flex-col gap-1 text-xs text-slate-500">
+              <span>
+                فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
+                {showLimit(l.pages)}
+              </span>
+              <span className="text-[10px] text-slate-400">{source}</span>
             </span>
           );
         },
@@ -820,7 +1315,7 @@ export default function UsersSection({
       },
       {
         key: "createdById",
-        label: "فیلتر سازنده کاربر",
+        label: "  سازنده کاربر",
         visible: false,
         viewable: false,
         editable: false,
@@ -859,7 +1354,15 @@ export default function UsersSection({
         render: (value) => <span>{formatFaDate(value as string)}</span>,
       },
     ],
-    [agentOptions, authUser?.role, creatorOptions],
+    [
+      agentOptions,
+      creatorOptions,
+      hasFullUserEditAccess,
+      hasFullUserCreateAccess,
+      headers,
+      openPreviewImage,
+      roleOptions,
+    ],
   );
 
   /* ══════════════════════════════════════════
@@ -1003,6 +1506,13 @@ export default function UsersSection({
             </button>
           ) : null
         }
+      />
+      <ImagePreviewModal
+        open={Boolean(previewImage)}
+        src={previewImage?.src ?? ""}
+        alt={previewImage?.title}
+        title={previewImage?.title}
+        onClose={closePreviewImage}
       />
     </div>
   );

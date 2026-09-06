@@ -11,11 +11,25 @@ import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
 import User from "@/models/users";
 import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
+import { forbiddenAccessResponse } from "@/lib/auth/enforceAccess";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import {
     isValidPhoneNumber,
     normalizePhoneNumber,
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
+
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
 
 function normalizeLimits(value: unknown) {
     const limits =
@@ -91,6 +105,7 @@ export const POST = compose(
         role: targetRole,
         agentid: agent._id,
         limits: normalizedLimits,
+        limitsOverrideEnabled: false,
     });
 
     return NextResponse.json({ agent }, { status: 201 });
@@ -102,14 +117,35 @@ export const GET = compose(
     withAuth(),
     withStatus("active"),
     withRole("agent", "agentManager", "admin", "superAdmin"),
-    withPermission({ component: "admin.agents", action: "view" }),
 )(async (req: AuthRequest) => {
     const requester = req.ctx.user!;
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const type = searchParams.get("type");           // filter by personal|company
-    const isActive = searchParams.get("isActive");   // filter by active state
+    const type = getFilterParam(searchParams, "type");           // filter by personal|company
+    const isActive = getFilterParam(searchParams, "isActive");   // filter by active state
+    const mode = searchParams.get("mode");
+    const search = searchParams.get("search")?.trim();
+    const isUserFormOptionsMode = mode === "user-form-options";
+
+    if (requester.role !== "superAdmin") {
+        const resolved = await resolveUserAccess(
+            String(requester._id),
+            requester.permissions,
+        );
+        const canViewAgents =
+            resolved.components["admin.agents"]?.has("view") ?? false;
+        const canCreateUsers =
+            resolved.components["admin.users"]?.has("create") ?? false;
+
+        if (!canViewAgents && !(isUserFormOptionsMode && canCreateUsers)) {
+            return forbiddenAccessResponse(
+                isUserFormOptionsMode
+                    ? { component: "admin.users", action: "create" }
+                    : { component: "admin.agents", action: "view" },
+            );
+        }
+    }
 
     const query: Record<string, unknown> = {};
     if (hasAgentScopedRole(requester.role)) {
@@ -119,7 +155,37 @@ export const GET = compose(
         query.user = { $in: managedUserIds ?? [] };
     }
     if (type) query.type = type;
-    if (isActive !== null) query.isActive = isActive === "true";
+    if (isActive === "true" || isActive === "false") {
+        query.isActive = isActive === "true";
+    }
+    if (search) {
+        const pattern = escapeRegex(toEnglishDigits(search));
+        const matchedUserIds = await User.find({
+            $or: [
+                { firstName: { $regex: pattern, $options: "i" } },
+                { lastName: { $regex: pattern, $options: "i" } },
+                { phoneNumber: { $regex: pattern, $options: "i" } },
+                { email: { $regex: pattern, $options: "i" } },
+                { nationalCode: { $regex: pattern, $options: "i" } },
+                { fatherName: { $regex: pattern, $options: "i" } },
+            ],
+        }).distinct("_id");
+
+        query.$and = [
+            ...((query.$and as Record<string, unknown>[]) ?? []),
+            {
+                $or: [
+                    { companyName: { $regex: pattern, $options: "i" } },
+                    { ceoName: { $regex: pattern, $options: "i" } },
+                    { fixedNumber: { $regex: pattern, $options: "i" } },
+                    { postalCode: { $regex: pattern, $options: "i" } },
+                    { economicNumber: { $regex: pattern, $options: "i" } },
+                    { registrationNumber: { $regex: pattern, $options: "i" } },
+                    { user: { $in: matchedUserIds } },
+                ],
+            },
+        ];
+    }
 
     const [agents, total] = await Promise.all([
         Agent.find(query)
@@ -127,6 +193,7 @@ export const GET = compose(
                 "user",
                 "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
             )
+            .sort({ createdAt: -1, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

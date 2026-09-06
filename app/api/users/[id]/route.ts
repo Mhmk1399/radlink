@@ -24,11 +24,49 @@ import {
     normalizeIdList,
     validateSinglePermissionIdSelection,
 } from "@/lib/auth/permissionAssignment";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 const VALID_ROLES = ["user", "agent", "agentManager", "admin", "superAdmin"];
 const VALID_STATUSES = ["active", "inactive"];
+
+function normalizeLimits(value: unknown) {
+    const limits =
+        typeof value === "object" && value !== null
+            ? (value as Record<string, unknown>)
+            : {};
+
+    return {
+        files: Math.max(0, Number(limits.files) || 0),
+        blocks: Math.max(0, Number(limits.blocks) || 0),
+        pages: Math.max(0, Number(limits.pages) || 0),
+    };
+}
+
+function resolveUserLimitView(user: Record<string, unknown>) {
+    const ownLimits = normalizeLimits(user.limits);
+    const agent =
+        user.agentid && typeof user.agentid === "object"
+            ? (user.agentid as Record<string, unknown>)
+            : null;
+    const inheritedLimits = agent ? normalizeLimits(agent.limits) : null;
+    const hasAgent = Boolean(agent || user.agentid);
+    const overrideEnabled = Boolean(user.limitsOverrideEnabled);
+    const usesAgentLimits = Boolean(hasAgent && !overrideEnabled && inheritedLimits);
+    const effectiveLimits = usesAgentLimits && inheritedLimits
+        ? inheritedLimits
+        : ownLimits;
+
+    return {
+        ...user,
+        limits: effectiveLimits,
+        ownLimits,
+        inheritedLimits,
+        limitsOverrideEnabled: hasAgent ? overrideEnabled : true,
+        limitsSource: usesAgentLimits ? "agent" : "user",
+    };
+}
 
 function isValidObjectId(id: string): boolean {
     return mongoose.Types.ObjectId.isValid(id) && new mongoose.Types.ObjectId(id).toString() === id;
@@ -67,7 +105,7 @@ export const GET = compose(
         .populate("permissions", "name isActive")
         .populate({
             path: "agentid",
-            select: "user type companyName",
+            select: "user type companyName limits",
             populate: {
                 path: "user",
                 select: "firstName lastName phoneNumber email",
@@ -77,7 +115,9 @@ export const GET = compose(
         .populate("updatedBy", "firstName lastName phoneNumber role")
         .lean();
     if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
-    return NextResponse.json({ user });
+    return NextResponse.json({
+        user: resolveUserLimitView(user as Record<string, unknown>),
+    });
 });
 
 export const PATCH = compose(
@@ -96,15 +136,23 @@ export const PATCH = compose(
 
     const body = await req.json();
     const requester = req.ctx.user!;
+    const resolvedRequesterAccess =
+        requester.role === "superAdmin"
+            ? null
+            : await resolveUserAccess(String(requester._id), requester.permissions);
+    const hasUsersUpdateAccess =
+        requester.role === "superAdmin" ||
+        (resolvedRequesterAccess?.components["admin.users"]?.has("update") ??
+            false);
 
-    if (!(await canAccessUserRequest(req, id))) {
+    if (!(await canAccessUserRequest(req, id)) && !hasUsersUpdateAccess) {
         return NextResponse.json(
             { message: "شما اجازه انجام این عملیات را ندارید." },
             { status: 403 }
         );
     }
 
-    const target = await User.findById(id).select("role agentid phoneNumber");
+    const target = await User.findById(id).select("role agentid phoneNumber limits limitsOverrideEnabled");
 
     if (!target) {
         return NextResponse.json(
@@ -115,6 +163,8 @@ export const PATCH = compose(
 
     const isAdmin = ["admin", "superAdmin"].includes(requester.role);
     const isSuperAdmin = requester.role === "superAdmin";
+    const canUseFullUpdatePayload =
+        (isAdmin || hasUsersUpdateAccess) && !hasAgentScopedRole(requester.role);
     const isSelf = String(requester._id) === id;
     const isAgentManager =
         hasAgentScopedRole(requester.role) &&
@@ -133,6 +183,7 @@ export const PATCH = compose(
     const selfAllowed = [
         "firstName",
         "lastName",
+        "collectionName",
         "email",
         "avatarUrl",
         "nationalCode",
@@ -142,6 +193,7 @@ export const PATCH = compose(
     const adminOnly = [
         "phoneNumber",
         "limits",
+        "limitsOverrideEnabled",
         "status",
         "agentid",
         "permissions",
@@ -149,7 +201,7 @@ export const PATCH = compose(
         "isDeleted",
     ];
 
-    const allowedFields = isAdmin
+    const allowedFields = canUseFullUpdatePayload
         ? [...selfAllowed, ...adminOnly]
         : isAgentManager
           ? [
@@ -161,7 +213,7 @@ export const PATCH = compose(
             ]
           : selfAllowed;
 
-    if (isSuperAdmin) {
+    if (canUseFullUpdatePayload) {
         allowedFields.push("role");
     }
 
@@ -257,6 +309,13 @@ export const PATCH = compose(
             }
         }
 
+        if (key === "role" && String(value) === "superAdmin" && !isSuperAdmin) {
+            return NextResponse.json(
+                { message: "فقط سوپر ادمین می‌تواند نقش سوپر ادمین تعیین کند." },
+                { status: 403 }
+            );
+        }
+
         if (key === "status") {
             if (!VALID_STATUSES.includes(String(value))) {
                 return NextResponse.json(
@@ -278,6 +337,7 @@ export const PATCH = compose(
         if (key === "agentid") {
             if (value === "" || value === null) {
                 unsets.agentid = "";
+                updates.limitsOverrideEnabled = true;
                 continue;
             } else if (
                 typeof value !== "string" ||
@@ -299,7 +359,32 @@ export const PATCH = compose(
                     { status: 404 }
                 );
             }
-            updates.limits = selectedAgent.limits;
+            if (!Boolean(body.limitsOverrideEnabled)) {
+                updates.limits = selectedAgent.limits;
+                updates.limitsOverrideEnabled = false;
+            }
+        }
+
+        if (key === "limitsOverrideEnabled") {
+            if (typeof value !== "boolean") {
+                return NextResponse.json(
+                    { message: "وضعیت محدودیت اختصاصی کاربر معتبر نیست." },
+                    { status: 400 },
+                );
+            }
+
+            updates.limitsOverrideEnabled = value;
+            if (!value && (updates.agentid || target.agentid)) {
+                const effectiveAgentId = updates.agentid ?? target.agentid;
+                const selectedAgent = await Agent.findOne({
+                    _id: effectiveAgentId,
+                    isActive: true,
+                }).select("limits").lean();
+                if (selectedAgent) {
+                    updates.limits = selectedAgent.limits;
+                }
+            }
+            continue;
         }
 
         if (key === "permissions") {
@@ -346,17 +431,14 @@ export const PATCH = compose(
                 );
             }
 
-            const limits = value as Record<string, unknown>;
-
-            value = {
-                files: Math.max(0, Number(limits.files) || 0),
-                blocks: Math.max(0, Number(limits.blocks) || 0),
-                pages: Math.max(0, Number(limits.pages) || 0),
-            };
+            value = normalizeLimits(value);
+            if ((target.agentid || updates.agentid) && body.limitsOverrideEnabled !== false) {
+                updates.limitsOverrideEnabled = true;
+            }
         }
 
         if (
-            ["firstName", "lastName", "phoneNumber", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
+            ["firstName", "lastName", "collectionName", "phoneNumber", "email", "avatarUrl", "nationalCode", "fatherName"].includes(
                 key
             )
         ) {
@@ -370,7 +452,7 @@ export const PATCH = compose(
     }
 
     if (hasRequestedPassword) {
-        if (!isAdmin) {
+        if (!canUseFullUpdatePayload) {
             return NextResponse.json(
                 { message: "فقط مدیر می‌تواند رمز عبور کاربر را تغییر دهد." },
                 { status: 403 },
@@ -403,7 +485,7 @@ export const PATCH = compose(
     }
 
     // A normal user may only update themselves.
-    if (!isAdmin && !isSelf && !isAgentManager) {
+    if (!canUseFullUpdatePayload && !isSelf && !isAgentManager) {
         return NextResponse.json(
             { message: "شما فقط می‌توانید حساب خودتان را ویرایش کنید." },
             { status: 403 }
@@ -424,7 +506,7 @@ export const PATCH = compose(
         .populate("permissions", "name isActive")
         .populate({
             path: "agentid",
-            select: "user type companyName",
+            select: "user type companyName limits",
             populate: {
                 path: "user",
                 select: "firstName lastName phoneNumber email",
@@ -446,7 +528,14 @@ export const PATCH = compose(
         );
     }
 
-    return NextResponse.json({ user });
+    const plainUser =
+        typeof user.toObject === "function"
+            ? user.toObject()
+            : user;
+
+    return NextResponse.json({
+        user: resolveUserLimitView(plainUser as unknown as Record<string, unknown>),
+    });
 });
 
 // Soft delete — sets isDeleted: true

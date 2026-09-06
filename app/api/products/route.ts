@@ -10,6 +10,20 @@ import "@/models/users";
 import "@/models/pages";
 import "@/models/files";
 import File from "@/models/files";
+import Page from "@/models/pages";
+import User from "@/models/users";
+
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
 
 function normalizeImage(value: unknown) {
     const candidate = Array.isArray(value) ? value[0] : value;
@@ -69,8 +83,9 @@ export const GET = compose(
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
     const query: Record<string, unknown> =
         await withActorOwnerScope(req.ctx.user!);
-    const ownerId = searchParams.get("ownerId");
-    const pageId = searchParams.get("pageId");
+    const ownerId = getFilterParam(searchParams, "ownerId");
+    const pageId = getFilterParam(searchParams, "pageId");
+    const search = searchParams.get("search")?.trim();
     if (ownerId && mongoose.Types.ObjectId.isValid(ownerId)) {
         query.$and = [
             ...((query.$and as unknown[]) ?? []),
@@ -81,6 +96,42 @@ export const GET = compose(
         query.page = { $exists: false };
     } else if (pageId && mongoose.Types.ObjectId.isValid(pageId)) {
         query.page = pageId;
+    }
+
+    if (search) {
+        const pattern = escapeRegex(search);
+        const [ownerIds, pageIds] = await Promise.all([
+            User.find({
+                $or: [
+                    { firstName: { $regex: pattern, $options: "i" } },
+                    { lastName: { $regex: pattern, $options: "i" } },
+                    { phoneNumber: { $regex: pattern, $options: "i" } },
+                    { email: { $regex: pattern, $options: "i" } },
+                ],
+            }).distinct("_id"),
+            Page.find({
+                $or: [
+                    { title: { $regex: pattern, $options: "i" } },
+                    { url: { $regex: pattern, $options: "i" } },
+                ],
+            }).distinct("_id"),
+        ]);
+
+        query.$and = [
+            ...((query.$and as Record<string, unknown>[]) ?? []),
+            {
+                $or: [
+                    { name: { $regex: pattern, $options: "i" } },
+                    { description: { $regex: pattern, $options: "i" } },
+                    { displayPrice: { $regex: pattern, $options: "i" } },
+                    { oldPrice: { $regex: pattern, $options: "i" } },
+                    { productUrl: { $regex: pattern, $options: "i" } },
+                    { source: { $regex: pattern, $options: "i" } },
+                    { owner: { $in: ownerIds } },
+                    { page: { $in: pageIds } },
+                ],
+            },
+        ];
     }
 
     applyDateRangeFilters(query, searchParams, ["createdAt"]);

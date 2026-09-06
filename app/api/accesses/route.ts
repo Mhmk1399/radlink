@@ -6,13 +6,17 @@ import { AuthRequest } from "@/lib/auth/types";
 import Access from "@/models/access";
 import {
     ACCESS_ACTIONS,
+    type AccessResourceKind,
     getAccessActionsForComponent,
     getAccessActionsForResource,
 } from "@/lib/auth/accessCatalog";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import { hasGlobalOwnerScope } from "@/lib/auth/ownership";
 import { applyDateRangeFilters } from "@/lib/api/dateRangeFilters";
 import "@/models/template";
 import "@/models/blocks";
 import "@/models/pages";
+import "@/models/permission";
 
 function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -63,8 +67,8 @@ function normalizeStaticComponents(value: unknown) {
 
 function normalizeDynamicItems(
     value: unknown,
-    idKey: "templateId" | "blockId" | "pageId",
-    resource: "templates" | "blocks" | "pages",
+    idKey: "templateId" | "blockId" | "pageId" | "accessId" | "permissionId",
+    resource: AccessResourceKind,
 ) {
     if (!Array.isArray(value)) return [];
 
@@ -94,6 +98,8 @@ function normalizeAccessPayload(body: Record<string, unknown>) {
             templates: normalizeDynamicItems(dynamicAccess.templates, "templateId", "templates"),
             blocks: normalizeDynamicItems(dynamicAccess.blocks, "blockId", "blocks"),
             pages: normalizeDynamicItems(dynamicAccess.pages, "pageId", "pages"),
+            accesses: normalizeDynamicItems(dynamicAccess.accesses, "accessId", "accesses"),
+            permissions: normalizeDynamicItems(dynamicAccess.permissions, "permissionId", "permissions"),
         },
     };
 }
@@ -102,7 +108,26 @@ function populateAccessQuery() {
     return Access.find()
         .populate("dynamicAccess.templates.templateId", "name thumbnail")
         .populate("dynamicAccess.blocks.blockId", "name type icon category")
-        .populate("dynamicAccess.pages.pageId", "title url isPublished");
+        .populate("dynamicAccess.pages.pageId", "title url isPublished")
+        .populate("dynamicAccess.accesses.accessId", "name isActive")
+        .populate("dynamicAccess.permissions.permissionId", "name isActive");
+}
+
+async function withAccessDocumentScope(
+    user: AuthRequest["ctx"]["user"],
+    query: Record<string, unknown>,
+    action = "view",
+) {
+    if (!user || hasGlobalOwnerScope(user)) return query;
+
+    const resolved = await resolveUserAccess(String(user._id), user.permissions);
+    const grantedIds = Object.entries(resolved.accesses)
+        .filter(([, actions]) => actions.has(action))
+        .map(([id]) => id);
+
+    return {
+        $and: [query, { _id: { $in: grantedIds } }],
+    };
 }
 
 export const POST = compose(
@@ -139,7 +164,9 @@ export const POST = compose(
         payload.staticComponents.length > 0 ||
         payload.dynamicAccess.templates.length > 0 ||
         payload.dynamicAccess.blocks.length > 0 ||
-        payload.dynamicAccess.pages.length > 0;
+        payload.dynamicAccess.pages.length > 0 ||
+        payload.dynamicAccess.accesses.length > 0 ||
+        payload.dynamicAccess.permissions.length > 0;
 
     if (!hasAnyAccess) {
         return NextResponse.json({ message: "حداقل یک قانون دسترسی الزامی است." }, { status: 400 });
@@ -162,6 +189,7 @@ export const GET = compose(
     withRole("admin", "superAdmin"),
     withPermission({ component: "admin.accesses", action: "view" })
 )(async (req: AuthRequest) => {
+    const user = req.ctx.user!;
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
@@ -198,14 +226,16 @@ export const GET = compose(
     const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
     const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
+    const scopedQuery = await withAccessDocumentScope(user, query);
+
     const [accesses, total] = await Promise.all([
         populateAccessQuery()
-            .find(query)
+            .find(scopedQuery)
             .sort({ [sortField]: sortDirection, _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),
-        Access.countDocuments(query),
+        Access.countDocuments(scopedQuery),
     ]);
 
     return NextResponse.json({ accesses, total, page, limit });

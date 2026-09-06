@@ -23,6 +23,19 @@ const ticketSchema = new mongoose.Schema({
         ref: "User",
         required:   true,
     },
+    page: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Page",
+    },
+    siteOwner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    source: {
+        type: String,
+        enum: ["admin", "landing"],
+        default: "admin",
+    },
     assignee: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -78,8 +91,12 @@ ticketSchema.index({ requester: 1, status: 1, createdAt: -1 });
 ticketSchema.index({ requester: 1, updatedAt: -1 });
 ticketSchema.index({ status: 1, createdAt: -1 });
 ticketSchema.index({ assignee: 1, status: 1, updatedAt: -1 });
+ticketSchema.index({ page: 1, requester: 1, updatedAt: -1 });
+ticketSchema.index({ siteOwner: 1, status: 1, updatedAt: -1 });
 
-const Ticket: mongoose.Model<any> =
+type TicketDocument = mongoose.InferSchemaType<typeof ticketSchema>;
+
+const Ticket: mongoose.Model<TicketDocument> =
     mongoose.models.Ticket || mongoose.model("Ticket", ticketSchema);
 
 export default Ticket;

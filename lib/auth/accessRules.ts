@@ -2,9 +2,10 @@ import {
   ACCESS_ACTIONS,
   STATIC_COMPONENT_CATALOG,
   type AccessActionValue,
+  type AccessResourceKind,
 } from "@/lib/auth/accessCatalog";
 
-export type AccessResource = "templates" | "blocks" | "pages";
+export type AccessResource = AccessResourceKind;
 
 export type RequestAccessTarget = {
   component: string;
@@ -17,8 +18,8 @@ const API_COMPONENT_RULES = [
   { prefix: "/api/admin/dashboard", component: "admin.dashboard" },
   { prefix: "/api/users", component: "admin.users" },
   { prefix: "/api/agents", component: "admin.agents" },
-  { prefix: "/api/permissions", component: "admin.permissions" },
-  { prefix: "/api/accesses", component: "admin.accesses" },
+  { prefix: "/api/permissions", component: "admin.permissions", resource: "permissions" },
+  { prefix: "/api/accesses", component: "admin.accesses", resource: "accesses" },
   { prefix: "/api/pages", component: "admin.pages", resource: "pages" },
   { prefix: "/api/templates", component: "admin.templates", resource: "templates" },
   { prefix: "/api/blocks", component: "admin.blocks", resource: "blocks" },
@@ -105,6 +106,17 @@ export function getAccessTargetForRequest(
   }
 
   if (
+    pathname === "/api/agents" &&
+    normalizedMethod === "GET" &&
+    searchParams.get("mode") === "user-form-options"
+  ) {
+    return {
+      component: "admin.users",
+      action: "create",
+    };
+  }
+
+  if (
     pathname === "/api/users" &&
     normalizedMethod === "GET" &&
     searchParams.get("mode") === "notification-options"
@@ -146,6 +158,13 @@ export function getAccessTargetForRequest(
   }
 
   if (pathname === "/api/tickets" && normalizedMethod === "POST") {
+    return null;
+  }
+
+  if (
+    /^\/api\/tickets\/[^/]+$/.test(pathname) &&
+    normalizedMethod === "PATCH"
+  ) {
     return null;
   }
 
@@ -197,5 +216,7 @@ export function getAccessResourceLabel(resource?: AccessResource) {
   if (resource === "templates") return "قالب";
   if (resource === "blocks") return "بلاک";
   if (resource === "pages") return "صفحه";
+  if (resource === "accesses") return "Access";
+  if (resource === "permissions") return "Permission";
   return "این آیتم";
 }

@@ -41,6 +41,7 @@ export type EditableStyleKey =
   | "borderColor"
   | "borderWidth"
   | "gridColumns"
+  | "layoutMode"
   | "shadow"
   | "animation";
 
@@ -51,6 +52,7 @@ export type ShadowStyleValue = {
 
 export type TextAlignValue = "left" | "center" | "right";
 export type ContentAlignValue = "left" | "center" | "right";
+export type LayoutModeValue = "grid" | "horizontal";
 
 export type EditableStyleMap = {
   color?: ResponsiveValue<string>;
@@ -67,6 +69,7 @@ export type EditableStyleMap = {
   borderColor?: ResponsiveValue<string>;
   borderWidth?: ResponsiveValue<number>;
   gridColumns?: ResponsiveValue<number>;
+  layoutMode?: ResponsiveValue<LayoutModeValue>;
   shadow?: ResponsiveValue<ShadowStyleValue>;
   animation?: AnimationType;
 };

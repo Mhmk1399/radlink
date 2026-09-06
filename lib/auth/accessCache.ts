@@ -43,6 +43,8 @@ export type ResolvedAccess = {
     templates: Record<string, Set<string>>;
     blocks: Record<string, Set<string>>;
     pages: Record<string, Set<string>>;
+    accesses: Record<string, Set<string>>;
+    permissions: Record<string, Set<string>>;
 };
 
 // One global cache instance shared across requests (survives hot reload via global)

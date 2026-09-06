@@ -4,6 +4,7 @@ import type {
   AnimationType,
   ContentAlignValue,
   EditableStyleKey,
+  LayoutModeValue,
   PageBlock,
   ResponsiveValue,
   ShadowStyleValue,
@@ -32,6 +33,11 @@ const CONTENT_ALIGN_VALUES = new Set<ContentAlignValue>([
   "right",
 ]);
 
+const LAYOUT_MODE_VALUES = new Set<LayoutModeValue>([
+  "grid",
+  "horizontal",
+]);
+
 export function normalizeStyleValue(
   styleKey: EditableStyleKey,
   value: string | number | AnimationType | ShadowStyleValue,
@@ -43,6 +49,10 @@ export function normalizeStyleValue(
   if (styleKey === "contentAlign") {
     const normalized = String(value) as ContentAlignValue;
     return CONTENT_ALIGN_VALUES.has(normalized) ? normalized : "right";
+  }
+  if (styleKey === "layoutMode") {
+    const normalized = String(value) as LayoutModeValue;
+    return LAYOUT_MODE_VALUES.has(normalized) ? normalized : "grid";
   }
   if (
     styleKey === "marginTop" ||

@@ -8,15 +8,36 @@ export const contactSaveSchema: BlockSchema = {
   elements: {
     container: {
       label: "قاب بلاک",
-      allowedStyleKeys: [],
+      allowedStyleKeys: [
+        "backgroundColor",
+        "borderRadius",
+        "borderColor",
+        "borderWidth",
+        "animation",
+      ],
     },
     button: {
       label: "دکمه ذخیره مخاطب",
-      allowedStyleKeys: [],
+      allowedStyleKeys: [
+        "color",
+        "backgroundColor",
+        "fontSize",
+        "borderRadius",
+        "borderColor",
+        "borderWidth",
+        "animation",
+      ],
     },
     icon: {
       label: "آیکون مخاطب",
-      allowedStyleKeys: [],
+      allowedStyleKeys: [
+        "color",
+        "backgroundColor",
+        "borderRadius",
+        "borderColor",
+        "borderWidth",
+        "animation",
+      ],
     },
   },
   contentFields: [
@@ -64,6 +85,21 @@ export const contactSaveSchema: BlockSchema = {
       key: "photoUrl",
       label: "عکس مخاطب",
       type: "image",
+    },
+    {
+      key: "buttonText",
+      label: "متن دکمه ذخیره",
+      type: "text",
+    },
+    {
+      key: "showIcon",
+      label: "نمایش آیکون",
+      type: "boolean",
+    },
+    {
+      key: "showInPage",
+      label: "نمایش به صورت بلاک در صفحه",
+      type: "boolean",
     },
 
   ],

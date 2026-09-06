@@ -44,6 +44,12 @@ export const GET = compose(
         pages: Object.fromEntries(
             Object.entries(access.pages).map(([k, v]) => [k, [...v]])
         ),
+        accesses: Object.fromEntries(
+            Object.entries(access.accesses).map(([k, v]) => [k, [...v]])
+        ),
+        permissions: Object.fromEntries(
+            Object.entries(access.permissions).map(([k, v]) => [k, [...v]])
+        ),
     };
 
     const userObject =

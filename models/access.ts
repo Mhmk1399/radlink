@@ -28,6 +28,14 @@ export interface IAccess extends Document {
             pageId: Types.ObjectId;
             actions: AccessAction[];
         }[];
+        accesses: {
+            accessId: Types.ObjectId;
+            actions: CommonAccessAction[];
+        }[];
+        permissions: {
+            permissionId: Types.ObjectId;
+            actions: CommonAccessAction[];
+        }[];
     };
 }
 
@@ -65,6 +73,18 @@ const AccessSchema = new Schema<IAccess>(
                 {
                     pageId: { type: Schema.Types.ObjectId, ref: "Page" },
                     actions: [{ type: String, enum: ["view", "create", "update", "delete", "publish"], required: true }],
+                },
+            ],
+            accesses: [
+                {
+                    accessId: { type: Schema.Types.ObjectId, ref: "Access" },
+                    actions: [{ type: String, enum: ["view", "create", "update", "delete"], required: true }],
+                },
+            ],
+            permissions: [
+                {
+                    permissionId: { type: Schema.Types.ObjectId, ref: "Permission" },
+                    actions: [{ type: String, enum: ["view", "create", "update", "delete"], required: true }],
                 },
             ],
         },

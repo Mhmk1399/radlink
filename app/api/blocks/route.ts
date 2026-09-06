@@ -5,6 +5,18 @@ import { AuthRequest } from "@/lib/auth/types";
 import { getBuilderBlocksForRequest } from "@/lib/auth/builderBlockAccess";
 import Block from "@/models/blocks";
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 // POST /api/blocks — admin creates a master block
 export const POST = compose(
     withDB(),
@@ -69,15 +81,27 @@ export const GET = compose(
     const { searchParams } = new URL(req.url);
     const page     = Math.max(1, Number(searchParams.get("page")  ?? 1));
     const limit    = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const type     = searchParams.get("type");
-    const category = searchParams.get("category");
-    const isActive = searchParams.get("isActive");
+    const type     = getFilterParam(searchParams, "type");
+    const category = getFilterParam(searchParams, "category");
+    const isActive = getFilterParam(searchParams, "isActive");
     const mode = searchParams.get("mode");
+    const search = searchParams.get("search")?.trim();
 
     const query: Record<string, unknown> = {};
     if (type)          query.type     = type;
-    if (category)      query.category = category;
-    if (isActive !== null) query.isActive = isActive === "true";
+    if (category)      query.category = { $regex: escapeRegex(category), $options: "i" };
+    if (isActive === "true" || isActive === "false") {
+        query.isActive = isActive === "true";
+    }
+    if (search) {
+        const pattern = escapeRegex(search);
+        query.$or = [
+            { name: { $regex: pattern, $options: "i" } },
+            { type: { $regex: pattern, $options: "i" } },
+            { category: { $regex: pattern, $options: "i" } },
+            { description: { $regex: pattern, $options: "i" } },
+        ];
+    }
 
     if (mode === "builder") {
         const blocks = await getBuilderBlocksForRequest(req);

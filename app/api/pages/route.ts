@@ -608,7 +608,7 @@ export const POST = compose(
         logoHeader: normalizeLogoHeaderSettings(
             body.logoHeader ?? templateLogoHeader,
         ),
-        footer: normalizePageFooterSettings({ ...footerSource, logo: "" }),
+        footer: normalizePageFooterSettings(footerSource),
         favicon: typeof body.favicon === "string" ? body.favicon.trim() : "",
         expiresAt,
         isPublished: effectivePublished,
@@ -678,7 +678,7 @@ export const GET = compose(
 
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const isPublished = searchParams.get("isPublished");
+    const isPublished = getFilterParam(searchParams, "isPublished");
     const mode = searchParams.get("mode");
 
     if (mode === "expiry-alerts") {
@@ -709,27 +709,25 @@ export const GET = compose(
         viewCount: "stats.views",
         visitorCount: "stats.visitors",
     };
-    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "updatedAt";
+    const sortField = sortFields[searchParams.get("sortKey") ?? ""] ?? "createdAt";
     const sortDirection = searchParams.get("sortDir") === "asc" ? 1 : -1;
 
     const filters: Record<string, unknown> = {};
 
-    if (isPublished !== null) {
+    if (isPublished === "true" || isPublished === "false") {
         filters.isPublished = isPublished === "true";
     }
 
     const ownerIdFilter =
-        searchParams.get("filter_ownerId") ??
-        searchParams.get("ownerId") ??
-        searchParams.get("filter_creatorId") ??
-        searchParams.get("creatorId");
+        getFilterParam(searchParams, "ownerId") ||
+        getFilterParam(searchParams, "creatorId") ||
+        getFilterParam(searchParams, "createdById") ||
+        getFilterParam(searchParams, "createdBy");
     if (ownerIdFilter && mongoose.Types.ObjectId.isValid(ownerIdFilter)) {
         filters.owner = ownerIdFilter;
     }
 
-    const assignedUserIdFilter =
-        searchParams.get("filter_assignedUserId") ??
-        searchParams.get("assignedUserId");
+    const assignedUserIdFilter = getFilterParam(searchParams, "assignedUserId");
     if (
         assignedUserIdFilter &&
         mongoose.Types.ObjectId.isValid(assignedUserIdFilter)

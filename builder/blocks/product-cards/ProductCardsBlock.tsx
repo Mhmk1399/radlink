@@ -8,7 +8,10 @@ import {
   sharedBlockKeyframes,
 } from "@/builder/blocks/shared/responsiveStyleToCss";
 import { normalizePersianPriceText } from "@/lib/format/persianPrice";
-import type { BlockComponentProps } from "@/types/blocks/builder.types";
+import type {
+  BlockComponentProps,
+  ResponsiveValue,
+} from "@/types/blocks/builder.types";
 import { useRef } from "react";
 
 // ─── Drag scroll hook ──────────────────────────────────────────────────────────
@@ -137,6 +140,12 @@ interface ProductItem {
   showOldPrice: boolean;
 }
 
+type ProductLayoutMode = "grid" | "horizontal";
+
+function getResponsiveFallback<T>(value: ResponsiveValue<T> | undefined) {
+  return value?.desktop ?? value?.tablet ?? value?.mobile;
+}
+
 // ─── Animations ─────────────────────────────────────────────────────────────────
 
 const fadeInUp = keyframes`
@@ -216,12 +225,17 @@ const StyledDescription = styled.p<{ $styleCss: string }>`
     font-size 0.2s ease;
 `;
 
-const StyledScrollArea = styled.div<{ $styleCss: string }>`
+const StyledScrollArea = styled.div<{
+  $styleCss: string;
+  $layoutMode: ProductLayoutMode;
+  $desktopColumns: number;
+}>`
   ${({ $styleCss }) => $styleCss}
-  display: flex;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: visible;
   -webkit-overflow-scrolling: touch;
-  cursor: grab;
+  cursor: default;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease;
@@ -248,11 +262,22 @@ const StyledScrollArea = styled.div<{ $styleCss: string }>`
   }
 
   @media (min-width: 1024px) {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    overflow: visible;
-    cursor: default;
+    display: ${({ $layoutMode }) =>
+      $layoutMode === "horizontal" ? "flex" : "grid"};
+    grid-template-columns: ${({ $layoutMode, $desktopColumns }) =>
+      $layoutMode === "horizontal"
+        ? "none"
+        : `repeat(${$desktopColumns}, minmax(0, 1fr))`};
+    overflow-x: ${({ $layoutMode }) =>
+      $layoutMode === "horizontal" ? "auto" : "visible"};
+    cursor: ${({ $layoutMode }) =>
+      $layoutMode === "horizontal" ? "grab" : "default"};
     scroll-snap-type: none;
+
+    &:not([data-dragging="true"]) {
+      scroll-snap-type: ${({ $layoutMode }) =>
+        $layoutMode === "horizontal" ? "x mandatory" : "none"};
+    }
   }
 `;
 
@@ -633,6 +658,21 @@ export default function ProductCardsBlock({
   const showDescription = data.showDescription !== false;
   const showButtons = data.showButtons !== false;
   const openInNewTab = data.openInNewTab !== false;
+  const scrollAreaElementStyle = elements.scrollArea?.style ?? {};
+  const styledLayoutMode = getResponsiveFallback(
+    scrollAreaElementStyle.layoutMode,
+  );
+  const styledDesktopColumns = getResponsiveFallback(
+    scrollAreaElementStyle.gridColumns,
+  );
+  const layoutMode: ProductLayoutMode =
+    styledLayoutMode === "horizontal" || data.layoutMode === "horizontal"
+      ? "horizontal"
+      : "grid";
+  const desktopColumns = Math.min(
+    4,
+    Math.max(1, Number(styledDesktopColumns ?? data.desktopColumns ?? 3) || 3),
+  );
   const showBottomButtons = data.showBottomButtons === true;
   const showBottomPrimaryButton = data.showBottomPrimaryButton !== false;
   const showBottomSecondaryButton = data.showBottomSecondaryButton !== false;
@@ -845,6 +885,8 @@ export default function ProductCardsBlock({
                 >
                   <StyledScrollArea
                     $styleCss={scrollAreaStyle}
+                    $layoutMode={layoutMode}
+                    $desktopColumns={desktopColumns}
                     className="gap-3 pb-1.5 sm:gap-4 sm:pb-2"
                     ref={scrollRef}
                     onMouseDown={handleScrollMouseDown}
@@ -893,7 +935,11 @@ export default function ProductCardsBlock({
                               <StyledCard
                                 $styleCss={cardStyle}
                                 $index={index}
-                                className="my-1 w-[190px] min-w-[190px] sm:my-2 sm:w-[250px] sm:min-w-[250px] lg:w-auto lg:min-w-0"
+                                className={`my-1 w-full min-w-0 sm:my-2 lg:w-auto ${
+                                  layoutMode === "horizontal"
+                                    ? "lg:min-w-[250px]"
+                                    : "lg:min-w-0"
+                                }`}
                               >
                                 {/* Image */}
                                 <EditablePart

@@ -113,14 +113,18 @@ export function createDefaultProductCardsBlock(order: number): PageBlock {
                 },
             },
             scrollArea: {
-                label: "ناحیه اسکرول",
+                label: "چینش محصولات",
                 allowedStyleKeys: [
+                    "layoutMode",
+                    "gridColumns",
                     "backgroundColor",
                     "borderRadius",
                     "borderColor",
                     "borderWidth",
                 ],
                 style: {
+                    layoutMode: { mobile: "grid" },
+                    gridColumns: { mobile: 3 },
                     backgroundColor: { mobile: "transparent" },
                     borderRadius: { mobile: 0 },
                     borderColor: { mobile: "transparent" },

@@ -175,7 +175,7 @@ export default function QRCodesSection({
         editable: false,
         sortable: true,
         filterable: true,
-        filterSearchable: true,
+        filterType: "text",
         hideOnMobile: true,
         render: (value) => (
           <span className={cn("text-sm", t.textMuted)}>

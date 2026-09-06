@@ -109,6 +109,7 @@ export default function BlocksSection({
         label: "دسته",
         editable: false,
         filterable: true,
+        filterType: "text",
         render: (value) => (
           <span
             className={cn(

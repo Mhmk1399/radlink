@@ -409,11 +409,6 @@ function CollapsibleChecklist({
   const [open, setOpen] = useState(defaultOpen ?? false);
   const [query, setQuery] = useState("");
 
-  // Reset search when closed
-  useEffect(() => {
-    if (!open) setQuery("");
-  }, [open]);
-
   /* ── Filter logic:
        - "id"   mode → match against option.value (the access _id / id)
        - "name" mode → match against option.label (user full name / phone)
@@ -457,7 +452,12 @@ function CollapsibleChecklist({
       {/* Header toggle */}
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((value) => {
+            if (value) setQuery("");
+            return !value;
+          });
+        }}
         className={cn(
           "flex w-full items-center gap-3 px-3.5 py-3 text-right transition-colors duration-200",
           t.hoverBg,
@@ -574,7 +574,7 @@ export default function PermissionsSection({
 }) {
   const t = useThemeTokens();
   const { isDark } = useTheme();
-  const { can } = useAccess();
+  const { can, isLoading: accessLoading } = useAccess();
   const [refreshToken, setRefreshToken] = useState(0);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [accesses, setAccesses] = useState<AccessSummary[]>([]);
@@ -585,13 +585,17 @@ export default function PermissionsSection({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const canDeleteTemplates = can("admin.permissions", "delete");
-  const token =
-    typeof window !== "undefined"
-      ? (localStorage.getItem("auth_token") ?? "")
-      : "";
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  const headers = useMemo(() => {
+    const token =
+      typeof window !== "undefined"
+        ? (localStorage.getItem("auth_token") ?? "")
+        : "";
+    return token ? { Authorization: `Bearer ${token}` } : undefined;
+  }, []);
   const canCreate = can("admin.permissions", "create");
   const canUpdate = can("admin.permissions", "update");
+  const canViewUsers = can("admin.users", "view");
+  const canViewAccesses = can("admin.accesses", "view");
 
   const transformResponse = useMemo(
     () =>
@@ -671,12 +675,14 @@ export default function PermissionsSection({
         label: "کاربران",
         editable: false,
         hideOnMobile: true,
-        filterable: true,
-        filterSearchable: true,
-        options: users.map((user) => ({
-          value: user.id,
-          label: userLabel(user),
-        })),
+        filterable: canViewUsers && users.length > 0,
+        filterSearchable: canViewUsers,
+        options: canViewUsers
+          ? users.map((user) => ({
+              value: user.id,
+              label: userLabel(user),
+            }))
+          : [],
         filterValues: (row) =>
           row.assignedToUsers.map((user) => user.id),
         render: (_value, row) => (
@@ -745,7 +751,7 @@ export default function PermissionsSection({
         ),
       },
     ],
-    [t, isDark, users],
+    [t, isDark, users, canViewUsers],
   );
 
   // Lock body scroll
@@ -762,31 +768,47 @@ export default function PermissionsSection({
     let cancelled = false;
 
     async function loadOptions() {
+      if (accessLoading) return;
+
+      if (!canViewUsers) setUsers([]);
+      if (!canViewAccesses) setAccesses([]);
+
+      if (!canViewUsers && !canViewAccesses) {
+        setOptionsLoading(false);
+        return;
+      }
+
       setOptionsLoading(true);
       try {
         const [usersResponse, accessesResponse] = await Promise.all([
-          fetch("/api/users?limit=100", { headers }),
-          fetch("/api/accesses?limit=100", { headers }),
+          canViewUsers ? fetch("/api/users?limit=100", { headers }) : null,
+          canViewAccesses ? fetch("/api/accesses?limit=100", { headers }) : null,
         ]);
 
         const [usersJson, accessesJson] = await Promise.all([
-          usersResponse.json().catch(() => null),
-          accessesResponse.json().catch(() => null),
+          usersResponse ? usersResponse.json().catch(() => null) : null,
+          accessesResponse ? accessesResponse.json().catch(() => null) : null,
         ]);
 
-        if (!usersResponse.ok) {
+        if (usersResponse && !usersResponse.ok && usersResponse.status !== 403) {
           throw new Error(usersJson?.message ?? "خطا در دریافت کاربران");
         }
-        if (!accessesResponse.ok) {
+        if (
+          accessesResponse &&
+          !accessesResponse.ok &&
+          accessesResponse.status !== 403
+        ) {
           throw new Error(accessesJson?.message ?? "خطا در دریافت accessها");
         }
 
         if (cancelled) return;
 
-        const rawUsers: unknown[] = Array.isArray(usersJson?.users)
+        const rawUsers: unknown[] =
+          usersResponse?.ok && Array.isArray(usersJson?.users)
           ? usersJson.users
           : [];
-        const rawAccesses: unknown[] = Array.isArray(accessesJson?.accesses)
+        const rawAccesses: unknown[] =
+          accessesResponse?.ok && Array.isArray(accessesJson?.accesses)
           ? accessesJson.accesses
           : [];
 
@@ -816,7 +838,7 @@ export default function PermissionsSection({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accessLoading, canViewAccesses, canViewUsers, headers]);
 
   function openCreate() {
     setForm(emptyForm());
@@ -1303,57 +1325,61 @@ export default function PermissionsSection({
               </div>
 
               {/* ── Accesses checklist — search by ID ── */}
-              <CollapsibleChecklist
-                title="Accessها"
-                icon={<FaKey className="h-3 w-3" />}
-                emptyText="accessای برای انتخاب وجود ندارد."
-                loading={optionsLoading}
-                defaultOpen={true}
-                searchPlaceholder="جستجو بر اساس ID..."
-                searchMode="id"
-                options={accesses.map((access) => ({
-                  value: access.id,
-                  label: accessLabel(access),
-                  sublabel: access.id.slice(-10),
-                }))}
-                values={form.accessIds}
-                onToggle={(value) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    accessIds: toggleArrayValue(prev.accessIds, value),
-                  }))
-                }
-              />
+              {canViewAccesses && (
+                <CollapsibleChecklist
+                  title="Accessها"
+                  icon={<FaKey className="h-3 w-3" />}
+                  emptyText="accessای برای انتخاب وجود ندارد."
+                  loading={optionsLoading}
+                  defaultOpen={true}
+                  searchPlaceholder="جستجو بر اساس ID..."
+                  searchMode="id"
+                  options={accesses.map((access) => ({
+                    value: access.id,
+                    label: accessLabel(access),
+                    sublabel: access.id.slice(-10),
+                  }))}
+                  values={form.accessIds}
+                  onToggle={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      accessIds: toggleArrayValue(prev.accessIds, value),
+                    }))
+                  }
+                />
+              )}
 
               {/* ── Users checklist — search by name ── */}
-              <CollapsibleChecklist
-                title="کاربران دریافت‌کننده"
-                icon={<FaUsers className="h-3 w-3" />}
-                emptyText="کاربری برای انتخاب وجود ندارد."
-                loading={optionsLoading}
-                searchPlaceholder="جستجو بر اساس نام یا شماره..."
-                searchMode="name"
-                options={users.map((user) => ({
-                  value: user.id,
-                  label: userLabel(user),
-                  sublabel: [
-                    user.role ? getUserRoleLabel(user.role) : "",
-                    user.phoneNumber,
-                  ]
-                    .filter(Boolean)
-                    .join(" · "),
-                }))}
-                values={form.assignedUserIds}
-                onToggle={(value) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    assignedUserIds: toggleArrayValue(
-                      prev.assignedUserIds,
-                      value,
-                    ),
-                  }))
-                }
-              />
+              {canViewUsers && (
+                <CollapsibleChecklist
+                  title="کاربران دریافت‌کننده"
+                  icon={<FaUsers className="h-3 w-3" />}
+                  emptyText="کاربری برای انتخاب وجود ندارد."
+                  loading={optionsLoading}
+                  searchPlaceholder="جستجو بر اساس نام یا شماره..."
+                  searchMode="name"
+                  options={users.map((user) => ({
+                    value: user.id,
+                    label: userLabel(user),
+                    sublabel: [
+                      user.role ? getUserRoleLabel(user.role) : "",
+                      user.phoneNumber,
+                    ]
+                      .filter(Boolean)
+                      .join(" · "),
+                  }))}
+                  values={form.assignedUserIds}
+                  onToggle={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      assignedUserIds: toggleArrayValue(
+                        prev.assignedUserIds,
+                        value,
+                      ),
+                    }))
+                  }
+                />
+              )}
             </div>
 
             {/* Footer */}

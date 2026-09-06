@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ComponentType } from "react";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
+import { shouldRenderContactSaveBlock } from "@/builder/blocks/contact-save/ContactSaveBlock";
 import { getBlockSpacingStyle } from "@/lib/design/block-spacing";
+import type { PageBlock } from "@/types/blocks/builder.types";
 
 const pendingPageViews = new Set<string>();
 
@@ -10,7 +12,7 @@ export default function PageRenderer({
   blocks,
   pageId,
 }: {
-  blocks: any[];
+  blocks: PageBlock[];
   pageId: string;
 }) {
   useEffect(() => {
@@ -55,14 +57,14 @@ export default function PageRenderer({
   return (
     <div>
       {blocks
-        .filter((block) => block.type !== "contactSave")
+        .filter((block) => shouldRenderContactSaveBlock(block))
         .map((b) => {
-          const cfg = (blockRegistry as any)[b.type];
+          const cfg = blockRegistry[b.type as keyof typeof blockRegistry];
 
           if (!cfg || !cfg.component) {
             return (
               <div
-                key={b.instanceId ?? Math.random()}
+                key={b.instanceId}
                 className="rounded-lg border p-3"
               >
                 <div className="text-sm font-bold">{b.type}</div>
@@ -73,7 +75,10 @@ export default function PageRenderer({
             );
           }
 
-          const BlockComponent = cfg.component as any;
+          const BlockComponent = cfg.component as ComponentType<{
+            block: PageBlock;
+            mode: "public";
+          }>;
 
           return (
             <div key={b.instanceId} style={getBlockSpacingStyle(b)}>

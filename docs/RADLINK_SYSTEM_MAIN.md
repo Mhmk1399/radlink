@@ -1,6 +1,6 @@
 # Radlink System Blueprint
 
-آخرین بازبینی کد: 2026-08-01
+آخرین بازبینی کد: 2026-09-05
 
 این فایل مرجع سریع و عملیاتی پروژه است. هدفش این است که هر نفر جدیدی با خواندن همین سند بفهمد Radlink چطور کار می‌کند، مسیرهای حساس کجاست، چه فایل‌هایی برای تغییر خطرناک‌ترند، و برای توسعه آینده باید از چه قراردادهایی پیروی کند.
 
@@ -15,6 +15,16 @@ Radlink یک اپ monolith با Next.js App Router، React، TypeScript، MongoD
 - صفحه‌ساز با بلاک‌های قابل تنظیم، یک `Page` یا `Template` می‌سازد.
 - صفحه عمومی از مسیر `/{url}` رندر می‌شود.
 - هر صفحه می‌تواند لوگو، هدر، فوتر، فونت، بک‌گراند، favicon/PWA icon، QR، نوتیفیکیشن، رزرو و محصولات داشته باشد.
+
+### یادداشت تغییرات مهم 2026-09-05
+
+- نقش `agentManager`/مدیر نماینده در قرارداد کاربران و scopeها جزو نقش‌های رسمی پروژه است.
+- محدودیت‌های فایل/بلاک/صفحه برای کاربران دارای نماینده حالا دو منبع دارد: ارث‌بری از `Agent.limits` یا override اختصاصی روی `User.limits` با `limitsOverrideEnabled`.
+- تغییر محدودیت نماینده نباید override اختصاصی کاربران زیرمجموعه را بازنویسی کند.
+- فوتر لندینگ می‌تواند لوگوی اختصاصی جدا از لوگوی هدر داشته باشد؛ اگر لوگوی فوتر خالی باشد، از لوگوی صفحه fallback می‌شود.
+- بلاک `contactInfo` نوع `landline`/تلفن ثابت با آیکون جدا و آیتم پیش‌فرض خالی دارد.
+- بلاک `productCards` چینش قابل تنظیم در تب استایل دارد و موبایل باید تک‌ستونه و خوانا بماند.
+- اکشن‌های ادیت/چت روی لندینگ باید در یک کنترل جمع‌وجور قرار بگیرند و chat modal در موبایل full-screen باشد.
 
 جریان اصلی پروژه این است:
 
@@ -93,6 +103,7 @@ flowchart LR
 
 - `user`
 - `agent`
+- `agentManager`
 - `admin`
 - `superAdmin`
 
@@ -103,8 +114,18 @@ flowchart LR
 - `role`, `status`: نقش و فعال/غیرفعال بودن.
 - `permissions`: لیست Permissionهای متصل به کاربر.
 - `limits`: سقف فایل، بلاک و صفحه.
+- `limitsOverrideEnabled`: مشخص می‌کند محدودیت‌های همان کاربر به صورت اختصاصی اعمال شود یا، در صورت داشتن نماینده، از محدودیت نماینده ارث‌بری کند.
 - `agentid`: اتصال user به Agent.
 - `isDeleted`: soft-delete منطقی برای کاربرها.
+
+قرارداد محدودیت‌ها:
+
+- مقدار `0` در `limits.files`, `limits.blocks`, `limits.pages` یعنی نامحدود.
+- اگر کاربر `agentid` داشته باشد و `limitsOverrideEnabled = false` باشد، محدودیت موثر او از `Agent.limits` خوانده می‌شود.
+- اگر همان کاربر `limitsOverrideEnabled = true` داشته باشد، محدودیت موثر از `User.limits` خودش خوانده می‌شود و فقط همان کاربر override می‌شود.
+- سوپرادمین/ادمین دارای مجوز ادیت کاربران می‌تواند در `UsersSection` برای یک کاربر زیرمجموعه نماینده، محدودیت اختصاصی بگذارد بدون اینکه `Agent.limits` یا محدودیت سایر کاربران آن نماینده تغییر کند.
+- تغییر `Agent.limits` فقط روی کاربران زیرمجموعه‌ای sync می‌شود که override اختصاصی ندارند (`limitsOverrideEnabled != true`).
+- محاسبه quota در `lib/auth/quota.ts` باید همین اولویت را رعایت کند: `superAdmin` همیشه bypass، سپس `User.limits` در حالت override، سپس `Agent.limits` در حالت ارث‌بری.
 
 ### Agent
 
@@ -118,6 +139,8 @@ flowchart LR
 - `type`: `personal` یا `company`.
 - `limits`: سقف منابع برای نماینده.
 - `isActive`: فعال بودن نماینده.
+
+وقتی یک User به نماینده یا مدیر نماینده تبدیل می‌شود، `agentid` روی همان User ثبت می‌شود و `limitsOverrideEnabled` برای او false می‌شود تا محدودیت نمایندگی از خود Agent مدیریت شود. هنگام ویرایش محدودیت‌های Agent، فقط Userهای زیرمجموعه‌ای که override اختصاصی ندارند با مقدار جدید sync می‌شوند.
 
 ### Access
 
@@ -186,9 +209,9 @@ Permission چند Access را گروه می‌کند و به چند user وصل 
 - `blocks`: آرایه embedded از snapshot کامل بلاک‌ها.
 - `background`: رنگ، تصویر و pattern صفحه.
 - `font`: فونت انتخابی لندینگ.
-- `logo`, `logoShape`
+- `logo`, `logoShape`: لوگوی اصلی صفحه و شکل آن، معمولا برای هدر و fallback فوتر استفاده می‌شود.
 - `logoHeader`: تنظیمات هدر لوگودار.
-- `footer`: تنظیمات فوتر.
+- `footer`: تنظیمات فوتر، شامل لوگوی اختصاصی فوتر، تصویر نماد اعتماد، متن زیر لوگو، رنگ‌ها و متن branding.
 - `favicon`
 - `thumbnail`
 - `seo`: شامل `title`, `description`, `keywords`, `canonical`, `ogImage`, `allowIndexing`.
@@ -629,6 +652,11 @@ type PageBlock = {
 
 `elements` ظاهر قابل ویرایش را نگه می‌دارد: رنگ، فونت، بک‌گراند، border، shadow، animation، align، margin/padding.
 
+قرارداد repeaterها:
+
+- بلاک‌ها نباید بدون دلیل محصولی/فنی `maxItems` ثابت داشته باشند. اگر کاربر باید بتواند هر تعداد آیتم لازم اضافه کند، schema نباید سقف مصنوعی مثل ۲۰ آیتم اعمال کند.
+- بلاک `slider` هم نباید محدودیت ثابت ۲۰ تصویر داشته باشد؛ محدودیت واقعی باید از quota فایل/فضای ذخیره‌سازی و توان performance پروژه بیاید، نه از خود بلاک.
+
 registry الان به صورت مرکزی این قابلیت‌ها را به schema/default اضافه می‌کند:
 
 - shadow برای بیشتر elementها.
@@ -650,8 +678,10 @@ registry الان به صورت مرکزی این قابلیت‌ها را به 
 
 `productCards`:
 
-- در دسکتاپ کارت‌ها باید ۳ ستونه نمایش داده شوند.
-- در موبایل همان الگوی اسکرول افقی حفظ می‌شود و اندازه کارت‌ها کمی کوچک‌تر از دسکتاپ است.
+- چینش محصولات از تب استایل کنترل می‌شود، نه تب محتوا.
+- در دسکتاپ تعداد ستون‌ها قابل تنظیم است؛ مثلا ۲ یا ۳ ستونه.
+- بلاک می‌تواند در حالت افقی/ردیفی یا حالت ستونی/grid نمایش داده شود.
+- در موبایل کارت‌های محصول باید تک‌ستونه و خوانا باشند؛ حتی اگر دسکتاپ چندستونه تنظیم شده باشد، خروجی موبایل نباید کارت‌ها را فشرده و زشت کند.
 - هر کارت می‌تواند دکمه خودش را داشته باشد، اما دو دکمه block-level هم زیر کل کارت‌ها وجود دارد. این دو دکمه نباید با دکمه داخلی کارت‌ها قاطی شوند.
 - دو دکمه زیر کارت‌ها باید مستقل قابل خاموش/روشن شدن، تغییر متن، تغییر لینک و تغییر ظاهر باشند.
 - وقتی کاربر محصول جدید به repeater اضافه می‌کند، آیتم جدید باید متن/قیمت/تصویر یا مقادیر default قابل فهم داشته باشد تا کارت خالی و گیج‌کننده ساخته نشود.
@@ -672,6 +702,8 @@ registry الان به صورت مرکزی این قابلیت‌ها را به 
 
 - تعداد ستون‌های grid آیتم‌ها از تب استایل تا ۴ ستون قابل تنظیم است.
 - کنترل grid باید با انتخاب container بلاک در تب استایل نمایش داده شود، نه با کلیک روی تک‌تک آیتم‌ها.
+- schema این بلاک باید نوع `landline`/«تلفن ثابت» را برای آیتم‌های تماس پشتیبانی کند.
+- آیتم پیش‌فرض `contactItems` برای تلفن ثابت با آیکون جدا وجود دارد، ولی مقدار شماره خالی است تا تا وقتی کاربر شماره وارد نکرده در خروجی public مثل آیتم واقعی نمایش داده نشود.
 
 ## Dynamic Island و فرم‌های ویرایش
 
@@ -793,6 +825,7 @@ Header می‌تواند:
 - title و description زیر لوگو داشته باشد.
 - background/gradient/pattern/wave داشته باشد.
 - variantهای wave، glass، liquid و patternهای مختلف داشته باشد.
+- تصویر هدر باید در موبایل هم منطقی نمایش داده شود؛ روی موبایل نباید crop شدید باعث از دست رفتن بخش اصلی لوگو شود. در حالت عکس آپلودی، نمایش `contain/center` روی موبایل و رفتار مناسب دسکتاپ باید حفظ شود.
 
 Footer:
 
@@ -800,7 +833,13 @@ Footer:
 - تنظیمات: `lib/design/page-footer.ts`
 - ذخیره در Page/Template: `footer`
 
-Footer باید همیشه با page logo کار کند، چون پروژه لوگوی جدا برای footer ندارد.
+Footer می‌تواند لوگوی اختصاصی خودش را داشته باشد. ترتیب نمایش لوگو در public landing این است:
+
+1. اگر `footer.logo` مقدار داشته باشد، همان لوگوی فوتر نمایش داده می‌شود.
+2. اگر `footer.logo` خالی باشد، فوتر از `page.logo` استفاده می‌کند.
+3. اگر هیچ لوگویی وجود نداشته باشد، حرف اول عنوان صفحه به عنوان fallback نمایش داده می‌شود.
+
+این لوگوی فوتر مستقل از لوگوی هدر، favicon و تصویر نماد اعتماد است. آپلود آن در editor فوتر صفحه‌ساز و modal برندینگ/فوتر صفحات ادمین انجام می‌شود و نباید با فیلد `trustBadgeImage` یا اینماد قاطی شود.
 
 قرارداد branding فوتر:
 
@@ -809,6 +848,7 @@ Footer باید همیشه با page logo کار کند، چون پروژه لو
 - admin و agent باید برای صفحه‌های داخل scope خود بتوانند branding فوتر را روشن/خاموش کنند.
 - متن کامل branding، بخش لینک‌دار متن و URL لینک باید قابل تغییر باشد. مثلا در متن بالا فقط «رادلینک» می‌تواند به `https://nfcrad.link/` لینک شود.
 - لینک فقط باید روی segment انتخاب‌شده اعمال شود، نه کل جمله.
+- فیلد `footer.logo` نباید در APIهای Page/Template به صورت اجباری خالی شود؛ ذخیره صفحه، ویرایش صفحه، ساخت قالب و ویرایش قالب باید مقدار لوگوی فوتر را حفظ کنند.
 
 نکته مهم UX:
 
@@ -816,6 +856,9 @@ Footer باید همیشه با page logo کار کند، چون پروژه لو
 - در ساخت صفحه از Template نباید دو Header یا دو Footer ساخته شود؛ فقط تنظیمات همان Header/Footer نهایی قابل ادیت است.
 - کلیک روی Header باید editor مربوط به Header را باز کند.
 - کلیک روی Footer باید editor مربوط به Footer را باز کند.
+- اکشن‌های بالای لندینگ برای ادیت صفحه و چت با صاحب صفحه نباید فضای زیادی اشغال کنند؛ این دو اکشن باید داخل یک دکمه/منوی جمع‌وجور نمایش داده شوند.
+- اگر کاربر برای چت توکن نداشته باشد، باید به `/auth` هدایت شود و بعد از ورود به همان لندینگ برگردد. صفحه auth در این حالت باید به کاربر بگوید بعد از ورود به لندینگ برمی‌گردد و دکمه رفتن به داشبورد نباید جریان چت را منحرف کند.
+- modal چت لندینگ در موبایل باید full-screen باشد و روی floating actionهای پایین صفحه قرار بگیرد.
 
 ## PWA، favicon و Add to Home Screen
 
@@ -1054,6 +1097,9 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `app/api/auth/verify-otp/route.ts` | نقطه صدور JWT و ریسک فعلی OTP bypass |
 | `app/api/auth/send-otp/route.ts` | OTP، rate limit اولیه، ساخت user |
 | `app/api/auth/login-password/route.ts` | ورود با رمز و verified کردن userهای ساخته‌شده توسط admin |
+| `app/api/users/route.ts` | لیست/ساخت کاربران، فیلترهای server-side، role/status/agent/limits و password اولیه |
+| `app/api/users/[id]/route.ts` | مشاهده/ویرایش/حذف نرم کاربر، تغییر password، agent و override محدودیت اختصاصی |
+| `app/api/agents/route.ts` و `app/api/agents/[id]/route.ts` | ساخت/ویرایش نماینده، sync محدودیت نماینده با کاربران بدون override |
 | `app/api/pages/route.ts` | ساخت/list صفحه، QR، sync products، publish |
 | `app/api/pages/[id]/route.ts` | ویرایش/حذف صفحه، blocks، publish، owner |
 | `app/api/pages/[id]/duplicate/route.ts` | کپی کامل صفحه و ساخت صفحه بدون owner |
@@ -1062,8 +1108,10 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `app/api/uploads/route.ts` | upload public فایل، quota، storage |
 | `lib/s3.ts`, `lib/liaraStorage.ts` | credential و object storage |
 | `lib/fileDeletion.ts` | حذف storage و DB record |
+| `lib/auth/quota.ts` | محاسبه سقف فایل/صفحه/بلاک با پشتیبانی از محدودیت اختصاصی کاربر و ارث‌بری از نماینده |
 | `lib/pages/autoAssignUnownedPages.ts` | منطق atomic تخصیص خودکار صفحات بدون صاحب |
-| `models/users.ts` | identity و role |
+| `models/users.ts` | identity، role، agentid، limits و `limitsOverrideEnabled` |
+| `models/agent.ts` | اطلاعات نماینده و محدودیت پیش‌فرض زیرمجموعه‌ها |
 | `models/access.ts` | قرارداد permission |
 | `models/permission.ts` | assignment دسترسی‌ها |
 | `models/systemSetting.ts` | تنظیمات سراسری حساس مثل user مقصد auto assignment |
@@ -1093,6 +1141,9 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `lib/design/page-footer.ts` | تنظیمات فوتر |
 | `lib/design/landing-fonts.ts` | فونت‌های لندینگ |
 | `lib/api/dateRangeFilters.ts` | تبدیل فیلترهای تاریخ DynamicTable به query مشترک backend |
+| `lib/auth/quota.ts` | محاسبه محدودیت فایل، صفحه و بلاک |
+| `components/admin/UsersSection.tsx` | فرم ساخت/ادیت کاربر، role، agent، password و محدودیت اختصاصی |
+| `components/landing/LandingFooter.tsx` | رندر فوتر public و اولویت لوگوی اختصاصی فوتر نسبت به لوگوی صفحه |
 | `components/global/DynamicTable.tsx` | جدول همه sectionهای ادمین |
 | `components/admin/AdminShell.tsx` | ناوبری پنل |
 | `components/admin/PagesSection.tsx` | مدیریت صفحات و publish |

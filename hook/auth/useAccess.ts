@@ -2,12 +2,15 @@
 
 import { useCallback } from "react";
 import useSWR from "swr";
+import type { AccessResourceKind } from "@/lib/auth/accessCatalog";
 
 type AccessMap = {
     components: Record<string, string[]>;
     templates: Record<string, string[]>;
     blocks: Record<string, string[]>;
     pages: Record<string, string[]>;
+    accesses: Record<string, string[]>;
+    permissions: Record<string, string[]>;
 };
 
 type MeResponse = {
@@ -101,7 +104,7 @@ export function useAccess() {
 
     const canOnResource = useCallback(
         (
-            resource: "templates" | "blocks" | "pages",
+            resource: AccessResourceKind,
             id: string,
             action: string,
         ): boolean => {

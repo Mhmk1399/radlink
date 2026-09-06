@@ -10,6 +10,7 @@ import React, {
 import { createPortal } from "react-dom";
 import { StyleSheetManager } from "styled-components";
 import { blockRegistry } from "@/builder/blocks/blockRegistry";
+import { shouldRenderContactSaveBlock } from "@/builder/blocks/contact-save/ContactSaveBlock";
 import { PageLogoPreview } from "@/builder/BuilderCanvas";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
 import LandingFooter from "@/components/landing/LandingFooter";
@@ -204,7 +205,9 @@ function PhonePreviewContent({
         block.isActive !== false &&
         !block.hidden,
     ) ?? null;
-  const contentBlocks = blocks.filter((block) => block.type !== "contactSave");
+  const contentBlocks = blocks.filter((block) =>
+    shouldRenderContactSaveBlock(block),
+  );
 
   return (
     <div
