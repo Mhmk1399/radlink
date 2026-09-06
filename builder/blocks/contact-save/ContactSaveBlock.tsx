@@ -26,6 +26,7 @@ export type ContactSaveData = {
   photoUrl: string;
   buttonText: string;
   showIcon: boolean;
+  showInPage: boolean;
 };
 
 const DEFAULT_DATA: ContactSaveData = {
@@ -40,6 +41,7 @@ const DEFAULT_DATA: ContactSaveData = {
   photoUrl: "",
   buttonText: "ذخیره در مخاطبین",
   showIcon: true,
+  showInPage: false,
 };
 
 const PREFIX = "contact-save";
@@ -130,7 +132,17 @@ export function getContactSaveData(block: PageBlock): ContactSaveData {
         : DEFAULT_DATA.buttonText,
     showIcon:
       typeof raw.showIcon === "boolean" ? raw.showIcon : DEFAULT_DATA.showIcon,
+    showInPage:
+      typeof raw.showInPage === "boolean"
+        ? raw.showInPage
+        : DEFAULT_DATA.showInPage,
   };
+}
+
+export function shouldRenderContactSaveBlock(block: PageBlock) {
+  if (block.type !== "contactSave") return true;
+  if (block.isActive === false || block.hidden === true) return false;
+  return getContactSaveData(block).showInPage;
 }
 
 function escapeVCardValue(value: string) {

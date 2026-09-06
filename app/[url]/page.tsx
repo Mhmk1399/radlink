@@ -356,7 +356,7 @@ export default async function PageRoute({ params }: Props) {
     .filter((notification) => notification.description);
   const clientBlocks = (page.blocks ?? []).map(
     (block) => toClientValue(block) as Record<string, unknown>,
-  );
+  ) as PageBlock[];
   const contactSaveBlock =
     clientBlocks.find(
       (block) =>

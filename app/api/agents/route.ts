@@ -19,6 +19,18 @@ import {
     toEnglishDigits,
 } from "@/lib/validation/identityFields";
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 function normalizeLimits(value: unknown) {
     const limits =
         typeof value === "object" && value !== null
@@ -110,9 +122,10 @@ export const GET = compose(
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const type = searchParams.get("type");           // filter by personal|company
-    const isActive = searchParams.get("isActive");   // filter by active state
+    const type = getFilterParam(searchParams, "type");           // filter by personal|company
+    const isActive = getFilterParam(searchParams, "isActive");   // filter by active state
     const mode = searchParams.get("mode");
+    const search = searchParams.get("search")?.trim();
     const isUserFormOptionsMode = mode === "user-form-options";
 
     if (requester.role !== "superAdmin") {
@@ -142,7 +155,37 @@ export const GET = compose(
         query.user = { $in: managedUserIds ?? [] };
     }
     if (type) query.type = type;
-    if (isActive !== null) query.isActive = isActive === "true";
+    if (isActive === "true" || isActive === "false") {
+        query.isActive = isActive === "true";
+    }
+    if (search) {
+        const pattern = escapeRegex(toEnglishDigits(search));
+        const matchedUserIds = await User.find({
+            $or: [
+                { firstName: { $regex: pattern, $options: "i" } },
+                { lastName: { $regex: pattern, $options: "i" } },
+                { phoneNumber: { $regex: pattern, $options: "i" } },
+                { email: { $regex: pattern, $options: "i" } },
+                { nationalCode: { $regex: pattern, $options: "i" } },
+                { fatherName: { $regex: pattern, $options: "i" } },
+            ],
+        }).distinct("_id");
+
+        query.$and = [
+            ...((query.$and as Record<string, unknown>[]) ?? []),
+            {
+                $or: [
+                    { companyName: { $regex: pattern, $options: "i" } },
+                    { ceoName: { $regex: pattern, $options: "i" } },
+                    { fixedNumber: { $regex: pattern, $options: "i" } },
+                    { postalCode: { $regex: pattern, $options: "i" } },
+                    { economicNumber: { $regex: pattern, $options: "i" } },
+                    { registrationNumber: { $regex: pattern, $options: "i" } },
+                    { user: { $in: matchedUserIds } },
+                ],
+            },
+        ];
+    }
 
     const [agents, total] = await Promise.all([
         Agent.find(query)

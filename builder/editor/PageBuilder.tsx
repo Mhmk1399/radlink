@@ -81,6 +81,7 @@ import {
 import { BuilderTour } from "../BuilderTour";
 import { useAccess } from "@/hook/auth/useAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
+import { shouldRenderContactSaveBlock } from "@/builder/blocks/contact-save/ContactSaveBlock";
 import {
   normalizeLogoHeaderSettings,
   type LogoHeaderSettings,
@@ -1124,7 +1125,7 @@ export default function SimplePageBuilder({
     [sortedBlocks],
   );
   const canvasBlocks = useMemo(
-    () => sortedBlocks.filter((block) => block.type !== "contactSave"),
+    () => sortedBlocks.filter((block) => shouldRenderContactSaveBlock(block)),
     [sortedBlocks],
   );
   const blockIds = useMemo(

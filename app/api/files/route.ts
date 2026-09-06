@@ -12,6 +12,14 @@ function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function getFilterParam(searchParams: URLSearchParams, key: string) {
+    return (
+        searchParams.get(`filter_${key}`)?.trim() ||
+        searchParams.get(key)?.trim() ||
+        ""
+    );
+}
+
 // POST /api/files — register an uploaded file record
 export const POST = compose(
     withDB(),
@@ -43,9 +51,9 @@ export const GET = compose(
     const query: Record<string, unknown> =
         await withActorOwnerScope(user);
     const search = searchParams.get("search")?.trim();
-    const kind = searchParams.get("filter_kind");
-    const ownerLabel = searchParams.get("filter_ownerLabel")?.trim();
-    const fileType = searchParams.get("filter_fileType");
+    const kind = getFilterParam(searchParams, "kind");
+    const ownerLabel = getFilterParam(searchParams, "ownerLabel");
+    const fileType = getFilterParam(searchParams, "fileType");
 
     if (search) {
         const pattern = escapeRegex(search);

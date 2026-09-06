@@ -41,203 +41,222 @@ import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
 /* ══════════════════════════════════════════════
    SOFT PALETTE — mirrors DashboardShell
    ══════════════════════════════════════════════ */
-
+const DASHBOARD_QUOTES = [
+  "هر صفحه بهتر، یک قدم نزدیک‌تر به اعتماد مشتری است.",
+  "حضور حرفه‌ای در فضای دیجیتال، از تجربه خوب کاربر شروع می‌شود.",
+  "هر کلیک می‌تواند آغاز یک ارتباط ارزشمند با مشتری باشد.",
+  "برند قوی، با تجربه‌ای ساخته می‌شود که در ذهن کاربر می‌ماند.",
+  "رشد دیجیتال از تصمیم‌های کوچک اما هوشمندانه شروع می‌شود.",
+  "هر بازدید یک فرصت تازه برای معرفی بهتر کسب‌وکار شماست.",
+  "سادگی در تجربه کاربر، قدرت در رشد کسب‌وکار است.",
+  "امروز بهتر بسازید تا فردا بیشتر دیده شوید.",
+  "ارتباط سریع‌تر با مشتری، مسیر رشد را کوتاه‌تر می‌کند.",
+  "یک حضور دیجیتال حرفه‌ای، ویترین همیشه‌باز کسب‌وکار شماست.",
+] as const;
 const dash = {
   dark: {
-    // ── Surfaces ──────────────────────────────
-    page: "bg-[#111116]",
-    card: "bg-[#1c1c23]",
-    cardHover: "hover:bg-[#21212a]",
-    input: "bg-[#1e1e26]",
-    hover: "hover:bg-[#ffffff07]",
-    active: "bg-[#c8a84b]/[0.07]",
+    page: "bg-[#090e16]",
+    card: "bg-[#111923]",
+    cardHover: "hover:bg-[#151f2b]",
+    input: "bg-[#182330]",
+    hover: "hover:bg-white/[0.035]",
+    active: "bg-[#f4bd45]/[0.09]",
 
-    // ── Text ──────────────────────────────────
-    textPrimary: "text-[#e6e3de]",
-    textSecondary: "text-[#9c9890]",
-    textMuted: "text-[#8a867e]",
-    textDisabled: "text-[#6e6a62]",
-    textAccent: "text-[#d2b660]",
+    textPrimary: "text-[#f3f5f7]",
+    textSecondary: "text-[#b2bac7]",
+    textMuted: "text-[#7f8a9b]",
+    textDisabled: "text-[#5d6878]",
+    textAccent: "text-[#f5c451]",
 
-    // ── Borders ───────────────────────────────
-    border: "border-[#26262f]",
-    borderAccent: "border-[#c8a84b]/18",
-    divider: "border-[#22222a]/70",
+    border: "border-[#202c3a]",
+    borderAccent: "border-[#f2bd45]/25",
+    divider: "border-[#1b2734]/90",
 
-    // ── Shadows ───────────────────────────────
-    shadow: "shadow-[0_2px_10px_-3px_rgba(0,0,0,0.35)]",
+    shadow: "shadow-[0_14px_34px_-24px_rgba(0,0,0,0.85)]",
 
-    // ── Accent fills ──────────────────────────
-    accentIcon: "bg-[#c8a84b]/[0.07] border-[#c8a84b]/14 text-[#d2b660]",
-    accentGlow: "bg-[#c8a84b]/[0.06]",
-    headerGrad: "from-[#c8a84b]/[0.04] via-transparent to-transparent",
+    accentIcon: "bg-[#f3bd45]/[0.10] border-[#f3bd45]/20 text-[#f5c451]",
+    accentGlow: "bg-[#f3bd45]/[0.10]",
+    headerGrad: "from-[#f3bd45]/[0.06] via-transparent to-transparent",
     avatarBg:
-      "from-[#c8a84b]/18 via-[#a07830]/12 to-[#c8a84b]/8 text-[#d2b660] ring-[#c8a84b]/18",
+      "from-[#f3bd45]/24 via-[#b98932]/16 to-[#26344a] text-[#f5c451] ring-[#f3bd45]/22",
 
-    // ── Status — muted, not neon ──────────────
-    successBg: "bg-emerald-500/[0.07]",
+    hero: "bg-[linear-gradient(110deg,#171b20_0%,#111823_42%,#0f1722_100%)] border-[#2a3542] shadow-[0_18px_48px_-30px_rgba(0,0,0,0.9)]",
+    heroGlow:
+      "bg-[radial-gradient(circle,rgba(246,198,82,0.30)_0%,rgba(246,198,82,0.10)_35%,transparent_68%)]",
+    heroSun:
+      "bg-[linear-gradient(180deg,#ffd978_0%,#efb840_100%)] shadow-[0_0_54px_rgba(245,190,66,0.30)]",
+    heroMountainBack: "bg-[#111824]",
+    heroMountainFront: "bg-[#0c131d]",
+    heroLine:
+      "bg-gradient-to-r from-transparent via-[#e5aa34]/70 to-transparent",
+    heroQuote: "text-[#d7dce4]",
+
+    statPurple:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(137,76,220,0.22),transparent_34%),linear-gradient(135deg,#19162b_0%,#151926_55%,#111821_100%)] border-[#4d3d70]/55",
+    statPurpleIcon:
+      "bg-purple-500/[0.16] border-purple-400/25 text-purple-300 shadow-[0_0_28px_rgba(168,85,247,0.10)]",
+    statGreen:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(16,185,129,0.19),transparent_35%),linear-gradient(135deg,#102822_0%,#111f24_58%,#111821_100%)] border-emerald-500/25",
+    statGreenIcon:
+      "bg-emerald-500/[0.15] border-emerald-400/25 text-emerald-300 shadow-[0_0_28px_rgba(16,185,129,0.10)]",
+    statAmber:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(245,183,65,0.20),transparent_35%),linear-gradient(135deg,#292316_0%,#1e1d1b_58%,#111821_100%)] border-amber-400/25",
+    statAmberIcon:
+      "bg-amber-400/[0.14] border-amber-300/25 text-amber-300 shadow-[0_0_28px_rgba(245,183,65,0.10)]",
+    statRose:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(244,63,94,0.18),transparent_35%),linear-gradient(135deg,#2a1820_0%,#211922_58%,#111821_100%)] border-rose-400/20",
+    statRoseIcon:
+      "bg-rose-500/[0.14] border-rose-400/25 text-rose-300 shadow-[0_0_28px_rgba(244,63,94,0.10)]",
+
+    successBg: "bg-emerald-500/[0.08]",
     successText: "text-emerald-400",
     successBadge:
-      "bg-emerald-500/[0.08] text-emerald-400 ring-1 ring-emerald-500/18",
+      "bg-emerald-500/[0.10] text-emerald-400 ring-1 ring-emerald-500/20",
     successDot: "bg-emerald-400",
-    pendingBg: "bg-amber-500/[0.07]",
+    pendingBg: "bg-amber-500/[0.08]",
     pendingText: "text-amber-400",
-    pendingBadge: "bg-amber-500/[0.08] text-amber-400 ring-1 ring-amber-500/18",
+    pendingBadge: "bg-amber-500/[0.10] text-amber-400 ring-1 ring-amber-500/20",
     pendingDot: "bg-amber-400",
-    defaultBg: "bg-white/[0.025]",
-    defaultText: "text-[#8a867e]",
-    defaultBadge: "bg-white/[0.05] text-[#9c9890] ring-1 ring-white/8",
-    defaultDot: "bg-[#4a4740]",
-    dotRing: "ring-[#1c1c23]",
+    defaultBg: "bg-white/[0.03]",
+    defaultText: "text-[#8c96a5]",
+    defaultBadge: "bg-white/[0.05] text-[#a0a9b6] ring-1 ring-white/10",
+    defaultDot: "bg-[#536070]",
+    dotRing: "ring-[#111923]",
 
-    // ── Change badges ─────────────────────────
     posBadge:
-      "bg-emerald-500/[0.08] text-emerald-400 ring-1 ring-emerald-500/18",
-    negBadge: "bg-red-500/[0.08] text-red-400 ring-1 ring-red-500/18",
+      "bg-emerald-500/[0.11] text-emerald-300 ring-1 ring-emerald-500/20",
+    negBadge: "bg-rose-500/[0.11] text-rose-300 ring-1 ring-rose-500/20",
 
-    // ── Error banner ─────────────────────────
-    errorBg: "bg-red-500/[0.06] border-red-500/15 text-red-400",
+    errorBg: "bg-rose-500/[0.08] border-rose-500/20 text-rose-300",
 
-    // ── System status ─────────────────────────
     onlineBg:
-      "bg-emerald-500/[0.07] text-emerald-400 ring-1 ring-emerald-500/14",
-    onlineDot: "bg-emerald-500",
+      "bg-emerald-500/[0.10] text-emerald-300 ring-1 ring-emerald-500/18",
+    onlineDot: "bg-emerald-400",
     onlinePing: "bg-emerald-400",
 
-    // ── Role colours ──────────────────────────
-    roleUser: "bg-[#3a3a44]/60 text-[#9c9890] ring-1 ring-[#3a3a44]",
-    roleAgent: "bg-blue-500/[0.08] text-blue-400 ring-1 ring-blue-500/18",
-    roleAdmin: "bg-amber-500/[0.08] text-amber-400 ring-1 ring-amber-500/18",
+    roleUser: "bg-slate-400/[0.09] text-slate-300 ring-1 ring-slate-400/15",
+    roleAgent: "bg-blue-500/[0.10] text-blue-300 ring-1 ring-blue-500/20",
+    roleAdmin: "bg-amber-500/[0.10] text-amber-300 ring-1 ring-amber-500/20",
     roleSuperAdmin:
-      "bg-[#c8a84b]/[0.07] text-[#d2b660] ring-1 ring-[#c8a84b]/20",
+      "bg-[#f3bd45]/[0.10] text-[#f5c451] ring-1 ring-[#f3bd45]/22",
 
-    // ── Quick action colours ───────────────────
-    qaBlue: "bg-blue-500/[0.08] text-blue-400",
-    qaGreen: "bg-emerald-500/[0.08] text-emerald-400",
-    qaAmber: "bg-amber-500/[0.08] text-amber-400",
-    qaPurple: "bg-purple-500/[0.08] text-purple-400",
-    qaPink: "bg-pink-500/[0.08] text-pink-400",
-    qaRed: "bg-red-500/[0.08] text-red-400",
+    qaBlue: "bg-blue-500/[0.14] text-blue-300 ring-1 ring-blue-400/15",
+    qaGreen:
+      "bg-emerald-500/[0.14] text-emerald-300 ring-1 ring-emerald-400/15",
+    qaAmber: "bg-amber-500/[0.14] text-amber-300 ring-1 ring-amber-400/15",
+    qaPurple: "bg-violet-500/[0.14] text-violet-300 ring-1 ring-violet-400/15",
+    qaPink: "bg-fuchsia-500/[0.14] text-fuchsia-300 ring-1 ring-fuchsia-400/15",
+    qaRed: "bg-rose-500/[0.14] text-rose-300 ring-1 ring-rose-400/15",
 
-    // ── Section link ──────────────────────────
     sectionLink:
-      "text-[#d2b660]/70 hover:text-[#d2b660] hover:bg-[#c8a84b]/[0.06]",
-    sectionIcon: "bg-[#c8a84b]/[0.06] text-[#d2b660]",
+      "text-[#f5c451]/78 hover:text-[#ffd56d] hover:bg-[#f3bd45]/[0.07]",
+    sectionIcon: "bg-[#f3bd45]/[0.09] text-[#f5c451] ring-1 ring-[#f3bd45]/12",
 
-    // ── Mini stat icon ────────────────────────
     miniIcon:
-      "bg-white/[0.03] text-[#8a867e] group-hover:bg-[#c8a84b]/[0.08] group-hover:text-[#d2b660]",
+      "bg-[#182330] text-[#8f9bad] group-hover:bg-[#f3bd45]/[0.10] group-hover:text-[#f5c451] ring-1 ring-white/[0.035]",
 
-    // ── Empty state ───────────────────────────
     emptyBg: "bg-white/[0.025]",
-    emptyIcon: "text-[#4a4a4e]",
+    emptyIcon: "text-[#506071]",
   },
 
   light: {
-  // ── Surfaces ──────────────────────────────
-  page: "bg-[#f1f2f4]",
-  card: "bg-[#ffffff]",
-  cardHover: "hover:bg-[#f8f8f9]",
-  input: "bg-[#f4f5f6]",
-  hover: "hover:bg-black/[0.035]",
-  active: "bg-black/[0.07]",
+    page: "bg-[#f4f1ea]",
+    card: "bg-[#fffdfa]",
+    cardHover: "hover:bg-[#fffaf0]",
+    input: "bg-[#f3eee4]",
+    hover: "hover:bg-[#7a5b1d]/[0.045]",
+    active: "bg-[#d39a21]/[0.10]",
 
-  // ── Text ──────────────────────────────────
-  textPrimary: "text-[#18181b]",
-  textSecondary: "text-[#52525b]",
-  textMuted: "text-[#71717a]",
-  textDisabled: "text-[#a1a1aa]",
-  textAccent: "text-[#27272a]",
+    textPrimary: "text-[#1d2430]",
+    textSecondary: "text-[#525d6c]",
+    textMuted: "text-[#7d8694]",
+    textDisabled: "text-[#a6abb3]",
+    textAccent: "text-[#9a6508]",
 
-  // ── Borders ───────────────────────────────
-  border: "border-[#dedfe3]",
-  borderAccent: "border-[#a1a1aa]/45",
-  divider: "border-[#e5e5e7]/80",
+    border: "border-[#e4ddcf]",
+    borderAccent: "border-[#c68b1a]/30",
+    divider: "border-[#ebe3d6]/95",
 
-  // ── Shadows ───────────────────────────────
-  shadow:
-    "shadow-[0_2px_10px_-4px_rgba(24,24,27,0.12)]",
+    shadow: "shadow-[0_14px_34px_-26px_rgba(63,52,35,0.30)]",
 
-  // ── Accent fills ──────────────────────────
-  accentIcon:
-    "bg-[#ececef] border-[#d4d4d8] text-[#27272a]",
-  accentGlow: "bg-black/[0.035]",
-  headerGrad:
-    "from-black/[0.035] via-transparent to-transparent",
-  avatarBg:
-    "from-[#e4e4e7] via-[#f4f4f5] to-[#d4d4d8] text-[#27272a] ring-[#a1a1aa]/35",
+    accentIcon: "bg-[#f8ecd0] border-[#ebcf91] text-[#96620a]",
+    accentGlow: "bg-[#d59a22]/[0.09]",
+    headerGrad: "from-[#d59a22]/[0.07] via-transparent to-transparent",
+    avatarBg:
+      "from-[#f2d99f] via-[#fff4d7] to-[#ebe4d8] text-[#8f5f0b] ring-[#ddb65d]/35",
 
-  // ── Status ────────────────────────────────
-  successBg: "bg-emerald-500/[0.08]",
-  successText: "text-emerald-700",
-  successBadge:
-    "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
-  successDot: "bg-emerald-600",
+    hero: "bg-[linear-gradient(110deg,#fff8e8_0%,#fffdfa_45%,#f7f4ee_100%)] border-[#e1d7c5] shadow-[0_18px_46px_-34px_rgba(80,61,25,0.32)]",
+    heroGlow:
+      "bg-[radial-gradient(circle,rgba(225,166,48,0.22)_0%,rgba(225,166,48,0.08)_35%,transparent_68%)]",
+    heroSun:
+      "bg-[linear-gradient(180deg,#ffd875_0%,#e9ad35_100%)] shadow-[0_0_48px_rgba(216,156,38,0.22)]",
+    heroMountainBack: "bg-[#e9dfcc]",
+    heroMountainFront: "bg-[#d8ccba]",
+    heroLine:
+      "bg-gradient-to-r from-transparent via-[#c98d1b]/55 to-transparent",
+    heroQuote: "text-[#4f5560]",
 
-  pendingBg: "bg-amber-500/[0.08]",
-  pendingText: "text-amber-700",
-  pendingBadge:
-    "bg-amber-500/[0.08] text-amber-700 ring-1 ring-amber-500/20",
-  pendingDot: "bg-amber-500",
+    statPurple:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(139,92,246,0.11),transparent_36%),linear-gradient(135deg,#fbf8ff_0%,#fffdfa_60%,#fffdfa_100%)] border-violet-300/45",
+    statPurpleIcon: "bg-violet-100 border-violet-200 text-violet-700",
+    statGreen:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(16,185,129,0.10),transparent_36%),linear-gradient(135deg,#f3fff9_0%,#fffdfa_60%,#fffdfa_100%)] border-emerald-300/45",
+    statGreenIcon: "bg-emerald-100 border-emerald-200 text-emerald-700",
+    statAmber:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(217,154,33,0.12),transparent_36%),linear-gradient(135deg,#fff9ec_0%,#fffdfa_60%,#fffdfa_100%)] border-amber-300/50",
+    statAmberIcon: "bg-amber-100 border-amber-200 text-amber-700",
+    statRose:
+      "bg-[radial-gradient(circle_at_88%_12%,rgba(244,63,94,0.09),transparent_36%),linear-gradient(135deg,#fff7f8_0%,#fffdfa_60%,#fffdfa_100%)] border-rose-200/65",
+    statRoseIcon: "bg-rose-100 border-rose-200 text-rose-700",
 
-  defaultBg: "bg-[#f0f0f2]",
-  defaultText: "text-[#71717a]",
-  defaultBadge:
-    "bg-[#f0f0f2] text-[#52525b] ring-1 ring-[#d4d4d8]",
-  defaultDot: "bg-[#a1a1aa]",
-  dotRing: "ring-white",
+    successBg: "bg-emerald-500/[0.08]",
+    successText: "text-emerald-700",
+    successBadge:
+      "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
+    successDot: "bg-emerald-600",
+    pendingBg: "bg-amber-500/[0.08]",
+    pendingText: "text-amber-700",
+    pendingBadge: "bg-amber-500/[0.08] text-amber-700 ring-1 ring-amber-500/20",
+    pendingDot: "bg-amber-500",
+    defaultBg: "bg-[#f1ede5]",
+    defaultText: "text-[#737c89]",
+    defaultBadge: "bg-[#f1ede5] text-[#5d6673] ring-1 ring-[#ddd4c5]",
+    defaultDot: "bg-[#a6aeb8]",
+    dotRing: "ring-[#fffdfa]",
 
-  // ── Change badges ─────────────────────────
-  posBadge:
-    "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
-  negBadge:
-    "bg-red-500/[0.08] text-red-600 ring-1 ring-red-500/20",
+    posBadge:
+      "bg-emerald-500/[0.09] text-emerald-700 ring-1 ring-emerald-500/20",
+    negBadge: "bg-rose-500/[0.09] text-rose-600 ring-1 ring-rose-500/20",
 
-  // ── Error banner ──────────────────────────
-  errorBg:
-    "bg-red-500/[0.07] border-red-500/20 text-red-600",
+    errorBg: "bg-rose-500/[0.07] border-rose-500/20 text-rose-600",
 
-  // ── System status ─────────────────────────
-  onlineBg:
-    "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/20",
-  onlineDot: "bg-emerald-600",
-  onlinePing: "bg-emerald-400",
+    onlineBg:
+      "bg-emerald-500/[0.08] text-emerald-700 ring-1 ring-emerald-500/18",
+    onlineDot: "bg-emerald-600",
+    onlinePing: "bg-emerald-400",
 
-  // ── Role colours ──────────────────────────
-  roleUser:
-    "bg-[#f0f0f2] text-[#52525b] ring-1 ring-[#d4d4d8]",
+    roleUser: "bg-[#f1ede5] text-[#596271] ring-1 ring-[#ded6c9]",
+    roleAgent: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    roleAdmin: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+    roleSuperAdmin: "bg-[#1f2937] text-white ring-1 ring-black/15",
 
-  roleAgent:
-    "bg-[#e9e9ec] text-[#3f3f46] ring-1 ring-[#d4d4d8]",
+    qaBlue: "bg-blue-50 text-blue-700 ring-1 ring-blue-100",
+    qaGreen: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
+    qaAmber: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+    qaPurple: "bg-violet-50 text-violet-700 ring-1 ring-violet-100",
+    qaPink: "bg-fuchsia-50 text-fuchsia-700 ring-1 ring-fuchsia-100",
+    qaRed: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
 
-  roleAdmin:
-    "bg-[#dedee2] text-[#27272a] ring-1 ring-[#c4c4c9]",
+    sectionLink:
+      "text-[#9a6508] hover:text-[#754a03] hover:bg-[#d59a22]/[0.08]",
+    sectionIcon: "bg-[#f8ecd0] text-[#96620a] ring-1 ring-[#ead29a]",
 
-  roleSuperAdmin:
-    "bg-[#27272a] text-white ring-1 ring-black/20",
+    miniIcon:
+      "bg-[#f1ede5] text-[#7c8490] group-hover:bg-[#f7e9c7] group-hover:text-[#93610b] ring-1 ring-[#e6dfd3]",
 
-  // ── Quick action colours ──────────────────
-  qaBlue: "bg-[#ededf0] text-[#3f3f46]",
-  qaGreen: "bg-[#e8e8eb] text-[#3f3f46]",
-  qaAmber: "bg-[#e4e4e7] text-[#27272a]",
-  qaPurple: "bg-[#ededf0] text-[#52525b]",
-  qaPink: "bg-[#e8e8eb] text-[#3f3f46]",
-  qaRed: "bg-[#dedee2] text-[#27272a]",
-
-  // ── Section link ──────────────────────────
-  sectionLink:
-    "text-[#52525b] hover:text-[#18181b] hover:bg-black/[0.05]",
-  sectionIcon:
-    "bg-[#ececef] text-[#3f3f46]",
-
-  // ── Mini stat icon ────────────────────────
-  miniIcon:
-    "bg-[#eeeeef] text-[#71717a] group-hover:bg-[#27272a] group-hover:text-white",
-
-  // ── Empty state ───────────────────────────
-  emptyBg: "bg-[#f3f3f5]",
-  emptyIcon: "text-[#a1a1aa]",
-},
+    emptyBg: "bg-[#f3eee5]",
+    emptyIcon: "text-[#a3a8b0]",
+  },
 } as const;
 
 /* ── useDash — resolves palette ── */
@@ -550,6 +569,7 @@ function StatCard({
   changeLabel,
   loading,
   onClick,
+  tone = "amber",
 }: {
   icon: React.ReactNode;
   label: string;
@@ -558,44 +578,60 @@ function StatCard({
   changeLabel?: string;
   loading?: boolean;
   onClick?: () => void;
+  tone?: "purple" | "green" | "amber" | "rose";
 }) {
   const { d } = useDash();
   const pos = (change ?? 0) >= 0;
   const anim = useCountUp(loading ? 0 : value);
 
+  const toneClass = {
+    purple: d.statPurple,
+    green: d.statGreen,
+    amber: d.statAmber,
+    rose: d.statRose,
+  }[tone];
+
+  const iconClass = {
+    purple: d.statPurpleIcon,
+    green: d.statGreenIcon,
+    amber: d.statAmberIcon,
+    rose: d.statRoseIcon,
+  }[tone];
+
   if (loading)
     return (
       <div
         className={cn(
-          "rounded-2xl border p-4 sm:p-5 min-h-[130px] sm:min-h-[152px]",
+          "rounded-2xl border p-4 sm:p-5 min-h-[148px] xl:min-h-[174px]",
           d.card,
           d.border,
+          d.shadow,
         )}
         aria-hidden="true"
       >
-        <div className="flex items-start justify-between mb-3 sm:mb-5">
+        <div className="flex items-start justify-between mb-4">
           <div
             className={cn(
-              "h-10 w-10 sm:h-12 sm:w-12 rounded-xl motion-safe:animate-pulse",
+              "h-11 w-11 sm:h-12 sm:w-12 rounded-xl motion-safe:animate-pulse",
               d.input,
             )}
           />
           <div
             className={cn(
-              "h-5 w-14 sm:h-6 sm:w-16 rounded-full motion-safe:animate-pulse",
+              "h-6 w-16 rounded-full motion-safe:animate-pulse",
               d.input,
             )}
           />
         </div>
         <div
           className={cn(
-            "h-7 w-20 sm:h-8 sm:w-28 rounded-lg motion-safe:animate-pulse mb-1.5 sm:mb-2",
+            "h-8 w-24 rounded-lg motion-safe:animate-pulse mb-2",
             d.input,
           )}
         />
         <div
           className={cn(
-            "h-3 w-16 sm:h-4 sm:w-20 rounded motion-safe:animate-pulse",
+            "h-3.5 w-24 rounded motion-safe:animate-pulse",
             d.input,
           )}
         />
@@ -618,92 +654,76 @@ function StatCard({
           : `${label}: ${formatNumber(value)}${changeText ? `، ${changeText}` : ""}`
       }
       className={cn(
-        "group relative w-full overflow-hidden rounded-2xl border p-4 sm:p-5 text-right transition-all duration-300",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-        d.card,
-        d.border,
+        "group relative w-full overflow-hidden rounded-2xl border p-4 sm:p-5 text-right min-h-[148px] xl:min-h-[174px] transition-all duration-300",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#eeb944]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+        toneClass,
         d.shadow,
         onClick &&
-          cn(
-            d.cardHover,
-            "cursor-pointer motion-safe:hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:scale-[0.99]",
-          ),
+          "cursor-pointer motion-safe:hover:-translate-y-1 hover:shadow-[0_22px_44px_-30px_rgba(0,0,0,0.85)] active:translate-y-0 active:scale-[0.99]",
         !onClick && "cursor-default",
       )}
     >
-      {/* Subtle corner glow on hover */}
       <div
-        className={cn(
-          "pointer-events-none absolute -right-6 -top-6 h-20 w-20 sm:h-24 sm:w-24 rounded-full blur-3xl opacity-0 transition-opacity duration-500",
-          onClick && "group-hover:opacity-100",
-          d.accentGlow,
-        )}
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-white/15 to-transparent"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -left-16 -bottom-20 h-44 w-44 rounded-full bg-white/[0.025] blur-3xl transition-transform duration-500 group-hover:scale-125"
         aria-hidden="true"
       />
 
-      <div className="relative">
+      <div className="relative z-10 flex h-full flex-col">
         <div className="flex items-start justify-between mb-3 sm:mb-4">
-          {/* Icon */}
           <div
             className={cn(
-              "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl border transition-transform duration-300",
+              "flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl border transition-transform duration-300",
               onClick && "motion-safe:group-hover:scale-110",
-              d.accentIcon,
+              iconClass,
             )}
             aria-hidden="true"
           >
             <span className="text-base sm:text-lg">{icon}</span>
           </div>
 
-          {/* Change badge */}
           {change !== undefined && (
             <div
               className={cn(
-                "flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-bold tracking-tight",
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] sm:text-[11px] font-extrabold tracking-tight",
                 pos ? d.posBadge : d.negBadge,
               )}
             >
               {pos ? (
-                <FaArrowTrendUp
-                  className="h-2.5 w-2.5 sm:h-3 sm:w-3"
-                  aria-hidden="true"
-                />
+                <FaArrowTrendUp className="h-3 w-3" aria-hidden="true" />
               ) : (
-                <FaArrowTrendDown
-                  className="h-2.5 w-2.5 sm:h-3 sm:w-3"
-                  aria-hidden="true"
-                />
+                <FaArrowTrendDown className="h-3 w-3" aria-hidden="true" />
               )}
               {toPersianDigits(Math.abs(change))}٪
             </div>
           )}
         </div>
 
-        {/* Value */}
         <p
           className={cn(
-            "text-2xl sm:text-3xl font-black tabular-nums mb-1 sm:mb-1.5 tracking-tight",
+            "text-2xl sm:text-[30px] font-black tabular-nums mb-1 tracking-tight leading-none",
             d.textPrimary,
           )}
         >
           {formatNumber(anim)}
         </p>
 
-        {/* Label */}
         <p
           className={cn(
-            "text-[11px] sm:text-[13px] font-semibold",
+            "text-[12px] sm:text-[13px] font-bold",
             d.textSecondary,
           )}
         >
           {label}
         </p>
 
-        {/* Sub-label */}
         {changeLabel && (
           <p
             className={cn(
-              "text-[10px] sm:text-[11px] mt-1 sm:mt-1.5 leading-relaxed hidden sm:block",
+              "text-[10px] sm:text-[11px] mt-1.5 leading-relaxed",
               d.textMuted,
             )}
           >
@@ -712,12 +732,10 @@ function StatCard({
         )}
       </div>
 
-      {/* Nav arrow */}
       {onClick && (
         <FaChevronLeft
           className={cn(
-            "absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-3.5 sm:w-3.5",
-            "opacity-0 transition-all duration-300 group-hover:opacity-40 motion-safe:group-hover:-translate-x-1",
+            "absolute left-3.5 bottom-4 h-3 w-3 opacity-0 transition-all duration-300 group-hover:opacity-40 motion-safe:group-hover:-translate-x-1",
             d.textMuted,
           )}
           aria-hidden="true"
@@ -750,29 +768,29 @@ function MiniStat({
       onClick={onClick}
       aria-label={`${label}: ${toPersianDigits(value.toLocaleString())}. مشاهده`}
       className={cn(
-        "group flex items-center gap-2 sm:gap-3 rounded-xl border p-2.5 sm:p-3.5 transition-all duration-200 text-right w-full",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+        "group flex min-h-[66px] w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-right transition-all duration-200 sm:min-h-[70px] sm:px-3.5",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#eeb944]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         d.card,
         d.border,
         d.shadow,
         d.cardHover,
-        "motion-safe:hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98]",
+        "motion-safe:hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985]",
       )}
     >
       <div
         className={cn(
-          "flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 motion-safe:group-hover:scale-110",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200 motion-safe:group-hover:scale-105",
           d.miniIcon,
         )}
         aria-hidden="true"
       >
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {loading ? (
           <div
             className={cn(
-              "h-4 sm:h-5 w-8 sm:w-10 rounded motion-safe:animate-pulse mb-1",
+              "mb-1 h-5 w-10 rounded motion-safe:animate-pulse",
               d.input,
             )}
             aria-hidden="true"
@@ -780,7 +798,7 @@ function MiniStat({
         ) : (
           <p
             className={cn(
-              "text-base sm:text-lg font-extrabold tabular-nums leading-none mb-0.5",
+              "mb-1 text-[17px] font-black tabular-nums leading-none sm:text-lg",
               d.textPrimary,
             )}
           >
@@ -789,21 +807,13 @@ function MiniStat({
         )}
         <p
           className={cn(
-            "text-[10px] sm:text-[11px] font-medium truncate",
+            "truncate text-[10px] font-medium sm:text-[11px]",
             d.textMuted,
           )}
         >
           {label}
         </p>
       </div>
-      <FaChevronLeft
-        className={cn(
-          "h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-0 transition-all duration-200",
-          "group-hover:opacity-40 motion-safe:group-hover:-translate-x-0.5",
-          d.textMuted,
-        )}
-        aria-hidden="true"
-      />
     </button>
   );
 }
@@ -827,9 +837,9 @@ function QuickAction({
       onClick={onClick}
       aria-label={label}
       className={cn(
-        "group flex flex-col items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl border p-2.5 sm:p-4 text-center transition-all duration-200 min-h-[76px] sm:min-h-[96px] justify-center",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-        "motion-safe:hover:-translate-y-1 hover:shadow-md active:translate-y-0 active:scale-[0.97]",
+        "group flex min-h-[86px] flex-col items-center justify-center gap-2 rounded-xl border p-2.5 text-center transition-all duration-200 sm:min-h-[100px] sm:rounded-2xl sm:p-4",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#eeb944]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+        "motion-safe:hover:-translate-y-1 active:translate-y-0 active:scale-[0.97]",
         d.card,
         d.cardHover,
         d.border,
@@ -837,7 +847,7 @@ function QuickAction({
     >
       <div
         className={cn(
-          "flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl transition-all duration-200 motion-safe:group-hover:scale-110",
+          "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 motion-safe:group-hover:scale-110 sm:h-11 sm:w-11",
           color,
         )}
         aria-hidden="true"
@@ -846,7 +856,7 @@ function QuickAction({
       </div>
       <span
         className={cn(
-          "text-[10px] sm:text-[11px] font-semibold leading-tight",
+          "text-[10px] font-bold leading-tight sm:text-[11px]",
           d.textSecondary,
         )}
       >
@@ -874,7 +884,6 @@ function RecentItem({
 }) {
   const { d } = useDash();
 
-  /* Status → palette slot */
   const s = {
     success: {
       bg: d.successBg,
@@ -900,14 +909,14 @@ function RecentItem({
     <div
       role="listitem"
       className={cn(
-        "flex items-center gap-2.5 sm:gap-3 rounded-xl px-2.5 sm:px-3 py-2.5 sm:py-3 transition-colors duration-150",
+        "group flex items-center gap-2.5 rounded-xl border px-2.5 py-2.5 transition-all duration-150 sm:gap-3 sm:px-3",
+        d.divider,
         d.hover,
       )}
     >
-      {/* Icon box */}
       <div
         className={cn(
-          "relative flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl",
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10",
           s.bg,
           s.text,
         )}
@@ -916,19 +925,18 @@ function RecentItem({
         {icon}
         <FaCircle
           className={cn(
-            "absolute -bottom-0.5 -right-0.5 h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full ring-2",
+            "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2",
             s.dot,
             d.dotRing,
           )}
         />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
           <p
             className={cn(
-              "text-[13px] sm:text-sm font-semibold truncate leading-snug",
+              "truncate text-[12px] font-bold leading-snug sm:text-[13px]",
               d.textPrimary,
             )}
           >
@@ -937,7 +945,7 @@ function RecentItem({
           {badge && (
             <span
               className={cn(
-                "shrink-0 rounded-full px-1.5 sm:px-2 py-px sm:py-0.5 text-[9px] sm:text-[10px] font-bold",
+                "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold sm:text-[10px]",
                 s.badge,
               )}
             >
@@ -947,7 +955,7 @@ function RecentItem({
         </div>
         <p
           className={cn(
-            "text-[10px] sm:text-[11px] truncate mt-0.5",
+            "mt-0.5 truncate text-[10px] sm:text-[11px]",
             d.textMuted,
           )}
         >
@@ -955,10 +963,9 @@ function RecentItem({
         </p>
       </div>
 
-      {/* Time */}
       <span
         className={cn(
-          "text-[9px] sm:text-[10px] shrink-0 tabular-nums font-medium whitespace-nowrap",
+          "shrink-0 whitespace-nowrap text-[9px] font-medium tabular-nums sm:text-[10px]",
           d.textMuted,
         )}
       >
@@ -992,24 +999,23 @@ function SectionCard({
   return (
     <section
       className={cn(
-        "rounded-2xl border overflow-hidden transition-shadow duration-300 hover:shadow-md",
+        "overflow-hidden rounded-2xl border transition-all duration-300 hover:-translate-y-0.5",
         d.card,
         d.border,
         d.shadow,
       )}
     >
-      {/* Header */}
       <div
         className={cn(
-          "flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b",
+          "flex items-center justify-between border-b px-4 py-3.5 sm:px-5 sm:py-4",
           d.divider,
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {icon && (
             <div
               className={cn(
-                "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md sm:rounded-lg",
+                "flex h-7 w-7 items-center justify-center rounded-lg",
                 d.sectionIcon,
               )}
               aria-hidden="true"
@@ -1017,7 +1023,9 @@ function SectionCard({
               {icon}
             </div>
           )}
-          <h3 className={cn("text-[13px] sm:text-sm font-bold", d.textPrimary)}>
+          <h3
+            className={cn("text-[13px] font-black sm:text-sm", d.textPrimary)}
+          >
             {title}
           </h3>
         </div>
@@ -1027,21 +1035,17 @@ function SectionCard({
             onClick={onLink}
             aria-label={`${linkText} — ${title}`}
             className={cn(
-              "flex items-center gap-1 rounded-lg px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-[11px] font-semibold transition-all duration-200",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a84b]/50",
+              "flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition-all duration-200 sm:text-[11px]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#eeb944]/45",
               d.sectionLink,
             )}
           >
             <span>{linkText}</span>
-            <FaArrowRight
-              className="h-2 w-2 sm:h-2.5 sm:w-2.5 rotate-180"
-              aria-hidden="true"
-            />
+            <FaChevronLeft className="h-2.5 w-2.5" aria-hidden="true" />
           </button>
         )}
       </div>
 
-      {/* Body */}
       <div className="p-3 sm:p-4">
         {loading ? (
           <SkeletonList />
@@ -1172,7 +1176,9 @@ export default function DashboardSection({
   const { d } = useDash();
   const { data, error, isLoading } = useDashboardStats();
   const { can, isSuperAdmin } = useAccess();
-
+  const [dashboardQuote, setDashboardQuote] = useState<string>(
+    DASHBOARD_QUOTES[0],
+  );
   const stats = data?.stats ?? EMPTY_STATS;
   const recentUsers = data?.recentUsers ?? [];
   const recentTickets = data?.recentTickets ?? [];
@@ -1181,7 +1187,11 @@ export default function DashboardSection({
   const [authUser, setAuthUser] = useState<AuthUser | null>(() =>
     getAuthUser(),
   );
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * DASHBOARD_QUOTES.length);
 
+    setDashboardQuote(DASHBOARD_QUOTES[randomIndex]);
+  }, []);
   useEffect(() => {
     function onProfileUpdated(event: Event) {
       const nextUser = authUserFromUnknown(
@@ -1316,144 +1326,195 @@ export default function DashboardSection({
   );
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8" dir="rtl">
+    <div className="space-y-4 sm:space-y-5 lg:space-y-5" dir="rtl">
       {/* ═══ Hero Header ═══ */}
       <div
         className={cn(
-          "relative overflow-hidden rounded-xl sm:rounded-2xl border p-4 sm:p-6 lg:p-8",
-          d.card,
-          d.border,
-          d.shadow,
+          "relative min-h-[156px] overflow-hidden rounded-2xl border px-4 py-5 sm:px-6 sm:py-6 lg:min-h-[166px] lg:px-7",
+          d.hero,
         )}
       >
-        {/* Subtle gradient wash */}
+        {/* Decorative golden landscape — pure UI, no business logic. */}
         <div
-          className={cn(
-            "pointer-events-none absolute inset-0 bg-gradient-to-bl",
-            d.headerGrad,
-          )}
+          className="pointer-events-none absolute inset-y-0 left-0 hidden w-[56%] overflow-hidden lg:block"
           aria-hidden="true"
-        />
+        >
+          <div
+            className={cn(
+              "absolute left-[18%] top-1/2 h-56 w-56 -translate-y-1/2 rounded-full blur-3xl",
+              d.heroGlow,
+            )}
+          />
+          <div
+            className={cn(
+              "absolute left-[29%] top-[26%] h-[74px] w-[74px] rounded-full",
+              d.heroSun,
+            )}
+          />
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 h-[78%] [clip-path:polygon(0_100%,0_72%,14%_55%,27%_70%,40%_39%,53%_67%,67%_30%,79%_56%,90%_35%,100%_58%,100%_100%)]",
+              d.heroMountainBack,
+            )}
+          />
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 h-[60%] opacity-95 [clip-path:polygon(0_100%,0_76%,18%_63%,31%_78%,46%_49%,57%_73%,72%_50%,84%_70%,100%_53%,100%_100%)]",
+              d.heroMountainFront,
+            )}
+          />
+          <div
+            className={cn(
+              "absolute -left-[8%] top-[61%] h-px w-[68%] -rotate-[11deg]",
+              d.heroLine,
+            )}
+          />
+          <div
+            className={cn(
+              "absolute left-[30%] top-[68%] h-px w-[70%] rotate-[8deg]",
+              d.heroLine,
+            )}
+          />
+        </div>
 
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <UserAvatar name={displayName} avatarUrl={authUser?.avatarUrl} />
-            <div className="min-w-0">
-              {/* Date */}
-              <p
-                className={cn(
-                  "text-[11px] sm:text-xs font-medium mb-0.5",
-                  d.textMuted,
-                )}
-              >
-                {currentDate}
-              </p>
-
-              {/* Greeting */}
-              <h1
-                className={cn(
-                  "text-lg sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight",
-                  d.textPrimary,
-                )}
-              >
-                {greeting}
-                {displayName !== "مدیر" ? `، ${displayName}` : ""}{" "}
-                {showRadVerifiedBadge ? (
-                  <RadVerifiedBadge />
-                ) : (
-                  <span
-                    className="inline-block motion-safe:animate-[wave_2.5s_ease-in-out_infinite] text-base sm:text-2xl"
-                    aria-hidden="true"
-                  >
-                    👋
-                  </span>
-                )}
-              </h1>
-
-              {/* Role + phone */}
-              <div className="flex items-center gap-2 mt-1 sm:mt-1.5 flex-wrap">
-                {authUser?.role && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-bold",
-                      getRoleBadge(authUser.role, d),
-                    )}
-                  >
-                    <FaShieldHalved
-                      className="h-2.5 w-2.5"
-                      aria-hidden="true"
-                    />
-                    {getRolePersian(authUser.role)}
-                  </span>
-                )}
-                {authUser?.phoneNumber && (
-                  <span
-                    className={cn(
-                      "text-[10px] sm:text-[11px] font-medium tabular-nums",
-                      d.textMuted,
-                    )}
-                    dir="ltr"
-                  >
-                    {toPersianDigits(authUser.phoneNumber)}
-                  </span>
-                )}
+        <div className="relative z-10 flex min-h-[116px] items-center justify-between">
+          {/* Greeting */}
+          <div className="min-w-0 ">
+            <div className="flex items-center gap-3">
+              <div className="lg:hidden">
+                <UserAvatar
+                  name={displayName}
+                  avatarUrl={authUser?.avatarUrl}
+                  size="sm"
+                />
+              </div>
+              <div className="min-w-0">
                 <p
                   className={cn(
-                    "text-[11px] sm:text-xs hidden lg:block",
+                    "text-[12px] font-semibold sm:text-sm",
+                    d.textSecondary,
+                  )}
+                >
+                  خوش آمدید <span aria-hidden="true">👋</span> {greeting} ✨
+                </p>
+                <h1
+                  className={cn(
+                    "mt-1 truncate text-xl font-black tracking-tight sm:text-2xl lg:text-[30px]",
+                    d.textPrimary,
+                  )}
+                >
+                  {displayName !== "مدیر" ? `${displayName} عزیز` : "مدیر عزیز"}{" "}
+                  {showRadVerifiedBadge && <RadVerifiedBadge />}
+                </h1>
+                <p
+                  className={cn(
+                    "mt-1.5 hidden text-[11px] sm:block sm:text-xs",
                     d.textMuted,
                   )}
                 >
-                  • خلاصه وضعیت سیستم
+                  امروز یک روز عالی برای ساختن آینده بهتر است.
                 </p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  {authUser?.role && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                        getRoleBadge(authUser.role, d),
+                      )}
+                    >
+                      <FaShieldHalved
+                        className="h-2.5 w-2.5"
+                        aria-hidden="true"
+                      />
+                      {getRolePersian(authUser.role)}
+                    </span>
+                  )}
+                  {authUser?.phoneNumber && (
+                    <span
+                      className={cn(
+                        "text-[10px] font-medium tabular-nums",
+                        d.textMuted,
+                      )}
+                      dir="ltr"
+                    >
+                      {toPersianDigits(authUser.phoneNumber)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* System online pill */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div
-              className={cn(
-                "flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-[10px] sm:text-[11px] font-semibold",
-                d.onlineBg,
-              )}
-              role="status"
-            >
-              <span
-                className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2"
-                aria-hidden="true"
+          {/* Quote / status */}
+          <div className="relative hidden min-w-[460px]   items-center justify-center lg:flex">
+            <div className="max-w-[330px] text-right">
+              <p
+                className={cn(
+                  "text-[13px] font-semibold leading-7 text-nowrap",
+                  d.heroQuote,
+                )}
               >
-                <span
-                  className={cn(
-                    "absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full opacity-70",
-                    d.onlinePing,
-                  )}
-                />
-                <span
-                  className={cn(
-                    "relative inline-flex h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full",
-                    d.onlineDot,
-                  )}
-                />
-              </span>
-              سیستم فعال
+                {" "}
+                « {dashboardQuote} »
+              </p>
+              <div className={cn("mt-2 h-px w-14", d.heroLine)} />
+              <div
+                className={cn(
+                  "mt-3 inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[10px] font-bold",
+                  d.onlineBg,
+                )}
+                role="status"
+              >
+                <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+                  <span
+                    className={cn(
+                      "absolute inline-flex h-full w-full animate-ping rounded-full opacity-70",
+                      d.onlinePing,
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "relative inline-flex h-1.5 w-1.5 rounded-full",
+                      d.onlineDot,
+                    )}
+                  />
+                </span>
+                سیستم فعال
+              </div>
             </div>
+          </div>
+          {/* Date block */}
+
+          <div
+            className={cn(
+              "hidden min-w-[160px] shrink-0 border-l pl-6 text-right md:block",
+              d.divider,
+            )}
+          >
+            <p className={cn("text-[11px] font-medium", d.textMuted)}>امروز</p>
+            <p className={cn("mt-1 text-[13px] font-bold", d.textSecondary)}>
+              {currentDate}
+            </p>
+            <p className={cn("mt-1 text-[11px] tabular-nums", d.textMuted)}>
+              {new Date().toLocaleTimeString("fa-IR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "Asia/Tehran",
+              })}
+            </p>
           </div>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div
             className={cn(
-              "mt-3 sm:mt-4 flex items-center gap-2 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3",
+              "relative z-20 mt-3 flex items-center gap-2 rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3",
               d.errorBg,
             )}
             role="alert"
           >
-            <FaClock
-              className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0"
-              aria-hidden="true"
-            />
-            <p className="text-[11px] sm:text-xs font-medium">
+            <FaClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <p className="text-[11px] font-medium sm:text-xs">
               {error instanceof Error
                 ? error.message
                 : "خطا در دریافت آمار داشبورد"}
@@ -1465,13 +1526,14 @@ export default function DashboardSection({
       {/* ═══ Main Stats ═══ */}
       <section
         aria-label="آمار کلیدی"
-        className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4"
+        className="grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4"
       >
         {can("admin.users", "view") && (
           <StatCard
             icon={<FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />}
             label="کل کاربران"
             value={stats.users.total}
+            tone="purple"
             change={stats.users.changePercent}
             changeLabel={`${toPersianDigits(stats.users.newLast30Days)} کاربر جدید در ۳۰ روز اخیر`}
             loading={loading}
@@ -1484,6 +1546,7 @@ export default function DashboardSection({
               icon={<FaFile className="h-4 w-4 sm:h-5 sm:w-5" />}
               label="صفحات منتشر شده"
               value={stats.pages.published}
+              tone="green"
               change={
                 stats.pages.total
                   ? Math.round(
@@ -1499,6 +1562,7 @@ export default function DashboardSection({
               icon={<FaEye className="h-4 w-4 sm:h-5 sm:w-5" />}
               label="کل بازدید صفحات"
               value={stats.pages.totalViews}
+              tone="amber"
               changeLabel={`${toPersianDigits(stats.pages.totalVisitors.toLocaleString())} بازدیدکننده یکتا`}
               loading={loading}
             />
@@ -1509,6 +1573,7 @@ export default function DashboardSection({
             icon={<FaTicket className="h-4 w-4 sm:h-5 sm:w-5" />}
             label="تیکت‌های باز"
             value={stats.tickets.open}
+            tone="rose"
             change={
               stats.tickets.total
                 ? -Math.round((stats.tickets.open / stats.tickets.total) * 100)
@@ -1524,7 +1589,7 @@ export default function DashboardSection({
       {/* ═══ Mini Stats ═══ */}
       <section
         aria-label="آمار تکمیلی"
-        className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 xl:grid-cols-6"
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6"
       >
         {miniStats.map((item) => (
           <MiniStat
@@ -1541,7 +1606,7 @@ export default function DashboardSection({
       {/* ═══ Bottom Grid ═══ */}
       <div
         className={cn(
-          "grid gap-3 sm:gap-4 lg:gap-6",
+          "grid gap-3 sm:gap-4 lg:gap-4",
           isSuperAdmin ? "lg:grid-cols-3" : "lg:grid-cols-1",
         )}
       >
@@ -1553,7 +1618,7 @@ export default function DashboardSection({
               <FaArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 rotate-180" />
             }
           >
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               {quickActions.map((action) => (
                 <QuickAction
                   key={action.label}
@@ -1578,7 +1643,7 @@ export default function DashboardSection({
             isEmpty={recentUsers.length === 0}
             emptyMessage="کاربر جدیدی یافت نشد"
           >
-            <div className="space-y-0.5" role="list">
+            <div className="space-y-2" role="list">
               {recentUsers.map((user) => (
                 <RecentItem
                   key={String(user._id ?? user.id ?? user.phoneNumber)}
@@ -1605,7 +1670,7 @@ export default function DashboardSection({
             isEmpty={recentTickets.length === 0}
             emptyMessage="تیکتی یافت نشد"
           >
-            <div className="space-y-0.5" role="list">
+            <div className="space-y-2" role="list">
               {recentTickets.map((ticket) => {
                 const si = ticketStatusInfo(ticket.status);
                 return (
@@ -1632,6 +1697,30 @@ export default function DashboardSection({
           </SectionCard>
         )}
       </div>
+
+      <footer className="flex flex-col items-center justify-between gap-2 px-1 pt-1 text-center sm:flex-row sm:text-right">
+        <div
+          className={cn(
+            "flex items-center gap-2 text-[10px] font-medium",
+            d.textMuted,
+          )}
+        >
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[9px] font-black tracking-[0.22em]",
+              d.sectionIcon,
+            )}
+          >
+            RAD
+          </span>
+          <span>راد لینک</span>
+          <span className={d.textDisabled}>|</span>
+          <span>پنل مدیریت</span>
+        </div>
+        <p className={cn("text-[10px]", d.textDisabled)}>
+          با تکنولوژی، ساده‌تر، حرفه‌ای‌تر، ادامه می‌دهیم ...
+        </p>
+      </footer>
 
       <style>{`
         @keyframes wave {

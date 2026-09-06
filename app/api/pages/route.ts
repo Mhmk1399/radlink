@@ -678,7 +678,7 @@ export const GET = compose(
 
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit = Math.min(100, Number(searchParams.get("limit") ?? 20));
-    const isPublished = searchParams.get("isPublished");
+    const isPublished = getFilterParam(searchParams, "isPublished");
     const mode = searchParams.get("mode");
 
     if (mode === "expiry-alerts") {
@@ -714,7 +714,7 @@ export const GET = compose(
 
     const filters: Record<string, unknown> = {};
 
-    if (isPublished !== null) {
+    if (isPublished === "true" || isPublished === "false") {
         filters.isPublished = isPublished === "true";
     }
 
@@ -727,9 +727,7 @@ export const GET = compose(
         filters.owner = ownerIdFilter;
     }
 
-    const assignedUserIdFilter =
-        searchParams.get("filter_assignedUserId") ??
-        searchParams.get("assignedUserId");
+    const assignedUserIdFilter = getFilterParam(searchParams, "assignedUserId");
     if (
         assignedUserIdFilter &&
         mongoose.Types.ObjectId.isValid(assignedUserIdFilter)

@@ -113,6 +113,7 @@ export default function TemplatesSection({
         label: "دسته‌بندی",
         editable: false,
         filterable: true,
+        filterType: "text",
         render: (value) => (
           <span
             className={cn(

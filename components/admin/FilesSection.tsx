@@ -285,6 +285,11 @@ export default function FilesSection({
         label: "نوع فایل",
         editable: false,
         filterable: true,
+        options: [
+          { label: "تصویر", value: "تصویر" },
+          { label: "PDF", value: "PDF" },
+          { label: "سند", value: "سند" },
+        ],
         render: (value) => (
           <span
             className={cn(
@@ -340,7 +345,7 @@ export default function FilesSection({
         sortable: true,
         copyable: true,
         filterable: true,
-        filterSearchable: true,
+        filterType: "text",
         render: (value) => (
           <span className={cn("text-sm font-medium", t.textMuted)}>
             {String(value || "-")}
