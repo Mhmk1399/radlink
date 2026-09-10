@@ -503,25 +503,25 @@ export function SliderBlock({
   const activeSlide: SlideItem | undefined = slides[safeIndex];
 
   /* ── Image aspect ratio — same pattern as BannerBlock ── */
-  const [aspectRatio, setAspectRatio] = useState<string | undefined>(
-    activeSlide?.imageUrl ? "16 / 9" : undefined,
-  );
+  const [aspectRatioState, setAspectRatioState] = useState<{
+    src: string;
+    ratio: string;
+  } | null>(null);
+  const aspectRatio = activeSlide?.imageUrl
+    ? aspectRatioState?.src === activeSlide.imageUrl
+      ? aspectRatioState.ratio
+      : "16 / 9"
+    : undefined;
 
   useEffect(() => {
     const imageUrl = activeSlide?.imageUrl;
 
-    if (!imageUrl) {
-      setAspectRatio(undefined);
-      return;
-    }
-
-    // Optimistically set 16/9 while loading
-    setAspectRatio("16 / 9");
+    if (!imageUrl) return;
 
     const cancel = loadImageAspectRatio(
       imageUrl,
-      (ratio) => setAspectRatio(ratio),
-      () => setAspectRatio("16 / 9"),
+      (ratio) => setAspectRatioState({ src: imageUrl, ratio }),
+      () => setAspectRatioState({ src: imageUrl, ratio: "16 / 9" }),
     );
 
     return cancel;
@@ -589,7 +589,8 @@ export function SliderBlock({
       if (!state?.dragging || state.isEditing) return;
       const dx = e.clientX - state.startX;
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
-      dx > 0 ? goPrev() : goNext();
+      if (dx > 0) goPrev();
+      else goNext();
     },
     [goPrev, goNext],
   );

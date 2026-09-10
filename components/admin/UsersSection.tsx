@@ -1004,7 +1004,23 @@ export default function UsersSection({
         },
       },
       {
+        key: "fullName",
+        label: "نام و نام خانوادگی",
+        editable: false,
+        viewable: false,
+        sortable: false,
+        copyable: true,
+        render: (_value, row) => {
+          const fullName =
+            [row.firstName, row.lastName].filter(Boolean).join(" ") ||
+            row.fullName ||
+            "—";
+          return <span className="font-semibold">{fullName}</span>;
+        },
+      },
+      {
         key: "firstName",
+        visible: false,
         filterable: true,
         filterType: "text",
         label: "نام",
@@ -1018,6 +1034,8 @@ export default function UsersSection({
       },
       {
         key: "lastName",
+        visible: false,
+
         label: "نام خانوادگی",
         filterable: true,
         filterType: "text",
@@ -1030,16 +1048,16 @@ export default function UsersSection({
         ),
       },
       {
-        key: "collectionName",
-        label: "اسم مجموعه",
-        sortable: true,
-        placeholder: "اسم مجموعه",
-        copyable: true,
+        key: "createdBy",
+        label: "سازنده کاربر",
         hideOnMobile: true,
+        editable: false,
+        copyable: true,
         render: (value) => (
           <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
       },
+
       {
         key: "phoneNumber",
         label: "شماره موبایل",
@@ -1077,6 +1095,112 @@ export default function UsersSection({
             )}
             headers={headers}
           />
+        ),
+      },
+      {
+        key: "limits",
+        label: "محدودیت‌ها",
+        editable: false,
+        render: (value, row) => {
+          const l = value as UserRow["limits"];
+          if (!l) return "—";
+          const showLimit = (value: number) =>
+            value > 0 ? String(value) : "نامحدود";
+          const source =
+            row.limitsSource === "agent" ? "از نماینده" : "اختصاصی کاربر";
+          return (
+            <span className="flex flex-col gap-1 text-xs text-slate-500">
+              <span>
+                فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
+                {showLimit(l.pages)}
+              </span>
+              <span className="text-[10px] text-slate-400">{source}</span>
+            </span>
+          );
+        },
+        hideOnMobile: true,
+        copyable: false,
+      },
+      {
+        key: "agentid",
+        label: "نماینده این کاربر",
+        sortable: true,
+        options: agentOptions,
+        defaultValue: requesterAgentId,
+        copyable: true,
+        hideOnMobile: true,
+        placeholder: "انتخاب نماینده یا بدون نماینده",
+        hiddenInForm: (_, mode) =>
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
+        render: (value, row) => (
+          <span className="text-sm text-slate-400">
+            {row.agentLabel ||
+              agentOptions.find((option) => option.value === value)?.label ||
+              String(value || "—")}
+          </span>
+        ),
+      },
+      {
+        key: "limitsOverrideEnabled",
+        label: "محدودیت اختصاصی",
+        inputType: "checkbox",
+        visible: false,
+        defaultValue: false,
+        formHelpText: (_, formData) =>
+          formData.agentid
+            ? "اگر روشن باشد، محدودیت‌های همین کاربر جدا از نماینده ذخیره می‌شود."
+            : "کاربر بدون نماینده همیشه از محدودیت اختصاصی خودش استفاده می‌کند.",
+        hiddenInForm: (_, mode) =>
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
+      },
+      {
+        key: "limits.files",
+        label: "محدودیت فایل",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
+        hiddenInForm: (_, mode) =>
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
+      },
+      {
+        key: "limits.blocks",
+        label: "محدودیت بلاک",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
+        hiddenInForm: (_, mode) =>
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
+      },
+      {
+        key: "limits.pages",
+        label: "محدودیت صفحه",
+        inputType: "number",
+        visible: false,
+        placeholder: "0",
+        formHelpText: (_, formData) =>
+          formData.agentid && !formData.limitsOverrideEnabled
+            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
+            : "عدد ۰ یعنی نامحدود.",
+        hiddenInForm: (_, mode) =>
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
+      },
+      {
+        key: "collectionName",
+        label: "اسم مجموعه",
+        sortable: true,
+        placeholder: "اسم مجموعه",
+        copyable: true,
+        hideOnMobile: true,
+        render: (value) => (
+          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
         ),
       },
       {
@@ -1150,25 +1274,6 @@ export default function UsersSection({
         hiddenInForm: (_, mode) =>
           mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
-      {
-        key: "agentid",
-        label: "نماینده این کاربر",
-        sortable: true,
-        options: agentOptions,
-        defaultValue: requesterAgentId,
-        copyable: true,
-        hideOnMobile: true,
-        placeholder: "انتخاب نماینده یا بدون نماینده",
-        hiddenInForm: (_, mode) =>
-          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
-        render: (value, row) => (
-          <span className="text-sm text-slate-400">
-            {row.agentLabel ||
-              agentOptions.find((option) => option.value === value)?.label ||
-              String(value || "—")}
-          </span>
-        ),
-      },
 
       {
         key: "permissions",
@@ -1188,82 +1293,7 @@ export default function UsersSection({
         hideOnMobile: true,
         copyable: false,
       },
-      {
-        key: "limitsOverrideEnabled",
-        label: "محدودیت اختصاصی",
-        inputType: "checkbox",
-        visible: false,
-        defaultValue: false,
-        formHelpText: (_, formData) =>
-          formData.agentid
-            ? "اگر روشن باشد، محدودیت‌های همین کاربر جدا از نماینده ذخیره می‌شود."
-            : "کاربر بدون نماینده همیشه از محدودیت اختصاصی خودش استفاده می‌کند.",
-        hiddenInForm: (_, mode) =>
-          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
-      },
-      {
-        key: "limits.files",
-        label: "محدودیت فایل",
-        inputType: "number",
-        visible: false,
-        placeholder: "0",
-        formHelpText: (_, formData) =>
-          formData.agentid && !formData.limitsOverrideEnabled
-            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
-            : "عدد ۰ یعنی نامحدود.",
-        hiddenInForm: (_, mode) =>
-          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
-      },
-      {
-        key: "limits.blocks",
-        label: "محدودیت بلاک",
-        inputType: "number",
-        visible: false,
-        placeholder: "0",
-        formHelpText: (_, formData) =>
-          formData.agentid && !formData.limitsOverrideEnabled
-            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
-            : "عدد ۰ یعنی نامحدود.",
-        hiddenInForm: (_, mode) =>
-          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
-      },
-      {
-        key: "limits.pages",
-        label: "محدودیت صفحه",
-        inputType: "number",
-        visible: false,
-        placeholder: "0",
-        formHelpText: (_, formData) =>
-          formData.agentid && !formData.limitsOverrideEnabled
-            ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
-            : "عدد ۰ یعنی نامحدود.",
-        hiddenInForm: (_, mode) =>
-          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
-      },
-      {
-        key: "limits",
-        label: "محدودیت‌ها",
-        editable: false,
-        render: (value, row) => {
-          const l = value as UserRow["limits"];
-          if (!l) return "—";
-          const showLimit = (value: number) =>
-            value > 0 ? String(value) : "نامحدود";
-          const source =
-            row.limitsSource === "agent" ? "از نماینده" : "اختصاصی کاربر";
-          return (
-            <span className="flex flex-col gap-1 text-xs text-slate-500">
-              <span>
-                فایل: {showLimit(l.files)} · بلوک: {showLimit(l.blocks)} · صفحه:{" "}
-                {showLimit(l.pages)}
-              </span>
-              <span className="text-[10px] text-slate-400">{source}</span>
-            </span>
-          );
-        },
-        hideOnMobile: true,
-        copyable: false,
-      },
+
       {
         key: "isPhoneVerified",
         label: "تأیید موبایل",
@@ -1322,16 +1352,7 @@ export default function UsersSection({
         ),
         hideOnMobile: true,
       },
-      {
-        key: "createdBy",
-        label: "سازنده کاربر",
-        hideOnMobile: true,
-        editable: false,
-        copyable: true,
-        render: (value) => (
-          <span className="text-sm text-slate-400">{String(value ?? "—")}</span>
-        ),
-      },
+
       {
         key: "createdById",
         label: "  سازنده کاربر",

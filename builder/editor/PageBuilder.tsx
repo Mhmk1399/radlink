@@ -116,8 +116,7 @@ import {
   type AppliedPageTheme,
   type PageThemeDefinition,
 } from "@/lib/builder/pageThemes";
-import { autoPolishBlocks } from "@/lib/builder/autoPolish";
-import {
+ import {
   deleteFile,
   extractKeyFromUrl,
   FILE_UPLOADED_EVENT,
@@ -2072,7 +2071,7 @@ export default function SimplePageBuilder({
               ...currentStyle,
               shadow: updateResponsiveValue(
                 currentResponsiveValue,
-                "mobile",
+                breakpoint,
                 normalizedValue as ShadowStyleValue,
               ),
             };
@@ -2083,7 +2082,7 @@ export default function SimplePageBuilder({
               ...currentStyle,
               [styleKey]: updateResponsiveValue(
                 currentResponsiveValue,
-                "mobile",
+                breakpoint,
                 normalizedValue as string | number,
               ),
             };
@@ -2098,7 +2097,7 @@ export default function SimplePageBuilder({
         }),
       );
     },
-    [selectedBlockId, blocks, requireBlockAction, setBlocks],
+    [selectedBlockId, blocks, breakpoint, requireBlockAction, setBlocks],
   );
 
   const updateBlockContainerSpacing = useCallback(

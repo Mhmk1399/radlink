@@ -8,7 +8,6 @@ import type {
   EditableStyleMap,
   BlockElement,
   PageBlock,
-  EditorMode,
   BannerBlockProps,
   EditableStyleKey,
   BannerData,
@@ -396,9 +395,10 @@ export function BannerBlock({
   onUpdateContent,
 }: BannerBlockProps) {
   const data = getBannerData(block);
-  const [imageAspectRatio, setImageAspectRatio] = React.useState<
-    string | undefined
-  >(data.imageUrl ? "16 / 9" : undefined);
+  const [imageAspectRatioState, setImageAspectRatioState] = React.useState<{
+    src: string;
+    ratio: string;
+  } | null>(null);
   const settings = (block.settings ?? {}) as Record<string, unknown>;
   const direction = settings.direction === "ltr" ? "ltr" : "rtl";
 
@@ -407,11 +407,25 @@ export function BannerBlock({
   const titleElement = getElementWithFallback(block, "title");
   const descriptionElement = getElementWithFallback(block, "description");
   const buttonElement = getElementWithFallback(block, "button");
+  const containerHeightStyle = containerElement.style?.height;
+  const hasCustomHeight = Boolean(
+    containerHeightStyle &&
+      (containerHeightStyle.mobile !== undefined ||
+        containerHeightStyle.tablet !== undefined ||
+        containerHeightStyle.desktop !== undefined),
+  );
+  const imageAspectRatio = data.imageUrl
+    ? imageAspectRatioState?.src === data.imageUrl
+      ? imageAspectRatioState.ratio
+      : "16 / 9"
+    : undefined;
 
-  const backgroundStyle = data.imageUrl
+  const backgroundStyle: React.CSSProperties | undefined = data.imageUrl
     ? {
         backgroundImage: `url(${data.imageUrl})`,
-        aspectRatio: imageAspectRatio,
+        ...(!hasCustomHeight && imageAspectRatio
+          ? { aspectRatio: imageAspectRatio }
+          : {}),
       }
     : undefined;
 
@@ -419,21 +433,22 @@ export function BannerBlock({
   const hasLinkedImage = Boolean(data.imageUrl && data.imageLink);
 
   React.useEffect(() => {
-    if (!data.imageUrl) {
-      setImageAspectRatio(undefined);
-      return;
-    }
+    if (!data.imageUrl) return;
 
-    setImageAspectRatio("16 / 9");
     let cancelled = false;
     const image = new Image();
     image.onload = () => {
       if (!cancelled && image.naturalWidth && image.naturalHeight) {
-        setImageAspectRatio(`${image.naturalWidth} / ${image.naturalHeight}`);
+        setImageAspectRatioState({
+          src: data.imageUrl,
+          ratio: `${image.naturalWidth} / ${image.naturalHeight}`,
+        });
       }
     };
     image.onerror = () => {
-      if (!cancelled) setImageAspectRatio("16 / 9");
+      if (!cancelled) {
+        setImageAspectRatioState({ src: data.imageUrl, ratio: "16 / 9" });
+      }
     };
     image.src = data.imageUrl;
 
