@@ -2,7 +2,13 @@
 // components/sections/UsersSection.tsx
 // ─────────────────────────────────────────────────────────────────
 "use client";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from "react";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
@@ -56,10 +62,6 @@ function formatUserRef(value: unknown) {
     (typeof record.phoneNumber === "string" ? record.phoneNumber : "") ||
     String(record._id ?? record.id ?? "")
   );
-}
-
-function hasAgentScopedRole(role?: string) {
-  return role === "agent" || role === "agentManager";
 }
 
 /* ══════════════════════════════════════════════
@@ -121,7 +123,12 @@ type UserRow = {
 type SelectOption = {
   value: string;
   label: string;
+  userId?: string;
 };
+
+function hasAgentScopedRole(role?: string) {
+  return role === "agent" || role === "agentManager";
+}
 
 /* ══════════════════════════════════════════════
    BADGE COMPONENTS
@@ -488,7 +495,9 @@ function UserPagesLazyPanel({
   );
 
   return (
-    <div className={cn("space-y-2", compact ? "min-w-[8rem]" : "sm:col-span-2")}>
+    <div
+      className={cn("space-y-2", compact ? "min-w-[8rem]" : "sm:col-span-2")}
+    >
       <button
         type="button"
         onClick={
@@ -526,7 +535,10 @@ function UserPagesLazyPanel({
               <button
                 type="button"
                 onClick={loadPages}
-                className={cn("shrink-0 rounded-lg px-2 py-1 text-xs", t.hoverBg)}
+                className={cn(
+                  "shrink-0 rounded-lg px-2 py-1 text-xs",
+                  t.hoverBg,
+                )}
               >
                 تلاش دوباره
               </button>
@@ -551,7 +563,12 @@ function UserPagesLazyPanel({
                     )}
                   >
                     <div className="min-w-0">
-                      <p className={cn("truncate text-sm font-bold", t.textPrimary)}>
+                      <p
+                        className={cn(
+                          "truncate text-sm font-bold",
+                          t.textPrimary,
+                        )}
+                      >
                         {page.title}
                       </p>
                       <p className={cn("mt-0.5 text-[11px]", t.textDisabled)}>
@@ -613,21 +630,18 @@ export default function UsersSection({
   const canCreateUsers = can("admin.users", "create");
   const canViewAgents = can("admin.agents", "view");
   const canDeleteUsers = !isNormalUser && can("admin.users", "delete");
-  const hasFullUserCreateAccess =
-    canCreateUsers && !hasAgentScopedRole(authUser?.role);
-  const hasFullUserEditAccess =
-    canUpdateUsers && !hasAgentScopedRole(authUser?.role);
+  const hasFullUserCreateAccess = canCreateUsers;
+  const hasFullUserEditAccess = canUpdateUsers;
   const roleOptions = useMemo(
-    () =>
-      [
-        { label: "کاربر", value: "user" },
-        { label: "نماینده", value: "agent" },
-        { label: "مدیر نماینده", value: "agentManager" },
-        { label: "مدیر", value: "admin" },
-        ...(authUser?.role === "superAdmin"
-          ? [{ label: "R A D", value: "superAdmin" }]
-          : []),
-      ],
+    () => [
+      { label: "کاربر", value: "user" },
+      { label: "نماینده", value: "agent" },
+      { label: "مدیر نماینده", value: "agentManager" },
+      { label: "مدیر", value: "admin" },
+      ...(authUser?.role === "superAdmin"
+        ? [{ label: "R A D", value: "superAdmin" }]
+        : []),
+    ],
     [authUser?.role],
   );
 
@@ -698,9 +712,7 @@ export default function UsersSection({
     async function loadAgentOptions() {
       if (
         !token ||
-        (!hasFullUserCreateAccess &&
-          !hasFullUserEditAccess &&
-          !canViewAgents)
+        (!hasFullUserCreateAccess && !hasFullUserEditAccess && !canViewAgents)
       ) {
         if (!ignore) setAgentOptions([]);
         return;
@@ -735,6 +747,7 @@ export default function UsersSection({
             return {
               value,
               label: getAgentOptionLabel(record, value.slice(-8)),
+              userId: getObjectId(record.user),
             };
           })
           .filter((option: SelectOption | null): option is SelectOption =>
@@ -767,6 +780,21 @@ export default function UsersSection({
     headers,
     token,
   ]);
+
+  const requesterAgentId = useMemo(() => {
+    if (!hasAgentScopedRole(authUser?.role)) return "";
+    const authUserId = authUser?.id;
+    const matchedOption = authUserId
+      ? agentOptions.find((option) => option.userId === authUserId)
+      : undefined;
+    if (matchedOption?.value) return matchedOption.value;
+
+    const authUserRecord =
+      authUser && typeof authUser === "object"
+        ? (authUser as Record<string, unknown>)
+        : null;
+    return getObjectId(authUserRecord?.agentid);
+  }, [agentOptions, authUser]);
 
   useEffect(() => {
     let ignore = false;
@@ -1028,7 +1056,7 @@ export default function UsersSection({
           </span>
         ),
       },
-            {
+      {
         key: "pagesQuickView",
         label: "صفحات کاربر",
         editable: true,
@@ -1038,9 +1066,15 @@ export default function UsersSection({
         render: (_value, row) => (
           <UserPagesLazyPanel userId={row._id || row.id} headers={headers} />
         ),
-        renderFormField: ({ formData }) => (
+        renderFormField: ({ formData, selectedRow }) => (
           <UserPagesLazyPanel
-            userId={String(formData._id ?? formData.id ?? "")}
+            userId={String(
+              selectedRow?._id ??
+                selectedRow?.id ??
+                formData._id ??
+                formData.id ??
+                "",
+            )}
             headers={headers}
           />
         ),
@@ -1070,9 +1104,7 @@ export default function UsersSection({
             ? "اختیاری است؛ اگر پر شود کاربر می‌تواند با این رمز وارد شود."
             : "برای تغییر رمز پر کنید؛ اگر خالی بماند رمز فعلی تغییر نمی‌کند.",
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
         copyable: false,
       },
       {
@@ -1101,9 +1133,7 @@ export default function UsersSection({
         render: (value) => <RoleBadge role={value as UserRole} />,
         copyable: false,
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
       {
         key: "status",
@@ -1118,22 +1148,19 @@ export default function UsersSection({
         render: (value) => <StatusBadge status={value as UserStatus} />,
         copyable: false,
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
       {
         key: "agentid",
         label: "نماینده این کاربر",
         sortable: true,
         options: agentOptions,
+        defaultValue: requesterAgentId,
         copyable: true,
         hideOnMobile: true,
         placeholder: "انتخاب نماینده یا بدون نماینده",
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
         render: (value, row) => (
           <span className="text-sm text-slate-400">
             {row.agentLabel ||
@@ -1172,9 +1199,7 @@ export default function UsersSection({
             ? "اگر روشن باشد، محدودیت‌های همین کاربر جدا از نماینده ذخیره می‌شود."
             : "کاربر بدون نماینده همیشه از محدودیت اختصاصی خودش استفاده می‌کند.",
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
       {
         key: "limits.files",
@@ -1187,9 +1212,7 @@ export default function UsersSection({
             ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
             : "عدد ۰ یعنی نامحدود.",
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
       {
         key: "limits.blocks",
@@ -1202,9 +1225,7 @@ export default function UsersSection({
             ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
             : "عدد ۰ یعنی نامحدود.",
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
       {
         key: "limits.pages",
@@ -1217,9 +1238,7 @@ export default function UsersSection({
             ? "این مقدار فعلا از نماینده خوانده می‌شود. برای تغییر فقط همین کاربر، محدودیت اختصاصی را روشن کنید."
             : "عدد ۰ یعنی نامحدود.",
         hiddenInForm: (_, mode) =>
-          mode === "create"
-            ? !hasFullUserCreateAccess
-            : !hasFullUserEditAccess,
+          mode === "create" ? !hasFullUserCreateAccess : !hasFullUserEditAccess,
       },
       {
         key: "limits",
@@ -1361,6 +1380,7 @@ export default function UsersSection({
       hasFullUserCreateAccess,
       headers,
       openPreviewImage,
+      requesterAgentId,
       roleOptions,
     ],
   );

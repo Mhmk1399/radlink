@@ -5239,6 +5239,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                         onChange: (value) => updateField(col.key, value),
                         error,
                         formData: formData as Partial<T>,
+                        selectedRow,
                         mode: modalMode === "create" ? "create" : "edit",
                       })
                     ) : isDate ? (

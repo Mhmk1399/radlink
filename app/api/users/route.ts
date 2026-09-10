@@ -33,6 +33,7 @@ import {
     normalizeIdList,
     validateSinglePermissionIdSelection,
 } from "@/lib/auth/permissionAssignment";
+import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 
 function normalizeLimits(value: unknown) {
     const limits =
@@ -269,6 +270,15 @@ export const POST = compose(
         }
 
         const body = await req.json();
+        const resolvedRequesterAccess =
+            currentUser.role === "superAdmin"
+                ? null
+                : await resolveUserAccess(String(currentUser._id), currentUser.permissions);
+        const hasUsersCreateAccess =
+            currentUser.role === "superAdmin" ||
+            currentUser.role === "admin" ||
+            (resolvedRequesterAccess?.components["admin.users"]?.has("create") ??
+                false);
 
         const rawPhoneNumber = toEnglishDigits(body.phoneNumber).trim();
         const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
@@ -339,14 +349,15 @@ export const POST = compose(
             );
         }
 
+        const hasScopedRequesterRole = hasAgentScopedRole(currentUser.role);
         const requesterAgent =
-            hasAgentScopedRole(currentUser.role)
+            hasScopedRequesterRole
                 ? await Agent.findOne({
                     user: currentUser._id,
                     isActive: true,
                 }).select("_id limits").lean()
                 : null;
-        if (hasAgentScopedRole(currentUser.role) && !requesterAgent) {
+        if (hasScopedRequesterRole && !requesterAgent) {
             return NextResponse.json(
                 { message: "پروفایل نمایندگی فعال برای شما پیدا نشد." },
                 { status: 403 },
@@ -354,7 +365,9 @@ export const POST = compose(
         }
 
         const agentId = requesterAgent
-            ? String(requesterAgent._id)
+            ? typeof body.agentid === "string" && body.agentid.trim()
+                ? body.agentid.trim()
+                : String(requesterAgent._id)
             : typeof body.agentid === "string"
                 ? body.agentid.trim()
                 : "";
@@ -395,20 +408,17 @@ export const POST = compose(
             "inactive",
         ];
 
-        const role: UserRole = hasAgentScopedRole(currentUser.role)
-            ? "user"
-            : allowedRoles.includes(body.role)
+        const canUseFullCreatePayload = hasUsersCreateAccess;
+
+        const role: UserRole = canUseFullCreatePayload && allowedRoles.includes(body.role)
                 ? body.role
                 : "user";
 
-        const status: UserStatus = hasAgentScopedRole(currentUser.role)
-            ? "active"
-            : allowedStatuses.includes(
+        const status: UserStatus = canUseFullCreatePayload && allowedStatuses.includes(
                 body.status,
             )
                 ? body.status
                 : "active";
-        const canUseFullCreatePayload = !hasAgentScopedRole(currentUser.role);
         const requestedLimitsOverrideEnabled =
             typeof body.limitsOverrideEnabled === "boolean"
                 ? body.limitsOverrideEnabled

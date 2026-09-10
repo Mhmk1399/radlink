@@ -137,8 +137,10 @@ export const GET = compose(
             resolved.components["admin.agents"]?.has("view") ?? false;
         const canCreateUsers =
             resolved.components["admin.users"]?.has("create") ?? false;
+        const canUpdateUsers =
+            resolved.components["admin.users"]?.has("update") ?? false;
 
-        if (!canViewAgents && !(isUserFormOptionsMode && canCreateUsers)) {
+        if (!canViewAgents && !(isUserFormOptionsMode && (canCreateUsers || canUpdateUsers))) {
             return forbiddenAccessResponse(
                 isUserFormOptionsMode
                     ? { component: "admin.users", action: "create" }
@@ -150,7 +152,7 @@ export const GET = compose(
     const query: Record<string, unknown> = {};
     if (hasAgentScopedRole(requester.role)) {
         const managedUserIds = await getManagedUserIds(requester, {
-            includeSelf: false,
+            includeSelf: isUserFormOptionsMode,
         });
         query.user = { $in: managedUserIds ?? [] };
     }

@@ -52,6 +52,7 @@ export interface ColumnDef<T> {
         onChange: (value: unknown) => void;
         error?: string;
         formData: Partial<T>;
+        selectedRow?: T | null;
         mode: "create" | "edit";
     }) => ReactNode;
 }

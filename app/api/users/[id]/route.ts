@@ -164,7 +164,7 @@ export const PATCH = compose(
     const isAdmin = ["admin", "superAdmin"].includes(requester.role);
     const isSuperAdmin = requester.role === "superAdmin";
     const canUseFullUpdatePayload =
-        (isAdmin || hasUsersUpdateAccess) && !hasAgentScopedRole(requester.role);
+        isAdmin || hasUsersUpdateAccess;
     const isSelf = String(requester._id) === id;
     const isAgentManager =
         hasAgentScopedRole(requester.role) &&
