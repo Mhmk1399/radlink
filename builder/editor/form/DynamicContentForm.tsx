@@ -12,6 +12,7 @@ import {
   HiOutlineLink,
   HiOutlinePhoto,
   HiOutlineDocumentText,
+  HiOutlineDocumentArrowDown,
   HiOutlineEye,
   HiOutlineEyeSlash,
   HiOutlineCloudArrowUp,
@@ -72,6 +73,8 @@ function getFieldIcon(type: ContentFieldType): React.ReactNode {
       return <HiOutlineDocumentText size={14} />;
     case "url":
       return <HiOutlineLink size={14} />;
+    case "file":
+      return <HiOutlineDocumentArrowDown size={14} />;
     case "video":
       return <HiOutlineFilm size={14} />; // ← اضافه کن
 
@@ -79,6 +82,8 @@ function getFieldIcon(type: ContentFieldType): React.ReactNode {
       return <HiOutlinePhoto size={14} />;
     case "boolean":
       return <HiOutlineEye size={14} />;
+    case "file":
+      return "فایل";
     case "repeater":
       return <HiOutlineBars3 size={14} />;
     case "color":

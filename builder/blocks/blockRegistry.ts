@@ -69,6 +69,9 @@ import { createDefaultBookingFormBlock } from "./booking-form/bookingForm.defaul
 import BankAccountBlock from "./bank-account/BankAccountBlock";
 import { bankAccountSchema } from "./bank-account/bankAccount.schema";
 import { createDefaultBankAccountBlock } from "./bank-account/bankAccount.default";
+import PdfDownloadsBlock from "./pdf-downloads/PdfDownloadsBlock";
+import { pdfDownloadsSchema } from "./pdf-downloads/pdfDownloads.schema";
+import { createDefaultPdfDownloadsBlock } from "./pdf-downloads/pdfDownloads.default";
 
 import React from "react";
 import type {
@@ -96,6 +99,7 @@ import {
   HiOutlineCalendarDays,
   HiOutlineUserPlus,
   HiOutlineCreditCard,
+  HiOutlineDocumentArrowDown,
 } from "react-icons/hi2";
 
 const SHADOW_STYLE_KEY: EditableStyleKey = "shadow";
@@ -445,6 +449,19 @@ export const blockRegistry = {
     schema: withBuilderStyleSchema(bankAccountSchema),
     createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultBankAccountBlock),
   },
+  pdfDownloads: {
+    type: "pdfDownloads",
+    label: "دانلود PDF",
+    description:
+      "نمایش چند فایل PDF با کارت‌های دانلود، توضیح و چینش قابل تنظیم.",
+    icon: React.createElement(HiOutlineDocumentArrowDown, { size: 18 }),
+    category: "media",
+    component: PdfDownloadsBlock,
+    schema: withBuilderStyleSchema(pdfDownloadsSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(
+      createDefaultPdfDownloadsBlock,
+    ),
+  },
 } as const;
 
 export type BlockType = keyof typeof blockRegistry;
@@ -452,6 +469,8 @@ export type BlockType = keyof typeof blockRegistry;
 const blockTypeAliases: Record<string, BlockType> = {
   "bank-account": "bankAccount",
   bank_account: "bankAccount",
+  "pdf-downloads": "pdfDownloads",
+  pdf_downloads: "pdfDownloads",
 };
 
 export function normalizeBlockType(type: string): BlockType | string {

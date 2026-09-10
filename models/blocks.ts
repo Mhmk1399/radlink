@@ -167,6 +167,7 @@ export type BlockType =
   | "productCards"
   | "bookingForm"
   | "bankAccount"
+  | "pdfDownloads"
   | string;
 
 export interface IBlock extends Document {

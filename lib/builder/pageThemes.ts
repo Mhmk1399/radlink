@@ -1303,6 +1303,7 @@ const TIGHT_SPACING_BLOCK_TYPES = new Set([
 ]);
 const FEATURE_SPACING_BLOCK_TYPES = new Set([
   "productCards",
+  "pdfDownloads",
   "bookingForm",
   "testimonial",
   "countdown",

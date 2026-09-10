@@ -58,6 +58,7 @@ function buildDefaultBlock(config: {
 
 const LEGACY_BLOCK_TYPES: Record<string, string[]> = {
     bankAccount: ["bank-account", "bank_account"],
+    pdfDownloads: ["pdf-downloads", "pdf_downloads"],
 };
 
 function getBlockTypeCandidates(type: string) {

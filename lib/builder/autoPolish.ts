@@ -36,6 +36,7 @@ const FEATURE_BLOCK_TYPES = new Set([
   "faq",
   "mapLinks",
   "messengerLinks",
+  "pdfDownloads",
   "productCards",
   "storyHighlights",
   "testimonial",

@@ -74,6 +74,8 @@ function isString(value: unknown): value is string {
 const BLOCK_TYPE_ALIASES: Record<string, string> = {
   "bank-account": "bankAccount",
   bank_account: "bankAccount",
+  "pdf-downloads": "pdfDownloads",
+  pdf_downloads: "pdfDownloads",
 };
 
 function canonicalBlockType(type: unknown) {

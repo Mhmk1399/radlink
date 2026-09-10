@@ -103,6 +103,7 @@ export type ContentFieldType =
   | "text"
   | "textarea"
   | "url"
+  | "file"
   | "image"
   | "video"
   | "boolean"
@@ -153,6 +154,7 @@ export type RepeaterFieldConfig = {
       | "textarea"
       | "boolean"
       | "url"
+      | "file"
       | "image"
       | "color"
       | "select";

@@ -13,6 +13,7 @@ import {
   HiOutlineEyeSlash,
   HiOutlineLink,
   HiOutlineCloudArrowUp,
+  HiOutlineDocumentArrowDown,
   HiOutlinePhoto,
   HiOutlineXMark,
   HiOutlineCheck,
@@ -41,7 +42,15 @@ import {
 type RepeaterSubField = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "boolean" | "url" | "image" | "color" | "select";
+  type:
+    | "text"
+    | "textarea"
+    | "boolean"
+    | "url"
+    | "file"
+    | "image"
+    | "color"
+    | "select";
   options?: ReadonlyArray<{
     value: string;
     label: string;
@@ -110,6 +119,10 @@ function isValidImageUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isPdfFile(file: File): boolean {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
 /* ================================================================== */
@@ -314,6 +327,190 @@ function RepeaterImageField({
           لینک نامعتبر
         </div>
       )}
+      {uploadError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-medium text-red-600">
+          {uploadError}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RepeaterPdfField({
+  value,
+  label,
+  onChange,
+}: {
+  value: string;
+  label: string;
+  onChange: (url: string) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"upload" | "url">(value ? "url" : "upload");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const uploadSelectedFile = useCallback(
+    async (file: File) => {
+      if (!isPdfFile(file)) {
+        setUploadError("فقط فایل PDF قابل آپلود است.");
+        return;
+      }
+
+      setIsUploading(true);
+      setUploadProgress(20);
+      setUploadError(null);
+      try {
+        const uploaded = await uploadFile(file);
+        setUploadProgress(100);
+        onChange(uploaded.url);
+        setMode("url");
+      } catch (error) {
+        setUploadError(
+          error instanceof Error
+            ? error.message
+            : "آپلود فایل PDF با خطا مواجه شد.",
+        );
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    },
+    [onChange],
+  );
+
+  const handleFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files?.length) return;
+      void uploadSelectedFile(files[0]);
+    },
+    [uploadSelectedFile],
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-[2px] rounded-lg bg-neutral-100 p-[2px]">
+        <button
+          type="button"
+          onClick={() => setMode("upload")}
+          className={[
+            "flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-semibold transition-all",
+            mode === "upload"
+              ? "bg-white text-neutral-800 shadow-sm"
+              : "text-neutral-400",
+          ].join(" ")}
+        >
+          <HiOutlineCloudArrowUp size={12} />
+          آپلود
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("url")}
+          className={[
+            "flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-semibold transition-all",
+            mode === "url"
+              ? "bg-white text-neutral-800 shadow-sm"
+              : "text-neutral-400",
+          ].join(" ")}
+        >
+          <HiOutlineLink size={12} />
+          لینک
+        </button>
+      </div>
+
+      {mode === "upload" && (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            handleFiles(e.dataTransfer.files);
+          }}
+          onClick={() => fileRef.current?.click()}
+          className={[
+            "relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-3 py-5 text-center transition-all",
+            isDragging
+              ? "border-red-300 bg-red-50"
+              : "border-neutral-200 bg-neutral-50 hover:border-red-200 hover:bg-white",
+            isUploading ? "pointer-events-none" : "",
+          ].join(" ")}
+        >
+          {isUploading ? (
+            <>
+              <div className="mb-2 h-8 w-8 animate-spin rounded-full border-2 border-neutral-200 border-t-red-500" />
+              <p className="text-[11px] font-semibold text-neutral-600">
+                در حال آپلود PDF...
+              </p>
+              <div className="mt-2 h-1 w-24 overflow-hidden rounded-full bg-neutral-200">
+                <div
+                  className="h-full rounded-full bg-red-500 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <HiOutlineDocumentArrowDown
+                size={24}
+                className="mb-1.5 text-red-300"
+              />
+              <p className="text-[11px] font-semibold text-neutral-600">
+                فایل PDF را بکشید یا کلیک کنید
+              </p>
+              <p className="mt-0.5 text-[9px] text-neutral-400">
+                PDF تا سقف مجاز آپلود فایل
+              </p>
+            </>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            aria-label={label}
+            onChange={(e) => handleFiles(e.target.files)}
+            className="hidden"
+          />
+        </div>
+      )}
+
+      {mode === "url" && (
+        <div className="relative">
+          <HiOutlineLink
+            size={12}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400"
+          />
+          <input
+            type="url"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full rounded-lg border border-neutral-200 bg-neutral-50 py-2 pl-8 pr-3 font-mono text-base text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400 focus:bg-white"
+            dir="ltr"
+            placeholder="https://example.com/file.pdf"
+          />
+        </div>
+      )}
+
+      {value && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-2 text-[10px] font-medium text-emerald-700">
+          <span className="min-w-0 truncate" dir="ltr">
+            {value}
+          </span>
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="shrink-0 rounded-md bg-white px-2 py-1 text-red-500 shadow-sm"
+          >
+            حذف
+          </button>
+        </div>
+      )}
+
       {uploadError && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-medium text-red-600">
           {uploadError}
@@ -578,6 +775,23 @@ export function RepeaterField({
                   }
 
                   /* ── URL ── */
+                  if (field.type === "file") {
+                    return (
+                      <div key={field.key}>
+                        <label className="mb-1 block text-[11px] font-semibold text-neutral-500">
+                          {field.label}
+                        </label>
+                        <RepeaterPdfField
+                          value={String(fieldValue ?? "")}
+                          label={field.label}
+                          onChange={(url) =>
+                            updateItemField(item.id, field.key, url)
+                          }
+                        />
+                      </div>
+                    );
+                  }
+
                   if (field.type === "color") {
                     return (
                       <div key={field.key}>
