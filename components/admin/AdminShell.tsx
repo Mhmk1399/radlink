@@ -1888,7 +1888,7 @@ function Sidebar({
               aria-label="رادلینک — رفتن به داشبورد"
             >
               <Image
-                src="/assets/images/radlinklogo.png"
+                src="https://storadge.arziplus.com/rad/radlinklogonew.png"
                 width={100}
                 height={100}
                 alt="logo"

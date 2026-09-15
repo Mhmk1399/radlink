@@ -295,7 +295,7 @@ function PhoneMockup() {
   
       <Image
         alt="hero"
-        src="/assets/images/hero.jpg"
+        src="https://storadge.arziplus.com/rad/heroImage.jpg"
         width={1200}
         height={1200}
         className="h-fit w-full rounded-[1rem] object-contain  "

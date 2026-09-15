@@ -307,7 +307,7 @@ function LogoMark() {
   return (
     <div className="flex min-h-14 items-center justify-center">
       <Image
-        src="/assets/images/radlinklogo.png"
+        src="https://storadge.arziplus.com/rad/radlinklogonew.png"
         width={160}
         height={48}
         alt="رادلینک"

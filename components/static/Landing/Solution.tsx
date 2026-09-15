@@ -399,7 +399,7 @@ function SolutionVisual() {
 
           <Image
             alt="logo"
-            src="/assets/images/radlinkLogo.png"
+            src="https://storadge.arziplus.com/rad/radlinklogonew.png"
             width={200}
             height={200}
           />

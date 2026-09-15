@@ -173,7 +173,7 @@ export function SmartLandingFooter() {
               )}
             >
               <Image
-                src="/assets/images/radlinklogo.png"
+                src="https://storadge.arziplus.com/rad/radlinklogonew.png"
                 width={LOGO_W}
                 height={LOGO_H}
                 alt="رادلینک"
