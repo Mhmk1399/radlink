@@ -99,6 +99,17 @@ function normalizeUser(value: unknown): UserSummary | null {
   };
 }
 
+function mergeUsersById(...groups: UserSummary[][]) {
+  const usersById = new Map<string, UserSummary>();
+
+  groups.flat().forEach((user) => {
+    if (!user.id || usersById.has(user.id)) return;
+    usersById.set(user.id, user);
+  });
+
+  return Array.from(usersById.values());
+}
+
 function normalizeAccess(value: unknown): AccessSummary | null {
   if (!isRecord(value)) return null;
   const id = getId(value);
@@ -309,6 +320,7 @@ function SearchInput({
         <button
           type="button"
           onClick={() => onChange("")}
+          aria-label="پاک کردن جستجو"
           className={cn(
             "absolute left-2 top-1/2 -translate-y-1/2 rounded p-0.5 transition-colors",
             t.hoverBg,
@@ -338,19 +350,39 @@ function VirtualList({
   containerHeight: number;
 }) {
   const [scrollTop, setScrollTop] = useState(0);
+  const [columnCount, setColumnCount] = useState(1);
 
-  const totalHeight = options.length * ITEM_HEIGHT;
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 640px)");
+    const updateColumnCount = () => setColumnCount(mediaQuery.matches ? 2 : 1);
 
-  const startIndex = Math.max(
-    0,
-    Math.floor(scrollTop / ITEM_HEIGHT) - VISIBLE_BUFFER,
+    updateColumnCount();
+    mediaQuery.addEventListener("change", updateColumnCount);
+    return () => mediaQuery.removeEventListener("change", updateColumnCount);
+  }, []);
+
+  const rowCount = Math.ceil(options.length / columnCount);
+  const totalHeight = rowCount * ITEM_HEIGHT;
+  const effectiveScrollTop = Math.min(
+    scrollTop,
+    Math.max(0, totalHeight - containerHeight),
   );
-  const visibleCount =
+
+  const startRow = Math.max(
+    0,
+    Math.floor(effectiveScrollTop / ITEM_HEIGHT) - VISIBLE_BUFFER,
+  );
+  const visibleRowCount =
     Math.ceil(containerHeight / ITEM_HEIGHT) + VISIBLE_BUFFER * 2;
-  const endIndex = Math.min(options.length - 1, startIndex + visibleCount);
+  const endRow = Math.min(rowCount - 1, startRow + visibleRowCount);
+  const startIndex = startRow * columnCount;
+  const endIndex = Math.min(
+    options.length - 1,
+    (endRow + 1) * columnCount - 1,
+  );
 
   const visibleOptions = options.slice(startIndex, endIndex + 1);
-  const offsetTop = startIndex * ITEM_HEIGHT;
+  const offsetTop = startRow * ITEM_HEIGHT;
 
   return (
     <div
@@ -577,6 +609,9 @@ export default function PermissionsSection({
   const { can, isLoading: accessLoading } = useAccess();
   const [refreshToken, setRefreshToken] = useState(0);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [editingAssignedUsers, setEditingAssignedUsers] = useState<
+    UserSummary[]
+  >([]);
   const [accesses, setAccesses] = useState<AccessSummary[]>([]);
   const [form, setForm] = useState<PermissionFormState>(() => emptyForm());
   const [modalOpen, setModalOpen] = useState(false);
@@ -596,6 +631,10 @@ export default function PermissionsSection({
   const canUpdate = can("admin.permissions", "update");
   const canViewUsers = can("admin.users", "view");
   const canViewAccesses = can("admin.accesses", "view");
+  const selectableUsers = useMemo(
+    () => mergeUsersById(editingAssignedUsers, users),
+    [editingAssignedUsers, users],
+  );
 
   const transformResponse = useMemo(
     () =>
@@ -766,6 +805,7 @@ export default function PermissionsSection({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function loadOptions() {
       if (accessLoading) return;
@@ -780,19 +820,51 @@ export default function PermissionsSection({
 
       setOptionsLoading(true);
       try {
-        const [usersResponse, accessesResponse] = await Promise.all([
-          canViewUsers ? fetch("/api/users?limit=100", { headers }) : null,
-          canViewAccesses ? fetch("/api/accesses?limit=100", { headers }) : null,
-        ]);
+        async function loadAllUsers() {
+          const allUsers: unknown[] = [];
+          let usersPage = 1;
+          let totalUsers = Number.POSITIVE_INFINITY;
 
-        const [usersJson, accessesJson] = await Promise.all([
-          usersResponse ? usersResponse.json().catch(() => null) : null,
-          accessesResponse ? accessesResponse.json().catch(() => null) : null,
-        ]);
+          while (allUsers.length < totalUsers) {
+            const response = await fetch(
+              `/api/users?page=${usersPage}&limit=100`,
+              { headers, signal: controller.signal },
+            );
+            const json = await response.json().catch(() => null);
 
-        if (usersResponse && !usersResponse.ok && usersResponse.status !== 403) {
-          throw new Error(usersJson?.message ?? "خطا در دریافت کاربران");
+            if (!response.ok) {
+              if (response.status === 403) return [];
+              throw new Error(json?.message ?? "خطا در دریافت کاربران");
+            }
+
+            const pageUsers: unknown[] = Array.isArray(json?.users)
+              ? json.users
+              : [];
+            allUsers.push(...pageUsers);
+            totalUsers =
+              typeof json?.total === "number" ? json.total : allUsers.length;
+
+            if (pageUsers.length === 0) break;
+            usersPage += 1;
+          }
+
+          return allUsers;
         }
+
+        const [rawUsers, accessesResponse] = await Promise.all([
+          canViewUsers ? loadAllUsers() : Promise.resolve([]),
+          canViewAccesses
+            ? fetch("/api/accesses?limit=100", {
+                headers,
+                signal: controller.signal,
+              })
+            : null,
+        ]);
+
+        const accessesJson = accessesResponse
+          ? await accessesResponse.json().catch(() => null)
+          : null;
+
         if (
           accessesResponse &&
           !accessesResponse.ok &&
@@ -803,26 +875,22 @@ export default function PermissionsSection({
 
         if (cancelled) return;
 
-        const rawUsers: unknown[] =
-          usersResponse?.ok && Array.isArray(usersJson?.users)
-          ? usersJson.users
-          : [];
         const rawAccesses: unknown[] =
           accessesResponse?.ok && Array.isArray(accessesJson?.accesses)
           ? accessesJson.accesses
           : [];
 
-        setUsers(
-          rawUsers
-            .map(normalizeUser)
-            .filter((user): user is UserSummary => !!user),
-        );
+        const normalizedUsers = rawUsers
+          .map(normalizeUser)
+          .filter((user): user is UserSummary => !!user);
+        setUsers(mergeUsersById(normalizedUsers));
         setAccesses(
           rawAccesses
             .map(normalizeAccess)
             .filter((access): access is AccessSummary => !!access),
         );
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
         toast.error(
           error instanceof Error
             ? error.message
@@ -837,15 +905,18 @@ export default function PermissionsSection({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [accessLoading, canViewAccesses, canViewUsers, headers]);
 
   function openCreate() {
+    setEditingAssignedUsers([]);
     setForm(emptyForm());
     setModalOpen(true);
   }
 
   function openEdit(row: PermissionRow) {
+    setEditingAssignedUsers(row.assignedToUsers);
     setForm({
       id: row._id,
       name: row.name,
@@ -919,7 +990,7 @@ export default function PermissionsSection({
           name: `${row.name} (کپی)`,
           description: row.description?.trim() ?? "",
           accesses: row.accesses.map((access) => access.id),
-          assignedToUsers: row.assignedToUsers.map((user) => user.id),
+          assignedToUsers: [],
         }),
       });
       const json = await response.json().catch(() => null);
@@ -1358,7 +1429,7 @@ export default function PermissionsSection({
                   loading={optionsLoading}
                   searchPlaceholder="جستجو بر اساس نام یا شماره..."
                   searchMode="name"
-                  options={users.map((user) => ({
+                  options={selectableUsers.map((user) => ({
                     value: user.id,
                     label: userLabel(user),
                     sublabel: [
