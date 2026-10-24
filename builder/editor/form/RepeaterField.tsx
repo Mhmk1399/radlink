@@ -863,7 +863,7 @@ export function RepeaterField({
                             placeholder="https://example.com"
                             />
                           </div>
-                          <LinkTypeHelp />
+                          <LinkTypeHelp onSelect={(example) => updateItemField(item.id, field.key, example)} />
                         </div>
                       </div>
                     );

@@ -84,7 +84,7 @@ import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
 import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import { assertPagePublishAccess } from "@/lib/auth/pagePublishAccess";
-import { buildPageTargetUrl } from "@/lib/qrCode";
+import { buildPageTargetUrl, createQrForPage } from "@/lib/qrCode";
 import {
     hasGlobalOwnerScope,
 } from "@/lib/auth/ownership";
@@ -614,6 +614,19 @@ export const PATCH = compose(
         );
     }
 
+    let qrSyncFailed = false;
+    try {
+        await createQrForPage({
+            pageId: String(page._id),
+            creatorId: String(currentPage.owner || user._id),
+            pageUrl: String(page.url),
+            requestUrl: req.url,
+        });
+    } catch (error) {
+        console.error("Page QR synchronization failed", error);
+        qrSyncFailed = true;
+    }
+
     const productOwnerId =
         (update.owner as string | undefined) ??
         (currentPage.owner ? String(currentPage.owner) : "");
@@ -665,6 +678,12 @@ export const PATCH = compose(
     revalidatePath("/sitemap.xml");
     invalidatePageExpiryAlertsCache();
 
+    if (qrSyncFailed) {
+        return NextResponse.json({
+            page,
+            message: "صفحه ذخیره شد اما به‌روزرسانی QR انجام نشد. لطفاً دوباره ذخیره کنید.",
+        }, { status: 502 });
+    }
     return NextResponse.json({ page });
 });
 

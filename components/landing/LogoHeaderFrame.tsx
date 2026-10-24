@@ -968,6 +968,7 @@ export function LogoHeaderFrame({
             title={headerTitle}
             description={headerDescription}
             titleColor={normalized.textColor}
+            titleFontSize={normalized.titleFontSize}
             descriptionColor={normalized.descriptionColor}
           />
         </div>
@@ -1050,6 +1051,7 @@ export function LogoHeaderFrame({
             title={headerTitle}
             description={headerDescription}
             titleColor={normalized.textColor}
+            titleFontSize={normalized.titleFontSize}
             descriptionColor={normalized.descriptionColor}
           />
         </div>
@@ -1062,11 +1064,13 @@ function HeaderText({
   title,
   description,
   titleColor,
+  titleFontSize,
   descriptionColor,
 }: {
   title: string;
   description: string;
   titleColor: string;
+  titleFontSize: number;
   descriptionColor: string;
 }) {
   if (!title && !description) return null;
@@ -1075,8 +1079,8 @@ function HeaderText({
     <div className="mt-3 max-w-[min(28rem,90%)]">
       {title ? (
         <p
-          className="line-clamp-1 text-[15px] font-black leading-6 sm:text-base"
-          style={{ color: titleColor }}
+          className="line-clamp-1 font-black leading-normal"
+          style={{ color: titleColor, fontSize: titleFontSize }}
         >
           {title}
         </p>

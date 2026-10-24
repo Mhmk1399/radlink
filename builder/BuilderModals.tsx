@@ -868,6 +868,23 @@ function LogoHeaderSettingsPanel({
             />
           </label>
           <label>
+            <span className="mb-2 flex items-center justify-between gap-3 text-[11px] font-bold text-neutral-600">
+              اندازه متن عنوان زیر لوگو
+              <span className="font-mono">{settings.titleFontSize}px</span>
+            </span>
+            <input
+              type="range"
+              min={10}
+              max={48}
+              step={1}
+              value={settings.titleFontSize}
+              onChange={(event) =>
+                update({ titleFontSize: Number(event.target.value), enabled: true })
+              }
+              className="w-full accent-[#064789]"
+            />
+          </label>
+          <label>
             <span className="mb-2 block text-[11px] font-bold text-neutral-600">
               توضیح کوتاه زیر عنوان
             </span>

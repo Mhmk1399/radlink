@@ -18,6 +18,7 @@ export const contactInfoSchema: BlockSchema = {
   contentFields: [
     { key: "title", label: "عنوان", type: "text" },
     { key: "description", label: "توضیحات", type: "textarea" },
+    { key: "contactOrder", label: "ترتیب راه‌های ارتباطی", type: "contact-order" },
     { key: "phoneLabel", label: "لیبل تلفن", type: "text" },
     { key: "phone", label: "شماره تلفن", type: "text" },
     { key: "whatsappLabel", label: "لیبل واتساپ", type: "text" },

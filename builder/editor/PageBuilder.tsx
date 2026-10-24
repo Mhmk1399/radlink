@@ -112,6 +112,8 @@ import {
 } from "@/lib/validation/pageSlug";
 import {
   applyPageTheme,
+  applyPageThemeToBlocks,
+  getSavedPageTheme,
   applyPageThemeProgressively,
   type AppliedPageTheme,
   type PageThemeDefinition,
@@ -1053,6 +1055,7 @@ export default function SimplePageBuilder({
   const [logoHeaderEditorOpen, setLogoHeaderEditorOpen] = useState(false);
   const [footerEditorOpen, setFooterEditorOpen] = useState(false);
   const [themeStudioOpen, setThemeStudioOpen] = useState(false);
+  const [activePageTheme, setActivePageTheme] = useState<PageThemeDefinition | null>(null);
   const [themeApplying, setThemeApplying] = useState<ThemeApplyingState | null>(
     null,
   );
@@ -1254,6 +1257,7 @@ export default function SimplePageBuilder({
         theme,
       });
       applyResolvedPageTheme(applied, { transition: options?.transition });
+      setActivePageTheme(theme);
 
       if (options?.persistDraft !== false) {
         saveThemeDraft(themeDraftStorageKey, theme);
@@ -1352,6 +1356,7 @@ export default function SimplePageBuilder({
 
         updateProgress(88, "ثبت تغییرات روی صفحه");
         applyResolvedPageTheme(applied);
+        setActivePageTheme(theme);
         saveThemeDraft(themeDraftStorageKey, theme);
 
         updateProgress(96, "رندر پیش‌نمایش صفحه");
@@ -1410,11 +1415,17 @@ export default function SimplePageBuilder({
   const createBlockFromSource = useCallback(
     (type: string, order: number): PageBlock | null => {
       const masterBlock = masterBlocks[type];
-      if (masterBlock) return createBlockFromMaster(masterBlock, order);
-
-      return null;
+      if (!masterBlock) return null;
+      const block = createBlockFromMaster(masterBlock, order);
+      const theme = getSavedPageTheme(blocks) ?? activePageTheme;
+      if (!theme) return block;
+      return applyPageThemeToBlocks(
+        [syncBlockStyleKeysWithRegistry(block)],
+        theme,
+        order,
+      )[0];
     },
-    [masterBlocks],
+    [activePageTheme, blocks, masterBlocks],
   );
   const currentServerSnapshot = useMemo(
     () =>

@@ -28,6 +28,7 @@ import {
   validateIdentityField,
 } from "@/lib/validation/identityFields";
 import { PersianDateTimePicker } from "./PersianDateTimePicker";
+import { ContactOrderField } from "./ContactOrderField";
 import { RepeaterField } from "./RepeaterField";
 import { RgbaColorInput } from "./RgbaColorInput";
 import { SelectField } from "./SelectField";
@@ -847,6 +848,9 @@ export function DynamicContentForm({
 
       <div className="space-y-2.5">
         {fields.map((field) => {
+          if (field.type === "contact-order") {
+            return <ContactOrderField key={field.key} data={data} onChange={onChange} />;
+          }
           const value = data[field.key];
           const isUrlLike = field.type === "url";
           const icon = getFieldIcon(field.type);
@@ -1207,7 +1211,7 @@ export function DynamicContentForm({
                   }
                   />
                 </div>
-                {isUrlLike && <LinkTypeHelp />}
+                {isUrlLike && <LinkTypeHelp onSelect={(example) => onChange(field.key, example)} />}
               </div>
               {identityError && (
                 <p className="mt-1.5 text-xs font-medium text-red-500">

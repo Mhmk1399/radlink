@@ -10,7 +10,7 @@ import {
 import { AuthRequest } from "@/lib/auth/types";
 import Agent from "@/models/agent";
 import User from "@/models/users";
-import { getManagedUserIds, hasAgentScopedRole } from "@/lib/auth/agentScope";
+import { getManagedUserIds, hasAgentScopedRole, invalidateActorScope } from "@/lib/auth/agentScope";
 import { forbiddenAccessResponse } from "@/lib/auth/enforceAccess";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import {
@@ -76,9 +76,15 @@ export const POST = compose(
 
     const user = await User.findById(userId);
     if (!user) return NextResponse.json({ message: "کاربر پیدا نشد." }, { status: 404 });
-    if (user.role !== "user") {
+    if (user.isDeleted || user.status !== "active") {
         return NextResponse.json(
-            { message: "فقط یک کاربر عادی می‌تواند به نماینده تبدیل شود." },
+            { message: "فقط کاربران فعال می‌توانند نماینده شوند." },
+            { status: 400 },
+        );
+    }
+    if (!["user", "agent", "agentManager"].includes(user.role)) {
+        return NextResponse.json(
+            { message: "فقط کاربر عادی، نماینده یا مدیر نماینده می‌تواند پروفایل نمایندگی داشته باشد." },
             { status: 400 },
         );
     }
@@ -107,6 +113,8 @@ export const POST = compose(
         limits: normalizedLimits,
         limitsOverrideEnabled: false,
     });
+
+    invalidateActorScope();
 
     return NextResponse.json({ agent }, { status: 201 });
 });

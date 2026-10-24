@@ -100,6 +100,7 @@ export type PageBlock = {
 };
 
 export type ContentFieldType =
+  | "contact-order"
   | "text"
   | "textarea"
   | "url"

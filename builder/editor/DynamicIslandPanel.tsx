@@ -1166,7 +1166,7 @@ function DesktopToolbar({
                           onClose={() => setOpenNumericDropdown(null)}
                           anchorEl={numericBtnRefs.current[key] ?? null}
                           align="right"
-                          width="w-64"
+                          width={key === "gridColumns" ? "w-[266px]" : "w-64"}
                           zIndex={400}
                         >
                           <div
@@ -1791,13 +1791,27 @@ export function DynamicIslandPanel({
     );
   }
 
-  const selEl: BlockElement | null = selectedElementId
+  let selEl: BlockElement | null = selectedElementId
     ? (block.elements[selectedElementId] ?? null)
     : null;
 
-  const selSchema = selectedElementId
+  let selSchema = selectedElementId
     ? (schema.elements[selectedElementId] ?? null)
     : null;
+
+  // Gallery columns belong to the whole grid, whichever part is selected.
+  const hasGalleryGrid = block.type === "gallery" && Boolean(block.elements.grid);
+  if (hasGalleryGrid && selEl && selSchema) {
+    const allowedStyleKeys: EditableStyleKey[] = Array.from(
+      new Set<EditableStyleKey>([...selSchema.allowedStyleKeys, "gridColumns"]),
+    );
+    selSchema = { ...selSchema, allowedStyleKeys };
+    selEl = {
+      ...selEl,
+      allowedStyleKeys,
+      style: { ...selEl.style, gridColumns: block.elements.grid.style.gridColumns },
+    };
+  }
 
   const selLabel = selectedElementId
     ? (schema.elements[selectedElementId]?.label ?? selectedElementId)
@@ -1814,7 +1828,8 @@ export function DynamicIslandPanel({
     isScrolled,
     onBreakpointChange,
     onUpdateContent,
-    onUpdateStyle,
+    onUpdateStyle: (elementId, key, value) =>
+      onUpdateStyle(hasGalleryGrid && key === "gridColumns" ? "grid" : elementId, key, value),
     onClose,
     onDeleteBlock,
     onDuplicateBlock,

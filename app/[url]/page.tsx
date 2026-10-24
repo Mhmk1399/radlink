@@ -6,7 +6,7 @@ import { connectDB } from "@/lib/data/db";
 import Notification from "@/models/notification";
 import Image from "next/image";
 import Page from "@/models/pages";
-import QR from "@/models/qr";
+import { buildPageTargetUrl } from "@/lib/qrCode";
 import User from "@/models/users";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
 import LandingFloatingActions from "@/components/landing/LandingFloatingActions";
@@ -310,7 +310,7 @@ export default async function PageRoute({ params }: Props) {
     );
   }
 
-  const [rawNotifications, qr, owner] = await Promise.all([
+  const [rawNotifications, owner] = await Promise.all([
     Notification.find({
       $and: [
         { isActive: { $ne: false } },
@@ -322,9 +322,6 @@ export default async function PageRoute({ params }: Props) {
       )
       .populate("createdBy", "firstName lastName phoneNumber role")
       .sort({ createdAt: -1 })
-      .lean(),
-    QR.findOne({ page: page._id, isActive: { $ne: false } })
-      .select("targetUrl imageurl")
       .lean(),
     User.findById(page.owner).select("role permissions").lean(),
   ]);
@@ -442,8 +439,7 @@ export default async function PageRoute({ params }: Props) {
       />
       <LandingFloatingActions
         contactBlock={contactSaveBlock as PageBlock | null}
-        pageUrl={String(qr?.targetUrl || page.url)}
-        qrImageUrl={String(qr?.imageurl || "")}
+        pageUrl={buildPageTargetUrl(String(page.url))}
         mode="public"
         enabled={showFloatingActions}
       />

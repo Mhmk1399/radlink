@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { sortContactItems } from "./contactInfo.order";
 import styled from "styled-components";
 
 import { EditablePart } from "@/builder/blocks/shared/EditablePart";
@@ -37,6 +38,11 @@ type ContactInfoData = {
   email: string;
   addressLabel?: string;
   address: string;
+  contactOrder?: string[];
+  phoneOrder?: string | number;
+  whatsappOrder?: string | number;
+  emailOrder?: string | number;
+  addressOrder?: string | number;
   contactItems?: ContactInfoItem[];
   primaryButtonText: string;
   secondaryButtonText: string;
@@ -55,6 +61,7 @@ type ContactInfoBlockProps = BlockComponentProps & {
 type IconTone = "phone" | "landline" | "whatsapp" | "email" | "address" | "link";
 
 type ContactInfoItem = {
+  displayOrder?: string | number;
   id?: string;
   type?: IconTone;
   label?: string;
@@ -65,6 +72,7 @@ type ContactInfoItem = {
 };
 
 type RenderContactInfoItem = {
+  displayOrder?: unknown;
   id: string;
   type: IconTone;
   label: React.ReactNode;
@@ -75,22 +83,6 @@ type RenderContactInfoItem = {
   sourcePriority: number;
   itemOrder: number;
 };
-
-const CONTACT_INFO_TYPE_ORDER: IconTone[] = [
-  "phone",
-  "landline",
-  "whatsapp",
-  "email",
-  "address",
-  "link",
-];
-
-const CONTACT_INFO_TYPE_ORDER_MAP = CONTACT_INFO_TYPE_ORDER.reduce<
-  Record<IconTone, number>
->((order, type, index) => {
-  order[type] = index;
-  return order;
-}, {} as Record<IconTone, number>);
 
 /* ================================================================== */
 /*  Styled                                                             */
@@ -631,6 +623,7 @@ function getExtraContactItems(
         repeaterKey: "contactItems" as const,
         repeaterItemId: getString(record.id) || undefined,
         repeaterIndex: index,
+        displayOrder: record.displayOrder,
         backgroundColor: getString(record.backgroundColor),
         textColor: getString(record.textColor),
       },
@@ -657,19 +650,6 @@ function getContactItemsGridColumns(
     : clampGridColumns(style?.gridColumns?.desktop, tablet);
 
   return { mobile, tablet, desktop };
-}
-
-function sortContactItemsByType(items: RenderContactInfoItem[]) {
-  return [...items].sort((a, b) => {
-    const groupDiff =
-      CONTACT_INFO_TYPE_ORDER_MAP[a.type] - CONTACT_INFO_TYPE_ORDER_MAP[b.type];
-    if (groupDiff !== 0) return groupDiff;
-
-    const sourceDiff = a.sourcePriority - b.sourcePriority;
-    if (sourceDiff !== 0) return sourceDiff;
-
-    return a.itemOrder - b.itemOrder;
-  });
 }
 
 /* ================================================================== */
@@ -768,6 +748,7 @@ export function ContactInfoBlock({
   if (Boolean(block.data.showPhone) && phone) {
     contactItems.push({
       id: "phone",
+      displayOrder: block.data.phoneOrder,
       type: "phone",
       label: (
         <InlineEditableText
@@ -800,6 +781,7 @@ export function ContactInfoBlock({
   if (Boolean(block.data.showWhatsapp) && whatsapp) {
     contactItems.push({
       id: "whatsapp",
+      displayOrder: block.data.whatsappOrder,
       type: "whatsapp",
       label: (
         <InlineEditableText
@@ -832,6 +814,7 @@ export function ContactInfoBlock({
   if (Boolean(block.data.showEmail) && email) {
     contactItems.push({
       id: "email",
+      displayOrder: block.data.emailOrder,
       type: "email",
       label: (
         <InlineEditableText
@@ -864,6 +847,7 @@ export function ContactInfoBlock({
   if (Boolean(block.data.showAddress) && address) {
     contactItems.push({
       id: "address",
+      displayOrder: block.data.addressOrder,
       type: "address",
       label: (
         <InlineEditableText
@@ -896,6 +880,7 @@ export function ContactInfoBlock({
   extraContactItems.forEach((item) => {
     contactItems.push({
       id: `extra-${item.id}`,
+      displayOrder: item.displayOrder,
       type: item.type,
       label: (
         <InlineEditableText
@@ -921,7 +906,7 @@ export function ContactInfoBlock({
     });
   });
 
-  const visibleContactItems = sortContactItemsByType(contactItems);
+  const visibleContactItems = sortContactItems(contactItems, block.data.contactOrder);
   const hasAnyItem = visibleContactItems.length > 0;
 
   if (!isEditor && !hasAnyItem && !phone && !whatsapp) {

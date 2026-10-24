@@ -2161,14 +2161,26 @@ function styleElement({
   return nextStyle;
 }
 
+export function getSavedPageTheme(blocks: PageBlock[]): PageThemeDefinition | null {
+  for (const block of blocks) {
+    const value = block.settings?.pageTheme;
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const theme = value as PageThemeDefinition;
+    if (typeof theme.id !== "string" || !theme.palette || !theme.scale) continue;
+    return normalizePageThemeDraft(theme);
+  }
+  return null;
+}
+
 export function applyPageThemeToBlocks(
   blocks: PageBlock[],
   theme: PageThemeDefinition,
+  startIndex = 0,
 ): PageBlock[] {
   const tones = resolveTheme(theme);
 
   return blocks.map((block, blockIndex) =>
-    styleBlockWithTheme({ block, blockIndex, theme, tones }),
+    styleBlockWithTheme({ block, blockIndex: blockIndex + startIndex, theme, tones }),
   );
 }
 
@@ -2214,8 +2226,9 @@ function styleBlockWithTheme({
     ? {
         ...block,
         elements: nextElements,
+        settings: { ...block.settings, pageTheme: cloneJson(theme) },
       }
-    : block;
+    : { ...block, settings: { ...block.settings, pageTheme: cloneJson(theme) } };
 }
 
 export async function applyPageThemeToBlocksProgressively(

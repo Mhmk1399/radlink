@@ -61,6 +61,7 @@ export type LogoHeaderSettings = {
   enabled: boolean;
   variant: LogoHeaderVariant;
   title: string;
+  titleFontSize: number;
   description: string;
   textColor: string;
   descriptionColor: string;
@@ -142,6 +143,7 @@ export const DEFAULT_LOGO_HEADER: LogoHeaderSettings = {
   enabled: true,
   variant: "wave-soft",
   title: "نام سایت شما",
+  titleFontSize: 16,
   description: "توضیح کوتاه درباره سایت شما",
   textColor: "#ffffff",
   descriptionColor: "rgba(255,255,255,0.78)",
@@ -206,10 +208,13 @@ export function normalizeLogoHeaderSettings(
       ? raw.variant
       : DEFAULT_LOGO_HEADER.variant,
     title:
-      typeof raw.title === "string" ? raw.title.trim() : DEFAULT_LOGO_HEADER.title,
+      typeof raw.title === "string" ? raw.title : DEFAULT_LOGO_HEADER.title,
+    titleFontSize: normalizeNumber(
+      raw.titleFontSize, DEFAULT_LOGO_HEADER.titleFontSize, 10, 48,
+    ),
     description:
       typeof raw.description === "string"
-        ? raw.description.trim()
+        ? raw.description
         : DEFAULT_LOGO_HEADER.description,
     textColor: normalizeColor(raw.textColor, DEFAULT_LOGO_HEADER.textColor),
     descriptionColor: normalizeColor(
