@@ -721,6 +721,8 @@ export default function PagesSection({
   const [brandingLogo, setBrandingLogo] = useState("");
   const [brandingFavicon, setBrandingFavicon] = useState("");
   const [brandingTrustBadge, setBrandingTrustBadge] = useState("");
+  const [brandingTrustBadgeLinkUrl, setBrandingTrustBadgeLinkUrl] =
+    useState("");
   const [brandingFooterLogo, setBrandingFooterLogo] = useState("");
   const [brandingFooterDescription, setBrandingFooterDescription] =
     useState("");
@@ -1115,6 +1117,7 @@ export default function PagesSection({
     setBrandingFavicon(typeof row.favicon === "string" ? row.favicon : "");
     setBrandingFooterLogo(footer.logo);
     setBrandingTrustBadge(footer.trustBadgeImage);
+    setBrandingTrustBadgeLinkUrl(footer.trustBadgeLinkUrl);
     setBrandingFooterDescription(footer.description);
     setBrandingFooterBg(footer.backgroundColor);
     setBrandingFooterText(footer.textColor);
@@ -1235,6 +1238,7 @@ export default function PagesSection({
           footer: {
             logo: brandingFooterLogo,
             trustBadgeImage: brandingTrustBadge,
+            trustBadgeLinkUrl: brandingTrustBadgeLinkUrl,
             description: brandingFooterDescription,
             backgroundColor: brandingFooterBg,
             textColor: brandingFooterText,
@@ -1720,6 +1724,43 @@ export default function PagesSection({
                           : "حذف تصویر"}
                       </button>
                     )}
+                    {item.kind === "trustBadge" ? (
+                      <label className="mt-3 block">
+                        <span
+                          className={cn(
+                            "mb-2 block text-xs font-bold",
+                            brandingModalTheme.textSecondary,
+                          )}
+                        >
+                          لینک تصویر نماد
+                        </span>
+                        <input
+                          type="url"
+                          inputMode="url"
+                          dir="ltr"
+                          value={brandingTrustBadgeLinkUrl}
+                          onChange={(event) =>
+                            setBrandingTrustBadgeLinkUrl(event.target.value)
+                          }
+                          placeholder="https://trustseal.enamad.ir/..."
+                          className={cn(
+                            "w-full rounded-xl border px-4 py-3 text-left text-sm outline-none transition",
+                            brandingModalTheme.inputBg,
+                            brandingModalTheme.borderInput,
+                            brandingModalTheme.borderFocus,
+                            brandingModalTheme.textPrimary,
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "mt-1.5 block text-[11px] leading-5",
+                            brandingModalTheme.textMuted,
+                          )}
+                        >
+                          با کلیک روی تصویر نماد، این آدرس در تب جدید باز می‌شود.
+                        </span>
+                      </label>
+                    ) : null}
                   </div>
                 ))}
               </div>

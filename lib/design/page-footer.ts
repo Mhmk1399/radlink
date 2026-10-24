@@ -2,6 +2,7 @@ export type PageFooterSettings = {
   enabled: boolean;
   logo: string;
   trustBadgeImage: string;
+  trustBadgeLinkUrl: string;
   trustBadgeAlt: string;
   description: string;
   backgroundColor: string;
@@ -18,6 +19,7 @@ export const DEFAULT_PAGE_FOOTER: PageFooterSettings = {
   enabled: true,
   logo: "",
   trustBadgeImage: "",
+  trustBadgeLinkUrl: "",
   trustBadgeAlt: "نماد اعتماد",
   description: "",
   backgroundColor: "rgba(255,255,255,0.78)",
@@ -86,6 +88,10 @@ export function normalizePageFooterSettings(
     trustBadgeImage: cleanString(
       source.trustBadgeImage,
       base.trustBadgeImage,
+    ),
+    trustBadgeLinkUrl: cleanString(
+      source.trustBadgeLinkUrl,
+      base.trustBadgeLinkUrl,
     ),
     trustBadgeAlt: cleanString(source.trustBadgeAlt, base.trustBadgeAlt),
     description: cleanString(source.description, base.description),

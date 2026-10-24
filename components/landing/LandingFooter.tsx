@@ -61,6 +61,23 @@ export function LandingFooter({
   const title = String(pageTitle || "رادلینک").trim();
   const description = footer.description.trim();
   const brandText = footer.brandingText.trim();
+  const trustBadgeLinkUrl = sanitizePageFooterLinkUrl(
+    footer.trustBadgeLinkUrl,
+  );
+  const trustBadgeClassName = cn(
+    "relative mt-4 shrink-0 overflow-hidden rounded-2xl border bg-white/78 shadow-sm",
+    compact ? "h-14 w-[88px]" : "h-16 w-[104px]",
+  );
+  const trustBadgeImage = footer.trustBadgeImage ? (
+    <Image
+      src={footer.trustBadgeImage}
+      alt={footer.trustBadgeAlt || "نماد اعتماد"}
+      fill
+      unoptimized
+      sizes={compact ? "88px" : "104px"}
+      className="object-contain p-2"
+    />
+  ) : null;
 
   return (
     <footer
@@ -132,23 +149,29 @@ export function LandingFooter({
           </p>
         ) : null}
 
-        {footer.trustBadgeImage ? (
-          <div
-            className={cn(
-              "relative mt-4 shrink-0 overflow-hidden rounded-2xl border bg-white/78 shadow-sm",
-              compact ? "h-14 w-[88px]" : "h-16 w-[104px]",
-            )}
-            style={{ borderColor: footer.borderColor }}
-          >
-            <Image
-              src={footer.trustBadgeImage}
-              alt={footer.trustBadgeAlt || "نماد اعتماد"}
-              fill
-              unoptimized
-              sizes={compact ? "88px" : "104px"}
-              className="object-contain p-2"
-            />
-          </div>
+        {trustBadgeImage ? (
+          trustBadgeLinkUrl ? (
+            <a
+              href={trustBadgeLinkUrl}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              aria-label={`مشاهده ${footer.trustBadgeAlt || "نماد اعتماد"}`}
+              className={cn(
+                trustBadgeClassName,
+                "transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2",
+              )}
+              style={{ borderColor: footer.borderColor }}
+            >
+              {trustBadgeImage}
+            </a>
+          ) : (
+            <div
+              className={trustBadgeClassName}
+              style={{ borderColor: footer.borderColor }}
+            >
+              {trustBadgeImage}
+            </div>
+          )
         ) : null}
 
         {footer.showRadlinkBranding && brandText ? (

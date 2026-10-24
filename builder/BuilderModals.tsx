@@ -1523,6 +1523,26 @@ export function PageFooterEditorModal({
               }}
             />
 
+            <label className="mt-3 block">
+              <span className="mb-2 block text-[11px] font-bold text-neutral-600">
+                لینک تصویر نماد
+              </span>
+              <input
+                type="url"
+                value={settings.trustBadgeLinkUrl}
+                onChange={(event) =>
+                  update({ trustBadgeLinkUrl: event.target.value })
+                }
+                dir="ltr"
+                inputMode="url"
+                placeholder="https://trustseal.enamad.ir/..."
+                className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-left text-xs text-neutral-800 outline-none transition placeholder:text-neutral-300 focus:border-[#064789]/50 focus:ring-4 focus:ring-[#064789]/5"
+              />
+              <span className="mt-1.5 block text-[10px] leading-5 text-neutral-400">
+                با کلیک روی تصویر نماد، این آدرس در تب جدید باز می‌شود.
+              </span>
+            </label>
+
             {uploadError ? (
               <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[11px] font-bold text-red-500">
                 {uploadError}

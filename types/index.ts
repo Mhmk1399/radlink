@@ -493,6 +493,7 @@ export interface PageFooter {
     enabled?: boolean;
     logo?: string;
     trustBadgeImage?: string;
+    trustBadgeLinkUrl?: string;
     trustBadgeAlt?: string;
     description?: string;
     backgroundColor?: string;
