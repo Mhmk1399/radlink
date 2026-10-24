@@ -165,8 +165,9 @@ export const GET = compose(
 
     if (mode === "agent-options") {
         query.status = "active";
-        query.role = { $in: ["agentManager", "agent"] };
-        query.agentid = { $exists: false };
+        query.role = { $in: ["user", "agent", "agentManager"] };
+        const existingAgentUserIds = await Agent.distinct("user");
+        query.$and = [{ _id: { $nin: existingAgentUserIds } }];
     }
 
     if (mode === "notification-options") {
@@ -197,18 +198,22 @@ export const GET = compose(
         mode === "agent-options" ||
         mode === "notification-options"
     ) {
-        const users = await User.find(query)
-            .select(
-                "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
-            )
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .lean();
+        const [users, total] = await Promise.all([
+            User.find(query)
+                .select(
+                    "firstName lastName phoneNumber email nationalCode fatherName avatarUrl role status createdAt",
+                )
+                .sort({ createdAt: -1, _id: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            User.countDocuments(query),
+        ]);
 
         return NextResponse.json({
             users,
-            total: users.length,
-            page: 1,
+            total,
+            page,
             limit,
         });
     }

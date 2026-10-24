@@ -101,7 +101,7 @@ const styleIcons: Partial<Record<EditableStyleKey, React.ReactNode>> = {
   paddingBottom: <RxBorderWidth size={15} />,
   borderRadius: <RxCornerBottomRight size={15} />,
   borderWidth: <RxBorderWidth size={15} />,
-  gridColumns: <HiOutlineSwatch size={15} />,
+  gridColumns: <HiOutlineSwatch size={20} />,
   layoutMode: <HiOutlineSwatch size={15} />,
   animation: <HiOutlineSparkles size={15} />,
 };

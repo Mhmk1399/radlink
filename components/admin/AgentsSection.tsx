@@ -592,19 +592,24 @@ export default function AgentsSection({
     async function loadUsers() {
       try {
         setLoadingUsers(true);
-        const response = await fetch(
-          "/api/users?mode=agent-options&limit=100",
-          { headers },
-        );
-        const json = await response.json().catch(() => null);
-        if (!response.ok)
-          throw new Error(json?.message ?? "خطا در دریافت کاربران");
-        const users: unknown[] =
-          isRecord(json) && Array.isArray(json.users)
-            ? json.users
-            : Array.isArray(json)
-              ? json
-              : [];
+        const users: unknown[] = [];
+        let page = 1;
+        let total = Number.POSITIVE_INFINITY;
+        while (!cancelled && users.length < total) {
+          const response = await fetch(
+            `/api/users?mode=agent-options&limit=100&page=${page}`,
+            { headers },
+          );
+          const json = await response.json().catch(() => null);
+          if (!response.ok)
+            throw new Error(json?.message ?? "خطا در دریافت کاربران");
+          const pageUsers: unknown[] =
+            isRecord(json) && Array.isArray(json.users) ? json.users : [];
+          users.push(...pageUsers);
+          total = typeof json?.total === "number" ? json.total : users.length;
+          if (pageUsers.length === 0) break;
+          page += 1;
+        }
         if (!cancelled) {
           setUserOptions(
             users.filter(isRecord).map((user) => {

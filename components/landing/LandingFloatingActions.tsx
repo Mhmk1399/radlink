@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   HiOutlinePlus,
   HiOutlineQrCode,
@@ -8,6 +8,7 @@ import {
   HiOutlineUserPlus,
   HiOutlineXMark,
   HiOutlinePencilSquare,
+  HiOutlineArrowDownTray,
 } from "react-icons/hi2";
 import {
   buildVCardFileName,
@@ -19,12 +20,16 @@ import type { PageBlock } from "@/types/blocks/builder.types";
 
 type FloatingActionsMode = "editor" | "preview" | "public";
 
-function normalizeTargetUrl(value?: string) {
+const subscribeToOrigin = () => () => {};
+const getBrowserOrigin = () => window.location.origin;
+const getServerOrigin = () => "";
+
+function normalizeTargetUrl(value: string | undefined, origin: string) {
   const url = value?.trim();
   if (url) {
     if (/^https?:\/\//i.test(url)) return url;
-    if (typeof window !== "undefined") {
-      return new URL(`/${url.replace(/^\/+/, "")}`, window.location.origin)
+    if (origin) {
+      return new URL(`/${url.replace(/^\/+/, "")}`, origin)
         .href;
     }
   }
@@ -50,25 +55,25 @@ async function copyText(value: string) {
 export default function LandingFloatingActions({
   contactBlock,
   pageUrl,
-  qrImageUrl,
   mode = "public",
   enabled = true,
   onEditContact,
 }: {
   contactBlock?: PageBlock | null;
   pageUrl?: string;
-  qrImageUrl?: string;
   mode?: FloatingActionsMode;
   enabled?: boolean;
   onEditContact?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const [generatedQr, setGeneratedQr] = useState("");
+  const [generatedQr, setGeneratedQr] = useState<{ url: string; image: string } | null>(null);
+  const origin = useSyncExternalStore(subscribeToOrigin, getBrowserOrigin, getServerOrigin);
   const [feedback, setFeedback] = useState("");
   const [dismissedHelpFor, setDismissedHelpFor] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const targetUrl = useMemo(() => normalizeTargetUrl(pageUrl), [pageUrl]);
+  const targetUrl = useMemo(() => normalizeTargetUrl(pageUrl, origin), [pageUrl, origin]);
+  const qrImage = generatedQr?.url === targetUrl ? generatedQr.image : "";
   const contactData = contactBlock ? getContactSaveData(contactBlock) : null;
   const contactBlockId = contactBlock?.instanceId ?? null;
   const canSaveContact = Boolean(
@@ -102,7 +107,7 @@ export default function LandingFloatingActions({
   }, [open]);
 
   useEffect(() => {
-    if (!qrOpen || qrImageUrl || generatedQr || !targetUrl) return;
+    if (!qrOpen || !targetUrl) return;
     let cancelled = false;
     void import("qrcode")
       .then(({ default: QRCode }) =>
@@ -113,7 +118,7 @@ export default function LandingFloatingActions({
         }),
       )
       .then((image) => {
-        if (!cancelled) setGeneratedQr(image);
+        if (!cancelled) setGeneratedQr({ url: targetUrl, image });
       })
       .catch(() => {
         if (!cancelled) setFeedback("ساخت QR کد انجام نشد.");
@@ -121,7 +126,7 @@ export default function LandingFloatingActions({
     return () => {
       cancelled = true;
     };
-  }, [generatedQr, qrImageUrl, qrOpen, targetUrl]);
+  }, [qrOpen, targetUrl]);
 
   const sharePage = useCallback(async () => {
     if (!targetUrl) {
@@ -375,9 +380,9 @@ export default function LandingFloatingActions({
               برای باز کردن این صفحه اسکن کنید.
             </p>
             <div className="mx-auto mt-5 flex aspect-square w-full max-w-64 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-3">
-              {qrImageUrl || generatedQr ? (
+              {qrImage ? (
                 <img
-                  src={qrImageUrl || generatedQr}
+                  src={qrImage}
                   alt="QR کد صفحه"
                   className="h-full w-full object-contain"
                 />
@@ -385,6 +390,14 @@ export default function LandingFloatingActions({
                 <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
               )}
             </div>
+            {qrImage && <a
+              href={qrImage}
+              download={`qr-${new URL(targetUrl).pathname.split("/").filter(Boolean).pop() || "page"}.png`}
+              className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-700"
+            >
+              <HiOutlineArrowDownTray className="h-5 w-5" />
+              دانلود تصویر QR
+            </a>}
             <p
               className="mt-4 truncate rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-500"
               dir="ltr"

@@ -5,6 +5,7 @@ import {
     uploadLiaraObject,
 } from "@/lib/liaraStorage";
 import File from "@/models/files";
+import { extractKeyFromUrl } from "@/lib/fileUtils";
 import QR from "@/models/qr";
 
 const SHORTCODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -80,15 +81,16 @@ export async function createQrForPage({
     requestUrl?: string;
 }) {
     const existingQr = await QR.findOne({ page: pageId }).lean();
-    if (existingQr) return existingQr;
-
     const targetUrl = buildPageTargetUrl(pageUrl, requestUrl);
+    if (existingQr?.targetUrl === targetUrl && existingQr.imageurl) return existingQr;
     const [imageBuffer, shortcode] = await Promise.all([
         generateQrImageBuffer(targetUrl),
-        generateUniqueQrShortcode(),
+        existingQr ? Promise.resolve(existingQr.shortcode) : generateUniqueQrShortcode(),
     ]);
 
-    const filename = `qr-${shortcode}.png`;
+    const filename = existingQr
+        ? `qr-${shortcode}-${randomBytes(6).toString("hex")}.png`
+        : `qr-${shortcode}.png`;
     const key = `rad/qrcodes/${filename}`;
     const uploaded = await uploadLiaraObject({
         key,
@@ -110,13 +112,34 @@ export async function createQrForPage({
         const file = await File.create({
             filename,
             path: uploaded.url,
-            owner: creatorId,
+            owner: existingQr?.owner ?? creatorId,
             mimeType: "image/png",
             size: imageBuffer.length,
             kind: "qr",
             page: pageId,
         });
         fileId = String(file._id);
+
+        if (existingQr) {
+            const updated = await QR.findByIdAndUpdate(existingQr._id, {
+                $set: { targetUrl, imageurl: uploaded.url, file: file._id },
+            }, { new: true, runValidators: true });
+            if (!updated) throw new Error("کد کیوآر صفحه پیدا نشد.");
+
+            // The replacement has a new URL so immutable browser/CDN caches stay correct.
+            if (existingQr.file) {
+                const oldFile = await File.findById(existingQr.file).lean().catch(() => null);
+                if (oldFile?.kind === "qr") {
+                    const oldKey = extractKeyFromUrl(oldFile.path);
+                    if (oldKey) {
+                        await deleteLiaraObject(oldKey)
+                            .then(() => File.findByIdAndDelete(oldFile._id))
+                            .catch(() => null);
+                    }
+                }
+            }
+            return updated;
+        }
 
         return await QR.create({
             page: pageId,

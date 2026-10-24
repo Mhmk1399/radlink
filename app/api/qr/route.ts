@@ -32,10 +32,10 @@ export const POST = compose(
     withStatus("active")
 )(async (req: AuthRequest) => {
     const user = req.ctx.user!;
-    const { pageId, targetUrl } = await req.json();
+    const { pageId } = await req.json();
 
-    if (!pageId || !targetUrl) {
-        return NextResponse.json({ message: "شناسه صفحه و آدرس مقصد الزامی هستند." }, { status: 400 });
+    if (!pageId) {
+        return NextResponse.json({ message: "شناسه صفحه الزامی است." }, { status: 400 });
     }
 
     const page = await Page.findById(pageId);
@@ -48,7 +48,7 @@ export const POST = compose(
     const qr = await createQrForPage({
         pageId: String(page._id),
         creatorId: String(user._id),
-        pageUrl: String(targetUrl),
+        pageUrl: String(page.url),
         requestUrl: req.url,
     });
     return NextResponse.json({ qr }, { status: 201 });

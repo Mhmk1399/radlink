@@ -42,6 +42,9 @@ import { createDefaultRichTextBlock } from "./rich-text/richText.default";
 import { SliderBlock } from "./slider/SliderBlock";
 import { createDefaultSliderBlock } from "./slider/slider.default";
 import { sliderSchema } from "./slider/slider.schema";
+import { GalleryBlock } from "./gallery/GalleryBlock";
+import { gallerySchema } from "./gallery/gallery.schema";
+import { createDefaultGalleryBlock } from "./gallery/gallery.default";
 
 import { separatorSchema } from "./separator/separator.schema";
 import { createDefaultSeparatorBlock } from "./separator/separator.default";
@@ -274,6 +277,17 @@ export const blockRegistry = {
     component: SuperLinkBlock,
     schema: withBuilderStyleSchema(superLinkSchema),
     createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSuperLinkBlock),
+  },
+
+  gallery: {
+    type: "gallery",
+    label: "گالری تصاویر",
+    description: "گالری تصاویر با شبکه قابل تنظیم، زیرنویس و ترتیب دلخواه.",
+    icon: React.createElement(HiOutlinePhoto, { size: 18 }),
+    category: "media",
+    component: GalleryBlock,
+    schema: withBuilderStyleSchema(gallerySchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultGalleryBlock),
   },
 
   video: {

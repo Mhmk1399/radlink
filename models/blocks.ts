@@ -96,6 +96,7 @@ export type EditableStyleKey =
   | "backgroundColor"
   | "fontSize"
   | "height"
+  | "gridColumns"
   | "textAlign"
   | "contentAlign"
   | "marginTop"
@@ -121,6 +122,7 @@ export type EditableStyleMap = {
   backgroundColor?: ResponsiveValue<string>;
   fontSize?: ResponsiveValue<number>;
   height?: ResponsiveValue<number>;
+  gridColumns?: ResponsiveValue<number>;
   textAlign?: ResponsiveValue<TextAlignValue>;
   contentAlign?: ResponsiveValue<ContentAlignValue>;
   marginTop?: ResponsiveValue<number>;
@@ -162,6 +164,7 @@ export type BlockType =
   | "faq"
   | "richText"
   | "slider"
+  | "gallery"
   | "separator"
   | "storyHighlights"
   | "productCards"
