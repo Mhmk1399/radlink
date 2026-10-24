@@ -1,3 +1,4 @@
+import { getCollectionNameValidationError, normalizeCollectionName } from "@/lib/validation/companyName";
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus } from "@/lib/auth/middlewares";
@@ -77,6 +78,7 @@ export const PATCH = compose(
     const {
         firstName,
         lastName,
+        collectionName,
         email,
         avatarUrl,
         nationalCode,
@@ -90,6 +92,12 @@ export const PATCH = compose(
             { message: "نام الزامی است و باید حداقل ۲ کاراکتر باشد." },
             { status: 400 }
         );
+    }
+
+    const normalizedCollectionName = normalizeCollectionName(collectionName === undefined ? user.collectionName : collectionName);
+    if (collectionName !== undefined || !user.firstName?.trim()) {
+        const nameError = getCollectionNameValidationError(normalizedCollectionName);
+        if (nameError) return NextResponse.json({ message: nameError, field: "collectionName" }, { status: 400 });
     }
 
     const normalizedEmail =
@@ -133,6 +141,7 @@ export const PATCH = compose(
         updatedBy: user._id,
     };
 
+    if (collectionName !== undefined || !user.firstName?.trim()) updateData.collectionName = normalizedCollectionName;
     if (email !== undefined) updateData.email = normalizedEmail || null;
     if (avatarUrl !== undefined)
         updateData.avatarUrl =

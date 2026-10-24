@@ -19,6 +19,7 @@ import {
   HiOutlineXMark,
   HiOutlineCheck,
   HiOutlineFilm,
+  HiOutlineMicrophone,
   HiOutlineBars3,
   HiOutlineSwatch,
 } from "react-icons/hi2";
@@ -34,6 +35,7 @@ import { RgbaColorInput } from "./RgbaColorInput";
 import { SelectField } from "./SelectField";
 import type { SelectFieldConfig } from "@/types/blocks/builder.types";
 import { uploadFile } from "@/lib/fileUtils";
+import { AudioField } from "./AudioField";
 import { LinkTypeHelp } from "./LinkTypeHelp";
 import {
   getMessengerPresetConfig,
@@ -76,6 +78,8 @@ function getFieldIcon(type: ContentFieldType): React.ReactNode {
       return <HiOutlineLink size={14} />;
     case "file":
       return <HiOutlineDocumentArrowDown size={14} />;
+    case "audio":
+      return <HiOutlineMicrophone size={14} />;
     case "video":
       return <HiOutlineFilm size={14} />; // ← اضافه کن
 
@@ -96,6 +100,8 @@ function getFieldIcon(type: ContentFieldType): React.ReactNode {
 
 function getFieldTypeLabel(type: ContentFieldType): string {
   switch (type) {
+    case "audio":
+      return "صدا";
     case "text":
       return "متن";
     case "textarea":
@@ -951,6 +957,10 @@ export function DynamicContentForm({
                 />
               </FieldCard>
             );
+          }
+
+          if (field.type === "audio") {
+            return <FieldCard key={field.key}><FieldHeader icon={icon} label={field.label} type="صدا" /><AudioField value={toInputValue(value)} label={field.label} onChange={(url) => onChange(field.key, url)} /></FieldCard>;
           }
 
           /* ── Video field with upload ── */

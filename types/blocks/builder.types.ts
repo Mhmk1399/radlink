@@ -106,6 +106,7 @@ export type ContentFieldType =
   | "url"
   | "file"
   | "image"
+  | "audio"
   | "video"
   | "boolean"
   | "datetime"
@@ -156,6 +157,7 @@ export type RepeaterFieldConfig = {
       | "boolean"
       | "url"
       | "file"
+      | "audio"
       | "image"
       | "color"
       | "select";

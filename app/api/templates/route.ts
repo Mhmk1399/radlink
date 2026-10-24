@@ -6,6 +6,7 @@ import { AuthRequest } from "@/lib/auth/types";
 import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
+import { collectTemplateAssetUrls } from "@/lib/templateAssets";
 import Category from "@/models/category";
 import "@/models/blocks";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
@@ -140,7 +141,7 @@ export const POST = compose(
         );
     }
 
-    const template = await Template.create({
+    const templateData = {
         name,
         description,
         thumbnail,
@@ -154,6 +155,10 @@ export const POST = compose(
         ),
         logoHeader: normalizeLogoHeaderSettings(logoHeader),
         footer: normalizePageFooterSettings(footer),
+    };
+    const template = await Template.create({
+        ...templateData,
+        assetUrls: collectTemplateAssetUrls(templateData),
     });
 
     if (normalizedCategory) {

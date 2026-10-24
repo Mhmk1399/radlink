@@ -1,5 +1,7 @@
 "use client";
 
+import { getCollectionNameValidationError } from "@/lib/validation/companyName";
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -173,6 +175,7 @@ async function apiUpdateProfile(
   data: {
     firstName: string;
     lastName: string;
+    collectionName: string;
     email?: string;
     nationalCode?: string;
     fatherName?: string;
@@ -679,6 +682,7 @@ export default function AuthPage({
   const [otp, setOtp] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [collectionName, setCollectionName] = useState("");
   const [email, setEmail] = useState("");
   const [nationalCode, setNationalCode] = useState("");
   const [fatherName, setFatherName] = useState("");
@@ -898,6 +902,8 @@ export default function AuthPage({
     }
 
     const nextErrors: Record<string, string> = {};
+    const companyError = getCollectionNameValidationError(collectionName);
+    if (companyError) nextErrors.collectionName = companyError;
     if (email.trim() && !isValidEmail(email))
       nextErrors.email = "فرمت ایمیل معتبر نیست.";
     if (nationalCode && !isValidNationalCode(nationalCode))
@@ -921,6 +927,7 @@ export default function AuthPage({
       const updatedUser = await apiUpdateProfile(authToken, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        collectionName: collectionName.trim(),
         email: email.trim() || undefined,
         nationalCode: nationalCode.trim() || undefined,
         fatherName: fatherName.trim() || undefined,
@@ -952,6 +959,7 @@ export default function AuthPage({
   }, [
     firstName,
     lastName,
+    collectionName,
     email,
     nationalCode,
     fatherName,
@@ -1659,7 +1667,7 @@ export default function AuthPage({
                         "text-slate-400",
                       )}
                     >
-                      نام و رمز عبور الزامی است؛ بعداً با همین رمز و شماره موبایل می‌توانید بدون پیامک وارد شوید
+                      نام، نام مجموعه / شرکت و رمز عبور الزامی است؛ بعداً با همین رمز و شماره موبایل می‌توانید بدون پیامک وارد شوید
                     </p>
                   </div>
                 </div>
@@ -1723,6 +1731,29 @@ export default function AuthPage({
                     }}
                     onEnter={handleRegister}
                     disabled={loading}
+                  />
+
+                  <Field
+                    id="collectionName"
+                    label="نام مجموعه / شرکت"
+                    required
+                    maxLength={120}
+                    placeholder="مثلاً: شرکت آوینا"
+                    value={collectionName}
+                    onChange={(value) => {
+                      setCollectionName(value);
+                      setRegisterErrors((current) => {
+                        const next = { ...current };
+                        const message = getCollectionNameValidationError(value);
+                        if (message) next.collectionName = message;
+                        else delete next.collectionName;
+                        return next;
+                      });
+                    }}
+                    onEnter={handleRegister}
+                    disabled={loading}
+                    error={Boolean(registerErrors.collectionName)}
+                    errorMessage={registerErrors.collectionName}
                   />
 
                   <Field

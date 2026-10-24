@@ -1,3 +1,4 @@
+import { getCollectionNameValidationError } from "@/lib/validation/companyName";
 import { NextResponse } from "next/server";
 import { compose } from "@/lib/auth/compose";
 import { withDB, withAuth, withStatus, withRole } from "@/lib/auth/middlewares";
@@ -221,6 +222,12 @@ export const PATCH = compose(
         updatedBy: requester._id,
     };
     const unsets: Record<string, ""> = {};
+    if ("collectionName" in body || (!target.firstName?.trim() && typeof body.firstName === "string" && body.firstName.trim())) {
+        const nameError = getCollectionNameValidationError(
+            "collectionName" in body ? body.collectionName : target.collectionName,
+        );
+        if (nameError) return NextResponse.json({ message: nameError, field: "collectionName" }, { status: 400 });
+    }
     const requestedPassword =
         typeof body.password === "string" ? body.password : "";
     const hasRequestedPassword = requestedPassword.trim().length > 0;

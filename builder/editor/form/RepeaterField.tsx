@@ -25,6 +25,7 @@ import {
   validateIdentityField,
 } from "@/lib/validation/identityFields";
 import { uploadFile } from "@/lib/fileUtils";
+import { AudioField } from "./AudioField";
 import { LinkTypeHelp } from "./LinkTypeHelp";
 import { RgbaColorInput } from "./RgbaColorInput";
 import { normalizePersianPriceText } from "@/lib/format/persianPrice";
@@ -48,6 +49,7 @@ type RepeaterSubField = {
     | "boolean"
     | "url"
     | "file"
+    | "audio"
     | "image"
     | "color"
     | "select";
@@ -754,6 +756,10 @@ export function RepeaterField({
                         />
                       </div>
                     );
+                  }
+
+                  if (field.type === "audio") {
+                    return <div key={field.key}><p className="mb-1 text-[11px] font-semibold text-neutral-500">{field.label}</p><AudioField value={String(fieldValue ?? "")} label={field.label} onChange={(url, durationSeconds) => updateItems(safeItems.map((entry) => entry.id === item.id ? { ...entry, [field.key]: url, [`${field.key}Duration`]: durationSeconds } : entry))} /></div>;
                   }
 
                   /* ── Image (with upload + url) ── */

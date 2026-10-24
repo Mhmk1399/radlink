@@ -1,6 +1,7 @@
 import "server-only";
 
 import File from "@/models/files";
+import Template from "@/models/template";
 import type { IUser } from "@/models/users";
 import { canAccessActorOwner } from "@/lib/auth/agentScope";
 import { deleteLiaraObject } from "@/lib/liaraStorage";
@@ -137,6 +138,14 @@ export async function deleteFileByIdentifier(
       "اجازه حذف این فایل را ندارید.",
       403,
       "FORBIDDEN",
+    );
+  }
+
+  if (await Template.exists({ assetUrls: file.path })) {
+    throw new FileDeletionError(
+      "این فایل در یک قالب استفاده می‌شود و قابل حذف نیست.",
+      409,
+      "FILE_IN_USE_BY_TEMPLATE",
     );
   }
 

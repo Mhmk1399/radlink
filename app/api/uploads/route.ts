@@ -9,6 +9,7 @@ import {
     quotaExceededResponse,
 } from "@/lib/auth/quota";
 import FileModel from "@/models/files";
+import { getAudioMimeType, MAX_AUDIO_SIZE } from "@/lib/audio";
 
 // Allowed file types and size limits
 const ALLOWED_TYPES = [
@@ -72,18 +73,20 @@ export const POST = compose(
             return jsonError("فایلی برای آپلود ارسال نشده است.", 400);
         }
 
-        // Validate file type
-        if (!ALLOWED_TYPES.includes(file.type)) {
+        // Audio recorders and file pickers may supply MIME parameters or no MIME at all.
+        const audioType = file.type.startsWith("video/") ? "" : getAudioMimeType(file);
+        const contentType = audioType || file.type;
+        if (!audioType && !ALLOWED_TYPES.includes(contentType)) {
             return jsonError("نوع فایل انتخاب‌شده مجاز نیست.", 400, {
-                allowedTypes: ALLOWED_TYPES,
+                allowedTypes: [...ALLOWED_TYPES, "audio/*"],
                 receivedType: file.type,
             });
         }
 
         // Validate file size
-        const maxFileSize = file.type.startsWith("video/")
-            ? MAX_VIDEO_SIZE
-            : MAX_FILE_SIZE;
+        const maxFileSize = audioType
+            ? MAX_AUDIO_SIZE
+            : contentType.startsWith("video/") ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
         if (file.size > maxFileSize) {
             return jsonError("حجم فایل بیش از حد مجاز است.", 400, {
                 maxFileSize,
@@ -125,7 +128,7 @@ export const POST = compose(
         const uploadResult = await uploadLiaraObject({
             key,
             body: buffer,
-            contentType: file.type,
+            contentType,
             metadata: {
                 originalName: encodeURIComponent(file.name),
                 uploadedAt: new Date().toISOString(),
@@ -143,7 +146,7 @@ export const POST = compose(
                 filename: file.name,
                 path: publicUrl,
                 owner: req.ctx.user!._id,
-                mimeType: file.type,
+                mimeType: contentType,
                 size: file.size,
                 kind,
             });
@@ -163,7 +166,7 @@ export const POST = compose(
                 url: publicUrl,
                 originalName: file.name, // Return unencoded for user convenience
                 size: file.size,
-                type: file.type,
+                type: contentType,
                 uploadedAt: new Date().toISOString(),
             },
             message: "فایل با موفقیت آپلود شد.",
@@ -237,9 +240,10 @@ export async function GET() {
                 bucket: process.env.LIARA_BUCKET_NAME,
                 endpoint: process.env.LIARA_ENDPOINT,
                 activeEndpoint,
-                allowedTypes: ALLOWED_TYPES,
+                allowedTypes: [...ALLOWED_TYPES, "audio/*"],
                 maxFileSize: `${MAX_FILE_SIZE / (1024 * 1024)}MB`,
                 maxVideoSize: `${MAX_VIDEO_SIZE / (1024 * 1024)}MB`,
+                maxAudioSize: `${MAX_AUDIO_SIZE / (1024 * 1024)}MB`,
             },
         });
     } catch (error) {

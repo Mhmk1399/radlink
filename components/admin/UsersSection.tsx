@@ -2,6 +2,8 @@
 // components/sections/UsersSection.tsx
 // ─────────────────────────────────────────────────────────────────
 "use client";
+
+import { getCollectionNameValidationError } from "@/lib/validation/companyName";
 import {
   useCallback,
   useEffect,
@@ -22,9 +24,12 @@ import {
   FaPowerOff,
   FaRotateRight,
   FaUsers,
+  FaUserShield,
 } from "react-icons/fa6";
 import type { ColumnDef } from "@/types/table";
 import DynamicTable from "../global/DynamicTable";
+import UserPermissionModal from "./UserPermissionModal";
+import { mutate } from "swr";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 import { superAdminBadgeClass } from "@/lib/userRole";
 import type { UserRole, UserStatus } from "@/types/index";
@@ -626,6 +631,8 @@ export default function UsersSection({
   const { isDark } = useTheme();
   const { can, user: authUser } = useAccess();
   const canUpdateUsers = can("admin.users", "update");
+  const canAssignPermissions = (authUser?.role === "admin" || authUser?.role === "superAdmin") && canUpdateUsers && can("admin.permissions", "view") && can("admin.permissions", "update");
+  const [permissionUser, setPermissionUser] = useState<UserRow | null>(null);
   const isNormalUser = authUser?.role === "user";
   const canCreateUsers = can("admin.users", "create");
   const canViewAgents = can("admin.agents", "view");
@@ -1194,7 +1201,9 @@ export default function UsersSection({
       },
       {
         key: "collectionName",
-        label: "اسم مجموعه",
+        label: "نام مجموعه / شرکت",
+        required: true,
+        validate: (value) => getCollectionNameValidationError(value),
         sortable: true,
         placeholder: "اسم مجموعه",
         copyable: true,
@@ -1515,6 +1524,14 @@ export default function UsersSection({
         emptyMessage="کاربری یافت نشد"
         rowActions={(row) =>
           canUpdateUsers && !isNormalUser ? (
+            <>
+            {canAssignPermissions && !row.isDeleted && (row.role !== "superAdmin" || authUser?.role === "superAdmin") && (
+              <button type="button" title="تخصیص دسترسی" aria-label="تخصیص دسترسی"
+                onClick={event => { event.stopPropagation(); setPermissionUser(row); }}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-amber-500 transition hover:bg-amber-500/10">
+                <FaUserShield className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={(event) => {
@@ -1545,9 +1562,23 @@ export default function UsersSection({
                 <FaPowerOff className="h-4 w-4" />
               )}
             </button>
+            </>
           ) : null
         }
       />
+      {permissionUser && <UserPermissionModal
+        key={permissionUser._id}
+        userId={permissionUser._id}
+        userName={permissionUser.fullName || [permissionUser.firstName, permissionUser.lastName].filter(Boolean).join(" ") || permissionUser.phoneNumber}
+        headers={headers}
+        onClose={() => setPermissionUser(null)}
+        onSaved={() => {
+          setPermissionUser(null);
+          setRefreshToken(value => value + 1);
+          toast.success("دسترسی کاربر ذخیره شد.");
+          void mutate(key => typeof key === "string" && (key.startsWith("/api/auth/me") || key.startsWith("/api/permissions")));
+        }}
+      />}
       <ImagePreviewModal
         open={Boolean(previewImage)}
         src={previewImage?.src ?? ""}

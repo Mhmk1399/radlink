@@ -1,6 +1,8 @@
 // SimplePageBuilder.tsx
 "use client";
 
+import { TemplateFromPageModal } from "@/builder/TemplateFromPageModal";
+
 import {
   startTransition,
   useCallback,
@@ -184,8 +186,6 @@ type CreatedPageResponse = {
   qr?: unknown;
 };
 
-let categoryOptionsCache: CategoryOption[] | null = null;
-let categoryOptionsRequestFailed = false;
 
 const BUILDER_META_SUFFIX = "صفحه‌ساز رادلینک";
 
@@ -1052,6 +1052,8 @@ export default function SimplePageBuilder({
   const [justSaved, setJustSaved] = useState(true);
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [pageMetaOpen, setPageMetaOpen] = useState(false);
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [saveAsTemplateError, setSaveAsTemplateError] = useState<string | null>(null);
   const [logoHeaderEditorOpen, setLogoHeaderEditorOpen] = useState(false);
   const [footerEditorOpen, setFooterEditorOpen] = useState(false);
   const [themeStudioOpen, setThemeStudioOpen] = useState(false);
@@ -1078,6 +1080,9 @@ export default function SimplePageBuilder({
     can,
     isLoading: isAccessLoading,
   } = useAccess();
+
+  const canSaveAsTemplate = saveMode === "page" && !isAccessLoading &&
+    (authUser?.role === "admin" || isSuperAdmin) && can("admin.templates", "create");
 
   useEffect(() => {
     const trackBuilderUpload = (event: Event) => {
@@ -1613,28 +1618,19 @@ export default function SimplePageBuilder({
   }, []);
 
   useEffect(() => {
-    if (saveMode !== "template") return;
+    if (saveMode !== "template" && !saveAsTemplateOpen) return;
 
     let cancelled = false;
 
     async function loadCategories() {
-      if (categoryOptionsCache || categoryOptionsRequestFailed) {
-        if (!cancelled) {
-          setCategoryOptions(categoryOptionsCache ?? []);
-          setIsCategoryOptionsLoading(false);
-        }
-        return;
-      }
-
+      setIsCategoryOptionsLoading(true);
       try {
         const token = localStorage.getItem("auth_token");
-        const res = await fetch("/api/categories?mode=options&limit=100", {
+        const res = await fetch(`/api/categories?mode=options&limit=100${saveAsTemplateOpen ? "&purpose=template-create" : ""}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const json = await res.json().catch(() => null);
         if (!res.ok) {
-          categoryOptionsCache = [];
-          categoryOptionsRequestFailed = true;
           throw new Error(
             typeof json?.message === "string"
               ? json.message
@@ -1660,19 +1656,16 @@ export default function SimplePageBuilder({
             }))
             .filter((option) => option.value);
 
-          categoryOptionsCache = options;
-          categoryOptionsRequestFailed = false;
           setCategoryOptions(options);
         }
       } catch (error) {
         if (!cancelled) {
-          categoryOptionsCache = [];
-          categoryOptionsRequestFailed = true;
           setCategoryOptions([]);
           const msg =
             error instanceof Error
               ? error.message
               : "خطا در دریافت دسته‌بندی‌ها";
+          if (saveAsTemplateOpen) setSaveAsTemplateError(msg);
           toastShow(msg, "error");
         }
       } finally {
@@ -1685,7 +1678,7 @@ export default function SimplePageBuilder({
     return () => {
       cancelled = true;
     };
-  }, [saveMode, toastShow]);
+  }, [saveMode, saveAsTemplateOpen, toastShow]);
 
   /* ── Keyboard shortcuts ── */
   useEffect(() => {
@@ -2525,6 +2518,41 @@ export default function SimplePageBuilder({
     toast,
   ]);
 
+  const savePageAsTemplate = useCallback(async (draft: {
+    name: string; description: string; categoryId: string;
+  }) => {
+    if (!canSaveAsTemplate || isServerSaving) return;
+    setSaveAsTemplateError(null);
+    if (!draft.name.trim() || !draft.categoryId || blocks.length === 0) {
+      setSaveAsTemplateError("نام قالب، دسته‌بندی و حداقل یک بلاک الزامی است.");
+      return;
+    }
+    try {
+      setIsServerSaving(true);
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          name: draft.name.trim(), description: draft.description,
+          categoryId: draft.categoryId, thumbnail: pageLogo,
+          builderBlocks: blocks,
+          background: { color: pageBackgroundColor, image: pageBackgroundImage, pattern: pageBackgroundPattern },
+          logoHeader, footer: pageFooter,
+        }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(json?.message ?? "ساخت قالب انجام نشد.");
+      setSaveAsTemplateOpen(false);
+      toast.show("قالب ساخته شد؛ می‌توانید ویرایش صفحه را ادامه دهید.", "success");
+    } catch (error) {
+      setSaveAsTemplateError(error instanceof Error ? error.message : "ساخت قالب انجام نشد.");
+    } finally {
+      setIsServerSaving(false);
+    }
+  }, [canSaveAsTemplate, isServerSaving, blocks, pageLogo, pageBackgroundColor,
+    pageBackgroundImage, pageBackgroundPattern, logoHeader, pageFooter, toast]);
+
   const updateTemplateOnServer = useCallback(async () => {
     if (!templateId) return createTemplateOnServer();
 
@@ -3049,6 +3077,10 @@ export default function SimplePageBuilder({
             setServerSaveError(null);
             setPageMetaOpen(true);
           }}
+          onSaveAsTemplate={canSaveAsTemplate ? () => {
+            setSaveAsTemplateError(null);
+            setSaveAsTemplateOpen(true);
+          } : undefined}
           onOpenCatalog={() => setCatalogOpen(true)}
           onClearAll={requestClearAllBlocks}
           onStartTour={() => setForceTourRun(true)}
@@ -3187,6 +3219,17 @@ export default function SimplePageBuilder({
         availableBlocks={catalogBlocks}
         isLoading={isMasterBlocksLoading}
       />
+
+      {saveAsTemplateOpen && <TemplateFromPageModal
+        title={pageTitle}
+        description={pageDescription}
+        categories={categoryOptions}
+        loading={isCategoryOptionsLoading}
+        saving={isServerSaving}
+        error={saveAsTemplateError}
+        onClose={() => { if (!isServerSaving) setSaveAsTemplateOpen(false); }}
+        onSave={savePageAsTemplate}
+      />}
 
       <PageMetaModal
         open={pageMetaOpen}

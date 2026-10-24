@@ -11,6 +11,7 @@ import {
   HiOutlineQuestionMarkCircle,
   HiOutlineArrowRight,
   HiOutlinePaintBrush,
+  HiOutlineDocumentDuplicate,
 } from "react-icons/hi2";
 import { HiOutlineEye } from "react-icons/hi2";
 import { SaveIndicator } from "./BuilderOverlays";
@@ -31,6 +32,7 @@ interface BuilderHeaderProps {
   // onAutoPolish: () => void;
   onOpenMeta: () => void;
   onOpenThemeStudio: () => void;
+  onSaveAsTemplate?: () => void;
   onOpenCatalog: () => void;
   onClearAll: () => void;
   onStartTour: () => void;
@@ -52,6 +54,7 @@ export function BuilderHeader({
   // onAutoPolish,
   onOpenMeta,
   onOpenThemeStudio,
+  onSaveAsTemplate,
   onOpenCatalog,
   onClearAll,
   onStartTour,
@@ -202,6 +205,18 @@ export function BuilderHeader({
                 {saveButtonLabel}
               </span>
             </button>
+
+            {mode === "page" && onSaveAsTemplate && <button
+              type="button"
+              onClick={onSaveAsTemplate}
+              disabled={isServerSaving}
+              title="ذخیره صفحه به‌عنوان قالب"
+              aria-label="ذخیره صفحه به‌عنوان قالب"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#064789] transition hover:bg-blue-100 disabled:opacity-50 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
+            >
+              <HiOutlineDocumentDuplicate size={16} />
+              <span className="hidden text-xs font-bold sm:inline">ذخیره به‌عنوان قالب</span>
+            </button>}
 
             {/* Add block (mobile) */}
             <button

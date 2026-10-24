@@ -217,6 +217,7 @@ export function UserProvider({
                 await userService.create({
                   firstName: user.firstName,
                   lastName: user.lastName,
+                  collectionName: user.collectionName ?? "",
                   phoneNumber: user.phoneNumber,
                   email: user.email,
                   nationalCode: user.nationalCode,

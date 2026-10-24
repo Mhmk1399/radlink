@@ -53,6 +53,7 @@ export interface TemplateStyle {
 export interface ITemplate extends Document {
     name: string;
     description?: string;
+    assetUrls: string[];
     thumbnail?: string;       // preview image URL
 
     // The full style skin — consumed by styled-components
@@ -136,6 +137,7 @@ const TemplateSchema = new Schema<ITemplate>(
 
         blocks: [{ type: Schema.Types.ObjectId, ref: "Block" }],
 
+        assetUrls: { type: [String], default: [], index: true },
         builderBlocks: { type: Schema.Types.Mixed, default: [] },
 
         isActive: { type: Boolean, default: true, index: true },

@@ -124,7 +124,7 @@ export interface User extends BaseDocument {
 export interface CreateUserPayload {
     firstName?: string;
     lastName?: string;
-    collectionName?: string;
+    collectionName: string;
     phoneNumber: string;
     email?: string;
     nationalCode?: string;

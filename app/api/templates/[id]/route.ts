@@ -6,6 +6,7 @@ import { AuthRequest } from "@/lib/auth/types";
 import { assertBuilderBlockMutationAccess } from "@/lib/auth/builderBlockAccess";
 import { withTemplateAccessScope } from "@/lib/auth/resourceScope";
 import Template from "@/models/template";
+import { collectTemplateAssetUrls } from "@/lib/templateAssets";
 import Category from "@/models/category";
 import "@/models/blocks";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
@@ -154,6 +155,8 @@ export const PATCH = compose(
         template.category = nextCategory ? new mongoose.Types.ObjectId(nextCategory) : undefined;
     }
 
+    template.assetUrls = collectTemplateAssetUrls({ thumbnail: template.thumbnail, background: template.background,
+        logoHeader: template.logoHeader, footer: template.footer, builderBlocks: template.builderBlocks, style: template.style });
     await template.save();
 
     const nextCategory = template.category ? String(template.category) : undefined;

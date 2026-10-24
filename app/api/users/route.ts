@@ -1,3 +1,4 @@
+import { getCollectionNameValidationError, normalizeCollectionName } from "@/lib/validation/companyName";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { compose } from "@/lib/auth/compose";
@@ -302,10 +303,11 @@ export const POST = compose(
             typeof body.lastName === "string"
                 ? body.lastName.trim()
                 : "";
-        const collectionName =
-            typeof body.collectionName === "string"
-                ? body.collectionName.trim()
-                : "";
+        const collectionName = normalizeCollectionName(body.collectionName);
+        const collectionNameError = getCollectionNameValidationError(collectionName);
+        if (collectionNameError) {
+            return NextResponse.json({ code: "INVALID_COLLECTION_NAME", message: collectionNameError, field: "collectionName" }, { status: 400 });
+        }
 
         if (!firstName || !lastName) {
             return NextResponse.json(
@@ -518,7 +520,7 @@ export const POST = compose(
         const user = await User.create({
             firstName,
             lastName,
-            collectionName: collectionName || undefined,
+            collectionName,
 
             phoneNumber,
 

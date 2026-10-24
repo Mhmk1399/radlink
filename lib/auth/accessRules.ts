@@ -90,7 +90,7 @@ export function getAccessTargetForRequest(
   ) {
     return {
       component: "admin.templates",
-      action: "view",
+      action: searchParams.get("purpose") === "template-create" ? "create" : "view",
     };
   }
 

@@ -42,6 +42,9 @@ import { createDefaultRichTextBlock } from "./rich-text/richText.default";
 import { SliderBlock } from "./slider/SliderBlock";
 import { createDefaultSliderBlock } from "./slider/slider.default";
 import { sliderSchema } from "./slider/slider.schema";
+import { AudioBlock } from "./audio/AudioBlock";
+import { audioSchema } from "./audio/audio.schema";
+import { createDefaultAudioBlock } from "./audio/audio.default";
 import { GalleryBlock } from "./gallery/GalleryBlock";
 import { gallerySchema } from "./gallery/gallery.schema";
 import { createDefaultGalleryBlock } from "./gallery/gallery.default";
@@ -277,6 +280,15 @@ export const blockRegistry = {
     component: SuperLinkBlock,
     schema: withBuilderStyleSchema(superLinkSchema),
     createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSuperLinkBlock),
+  },
+
+  audio: {
+    type: "audio", label: "صوت و ویس",
+    description: "چند فایل صوتی یا ویس ضبط‌شده با پخش‌کننده موجی.",
+    icon: React.createElement(HiOutlinePlayCircle, { size: 18 }),
+    category: "media", component: AudioBlock,
+    schema: withBuilderStyleSchema(audioSchema),
+    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultAudioBlock),
   },
 
   gallery: {
