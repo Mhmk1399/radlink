@@ -1081,8 +1081,13 @@ export default function SimplePageBuilder({
     isLoading: isAccessLoading,
   } = useAccess();
 
-  const canSaveAsTemplate = saveMode === "page" && !isAccessLoading &&
-    (authUser?.role === "admin" || isSuperAdmin) && can("admin.templates", "create");
+  const canSaveAsTemplate =
+    saveMode === "page" &&
+    !isAccessLoading &&
+    (authUser?.role === "agent" ||
+      authUser?.role === "agentManager" ||
+      isSuperAdmin) &&
+    can("admin.templates", "create");
 
   useEffect(() => {
     const trackBuilderUpload = (event: Event) => {

@@ -153,7 +153,7 @@ export function BuilderHeader({
               type="button"
               data-tour="tour-preview-btn"
               onClick={onPreview}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
+              className="lg:flex hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 transition-all hover:bg-neutral-50 hover:text-neutral-700 hover:shadow-sm active:scale-95 sm:h-10 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
             >
               <HiOutlineEye size={16} />
               <span className="hidden text-[12px] font-semibold sm:inline">
