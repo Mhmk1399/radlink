@@ -44,6 +44,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public folder
 COPY --from=builder /app/public ./public
 
+RUN mkdir -p /app/.next/cache \
+    && chown -R nextjs:nodejs /app/.next /app/public
+
+    
 USER nextjs
 
 EXPOSE 3000
