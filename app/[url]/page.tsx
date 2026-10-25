@@ -310,7 +310,12 @@ export default async function PageRoute({ params }: Props) {
     );
   }
 
-  const [rawNotifications, owner] = await Promise.all([
+  const ownerId = String(page.owner ?? "");
+  const assignedUserId = String(page.assignedUser ?? "");
+  const shouldLoadAssignedUser = Boolean(
+    assignedUserId && assignedUserId !== ownerId,
+  );
+  const [rawNotifications, owner, assignedLandingUser] = await Promise.all([
     Notification.find({
       $and: [
         { isActive: { $ne: false } },
@@ -323,8 +328,16 @@ export default async function PageRoute({ params }: Props) {
       .populate("createdBy", "firstName lastName phoneNumber role")
       .sort({ createdAt: -1 })
       .lean(),
-    User.findById(page.owner).select("role permissions").lean(),
+    User.findById(page.owner)
+      .select("role permissions firstName accountBadge")
+      .lean(),
+    shouldLoadAssignedUser
+      ? User.findById(assignedUserId)
+          .select("firstName accountBadge")
+          .lean()
+      : Promise.resolve(null),
   ]);
+  const landingUser = assignedLandingUser ?? owner;
   const ownerAccess =
     owner && owner.role !== "superAdmin"
       ? await resolveUserAccess(String(owner._id), owner.permissions ?? [])
@@ -401,6 +414,8 @@ export default async function PageRoute({ params }: Props) {
           logo={typeof page.logo === "string" ? page.logo : ""}
           logoShape={page.logoShape === "circle" ? "circle" : "square"}
           title={String(page.title || "")}
+          accountBadge={landingUser?.accountBadge ?? null}
+          accountBadgeFirstName={landingUser?.firstName ?? null}
         />
         {false ? (
           <div

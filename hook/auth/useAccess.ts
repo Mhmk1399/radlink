@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import useSWR from "swr";
 import type { AccessResourceKind } from "@/lib/auth/accessCatalog";
+import type { UserAccountBadge } from "@/lib/users/accountBadge";
 
 type AccessMap = {
     components: Record<string, string[]>;
@@ -21,6 +22,7 @@ type MeResponse = {
         firstName?: string;
         lastName?: string;
         phoneNumber: string;
+        accountBadge?: UserAccountBadge;
         permissions?: unknown[];
         limits?: {
             files: number;

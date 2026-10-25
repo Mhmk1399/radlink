@@ -12,6 +12,9 @@
 
 import { ReactNode } from "react";
 import { KeyedMutator } from "swr/_internal";
+import type { UserAccountBadge } from "@/lib/users/accountBadge";
+
+export type { UserAccountBadge } from "@/lib/users/accountBadge";
 
 /* ══════════════════════════════════════════════
    SHARED / COMMON
@@ -100,6 +103,7 @@ export interface User extends BaseDocument {
     phoneNumber: string;
     email?: string;
     avatarUrl?: string;
+    accountBadge?: UserAccountBadge;
     nationalCode?: string;
     fatherName?: string;
     role: UserRole;
@@ -140,6 +144,7 @@ export interface CreateUserPayload {
 export interface UpdateUserPayload extends Partial<CreateUserPayload> {
     id: string;
     avatarUrl?: string;
+    accountBadge?: UserAccountBadge;
     isPhoneVerified?: boolean;
 }
 

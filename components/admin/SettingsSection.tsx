@@ -97,7 +97,7 @@ export default function SettingsSection({
       try {
         const [settingsResponse, usersResponse] = await Promise.all([
           fetch("/api/settings/auto-page-assignment", { headers }),
-          fetch("/api/settings/auto-page-assignment?mode=options&limit=100", {
+          fetch("/api/settings/auto-page-assignment?mode=options", {
             headers,
           }),
         ]);

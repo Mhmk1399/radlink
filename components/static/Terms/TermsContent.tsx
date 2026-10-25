@@ -94,8 +94,7 @@ export function TermsContent({
         </div>
 
         <p className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-xs leading-7 text-amber-100/90">
-          آخرین بازبینی: مرداد ۱۴۰۵. این متن اطلاع‌رسانی عمومی سرویس است و در
-          صورت نیاز می‌تواند با نسخه حقوقی رسمی‌تر جایگزین شود.
+          آخرین بازبینی: مرداد ۱۴۰۵. این متن اطلاع‌رسانی عمومی سرویس است.
         </p>
       </div>
     </section>

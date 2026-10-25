@@ -282,25 +282,25 @@ export const blockRegistry = {
     createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultSuperLinkBlock),
   },
 
-  audio: {
-    type: "audio", label: "صوت و ویس",
-    description: "چند فایل صوتی یا ویس ضبط‌شده با پخش‌کننده موجی.",
-    icon: React.createElement(HiOutlinePlayCircle, { size: 18 }),
-    category: "media", component: AudioBlock,
-    schema: withBuilderStyleSchema(audioSchema),
-    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultAudioBlock),
-  },
+  // audio: {
+  //   type: "audio", label: "صوت و ویس",
+  //   description: "چند فایل صوتی یا ویس ضبط‌شده با پخش‌کننده موجی.",
+  //   icon: React.createElement(HiOutlinePlayCircle, { size: 18 }),
+  //   category: "media", component: AudioBlock,
+  //   schema: withBuilderStyleSchema(audioSchema),
+  //   createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultAudioBlock),
+  // },
 
-  gallery: {
-    type: "gallery",
-    label: "گالری تصاویر",
-    description: "گالری تصاویر با شبکه قابل تنظیم، زیرنویس و ترتیب دلخواه.",
-    icon: React.createElement(HiOutlinePhoto, { size: 18 }),
-    category: "media",
-    component: GalleryBlock,
-    schema: withBuilderStyleSchema(gallerySchema),
-    createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultGalleryBlock),
-  },
+  // gallery: {
+  //   type: "gallery",
+  //   label: "گالری تصاویر",
+  //   description: "گالری تصاویر با شبکه قابل تنظیم، زیرنویس و ترتیب دلخواه.",
+  //   icon: React.createElement(HiOutlinePhoto, { size: 18 }),
+  //   category: "media",
+  //   component: GalleryBlock,
+  //   schema: withBuilderStyleSchema(gallerySchema),
+  //   createDefaultBlock: withBuilderStyleDefaultBlock(createDefaultGalleryBlock),
+  // },
 
   video: {
     type: "video",

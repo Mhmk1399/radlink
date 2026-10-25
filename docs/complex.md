@@ -1,4 +1,4 @@
-1. SimplePageBuilder.tsx
+1. PageBuilder.tsx
 
 این مغز صفحه‌ساز فعلیه.
 
@@ -25,14 +25,14 @@ breakpoint
 
 پس وقتی کاربر روی عنوان بنر کلیک می‌کند:
 
-SimplePageBuilder می‌فهمد:
+PageBuilder می‌فهمد:
 کدام block انتخاب شده
 کدام element انتخاب شده
 بعد DynamicIslandPanel را با اطلاعات همان block باز می‌کند
 
 نقش ساده‌شده:
 
-SimplePageBuilder = کنترل‌پنل اصلی صفحه‌ساز 2. DraggableBlockItem.tsx
+PageBuilder = کنترل‌پنل اصلی صفحه‌ساز 2. DraggableBlockItem.tsx
 
 این فایل مسئول نمایش هر بلاک داخل صفحه + قابلیت drag/drop است.
 
@@ -57,7 +57,7 @@ DraggableBlockItem = قاب قابل جابه‌جایی دور هر بلاک
 
 مثلاً:
 
-SimplePageBuilder
+PageBuilder
 └── DraggableBlockItem
 └── BannerBlock یا SimpleLinkBlock 3. DynamicIslandPanel.tsx
 
@@ -193,7 +193,7 @@ createDefaultBlock: createDefaultSimpleLinkBlock,
 
 پس وقتی کاربر روی دکمه «+ بنر» کلیک می‌کند:
 
-SimplePageBuilder از blockRegistry می‌پرسد:
+PageBuilder از blockRegistry می‌پرسد:
 برای banner چطور یک بلاک جدید بسازم؟
 
 وقتی قرار است بلاک نمایش داده شود:
@@ -247,7 +247,7 @@ accentTokens = رنگ و حال‌وهوای لوکس مشکی/طلایی برا
 
 نه برای خروجی صفحه کاربر.
 
-SimplePageBuilder
+PageBuilder
 ├── blockRegistry را می‌خواند
 ├── blocks state را نگه می‌دارد
 ├── add / delete / duplicate / reorder انجام می‌دهد
@@ -263,7 +263,7 @@ SimplePageBuilder
 ├── DynamicStyleForm را برای element.style نشان می‌دهد
 └── حذف / کپی بلاک را انجام می‌دهد
 
-        SimplePageBuilder:
+        PageBuilder:
 
 مدیر کل صفحه‌ساز
 

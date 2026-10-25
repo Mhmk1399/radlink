@@ -181,7 +181,7 @@ async function apiUpdateProfile(
     fatherName?: string;
     password?: string;
     passwordConfirm?: string;
-  }
+  },
 ): Promise<BackendUser> {
   const res = await fetch("/api/auth/me", {
     method: "PATCH",
@@ -195,7 +195,10 @@ async function apiUpdateProfile(
   const response = await res.json();
 
   if (!res.ok) {
-    throw { status: res.status, message: response.message ?? "خطا در ثبت اطلاعات" };
+    throw {
+      status: res.status,
+      message: response.message ?? "خطا در ثبت اطلاعات",
+    };
   }
 
   return response.user ?? response;
@@ -438,9 +441,7 @@ function Field({
           ref={ref}
           id={id}
           name={id}
-          type={
-            numeric ? "text" : isPassword && showPassword ? "text" : type
-          }
+          type={numeric ? "text" : isPassword && showPassword ? "text" : type}
           dir={dir ?? (numeric || type === "email" ? "ltr" : undefined)}
           {...(numeric
             ? {
@@ -486,13 +487,25 @@ function Field({
             )}
           >
             {showPassword ? (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4.5 w-4.5">
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4.5 w-4.5"
+              >
                 <path d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" />
                 <path d="M10.748 13.93l2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z" />
               </svg>
             ) : (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4.5 w-4.5">
-                <path fillRule="evenodd" d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" clipRule="evenodd" />
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4.5 w-4.5"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
+                  clipRule="evenodd"
+                />
                 <path
                   fillRule="evenodd"
                   d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14.5 10a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"
@@ -649,7 +662,11 @@ function ErrorLine({ msg, center }: { msg: string; center?: boolean }) {
         center && "justify-center",
       )}
     >
-      <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+      <svg
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        className="h-3.5 w-3.5 shrink-0"
+      >
         <path
           fillRule="evenodd"
           d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
@@ -691,9 +708,9 @@ export default function AuthPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpError, setOtpError] = useState(false);
-  const [registerErrors, setRegisterErrors] = useState<
-    Record<string, string>
-  >({});
+  const [registerErrors, setRegisterErrors] = useState<Record<string, string>>(
+    {},
+  );
   const [timer, setTimer] = useState(OTP_EXPIRY);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isExistingUser, setIsExistingUser] = useState(false);
@@ -1071,7 +1088,10 @@ export default function AuthPage({
   useEffect(() => {
     if (step === "success") {
       const returnTo = getSafeReturnTo();
-      const id = setTimeout(() => router.push(returnTo || "/admin"), returnTo ? 0 : 3000);
+      const id = setTimeout(
+        () => router.push(returnTo || "/admin"),
+        returnTo ? 0 : 3000,
+      );
       return () => clearTimeout(id);
     }
   }, [step, router]);
@@ -1135,7 +1155,11 @@ export default function AuthPage({
           {/* Step progress indicator */}
           <div className="relative flex items-center justify-center gap-2 pt-5">
             {(
-              ["phone", "otp", step === "setPassword" ? "setPassword" : "register"] as AuthStep[]
+              [
+                "phone",
+                "otp",
+                step === "setPassword" ? "setPassword" : "register",
+              ] as AuthStep[]
             ).map((s, i) => {
               const order: AuthStep[] = [
                 "phone",
@@ -1170,7 +1194,7 @@ export default function AuthPage({
                 <div className="flex flex-col items-center gap-4 text-center">
                   <LogoMark />
                   <div>
-                    <h1 className={cn(  "text-xl text-white")}>
+                    <h1 className={cn("text-xl text-white")}>
                       ورود یا ثبت‌نام
                     </h1>
                     <p
@@ -1185,7 +1209,8 @@ export default function AuthPage({
                   </div>
                   {isReturningToLandingChat && (
                     <div className="w-full rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-right text-xs leading-6 text-yellow-100">
-                      بعد از ورود یا ثبت‌نام، مستقیم به همان صفحه برمی‌گردید و گفت‌وگو برایتان باز می‌شود.
+                      بعد از ورود یا ثبت‌نام، مستقیم به همان صفحه برمی‌گردید و
+                      گفت‌وگو برایتان باز می‌شود.
                     </div>
                   )}
                 </div>
@@ -1249,7 +1274,10 @@ export default function AuthPage({
                           error
                             ? "border-red-400/40 bg-red-400/4"
                             : phoneValid
-                              ? cn(accentTokens.emerald.border, "bg-emerald-400/4")
+                              ? cn(
+                                  accentTokens.emerald.border,
+                                  "bg-emerald-400/4",
+                                )
                               : cn(borders.light, backgrounds.surface.glass),
                           "focus:border-yellow-400/50 focus:bg-yellow-400/4 focus:ring-2 focus:ring-yellow-400/20",
                           loading && "opacity-60 cursor-not-allowed",
@@ -1379,7 +1407,7 @@ export default function AuthPage({
                   <LogoMark />
 
                   <div>
-                    <h1 className={cn(  "text-xl text-white")}>کد تأیید</h1>
+                    <h1 className={cn("text-xl text-white")}>کد تأیید</h1>
                     <p
                       className={cn(
                         "mt-2",
@@ -1520,9 +1548,7 @@ export default function AuthPage({
 
                   <LogoMark />
                   <div>
-                    <h1 className={cn( " text-white text-xl")}>
-                      ساخت رمز عبور
-                    </h1>
+                    <h1 className={cn(" text-white text-xl")}>ساخت رمز عبور</h1>
                     <p
                       className={cn(
                         "mt-2",
@@ -1657,9 +1683,7 @@ export default function AuthPage({
                 <div className="flex flex-col items-center gap-4 text-center">
                   <LogoMark />
                   <div>
-                    <h1 className={cn( "text-xl text-white" )}>
-                      تکمیل ثبت‌نام
-                    </h1>
+                    <h1 className={cn("text-xl text-white")}>تکمیل ثبت‌نام</h1>
                     <p
                       className={cn(
                         "mt-2",
@@ -1667,7 +1691,8 @@ export default function AuthPage({
                         "text-slate-400",
                       )}
                     >
-                      نام، نام مجموعه / شرکت و رمز عبور الزامی است؛ بعداً با همین رمز و شماره موبایل می‌توانید بدون پیامک وارد شوید
+                      نام، نام مجموعه / شرکت و رمز عبور الزامی است؛ بعداً با
+                      همین رمز و شماره موبایل می‌توانید بدون پیامک وارد شوید
                     </p>
                   </div>
                 </div>
@@ -1796,12 +1821,8 @@ export default function AuthPage({
                       setNationalCode(normalized);
                       setRegisterErrors((current) => {
                         const next = { ...current };
-                        if (
-                          normalized &&
-                          !isValidNationalCode(normalized)
-                        )
-                          next.nationalCode =
-                            "کد ملی باید دقیقاً ۱۰ رقم باشد.";
+                        if (normalized && !isValidNationalCode(normalized))
+                          next.nationalCode = "کد ملی باید دقیقاً ۱۰ رقم باشد.";
                         else delete next.nationalCode;
                         return next;
                       });
@@ -1920,7 +1941,7 @@ export default function AuthPage({
                 <SuccessCheck />
 
                 <div>
-                  <h1 className={cn(  "text-xl text-white")}>
+                  <h1 className={cn("text-xl text-white")}>
                     {isExistingUser ? "ورود موفق!" : "ثبت‌نام موفق!"}
                   </h1>
                   <p
@@ -1933,13 +1954,18 @@ export default function AuthPage({
                     {isReturningToLandingChat
                       ? "ورود انجام شد. در حال برگشت به همان صفحه برای ادامه گفت‌وگو..."
                       : isExistingUser
-                      ? "خوش آمدی! در حال انتقال به داشبورد..."
-                      : "حساب شما ساخته شد. در حال انتقال به داشبورد..."}
+                        ? "خوش آمدی! در حال انتقال به داشبورد..."
+                        : "حساب شما ساخته شد. در حال انتقال به داشبورد..."}
                   </p>
                 </div>
 
                 {/* Progress bar */}
-                <div className={cn("w-full max-w-xs", isReturningToLandingChat && "hidden")}>
+                <div
+                  className={cn(
+                    "w-full max-w-xs",
+                    isReturningToLandingChat && "hidden",
+                  )}
+                >
                   <div
                     className={cn(
                       "h-1 overflow-hidden rounded-full",
@@ -1996,18 +2022,11 @@ export default function AuthPage({
                   <button
                     type="button"
                     onClick={() => setIsTermsModalOpen(true)}
-                    className={cn(
-                      accentTokens.amber.text,
-                      "hover:underline",
-                    )}
+                    className={cn(accentTokens.amber.text, "hover:underline")}
                   >
                     قوانین
                   </button>{" "}
-                  و{" "}
-                 
-                    حریم خصوصی
-                  
-                  را می‌پذیرید.
+                  و حریم خصوصی را می‌پذیرید.
                 </p>
               </div>
             )}
@@ -2057,6 +2076,7 @@ export default function AuthPage({
 
               <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <Link
+                  target="_blank"
                   href="/terms"
                   className={cn(
                     accentTokens.amber.text,

@@ -19,6 +19,7 @@ services:
     environment:
       APP_INTERNAL_URL: http://app:3000
       AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE: "0 0 * * *"
+      USER_BULK_UPDATE_CRON_SCHEDULE: "* * * * *"
     volumes:
       - ./services/cron:/cron:ro
     command: ["/bin/sh", "/cron/auto-assign-pages-cron.sh"]

@@ -3,6 +3,8 @@ import type {
   LogoHeaderVariant,
 } from "@/lib/design/logo-header";
 import { normalizeLogoHeaderSettings } from "@/lib/design/logo-header";
+import UserAccountBadgeView from "@/components/ui/UserAccountBadge";
+import type { UserAccountBadge } from "@/lib/users/accountBadge";
 
 const EDGE_WAVE_VARIANTS = new Set<LogoHeaderVariant>([
   "wave-jagged",
@@ -931,12 +933,16 @@ export function LogoHeaderFrame({
   logo,
   logoShape = "square",
   title,
+  accountBadge,
+  accountBadgeFirstName,
   showPlaceholder = false,
 }: {
   settings?: Partial<LogoHeaderSettings> | null;
   logo?: string;
   logoShape?: "square" | "circle";
   title?: string;
+  accountBadge?: Partial<UserAccountBadge> | null;
+  accountBadgeFirstName?: string | null;
   showPlaceholder?: boolean;
 }) {
   const normalized = normalizeLogoHeaderSettings(settings);
@@ -970,6 +976,8 @@ export function LogoHeaderFrame({
             titleColor={normalized.textColor}
             titleFontSize={normalized.titleFontSize}
             descriptionColor={normalized.descriptionColor}
+            accountBadge={accountBadge}
+            accountBadgeFirstName={accountBadgeFirstName}
           />
         </div>
       </div>
@@ -1053,6 +1061,8 @@ export function LogoHeaderFrame({
             titleColor={normalized.textColor}
             titleFontSize={normalized.titleFontSize}
             descriptionColor={normalized.descriptionColor}
+            accountBadge={accountBadge}
+            accountBadgeFirstName={accountBadgeFirstName}
           />
         </div>
       </div>
@@ -1066,24 +1076,34 @@ function HeaderText({
   titleColor,
   titleFontSize,
   descriptionColor,
+  accountBadge,
+  accountBadgeFirstName,
 }: {
   title: string;
   description: string;
   titleColor: string;
   titleFontSize: number;
   descriptionColor: string;
+  accountBadge?: Partial<UserAccountBadge> | null;
+  accountBadgeFirstName?: string | null;
 }) {
   if (!title && !description) return null;
 
   return (
     <div className="mt-3 max-w-[min(28rem,90%)]">
       {title ? (
-        <p
-          className="line-clamp-1 font-black leading-normal"
-          style={{ color: titleColor, fontSize: titleFontSize }}
-        >
-          {title}
-        </p>
+        <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
+          <p
+            className="line-clamp-1 min-w-0 font-black leading-normal"
+            style={{ color: titleColor, fontSize: titleFontSize }}
+          >
+            {title}
+          </p>
+          <UserAccountBadgeView
+            firstName={accountBadgeFirstName}
+            badge={accountBadge}
+          />
+        </div>
       ) : null}
       {description ? (
         <p

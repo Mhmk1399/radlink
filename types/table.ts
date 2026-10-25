@@ -57,6 +57,12 @@ export interface ColumnDef<T> {
     }) => ReactNode;
 }
 
+export interface DynamicTableBulkActionContext<T> {
+    selectedIds: string[];
+    selectedRows: T[];
+    clearSelection: () => void;
+}
+
 export interface DynamicTableProps<T extends object> {
     endpoint: string;
     columns: ColumnDef<T>[];
@@ -95,6 +101,8 @@ export interface DynamicTableProps<T extends object> {
     searchDebounceMs?: number;
     emptyMessage?: string;
     rowActions?: (row: T) => ReactNode;
+    /** Render actions for selected rows. IDs remain selected across pagination. */
+    bulkActions?: (context: DynamicTableBulkActionContext<T>) => ReactNode;
     exportable?: boolean;
     exportFileName?: string;
 

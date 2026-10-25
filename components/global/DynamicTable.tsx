@@ -3030,6 +3030,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   searchDebounceMs = 300,
   emptyMessage = "داده‌ای یافت نشد",
   rowActions,
+  bulkActions,
   exportable = true,
   exportFileName = "export",
   stickyHeader = true,
@@ -3088,6 +3089,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   const [desktopCanScrollX, setDesktopCanScrollX] = useState(false);
   const mobileFiltersId = useId();
   const desktopScrollerRef = useRef<HTMLDivElement | null>(null);
+  const formScrollRef = useRef<HTMLDivElement | null>(null);
   const desktopDragRef = useRef({
     active: false,
     captured: false,
@@ -3461,18 +3463,34 @@ export default function DynamicTable<T extends Record<string, unknown>>({
   );
 
   const toggleAllSelection = useCallback(() => {
-    if (selectedRows.size === paginatedRows.length) setSelectedRows(new Set());
-    else
-      setSelectedRows(new Set(paginatedRows.map((r) => String(r[primaryKey]))));
+    const pageKeys = paginatedRows.map((row) => String(row[primaryKey]));
+    const allPageRowsSelected =
+      pageKeys.length > 0 && pageKeys.every((key) => selectedRows.has(key));
+
+    setSelectedRows((previous) => {
+      const next = new Set(previous);
+      pageKeys.forEach((key) => {
+        if (allPageRowsSelected) next.delete(key);
+        else next.add(key);
+      });
+      return next;
+    });
   }, [paginatedRows, selectedRows, primaryKey]);
 
+  const selectedOnPageCount = paginatedRows.reduce(
+    (count, row) =>
+      count + (selectedRows.has(String(row[primaryKey])) ? 1 : 0),
+    0,
+  );
   const isAllSelected =
-    paginatedRows.length > 0 && selectedRows.size === paginatedRows.length;
-  const isSomeSelected = selectedRows.size > 0 && !isAllSelected;
+    paginatedRows.length > 0 && selectedOnPageCount === paginatedRows.length;
+  const isSomeSelected = selectedOnPageCount > 0 && !isAllSelected;
 
   const getSelectedData = useCallback((): T[] => {
     return filtered.filter((row) => selectedRows.has(String(row[primaryKey])));
   }, [filtered, selectedRows, primaryKey]);
+
+  const clearSelection = useCallback(() => setSelectedRows(new Set()), []);
 
   const handleSort = useCallback(
     (key: string) => {
@@ -3553,6 +3571,33 @@ export default function DynamicTable<T extends Record<string, unknown>>({
     }
   }, [formData, modalMode, onFormDiscard, resetModal, selectedRow]);
 
+  const focusFirstInvalidField = useCallback(
+    (errors: Record<string, string>) => {
+      const firstInvalidKey =
+        editableCols.find((column) => Boolean(errors[column.key]))?.key ??
+        Object.keys(errors)[0];
+      if (!firstInvalidKey) return;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const container = formScrollRef.current;
+          const field = Array.from(
+            container?.querySelectorAll<HTMLElement>("[data-form-key]") ?? [],
+          ).find((element) => element.dataset.formKey === firstInvalidKey);
+          if (!field) return;
+
+          field.scrollIntoView({ behavior: "smooth", block: "center" });
+          field
+            .querySelector<HTMLElement>(
+              "input:not([type='hidden']):not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex='-1'])",
+            )
+            ?.focus({ preventScroll: true });
+        });
+      });
+    },
+    [editableCols],
+  );
+
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     const formMode = modalMode === "create" ? "create" : "edit";
@@ -3581,8 +3626,9 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       }
     });
     setFormErrors(errors);
+    if (Object.keys(errors).length > 0) focusFirstInvalidField(errors);
     return Object.keys(errors).length === 0;
-  }, [editableCols, formData, modalMode]);
+  }, [editableCols, focusFirstInvalidField, formData, modalMode]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -3620,6 +3666,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             ...current,
             [field]: mutationError.message,
           }));
+          focusFirstInvalidField({ [field]: mutationError.message });
         }
       } finally {
         setSubmitting(false);
@@ -3637,6 +3684,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
       validateForm,
       resetModal,
       editableCols,
+      focusFirstInvalidField,
     ],
   );
 
@@ -4227,7 +4275,7 @@ export default function DynamicTable<T extends Record<string, unknown>>({
         {selectedRows.size > 0 && (
           <div
             className={cn(
-              "mb-3 flex items-center justify-between rounded-xl px-4 py-2.5 border",
+              "mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-2.5",
               isDark
                 ? "bg-[#c9a84c]/6 border-[#c9a84c]/12"
                 : "bg-[#8a7032]/4 border-[#8a7032]/10",
@@ -4238,17 +4286,24 @@ export default function DynamicTable<T extends Record<string, unknown>>({
             <span className={cn("text-xs font-medium", t.textAccent)}>
               {toPersianDigits(selectedRows.size)} ردیف انتخاب شده
             </span>
-            <button
-              type="button"
-              onClick={() => setSelectedRows(new Set())}
-              className={cn(
-                "text-xs transition-colors",
-                t.textMuted,
-                isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
-              )}
-            >
-              لغو انتخاب
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {bulkActions?.({
+                selectedIds: Array.from(selectedRows),
+                selectedRows: getSelectedData(),
+                clearSelection,
+              })}
+              <button
+                type="button"
+                onClick={clearSelection}
+                className={cn(
+                  "text-xs transition-colors",
+                  t.textMuted,
+                  isDark ? "hover:text-[#e8e6e3]" : "hover:text-[#2c2a25]",
+                )}
+              >
+                لغو انتخاب
+              </button>
+            </div>
           </div>
         )}
 
@@ -5190,7 +5245,10 @@ export default function DynamicTable<T extends Record<string, unknown>>({
               <Icon.X />
             </button>
           </div>
-          <div className="max-h-[60vh] overflow-y-auto overflow-x-visible px-5 py-4">
+          <div
+            ref={formScrollRef}
+            className="max-h-[60vh] overflow-y-auto overflow-x-visible px-5 py-4"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               {editableCols.map((col) => {
                 const formMode = modalMode === "create" ? "create" : "edit";
@@ -5219,7 +5277,11 @@ export default function DynamicTable<T extends Record<string, unknown>>({
                 const dateDisplay = isDate ? formatDateForPicker(fv) : "";
 
                 return (
-                  <div key={col.key} className={isFull ? "sm:col-span-2" : ""}>
+                  <div
+                    key={col.key}
+                    data-form-key={col.key}
+                    className={isFull ? "sm:col-span-2" : ""}
+                  >
                     <label
                       htmlFor={`field-${col.key}`}
                       className={cn("mb-1.5 block", fieldLabel)}

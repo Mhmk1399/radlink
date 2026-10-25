@@ -62,6 +62,11 @@ import {
 import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
 import Image from "next/image";
 import { NotificationIcon } from "@/components/notifications/NotificationIcon";
+import UserAccountBadge from "@/components/ui/UserAccountBadge";
+import {
+  normalizeUserAccountBadge,
+  type UserAccountBadge as UserAccountBadgeValue,
+} from "@/lib/users/accountBadge";
 import { createPortal } from "react-dom";
 
 /* ══════════════════════════════════════════════
@@ -192,6 +197,7 @@ interface AuthUser {
   email?: string;
   avatarUrl?: string;
   role?: string;
+  accountBadge?: UserAccountBadgeValue;
 }
 
 const PROFILE_OVERRIDE_KEY = "admin-profile-user-override";
@@ -215,6 +221,10 @@ function readProfileOverride(userId?: string): Partial<AuthUser> | null {
       avatarUrl: normalizeLiaraUrl(
         typeof record.avatarUrl === "string" ? record.avatarUrl : "",
       ),
+      accountBadge:
+        record.accountBadge && typeof record.accountBadge === "object"
+          ? normalizeUserAccountBadge(record.accountBadge)
+          : undefined,
     };
   } catch {
     return null;
@@ -235,6 +245,10 @@ function authUserFromUnknown(value: unknown): Partial<AuthUser> | null {
       typeof record.avatarUrl === "string" ? record.avatarUrl : "",
     ),
     role: typeof record.role === "string" ? record.role : undefined,
+    accountBadge:
+      record.accountBadge && typeof record.accountBadge === "object"
+        ? normalizeUserAccountBadge(record.accountBadge)
+        : undefined,
   };
 }
 
@@ -1319,15 +1333,22 @@ function UserDropdown({
             s.avatarBg,
           )}
         />
-        <div className="hidden sm:block text-right min-w-0">
-          <p
-            className={cn(
-              "text-xs font-medium leading-none truncate max-w-[120px]",
-              s.textPrimary,
-            )}
-          >
-            {displayName}
-          </p>
+        <div className="hidden min-w-0 text-right sm:block">
+          <div className="flex min-w-0 items-center justify-end gap-1.5">
+            <p
+              className={cn(
+                "max-w-[120px] truncate text-xs font-medium leading-none",
+                s.textPrimary,
+              )}
+            >
+              {displayName}
+            </p>
+            <UserAccountBadge
+              firstName={authUser?.firstName}
+              badge={authUser?.accountBadge}
+              className="max-w-20"
+            />
+          </div>
           <p
             className={cn(
               "mt-0.5 text-[10px] leading-none",
@@ -1375,9 +1396,21 @@ function UserDropdown({
                 )}
               />
               <div className="min-w-0 flex-1">
-                <p className={cn("text-sm font-bold truncate", s.textPrimary)}>
-                  {displayName}
-                </p>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p
+                    className={cn(
+                      "min-w-0 truncate text-sm font-bold",
+                      s.textPrimary,
+                    )}
+                  >
+                    {displayName}
+                  </p>
+                  <UserAccountBadge
+                    firstName={authUser?.firstName}
+                    badge={authUser?.accountBadge}
+                    className="max-w-24"
+                  />
+                </div>
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[9px] font-bold mt-1",
@@ -2112,15 +2145,22 @@ function Sidebar({
                   s.avatarBg,
                 )}
               />
-              <div className="flex-1 min-w-0 text-right">
-                <p
-                  className={cn(
-                    "text-xs font-semibold truncate leading-none",
-                    s.textPrimary,
-                  )}
-                >
-                  {displayName}
-                </p>
+              <div className="min-w-0 flex-1 text-right">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p
+                    className={cn(
+                      "min-w-0 truncate text-xs font-semibold leading-none",
+                      s.textPrimary,
+                    )}
+                  >
+                    {displayName}
+                  </p>
+                  <UserAccountBadge
+                    firstName={authUser?.firstName}
+                    badge={authUser?.accountBadge}
+                    className="max-w-20"
+                  />
+                </div>
                 <p
                   className={cn(
                     "mt-1 text-[10px] leading-none",

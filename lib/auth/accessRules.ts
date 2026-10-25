@@ -84,6 +84,13 @@ export function getAccessTargetForRequest(
   const normalizedMethod = method.toUpperCase();
 
   if (
+    pathname === "/api/users/bulk-update" ||
+    pathname.startsWith("/api/users/bulk-update/")
+  ) {
+    return { component: "admin.users", action: "update" };
+  }
+
+  if (
     pathname === "/api/categories" &&
     normalizedMethod === "GET" &&
     searchParams.get("mode") === "options"

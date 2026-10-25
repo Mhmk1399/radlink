@@ -17,14 +17,12 @@ export const GET = compose(
 )(async (req: AuthRequest) => {
   const { searchParams } = new URL(req.url);
   if (searchParams.get("mode") === "options") {
-    const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? 100)));
     const users = await User.find({
       status: "active",
       isDeleted: { $ne: true },
     })
       .select("firstName lastName phoneNumber email role")
       .sort({ createdAt: -1 })
-      .limit(limit)
       .lean();
 
     return NextResponse.json({

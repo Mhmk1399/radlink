@@ -9,6 +9,22 @@ export const PAGE_SLUG_REQUIRED_MESSAGE =
 export const PAGE_SLUG_MIN_LENGTH_MESSAGE =
   "آدرس صفحه باید حداقل ۴ کاراکتر باشد.";
 
+export const PAGE_SLUG_RESERVED_MESSAGE =
+  "این آدرس برای یکی از بخش‌های اصلی سایت رزرو شده است. لطفاً آدرس دیگری انتخاب کنید.";
+
+// Keep this list in sync with static top-level routes under app/.
+export const RESERVED_PAGE_SLUGS = [
+  "about",
+  "admin",
+  "api",
+  "auth",
+  "builder",
+  "contact",
+  "terms",
+] as const;
+
+const RESERVED_PAGE_SLUG_SET = new Set<string>(RESERVED_PAGE_SLUGS);
+
 const PAGE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function toEnglishDigits(value: string): string {
@@ -40,12 +56,17 @@ export function hasInvalidPageSlugCharacters(value: unknown): boolean {
   return normalized !== sanitizePageSlug(value);
 }
 
+export function isReservedPageSlug(value: unknown): boolean {
+  return RESERVED_PAGE_SLUG_SET.has(normalizePageSlugInput(value));
+}
+
 export function isValidPageSlug(value: unknown): boolean {
   const normalized = normalizePageSlugInput(value);
   return (
     normalized.length >= PAGE_SLUG_MIN_LENGTH &&
     normalized === sanitizePageSlug(value) &&
-    PAGE_SLUG_PATTERN.test(normalized)
+    PAGE_SLUG_PATTERN.test(normalized) &&
+    !isReservedPageSlug(normalized)
   );
 }
 
@@ -53,6 +74,7 @@ export function getPageSlugValidationError(value: unknown): string | null {
   const normalized = normalizePageSlugInput(value);
 
   if (!normalized) return PAGE_SLUG_REQUIRED_MESSAGE;
+  if (isReservedPageSlug(normalized)) return PAGE_SLUG_RESERVED_MESSAGE;
   if (normalized.length < PAGE_SLUG_MIN_LENGTH)
     return PAGE_SLUG_MIN_LENGTH_MESSAGE;
   if (hasInvalidPageSlugCharacters(value) || !PAGE_SLUG_PATTERN.test(normalized))

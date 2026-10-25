@@ -138,8 +138,6 @@ const EnamadBadge = () => {
   );
 };
 
- 
-
 /* ── FOOTER ── */
 
 export function SmartLandingFooter() {
@@ -186,7 +184,7 @@ export function SmartLandingFooter() {
               دیجیتال؛ سریع، ساده، قابل شخصی‌سازی و آماده اشتراک‌گذاری.
             </p>
 
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               {socialLinks.map((s) => (
                 <Link
                   key={s.label}
@@ -202,7 +200,7 @@ export function SmartLandingFooter() {
                   {s.icon}
                 </Link>
               ))}
-            </div>
+            </div> */}
           </div>
 
           {/* ══ LINKS — two labeled groups instead of one anonymous grid ══ */}
@@ -264,7 +262,6 @@ export function SmartLandingFooter() {
                 <p className="text-xs text-nowrap font-semibold text-white">
                   نماد اعتماد الکترونیکی
                 </p>
-             
               </div>
             </div>
           </div>

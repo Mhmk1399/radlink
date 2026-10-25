@@ -139,6 +139,15 @@ flowchart LR
 - اگر سازنده کاربر نقش `agent` یا `agentManager` داشته باشد، فرم ساخت باید `agentid` همان نماینده سازنده را پیش‌فرض کند و `POST /api/users` هم اگر `agentid` خالی بود همان Agent فعال سازنده را ثبت کند.
 - اگر سازنده نقش نماینده‌ای داشته باشد ولی Agent فعال برای او پیدا نشود، ساخت کاربر باید با خطای کنترل‌شده متوقف شود و کاربر جدید بدون نماینده ساخته نشود.
 
+قرارداد ویرایش گروهی کاربران:
+
+- انتخاب ردیف‌ها در `DynamicTable` بین صفحه‌های مختلف pagination حفظ می‌شود و اکشن «ویرایش گروهی» فقط برای دارنده `admin.users:update` نمایش داده می‌شود.
+- هر عملیات ابتدا به‌عنوان یک رکورد پایدار در `UserBulkUpdateJob` ثبت می‌شود و Jobهای گروهی به‌ترتیب صف پردازش می‌شوند؛ اجرای هم‌زمان workerها نباید دو Job را هم‌زمان claim کند.
+- پردازش هر کاربر با `$set` فقط روی فیلدهای انتخاب‌شده انجام می‌شود. فرم ادیت تکی نیز Patch تفاضلی می‌فرستد تا تغییر هم‌زمان نام، وضعیت یا سایر فیلدهای نامرتبط، مقدارهای Job را overwrite نکند.
+- تغییر گروهی هرکدام از محدودیت‌ها، `limitsOverrideEnabled` همان کاربران را فعال می‌کند و به `Agent.limits` یا کاربران دیگر نماینده دست نمی‌زند. مقدار صفر همچنان به معنی نامحدود است.
+- هنگام ثبت و هنگام اجرای Job، وجود کاربران، حذف‌نشدن، فعال بودن درخواست‌کننده، Access و scope نماینده دوباره بررسی می‌شود. غیر RAD اجازه تغییر حساب RAD را ندارد.
+- Job بلافاصله بعد از ثبت پردازش می‌شود و cron دقیقه‌ای `/api/cron/process-user-bulk-updates` بازیابی Jobهای queued یا lease منقضی‌شده را تضمین می‌کند.
+
 ### Agent
 
 فایل: `models/agent.ts`
@@ -548,6 +557,7 @@ Sectionهای اصلی:
 - double click روی ردیف باید اول فرم edit همان table را باز کند؛ اگر آن table فرم edit/action مناسب ندارد، فرم view باز می‌شود.
 - کلیک روی controlهای داخلی ردیف مثل button، checkbox، لینک، menu و input نباید trigger دابل‌کلیک ردیف شود.
 - فیلدهای سفارشی فرم (`renderFormField`) فقط نباید به `formData` متکی باشند؛ `DynamicTable` باید `selectedRow` را هم پاس بدهد تا کنترل‌هایی مثل نمایش صفحات کاربر در مودال ادیت به `_id` رکورد اصلی دسترسی داشته باشند.
+- در خطای اعتبارسنجی فرم، `DynamicTable` باید اولین فیلد نامعتبر را داخل modal به دید کاربر اسکرول دهد، فوکوس کند و پیام خطا را همان‌جا نمایش دهد؛ کلیک ثبت نباید بدون بازخورد ظاهری متوقف شود.
 
 نکته‌های مهم Admin:
 
@@ -603,6 +613,7 @@ stateهای مهم PageBuilder:
 در ذخیره صفحه این اتفاق‌ها می‌افتد:
 
 - slug با `lib/validation/pageSlug.ts` sanitize/validate می‌شود.
+- slug صفحه نباید با routeهای ثابت سطح اول برنامه یکسان باشد؛ فهرست مرکزی `RESERVED_PAGE_SLUGS` در همان فایل نگهداری می‌شود و ساخت و ویرایش صفحه هر دو آن را بررسی می‌کنند.
 - owner و assignedUser بررسی می‌شوند.
 - اگر publish درخواست شده باشد، `assertPagePublishAccess` اجرا می‌شود.
 - دسترسی ساخت/ویرایش/publish بلاک‌ها با `assertBuilderBlockMutationAccess` چک می‌شود.
@@ -1115,6 +1126,8 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `app/api/auth/login-password/route.ts` | ورود با رمز و verified کردن userهای ساخته‌شده توسط admin |
 | `app/api/users/route.ts` | لیست/ساخت کاربران، فیلترهای server-side، role/status/agent/limits و password اولیه |
 | `app/api/users/[id]/route.ts` | مشاهده/ویرایش/حذف نرم کاربر، تغییر password، agent و override محدودیت اختصاصی |
+| `app/api/users/bulk-update/route.ts` | اعتبارسنجی کاربران انتخاب‌شده و ثبت Job ویرایش گروهی |
+| `app/api/cron/process-user-bulk-updates/route.ts` | recovery و پردازش secret-protected صف ویرایش گروهی |
 | `app/api/agents/route.ts` و `app/api/agents/[id]/route.ts` | ساخت/ویرایش نماینده، sync محدودیت نماینده با کاربران بدون override |
 | `app/api/pages/route.ts` | ساخت/list صفحه، QR، sync products، publish |
 | `app/api/pages/[id]/route.ts` | ویرایش/حذف صفحه، blocks، publish، owner |
@@ -1127,6 +1140,7 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `lib/auth/quota.ts` | محاسبه سقف فایل/صفحه/بلاک با پشتیبانی از محدودیت اختصاصی کاربر و ارث‌بری از نماینده |
 | `lib/pages/autoAssignUnownedPages.ts` | منطق atomic تخصیص خودکار صفحات بدون صاحب |
 | `models/users.ts` | identity، role، agentid، limits و `limitsOverrideEnabled` |
+| `models/userBulkUpdateJobs.ts` | صف پایدار، lease و نتیجه عملیات ویرایش گروهی کاربران |
 | `models/agent.ts` | اطلاعات نماینده و محدودیت پیش‌فرض زیرمجموعه‌ها |
 | `models/access.ts` | قرارداد permission |
 | `models/permission.ts` | assignment دسترسی‌ها |
@@ -1213,12 +1227,15 @@ Ticket شامل requester، assignee، category، attachments و replies embedde
 | `APP_URL` | fallback server base URL |
 | `RADLINK_CRON_SECRET` | secret اجرای endpointهای زمان‌بندی‌شده مثل تخصیص خودکار صفحات |
 | `AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE` | زمان‌بندی cron اختیاری برای VPS/Docker Compose؛ پیش‌فرض روزی یک‌بار در `0 0 * * *` |
+| `USER_BULK_UPDATE_CRON_SCHEDULE` | زمان‌بندی بازیابی صف ویرایش گروهی کاربران؛ پیش‌فرض هر دقیقه در `* * * * *` |
 
 در deploy فعلی VPS، اجرای خودکار تخصیص صفحات توسط سرویس `auto-assign-pages-cron` در `docker-compose.yml` انجام می‌شود و به سرویس‌های Vercel وابسته نیست.
 
 `RADLINK_CRON_SECRET` باید یک رشته طولانی و غیرقابل حدس باشد و همان مقدار هم در سرویس app و هم در سرویس cron موجود باشد. cron این مقدار را در header درخواست می‌فرستد و endpoint بدون آن `401` می‌دهد.
 
 اگر `AUTO_PAGE_ASSIGNMENT_CRON_SCHEDULE` تنظیم نشود، زمان‌بندی پیش‌فرض روزی یک‌بار است. این زمان‌بندی فقط زمان اجرای job را مشخص می‌کند؛ خود job داخل اجرا، فقط صفحاتی را تغییر می‌دهد که حداقل ۲۴ ساعت از ایجادشان گذشته و هنوز owner/assignedUser ندارند.
+
+همان سرویس cron با `USER_BULK_UPDATE_CRON_SCHEDULE` صف ویرایش گروهی کاربران را نیز پردازش می‌کند. اجرای اصلی بلافاصله بعد از ثبت Job آغاز می‌شود و cron نقش recovery را در صورت بسته‌شدن درخواست یا restart سرویس دارد.
 
 این‌ها هرگز نباید داخل client bundle، log عمومی، screenshot یا docs عمومی با مقدار واقعی بیایند.
 

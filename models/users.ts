@@ -1,4 +1,9 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import {
+  DEFAULT_USER_ACCOUNT_BADGE_COLOR,
+  USER_ACCOUNT_BADGE_LABEL_MAX_LENGTH,
+  type UserAccountBadge,
+} from "@/lib/users/accountBadge";
 
 export type UserRole = "user" | "agent" | "agentManager" | "admin" | "superAdmin";
 
@@ -12,6 +17,7 @@ export interface IUser extends Document {
   phoneNumber: string;
   email?: string;
   avatarUrl?: string;
+  accountBadge: UserAccountBadge;
   passwordHash?: string;
   passwordChangedAt?: Date;
 
@@ -88,6 +94,29 @@ const UserSchema = new Schema<IUser>(
     avatarUrl: {
       type: String,
       trim: true,
+    },
+
+    accountBadge: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      label: {
+        type: String,
+        trim: true,
+        default: "",
+        maxlength: USER_ACCOUNT_BADGE_LABEL_MAX_LENGTH,
+      },
+      color: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        default: DEFAULT_USER_ACCOUNT_BADGE_COLOR,
+        match: [
+          /^#[0-9a-fA-F]{6}$/,
+          "رنگ نشان حساب باید با فرمت شش‌رقمی مانند #2563eb باشد.",
+        ],
+      },
     },
 
     passwordHash: {

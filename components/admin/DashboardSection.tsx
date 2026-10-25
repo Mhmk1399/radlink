@@ -37,6 +37,7 @@ import {
   FaShieldHalved,
 } from "react-icons/fa6";
 import { getUserRoleLabel, superAdminBadgeClass } from "@/lib/userRole";
+import UserAccountBadgeView from "@/components/ui/UserAccountBadge";
 
 /* ══════════════════════════════════════════════
    SOFT PALETTE — mirrors DashboardShell
@@ -1175,7 +1176,7 @@ export default function DashboardSection({
 }) {
   const { d } = useDash();
   const { data, error, isLoading } = useDashboardStats();
-  const { can, isSuperAdmin } = useAccess();
+  const { can, isSuperAdmin, user: accessUser } = useAccess();
   const [dashboardQuote, setDashboardQuote] = useState<string>(
     DASHBOARD_QUOTES[0],
   );
@@ -1212,7 +1213,8 @@ export default function DashboardSection({
   }, []);
 
   const displayName = useMemo(() => getDisplayName(authUser), [authUser]);
-  const showRadVerifiedBadge = isRadFirstName(authUser?.firstName);
+  const badgeFirstName = authUser?.firstName || accessUser?.firstName;
+  const showRadVerifiedBadge = isRadFirstName(badgeFirstName);
   const greeting = useMemo(() => getGreeting(), []);
   const currentDate = useMemo(() => getCurrentDate(), []);
 
@@ -1395,7 +1397,7 @@ export default function DashboardSection({
                     d.textSecondary,
                   )}
                 >
-                  خوش آمدید <span aria-hidden="true">👋</span> {greeting} ✨
+                  خوش آمدید <span aria-hidden="true">_</span> {greeting} ✨
                 </p>
                 <h1
                   className={cn(
@@ -1403,8 +1405,16 @@ export default function DashboardSection({
                     d.textPrimary,
                   )}
                 >
-                  {displayName !== "مدیر" ? `${displayName} عزیز` : "مدیر عزیز"}{" "}
-                  {showRadVerifiedBadge && <RadVerifiedBadge />}
+                  {displayName !== "مدیر" ? `${displayName}  ` : "مدیر   "}{"  "}
+                  {showRadVerifiedBadge ? (
+                    <RadVerifiedBadge />
+                  ) : (
+                    <UserAccountBadgeView
+                      firstName={badgeFirstName}
+                      badge={accessUser?.accountBadge}
+                      size="md"
+                    />
+                  )}
                 </h1>
                 <p
                   className={cn(

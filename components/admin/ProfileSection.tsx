@@ -33,6 +33,11 @@ import {
 } from "@/lib/validation/identityFields";
 import type { UserRole, UserStatus } from "@/types";
 import { superAdminBadgeClass } from "@/lib/userRole";
+import UserAccountBadgeView from "@/components/ui/UserAccountBadge";
+import {
+  normalizeUserAccountBadge,
+  type UserAccountBadge,
+} from "@/lib/users/accountBadge";
 
 type UserLimits = {
   files?: number;
@@ -48,6 +53,7 @@ type ProfileUser = {
   phoneNumber: string;
   email?: string;
   avatarUrl?: string;
+  accountBadge: UserAccountBadge;
   nationalCode?: string;
   fatherName?: string;
   role: UserRole;
@@ -103,6 +109,7 @@ function normalizeProfileUser(value: unknown): ProfileUser {
     phoneNumber: toText(record.phoneNumber),
     email: toText(record.email),
     avatarUrl: normalizeLiaraUrl(toText(record.avatarUrl)),
+    accountBadge: normalizeUserAccountBadge(record.accountBadge),
     nationalCode: toText(record.nationalCode),
     fatherName: toText(record.fatherName),
     role,
@@ -232,6 +239,7 @@ function publishProfileUpdate(user: ProfileUser) {
     phoneNumber: user.phoneNumber ?? "",
     email: user.email ?? "",
     avatarUrl: normalizeLiaraUrl(user.avatarUrl ?? ""),
+    accountBadge: user.accountBadge,
     role: user.role,
   };
 
@@ -1176,14 +1184,20 @@ function ProfileEditor({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p
-                className={cn(
-                  "truncate text-base font-extrabold",
-                  t.textPrimary,
-                )}
-              >
-                {displayName}
-              </p>
+              <div className="flex min-w-0 items-center gap-2">
+                <p
+                  className={cn(
+                    "min-w-0 truncate text-base font-extrabold",
+                    t.textPrimary,
+                  )}
+                >
+                  {displayName}
+                </p>
+                <UserAccountBadgeView
+                  firstName={user.firstName}
+                  badge={user.accountBadge}
+                />
+              </div>
               <p className={cn("mt-0.5 text-xs", t.textDisabled)}>
                 {user.phoneNumber}
               </p>

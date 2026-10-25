@@ -8,9 +8,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent,
+  type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import type { AdminSection } from "@/hook/admin/useHashRoute";
 import { useAccess } from "@/hook/auth/useAccess";
 import { useThemeTokens } from "@/hook/theme/useThemeTokens";
@@ -20,9 +23,11 @@ import {
   FaArrowRight,
   FaArrowUpRightFromSquare,
   FaFileLines,
+  FaLayerGroup,
   FaPenToSquare,
   FaPowerOff,
   FaRotateRight,
+  FaXmark,
   FaUsers,
   FaUserShield,
 } from "react-icons/fa6";
@@ -31,9 +36,17 @@ import DynamicTable from "../global/DynamicTable";
 import UserPermissionModal from "./UserPermissionModal";
 import { mutate } from "swr";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
+import UserAccountBadgeView from "@/components/ui/UserAccountBadge";
 import { superAdminBadgeClass } from "@/lib/userRole";
 import type { UserRole, UserStatus } from "@/types/index";
 import { toast } from "@/components/ui/CustomToast";
+import {
+  DEFAULT_USER_ACCOUNT_BADGE_COLOR,
+  isRadFirstName,
+  normalizeUserAccountBadge,
+  validateUserAccountBadge,
+  type UserAccountBadge,
+} from "@/lib/users/accountBadge";
 
 /* ══════════════════════════════════════════════
    HELPERS
@@ -83,6 +96,7 @@ type UserRow = {
   phoneNumber: string;
   email?: string;
   avatarUrl?: string;
+  accountBadge: UserAccountBadge;
   nationalCode?: string;
   fatherName?: string;
   role: UserRole;
@@ -224,6 +238,132 @@ function VerifyBadge({ verified }: { verified: boolean }) {
   );
 }
 
+function AccountBadgeEditor({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (value: UserAccountBadge) => void;
+}) {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+  const rawBadge =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Partial<UserAccountBadge>)
+      : {};
+  const badge: UserAccountBadge = {
+    enabled: rawBadge.enabled === true,
+    label: typeof rawBadge.label === "string" ? rawBadge.label : "",
+    color:
+      typeof rawBadge.color === "string"
+        ? rawBadge.color
+        : DEFAULT_USER_ACCOUNT_BADGE_COLOR,
+  };
+  const pickerColor = /^#[0-9a-fA-F]{6}$/.test(badge.color)
+    ? badge.color
+    : DEFAULT_USER_ACCOUNT_BADGE_COLOR;
+  const updateBadge = (next: Partial<UserAccountBadge>) => {
+    onChange({ ...badge, ...next });
+  };
+
+  return (
+    <div
+      className={cn(
+        "space-y-3 rounded-xl border p-3",
+        t.borderSubtle,
+        t.inputBg,
+      )}
+    >
+      <label
+        htmlFor="field-accountBadge"
+        className="flex cursor-pointer items-center justify-between gap-4"
+      >
+        <span className="min-w-0">
+          <span className={cn("block text-sm font-bold", t.textPrimary)}>
+            نمایش نشان کنار نام کاربر
+          </span>
+          <span className={cn("mt-0.5 block text-xs", t.textMuted)}>
+            در جدول، پروفایل و صفحات عمومی این کاربر نمایش داده می‌شود.
+          </span>
+        </span>
+        <input
+          id="field-accountBadge"
+          type="checkbox"
+          checked={badge.enabled}
+          onChange={(event) => updateBadge({ enabled: event.target.checked })}
+          className="h-5 w-5 shrink-0 cursor-pointer accent-[#c99b32]"
+        />
+      </label>
+
+      {badge.enabled ? (
+        <div className="grid gap-3 border-t border-current/10 pt-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+          <label className="space-y-1.5">
+            <span className={cn("block text-xs font-bold", t.textMuted)}>
+              عنوان نشان (اختیاری)
+            </span>
+            <input
+              type="text"
+              value={badge.label}
+              onChange={(event) => updateBadge({ label: event.target.value })}
+              maxLength={40}
+              placeholder="مثلاً VIP یا رویال"
+              className={cn(
+                "h-10 w-full rounded-xl border px-3 text-sm outline-none transition focus:ring-2 focus:ring-[#c99b32]/35",
+                t.borderInput,
+                t.inputBg,
+                t.textPrimary,
+              )}
+            />
+          </label>
+
+          <div className="space-y-1.5">
+            <span className={cn("block text-xs font-bold", t.textMuted)}>
+              رنگ نشان
+            </span>
+            <div className="flex gap-2" dir="ltr">
+              <input
+                type="color"
+                value={pickerColor}
+                onChange={(event) => updateBadge({ color: event.target.value })}
+                aria-label="انتخاب رنگ نشان حساب"
+                className={cn(
+                  "h-10 w-12 shrink-0 cursor-pointer rounded-lg border bg-transparent p-1",
+                  t.borderInput,
+                )}
+              />
+              <input
+                type="text"
+                value={badge.color}
+                onChange={(event) => updateBadge({ color: event.target.value })}
+                maxLength={7}
+                inputMode="text"
+                aria-label="کد رنگ نشان حساب"
+                className={cn(
+                  "h-10 min-w-0 flex-1 rounded-xl border px-3 font-mono text-sm uppercase outline-none transition focus:ring-2 focus:ring-[#c99b32]/35",
+                  t.borderInput,
+                  t.inputBg,
+                  t.textPrimary,
+                )}
+              />
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "flex min-h-11 items-center gap-2 rounded-xl border px-3 sm:col-span-2",
+              t.borderSubtle,
+              isDark ? "bg-black/10" : "bg-white/70",
+            )}
+          >
+            <span className={cn("text-xs", t.textMuted)}>پیش‌نمایش:</span>
+            <UserAccountBadgeView badge={badge} />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const DEFAULT_USER_AVATAR = `data:image/svg+xml,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
   <rect width="96" height="96" rx="48" fill="#1f2937"/>
@@ -304,7 +444,10 @@ function getAgentOptionLabel(agent: Record<string, unknown>, fallback: string) {
   return `${userLabel} (${type})${companyName}`;
 }
 
-function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
+function buildUserPayload(
+  item: Partial<UserRow> & Record<string, unknown>,
+  includeAccountBadge = false,
+) {
   const payload: Partial<UserRow> & Record<string, unknown> = {
     ...item,
     firstName:
@@ -337,6 +480,12 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
   delete payload["limits.pages"];
   delete payload.permissions;
 
+  if (includeAccountBadge) {
+    payload.accountBadge = normalizeUserAccountBadge(item.accountBadge);
+  } else {
+    delete payload.accountBadge;
+  }
+
   if (typeof item.password === "string" && item.password.trim()) {
     payload.password = item.password;
   } else {
@@ -352,6 +501,454 @@ function buildUserPayload(item: Partial<UserRow> & Record<string, unknown>) {
     : true;
 
   return payload;
+}
+
+const USER_UPDATE_FIELDS = [
+  "firstName",
+  "lastName",
+  "collectionName",
+  "phoneNumber",
+  "email",
+  "avatarUrl",
+  "nationalCode",
+  "fatherName",
+  "role",
+  "status",
+  "agentid",
+  "limits",
+  "limitsOverrideEnabled",
+  "isPhoneVerified",
+  "accountBadge",
+  "password",
+] as const;
+
+function valuesEqual(left: unknown, right: unknown) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function buildUserUpdatePayload(
+  item: Partial<UserRow> & Record<string, unknown>,
+  original: Partial<UserRow> & Record<string, unknown>,
+  includeAccountBadge = false,
+) {
+  const next = buildUserPayload(item, includeAccountBadge);
+  const previous = buildUserPayload(original, includeAccountBadge);
+  const payload: Record<string, unknown> = { _id: item._id };
+
+  USER_UPDATE_FIELDS.forEach((field) => {
+    if (!valuesEqual(next[field], previous[field])) {
+      payload[field] = next[field];
+    }
+  });
+
+  return payload;
+}
+
+type UserBulkUpdateJob = {
+  id: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  total: number;
+  processed: number;
+  modified: number;
+  failed: number;
+  message?: string;
+};
+
+type UserBulkUpdateForm = {
+  applyStatus: boolean;
+  status: UserStatus;
+  applyFiles: boolean;
+  files: number;
+  applyBlocks: boolean;
+  blocks: number;
+  applyPages: boolean;
+  pages: number;
+};
+
+const DEFAULT_BULK_UPDATE_FORM: UserBulkUpdateForm = {
+  applyStatus: false,
+  status: "active",
+  applyFiles: false,
+  files: 0,
+  applyBlocks: false,
+  blocks: 0,
+  applyPages: false,
+  pages: 0,
+};
+
+function UserBulkUpdateModal({
+  open,
+  userIds,
+  headers,
+  onClose,
+  onCompleted,
+}: {
+  open: boolean;
+  userIds: string[];
+  headers?: Record<string, string>;
+  onClose: () => void;
+  onCompleted: () => void;
+}) {
+  const t = useThemeTokens();
+  const { isDark } = useTheme();
+  const [form, setForm] = useState<UserBulkUpdateForm>(
+    DEFAULT_BULK_UPDATE_FORM,
+  );
+  const [job, setJob] = useState<UserBulkUpdateJob | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const handledJobIdRef = useRef("");
+  const running = job?.status === "queued" || job?.status === "processing";
+  const jobId = job?.id;
+  const jobStatus = job?.status;
+  const hasSelectedUpdate =
+    form.applyStatus || form.applyFiles || form.applyBlocks || form.applyPages;
+
+  useEffect(() => {
+    if (!jobId || (jobStatus !== "queued" && jobStatus !== "processing")) {
+      return;
+    }
+
+    let cancelled = false;
+    let requestRunning = false;
+
+    async function readJob() {
+      if (requestRunning || cancelled) return;
+      requestRunning = true;
+      try {
+        const response = await fetch(`/api/users/bulk-update/${jobId}`, {
+          headers,
+        });
+        const json = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(
+            typeof json?.message === "string"
+              ? json.message
+              : "دریافت وضعیت عملیات گروهی انجام نشد.",
+          );
+        }
+        if (cancelled || !json?.job) return;
+
+        const nextJob = json.job as UserBulkUpdateJob;
+        setJob(nextJob);
+        if (
+          nextJob.status === "completed" &&
+          handledJobIdRef.current !== nextJob.id
+        ) {
+          handledJobIdRef.current = nextJob.id;
+          onCompleted();
+          toast.success(
+            `${nextJob.modified.toLocaleString("fa-IR")} کاربر به‌روزرسانی شد.`,
+          );
+        }
+        if (
+          nextJob.status === "failed" &&
+          handledJobIdRef.current !== nextJob.id
+        ) {
+          handledJobIdRef.current = nextJob.id;
+          toast.error(nextJob.message || "ویرایش گروهی با خطا مواجه شد.");
+        }
+      } catch (pollError) {
+        if (!cancelled) {
+          setError(
+            pollError instanceof Error
+              ? pollError.message
+              : "دریافت وضعیت عملیات گروهی انجام نشد.",
+          );
+        }
+      } finally {
+        requestRunning = false;
+      }
+    }
+
+    void readJob();
+    const intervalId = window.setInterval(readJob, 1200);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [headers, jobId, jobStatus, onCompleted]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !running) onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose, open, running]);
+
+  async function submitBulkUpdate() {
+    if (!hasSelectedUpdate || submitting || running) return;
+    setSubmitting(true);
+    setError("");
+
+    const selectedLimitValues = [
+      form.applyFiles ? form.files : undefined,
+      form.applyBlocks ? form.blocks : undefined,
+      form.applyPages ? form.pages : undefined,
+    ].filter((value): value is number => value !== undefined);
+    if (
+      selectedLimitValues.some(
+        (value) => !Number.isSafeInteger(value) || value < 0,
+      )
+    ) {
+      setError("محدودیت‌ها باید عدد صحیح صفر یا بزرگ‌تر باشند.");
+      setSubmitting(false);
+      return;
+    }
+
+    const limits: Record<string, number> = {};
+    if (form.applyFiles) limits.files = form.files;
+    if (form.applyBlocks) limits.blocks = form.blocks;
+    if (form.applyPages) limits.pages = form.pages;
+
+    const updates: Record<string, unknown> = {};
+    if (form.applyStatus) updates.status = form.status;
+    if (Object.keys(limits).length > 0) updates.limits = limits;
+
+    try {
+      const response = await fetch("/api/users/bulk-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({ userIds, updates }),
+      });
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.job) {
+        throw new Error(
+          typeof json?.message === "string"
+            ? json.message
+            : "ثبت ویرایش گروهی انجام نشد.",
+        );
+      }
+
+      handledJobIdRef.current = "";
+      setJob(json.job as UserBulkUpdateJob);
+      toast.success("عملیات گروهی در صف قرار گرفت.");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "ثبت ویرایش گروهی انجام نشد.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function resetJob() {
+    setJob(null);
+    setError("");
+    setForm(DEFAULT_BULK_UPDATE_FORM);
+  }
+
+  if (!open || typeof document === "undefined") return null;
+
+  const terminal = job?.status === "completed" || job?.status === "failed";
+  const progress = job?.total
+    ? Math.min(100, Math.round((job.processed / job.total) * 100))
+    : 0;
+
+  return createPortal(
+    <div dir="rtl"
+      className="fixed inset-0 z-[250] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !running) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-bulk-update-title"
+        className={cn(
+          "w-full overflow-hidden rounded-t-2xl border sm:max-w-2xl sm:rounded-2xl",
+          t.cardBg,
+          t.borderSubtle,
+          isDark
+            ? "shadow-[0_24px_80px_rgba(0,0,0,0.65)]"
+            : "shadow-[0_24px_80px_rgba(24,24,27,0.18)]",
+        )}
+      >
+        <header className={cn("flex items-center justify-between border-b px-5 py-4", t.divider)}>
+          <div className="min-w-0">
+            <h2 id="user-bulk-update-title" className={cn("text-base font-extrabold", t.textPrimary)}>
+              ویرایش گروهی کاربران
+            </h2>
+            <p className={cn("mt-1 text-xs", t.textMuted)}>
+              {userIds.length.toLocaleString("fa-IR")} کاربر انتخاب شده است
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={running}
+            aria-label="بستن"
+            className={cn("inline-flex h-9 w-9 items-center justify-center rounded-lg transition disabled:opacity-40", t.hoverBg, t.textMuted)}
+          >
+            <FaXmark className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="max-h-[70dvh] overflow-y-auto p-5">
+          {job ? (
+            <div className="space-y-4">
+              <div className={cn("rounded-xl border p-4", t.borderSubtle, t.inputBg)}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className={cn("text-sm font-bold", t.textPrimary)}>
+                    {job.status === "queued"
+                      ? "در صف پردازش"
+                      : job.status === "processing"
+                        ? "در حال اعمال تغییرات"
+                        : job.status === "completed"
+                          ? "عملیات تکمیل شد"
+                          : "عملیات ناموفق بود"}
+                  </span>
+                  {running ? <FaRotateRight className={cn("h-4 w-4 animate-spin", t.textAccent)} /> : null}
+                </div>
+                <div className={cn("mt-3 h-2 overflow-hidden rounded-full", isDark ? "bg-white/5" : "bg-black/5")}>
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-300", job.status === "failed" ? "bg-red-500" : "bg-[#c9a84c]")}
+                    style={{ width: `${terminal ? 100 : progress}%` }}
+                  />
+                </div>
+                <p className={cn("mt-3 text-xs", job.status === "failed" ? "text-red-400" : t.textMuted)}>
+                  {job.message || "عملیات به‌ترتیب صف پردازش می‌شود."}
+                </p>
+                {terminal ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className={cn("rounded-lg p-2", isDark ? "bg-black/15" : "bg-white")}>
+                      <strong className={cn("block text-sm", t.textPrimary)}>{job.total.toLocaleString("fa-IR")}</strong>
+                      <span className={cn("text-[10px]", t.textMuted)}>انتخاب‌شده</span>
+                    </div>
+                    <div className={cn("rounded-lg p-2", isDark ? "bg-black/15" : "bg-white")}>
+                      <strong className={cn("block text-sm", t.textPrimary)}>{job.modified.toLocaleString("fa-IR")}</strong>
+                      <span className={cn("text-[10px]", t.textMuted)}>تغییریافته</span>
+                    </div>
+                    <div className={cn("rounded-lg p-2", isDark ? "bg-black/15" : "bg-white")}>
+                      <strong className={cn("block text-sm", job.failed ? "text-red-400" : t.textPrimary)}>{job.failed.toLocaleString("fa-IR")}</strong>
+                      <span className={cn("text-[10px]", t.textMuted)}>ناموفق</span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {terminal ? (
+                <button
+                  type="button"
+                  onClick={resetJob}
+                  className={cn("inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-bold transition", t.borderSubtle, t.hoverBg, t.textPrimary)}
+                >
+                  عملیات جدید
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <BulkUpdateField
+                checked={form.applyStatus}
+                onCheckedChange={(checked) => setForm((current) => ({ ...current, applyStatus: checked }))}
+                title="وضعیت حساب"
+              >
+                <select
+                  value={form.status}
+                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as UserStatus }))}
+                  disabled={!form.applyStatus}
+                  className={cn("h-10 w-full rounded-xl border px-3 text-sm outline-none disabled:opacity-50", t.inputBg, t.borderInput, t.textPrimary)}
+                >
+                  <option value="active">فعال</option>
+                  <option value="inactive">غیرفعال</option>
+                </select>
+              </BulkUpdateField>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <BulkLimitField label="محدودیت فایل" checked={form.applyFiles} value={form.files} onCheckedChange={(checked) => setForm((current) => ({ ...current, applyFiles: checked }))} onValueChange={(value) => setForm((current) => ({ ...current, files: value }))} />
+                <BulkLimitField label="محدودیت بلاک" checked={form.applyBlocks} value={form.blocks} onCheckedChange={(checked) => setForm((current) => ({ ...current, applyBlocks: checked }))} onValueChange={(value) => setForm((current) => ({ ...current, blocks: value }))} />
+                <BulkLimitField label="محدودیت صفحه" checked={form.applyPages} value={form.pages} onCheckedChange={(checked) => setForm((current) => ({ ...current, applyPages: checked }))} onValueChange={(value) => setForm((current) => ({ ...current, pages: value }))} />
+              </div>
+              <p className={cn("text-xs", t.textMuted)}>
+                صفر به معنی نامحدود است. فقط گزینه‌های تیک‌خورده تغییر می‌کنند.
+              </p>
+            </div>
+          )}
+
+          {error ? <p role="alert" className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p> : null}
+        </div>
+
+        {!job ? (
+          <footer className={cn("flex items-center justify-end gap-2 border-t px-5 py-4", t.divider)}>
+            <button type="button" onClick={onClose} className={cn("h-10 rounded-xl px-4 text-sm font-bold transition", t.hoverBg, t.textMuted)}>
+              انصراف
+            </button>
+            <button
+              type="button"
+              onClick={submitBulkUpdate}
+              disabled={!hasSelectedUpdate || submitting}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#c9a84c] px-5 text-sm font-extrabold text-[#17130a] transition hover:bg-[#d8b85d] disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {submitting ? <FaRotateRight className="h-3.5 w-3.5 animate-spin" /> : <FaLayerGroup className="h-3.5 w-3.5" />}
+              ثبت در صف
+            </button>
+          </footer>
+        ) : null}
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
+function BulkUpdateField({
+  checked,
+  onCheckedChange,
+  title,
+  children,
+}: {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  title: string;
+  children: ReactNode;
+}) {
+  const t = useThemeTokens();
+  return (
+    <div className={cn("rounded-xl border p-3", t.borderSubtle, t.inputBg)}>
+      <label className="mb-3 flex cursor-pointer items-center gap-2">
+        <input type="checkbox" checked={checked} onChange={(event) => onCheckedChange(event.target.checked)} className="h-4 w-4 accent-[#c9a84c]" />
+        <span className={cn("text-sm font-bold", t.textPrimary)}>{title}</span>
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function BulkLimitField({
+  label,
+  checked,
+  value,
+  onCheckedChange,
+  onValueChange,
+}: {
+  label: string;
+  checked: boolean;
+  value: number;
+  onCheckedChange: (checked: boolean) => void;
+  onValueChange: (value: number) => void;
+}) {
+  const t = useThemeTokens();
+  return (
+    <BulkUpdateField checked={checked} onCheckedChange={onCheckedChange} title={label}>
+      <input
+        type="number"
+        min={0}
+        step={1}
+        value={value}
+        disabled={!checked}
+        onChange={(event) => onValueChange(Math.max(0, Number(event.target.value) || 0))}
+        className={cn("h-10 w-full rounded-xl border px-3 text-sm outline-none disabled:opacity-50", t.inputBg, t.borderInput, t.textPrimary)}
+      />
+    </BulkUpdateField>
+  );
 }
 
 /* ══════════════════════════════════════════════
@@ -631,9 +1228,12 @@ export default function UsersSection({
   const { isDark } = useTheme();
   const { can, user: authUser } = useAccess();
   const canUpdateUsers = can("admin.users", "update");
+  const canManageAccountBadges =
+    canUpdateUsers && can("admin.users.accountBadge", "update");
   const canAssignPermissions = (authUser?.role === "admin" || authUser?.role === "superAdmin") && canUpdateUsers && can("admin.permissions", "view") && can("admin.permissions", "update");
   const [permissionUser, setPermissionUser] = useState<UserRow | null>(null);
   const isNormalUser = authUser?.role === "user";
+  const canBulkUpdateUsers = canUpdateUsers && !isNormalUser;
   const canCreateUsers = can("admin.users", "create");
   const canViewAgents = can("admin.agents", "view");
   const canDeleteUsers = !isNormalUser && can("admin.users", "delete");
@@ -666,6 +1266,10 @@ export default function UsersSection({
   const [creatorOptions, setCreatorOptions] = useState<SelectOption[]>([]);
   const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [bulkSelection, setBulkSelection] = useState<{
+    userIds: string[];
+    clearSelection: () => void;
+  } | null>(null);
   const [previewImage, setPreviewImage] = useState<{
     src: string;
     title: string;
@@ -674,6 +1278,11 @@ export default function UsersSection({
     setPreviewImage({ src, title });
   }, []);
   const closePreviewImage = useCallback(() => setPreviewImage(null), []);
+  const closeBulkUpdate = useCallback(() => setBulkSelection(null), []);
+  const completeBulkUpdate = useCallback(() => {
+    bulkSelection?.clearSelection();
+    setRefreshToken((current) => current + 1);
+  }, [bulkSelection]);
 
   async function toggleUserStatus(row: UserRow) {
     if (!row._id || togglingStatusId) return;
@@ -937,6 +1546,7 @@ export default function UsersSection({
             // Normalise agentid (model uses lowercase)
             agentid: agentId || undefined,
             agentLabel,
+            accountBadge: normalizeUserAccountBadge(u.accountBadge),
             // Normalise permissions (populated docs or raw ObjectId strings)
             permissions: Array.isArray(u.permissions)
               ? u.permissions.map((p: unknown) => {
@@ -1022,8 +1632,55 @@ export default function UsersSection({
             [row.firstName, row.lastName].filter(Boolean).join(" ") ||
             row.fullName ||
             "—";
-          return <span className="font-semibold">{fullName}</span>;
+          return (
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate font-semibold">
+                {fullName}
+              </span>
+              <UserAccountBadgeView
+                firstName={row.firstName}
+                badge={row.accountBadge}
+              />
+            </span>
+          );
         },
+      },
+      {
+        key: "accountBadge",
+        label: "نوع حساب",
+        visible: false,
+        sortable: false,
+        copyable: false,
+        inputType: "textarea",
+        defaultValue: {
+          enabled: false,
+          label: "",
+          color: DEFAULT_USER_ACCOUNT_BADGE_COLOR,
+        },
+        hiddenInForm: (formData, mode) =>
+          mode === "create" ||
+          !canManageAccountBadges ||
+          isRadFirstName(String(formData.firstName ?? "")),
+        validate: (value) => validateUserAccountBadge(value),
+        render: (value, row) => {
+          const badge = normalizeUserAccountBadge(value);
+          const isVisible = isRadFirstName(row.firstName) || badge.enabled;
+
+          return isVisible ? (
+            <UserAccountBadgeView
+              firstName={row.firstName}
+              badge={badge}
+            />
+          ) : (
+            <span className={cn("text-xs", t.textDisabled)}>بدون نشان</span>
+          );
+        },
+        renderFormField: ({ value, onChange }) => (
+          <AccountBadgeEditor
+            value={value}
+            onChange={(nextValue) => onChange(nextValue)}
+          />
+        ),
       },
       {
         key: "firstName",
@@ -1405,6 +2062,7 @@ export default function UsersSection({
     ],
     [
       agentOptions,
+      canManageAccountBadges,
       creatorOptions,
       hasFullUserEditAccess,
       hasFullUserCreateAccess,
@@ -1412,6 +2070,7 @@ export default function UsersSection({
       openPreviewImage,
       requesterAgentId,
       roleOptions,
+      t.textDisabled,
     ],
   );
 
@@ -1468,9 +2127,15 @@ export default function UsersSection({
         endpoint="/api/users?includeDeleted=true"
         refreshKey={refreshToken}
         updateMethod="PATCH"
-        onUpdate={async (item, builtInUpdate) => {
+        onUpdate={async (item, builtInUpdate, original) => {
           try {
-            await builtInUpdate(buildUserPayload(item) as UserRow);
+            await builtInUpdate(
+              buildUserUpdatePayload(
+                item,
+                original,
+                canManageAccountBadges,
+              ) as UserRow,
+            );
             toast.success("اطلاعات کاربر ویرایش شد");
           } catch (error) {
             toast.error(
@@ -1522,6 +2187,25 @@ export default function UsersSection({
         transformResponse={transformResponse}
         serverSide
         emptyMessage="کاربری یافت نشد"
+        bulkActions={({ selectedIds, clearSelection }) =>
+          canBulkUpdateUsers ? (
+            <button
+              type="button"
+              onClick={() =>
+                setBulkSelection({ userIds: selectedIds, clearSelection })
+              }
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold transition",
+                t.borderAccent,
+                t.textAccent,
+                t.hoverBg,
+              )}
+            >
+              <FaLayerGroup className="h-3.5 w-3.5" />
+              ویرایش گروهی
+            </button>
+          ) : null
+        }
         rowActions={(row) =>
           canUpdateUsers && !isNormalUser ? (
             <>
@@ -1565,6 +2249,13 @@ export default function UsersSection({
             </>
           ) : null
         }
+      />
+      <UserBulkUpdateModal
+        open={Boolean(bulkSelection)}
+        userIds={bulkSelection?.userIds ?? []}
+        headers={headers}
+        onClose={closeBulkUpdate}
+        onCompleted={completeBulkUpdate}
       />
       {permissionUser && <UserPermissionModal
         key={permissionUser._id}

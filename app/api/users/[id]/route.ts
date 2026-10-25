@@ -26,6 +26,8 @@ import {
     validateSinglePermissionIdSelection,
 } from "@/lib/auth/permissionAssignment";
 import { resolveUserAccess } from "@/lib/auth/resolveUserAccess";
+import { buildAccessDeniedPayload } from "@/lib/auth/enforceAccess";
+import { parseUserAccountBadge } from "@/lib/users/accountBadge";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -145,11 +147,41 @@ export const PATCH = compose(
         requester.role === "superAdmin" ||
         (resolvedRequesterAccess?.components["admin.users"]?.has("update") ??
             false);
+    const hasAccountBadgeInPayload = Object.prototype.hasOwnProperty.call(
+        body,
+        "accountBadge",
+    );
+    const canManageAccountBadges =
+        requester.role === "superAdmin" ||
+        (resolvedRequesterAccess?.components["admin.users.accountBadge"]?.has(
+            "update",
+        ) ?? false);
+    const canManageTargetUser = await canAccessUserRequest(req, id);
 
-    if (!(await canAccessUserRequest(req, id)) && !hasUsersUpdateAccess) {
+    if (!canManageTargetUser && !hasUsersUpdateAccess) {
         return NextResponse.json(
             { message: "شما اجازه انجام این عملیات را ندارید." },
             { status: 403 }
+        );
+    }
+
+    if (hasAccountBadgeInPayload && !canManageAccountBadges) {
+        return NextResponse.json(
+            buildAccessDeniedPayload({
+                component: "admin.users.accountBadge",
+                action: "update",
+            }),
+            { status: 403 },
+        );
+    }
+
+    if (hasAccountBadgeInPayload && !canManageTargetUser) {
+        return NextResponse.json(
+            {
+                message:
+                    "شما فقط می‌توانید نشان حساب کاربران زیرمجموعه خودتان را تغییر دهید.",
+            },
+            { status: 403 },
         );
     }
 
@@ -216,6 +248,9 @@ export const PATCH = compose(
 
     if (canUseFullUpdatePayload) {
         allowedFields.push("role");
+    }
+    if (canManageAccountBadges) {
+        allowedFields.push("accountBadge");
     }
 
     const updates: Record<string, unknown> = {
@@ -321,6 +356,22 @@ export const PATCH = compose(
                 { message: "فقط سوپر ادمین می‌تواند نقش سوپر ادمین تعیین کند." },
                 { status: 403 }
             );
+        }
+
+        if (key === "accountBadge") {
+            const parsedBadge = parseUserAccountBadge(value);
+            if (!parsedBadge.badge) {
+                return NextResponse.json(
+                    {
+                        code: "INVALID_USER_ACCOUNT_BADGE",
+                        message:
+                            parsedBadge.error ?? "اطلاعات نشان حساب معتبر نیست.",
+                        field: "accountBadge",
+                    },
+                    { status: 400 },
+                );
+            }
+            value = parsedBadge.badge;
         }
 
         if (key === "status") {

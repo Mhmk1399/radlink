@@ -22,6 +22,10 @@ export const VIEW_ONLY_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
   (action) => action.value === "view",
 );
 
+export const UPDATE_ONLY_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
+  (action) => action.value === "update",
+);
+
 export const PAGE_ACCESS_ACTIONS = ACCESS_ACTIONS;
 
 export const BLOCK_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
@@ -31,6 +35,9 @@ export const BLOCK_ACCESS_ACTIONS = ACCESS_ACTIONS.filter(
 export function getAccessActionsForComponent(componentName: string) {
   if (componentName === "admin.dashboard") return VIEW_ONLY_ACCESS_ACTIONS;
   if (componentName === "builder.access") return VIEW_ONLY_ACCESS_ACTIONS;
+  if (componentName === "admin.users.accountBadge") {
+    return UPDATE_ONLY_ACCESS_ACTIONS;
+  }
   if (componentName === "admin.pages") return PAGE_ACCESS_ACTIONS;
   if (componentName === "admin.blocks") return BLOCK_ACCESS_ACTIONS;
 
@@ -49,6 +56,7 @@ export function getAccessActionsForResource(
 export const STATIC_COMPONENT_CATALOG = [
   { key: "admin.dashboard", label: "داشبورد ادمین" },
   { key: "admin.users", label: "کاربران" },
+  { key: "admin.users.accountBadge", label: "نشان حساب کاربران" },
   { key: "admin.agents", label: "نمایندگان" },
   { key: "admin.permissions", label: "Permissionها" },
   { key: "admin.accesses", label: "Accessها" },
