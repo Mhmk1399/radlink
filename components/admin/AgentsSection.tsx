@@ -661,7 +661,10 @@ export default function AgentsSection({
     key: K,
     value: AgentFormState[K],
   ) {
-    const nextValue = sanitizeIdentityField(String(key), value) as AgentFormState[K];
+    const nextValue = sanitizeIdentityField(
+      String(key),
+      value,
+    ) as AgentFormState[K];
     setForm((current) => ({ ...current, [key]: nextValue }));
     setFormErrors((current) => {
       const next = { ...current };
@@ -1130,7 +1133,7 @@ export default function AgentsSection({
                         </div>
                       )}
                     </Field>
-                    <Field label="نقش نمایندگی" icon={<FaUserTie />}>
+                    {/* <Field  label="نقش نمایندگی" icon={<FaUserTie />}>
                       <CustomSelect
                         id="userRole"
                         name="userRole"
@@ -1155,7 +1158,7 @@ export default function AgentsSection({
                         size="md"
                         position="auto"
                       />
-                    </Field>
+                    </Field> */}
                   </>
                 )}
 

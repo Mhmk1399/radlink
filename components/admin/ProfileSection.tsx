@@ -459,7 +459,7 @@ function LimitCard({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center",
+        "flex flex-col items-center gap-1.5 rounded-xl border p-1 text-center",
         t.borderSubtle,
         t.inputBg,
       )}
@@ -474,7 +474,7 @@ function LimitCard({
       >
         {icon}
       </span>
-      <span className={cn("text-lg font-black tabular-nums", t.textPrimary)}>
+      <span className={cn("text-sm font-black tabular-nums", t.textPrimary)}>
         {value.toLocaleString("fa-IR")}
       </span>
       <span className={cn("text-[11px]", t.textDisabled)}>{label}</span>
@@ -596,17 +596,7 @@ function AvatarUploadField({
             <p className={cn("mt-1 text-xs leading-5", t.textMuted)}>
               JPG، PNG، GIF یا WEBP — حداکثر ۵ مگابایت
             </p>
-            {value && (
-              <p
-                className={cn(
-                  "mt-1.5 max-w-full truncate font-mono text-[11px]",
-                  t.textDisabled,
-                )}
-                dir="ltr"
-              >
-                {value}
-              </p>
-            )}
+          
 
             <div className="mt-3 flex flex-wrap gap-2">
               <input

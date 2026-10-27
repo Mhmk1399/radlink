@@ -1405,7 +1405,8 @@ export default function DashboardSection({
                     d.textPrimary,
                   )}
                 >
-                  {displayName !== "مدیر" ? `${displayName}  ` : "مدیر   "}{"  "}
+                  {displayName !== "مدیر" ? `${displayName}  ` : "مدیر   "}
+                  {"  "}
                   {showRadVerifiedBadge ? (
                     <RadVerifiedBadge />
                   ) : (
@@ -1468,29 +1469,6 @@ export default function DashboardSection({
                 « {dashboardQuote} »
               </p>
               <div className={cn("mt-2 h-px w-14", d.heroLine)} />
-              <div
-                className={cn(
-                  "mt-3 inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[10px] font-bold",
-                  d.onlineBg,
-                )}
-                role="status"
-              >
-                <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-                  <span
-                    className={cn(
-                      "absolute inline-flex h-full w-full animate-ping rounded-full opacity-70",
-                      d.onlinePing,
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      "relative inline-flex h-1.5 w-1.5 rounded-full",
-                      d.onlineDot,
-                    )}
-                  />
-                </span>
-                سیستم فعال
-              </div>
             </div>
           </div>
           {/* Date block */}
