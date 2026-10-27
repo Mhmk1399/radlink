@@ -1,13 +1,10 @@
 import { Resolver } from "node:dns/promises";
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
 const MONGODB_DNS_SERVERS = process.env.MONGODB_DNS_SERVERS
     ?.split(",")
     .map((server) => server.trim())
     .filter(Boolean);
-
-if (!MONGODB_URI) throw new Error("آدرس اتصال پایگاه داده تنظیم نشده است.");
 
 async function resolveMongoUri(uri: string) {
     if (!MONGODB_DNS_SERVERS?.length || !uri.startsWith("mongodb+srv://")) {
@@ -52,7 +49,9 @@ const globalWithMongoose = global as typeof globalThis & {
 
 export async function connectDB() {
     if (globalWithMongoose._mongooseConn) return globalWithMongoose._mongooseConn;
-    const resolvedUri = await resolveMongoUri(MONGODB_URI);
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) throw new Error("آدرس اتصال پایگاه داده تنظیم نشده است.");
+    const resolvedUri = await resolveMongoUri(mongoUri);
     await mongoose.connect(resolvedUri);
     globalWithMongoose._mongooseConn = mongoose;
     return mongoose;

@@ -1,8 +1,11 @@
 import jwt from "jsonwebtoken";
-import { IUser } from "@/models/users";
+import type { IUser } from "@/models/users";
 
-const SECRET = process.env.JWT_SECRET as string;
-if (!SECRET) throw new Error("کلید امضای توکن تنظیم نشده است.");
+function getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("کلید امضای توکن تنظیم نشده است.");
+    return secret;
+}
 
 export type JwtPayload = {
     userId: string;
@@ -14,9 +17,9 @@ export type JwtPayload = {
 };
 
 export function signToken(payload: JwtPayload): string {
-    return jwt.sign(payload, SECRET, { expiresIn: "7d" });
+    return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
 }
 
 export function verifyToken(token: string): JwtPayload {
-    return jwt.verify(token, SECRET) as JwtPayload;
+    return jwt.verify(token, getJwtSecret()) as JwtPayload;
 }

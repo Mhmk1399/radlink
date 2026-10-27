@@ -1,0 +1,13 @@
+services:
+  app:
+    image: ${RADLINK_IMAGE:-radlink:latest}
+    container_name: radlink-app
+    ports:
+      - "127.0.0.1:3090:3000"
+    env_file:
+      - .env.production
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

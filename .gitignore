@@ -19,7 +19,7 @@
 
 # production
 /build
-/mongo-export/
+/mongo-export*/
 
 # misc
 .DS_Store

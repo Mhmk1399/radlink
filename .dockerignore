@@ -8,6 +8,10 @@ coverage
 *.log
 *.pem
 .DS_Store
+.env
+.env.*
+mongo-export*/
+radlink*.tar.gz
 README.md
 docs/
 graphify-out/

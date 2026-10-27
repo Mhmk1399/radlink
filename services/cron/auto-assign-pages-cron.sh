@@ -11,7 +11,9 @@ if [ -z "$SECRET" ]; then
   exit 1
 fi
 
-apk add --no-cache curl >/dev/null
+if ! command -v curl >/dev/null 2>&1; then
+  apk add --no-cache curl >/dev/null
+fi
 
 cat > /etc/crontabs/root <<EOF
 $CRON_SCHEDULE curl -fsS -X POST -H "Authorization: Bearer $SECRET" "$APP_INTERNAL_URL/api/cron/auto-assign-pages"

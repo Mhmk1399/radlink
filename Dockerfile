@@ -24,9 +24,11 @@ COPY . .
 ARG NEXT_PUBLIC_LIARA_BUCKET_NAME
 ARG NEXT_PUBLIC_LIARA_PUBLIC_URL
 ARG NEXT_PUBLIC_STORAGE_URL
+ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_LIARA_BUCKET_NAME=${NEXT_PUBLIC_LIARA_BUCKET_NAME}
 ENV NEXT_PUBLIC_LIARA_PUBLIC_URL=${NEXT_PUBLIC_LIARA_PUBLIC_URL}
 ENV NEXT_PUBLIC_STORAGE_URL=${NEXT_PUBLIC_STORAGE_URL}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 
 RUN npm run build
 
@@ -41,14 +43,14 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 nextjs
+ && adduser --system --uid 1001 --ingroup nodejs nextjs
 
 # Copy standalone output
-COPY --from=builder /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 # Copy static assets
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public folder
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 RUN mkdir -p /app/.next/cache \
     && chown -R nextjs:nodejs /app/.next /app/public
