@@ -3,13 +3,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_LIARA_BUCKET_NAME: ${NEXT_PUBLIC_LIARA_BUCKET_NAME}
+        NEXT_PUBLIC_LIARA_PUBLIC_URL: ${NEXT_PUBLIC_LIARA_PUBLIC_URL}
+        NEXT_PUBLIC_STORAGE_URL: ${NEXT_PUBLIC_STORAGE_URL}
     ports:
       - "3000:3000"
     env_file:
       - .env
-    depends_on:
-      mongo:
-        condition: service_healthy
     restart: unless-stopped
 
   auto-assign-pages-cron:
@@ -27,23 +28,3 @@ services:
       app:
         condition: service_started
     restart: unless-stopped
-
-  mongo:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-secret}
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    restart: unless-stopped
-
-volumes:
-  mongo_data:

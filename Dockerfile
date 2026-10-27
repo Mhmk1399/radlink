@@ -19,8 +19,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time env vars (non-secret public vars can be set here if needed)
-# ENV NEXT_PUBLIC_EXAMPLE=value
+# NEXT_PUBLIC_* values are embedded into browser bundles by `next build`.
+# These values are public URLs/names only; never pass access keys as build args.
+ARG NEXT_PUBLIC_LIARA_BUCKET_NAME
+ARG NEXT_PUBLIC_LIARA_PUBLIC_URL
+ARG NEXT_PUBLIC_STORAGE_URL
+ENV NEXT_PUBLIC_LIARA_BUCKET_NAME=${NEXT_PUBLIC_LIARA_BUCKET_NAME}
+ENV NEXT_PUBLIC_LIARA_PUBLIC_URL=${NEXT_PUBLIC_LIARA_PUBLIC_URL}
+ENV NEXT_PUBLIC_STORAGE_URL=${NEXT_PUBLIC_STORAGE_URL}
 
 RUN npm run build
 

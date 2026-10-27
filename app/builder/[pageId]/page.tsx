@@ -68,7 +68,7 @@ function LoadingScreen() {
 
 
             <Image
-              src="https://storadge.arziplus.com/rad/radlinklogonew.png"
+              src="https://bucket.nfcrad.link/rad/radlinklogonew.png"
               width={96}
               height={96}
               alt="رادلینک"
